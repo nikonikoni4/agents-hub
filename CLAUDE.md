@@ -49,3 +49,11 @@
 5. **Bug 先测试**：修 bug 先写复现测试，再修复直到通过。
 
 6. **记录教训**：每次被纠正后，在 `docs/temp/temp_lecture_record/temp_lecture_record.md` 记录经验教训
+
+## 核心编码原则
+在编码时必须遵守的规则
+
+- **SSOT**（Single Source of Truth）：单一数据来源，数据只存储在一个地方
+- **DRY**（Don't Repeat Yourself）：不要重复相同逻辑和知识
+- **SRP**（Single Responsibility Principle）：单一职责，一个模块只做一件事
+- **DDD**（Domain-Driven Design）：领域驱动设计，以业务领域为核心构建软件
