@@ -57,3 +57,4 @@
 - **DRY**（Don't Repeat Yourself）：不要重复相同逻辑和知识
 - **SRP**（Single Responsibility Principle）：单一职责，一个模块只做一件事
 - **DDD**（Domain-Driven Design）：领域驱动设计，以业务领域为核心构建软件
+- 不能修改全局系统变量

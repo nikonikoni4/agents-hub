@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 
-DEFAULT_CODEX_HOME = r"D:\desktop\软件开发\test-codex\role-nico"
+DEFAULT_CODEX_HOME = r"D:\desktop\软件开发\test-codex\role-xiaoli"
 DEFAULT_CODEX_COMMAND = r"C:\Users\15535\AppData\Roaming\npm\codex.cmd"
 
 
