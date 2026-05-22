@@ -217,3 +217,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 other
+settings.json
+settings1.json
+settings2.json
