@@ -11,9 +11,10 @@
 | **架构地图** | `docs/ARCHITECTURE.md` | 顶层导航,说明主要模块、层级和依赖关系 |
 | **PRD** | `docs/PRD.md` | 产品定位，功能需求 |
 | **启动文档** | `docs/RUN.md` | 如何启动系统,包括启动指令、端口、运行前提 |
+| **设计文档** | `docs/DESIGN.md` | 前段设计风格和规范文档，修改前段UI/UX内容时必读 |
 | **编码规则** | `docs/coding-rules/` | 编写代码时必须遵守的规范、约束、触发场景 |
 | **文档规则** | `docs/docs-rules/` | 编写 docs 时必须遵守的规范、约束、触发场景 |
-| **产品规格** | `docs/specs/` | 对于正式 `spec`,承载业务意图、业务规则、领域概念,以及规范性技术契约 |
+| **产品规格** | `docs/specs/` | 对于正式 `spec`,承载业务意图、业务规则、领域概念,以及规范性技术契约,是了解系统某个功能的重要文档 |
 | **架构决策** | `docs/design-decisions/` | 记录对于长期具有重要的作用的修改决定 |
 | **自动生成** | `docs/generated/` | 代码镜像,不手工维护正文,用于快速了解当前实现事实及 CI 结果 |
 | **执行计划** | `docs/plans/` | 执行过程中的任务分解和执行记录,也是历史执行资产 |
@@ -31,6 +32,7 @@
 4. **修改或为某个模块增加功能前**：需要阅读`docs/specs/index.md`，查看当前是否已经存在spec，按需加载具体的spec来了解该功能情况
 5. **如果你是minimax模型**：必须阅读`docs/coding-rules/other-model-rules`
 6. **修复bug时**: 可以阅读`docs\history-bugs\index.md`来获取历史bug解决方法
+7. **修改前段UI/UX时** ： 必须阅读`docs/DESIGN.md`
 
 </<docs-read-rules>>
 
