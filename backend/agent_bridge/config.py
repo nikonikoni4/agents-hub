@@ -1,4 +1,26 @@
-# 临时入口配置层，暂时放置在这里，后续会统一做配置层
+"""配置数据类和平台枚举"""
 
-class AgentBridgeConfig:
-    pass
+from dataclasses import dataclass
+from typing import Optional, List
+from enum import Enum
+
+
+class AgentPlatform(Enum):
+    """Agent 平台枚举"""
+    CLAUDE = "claude"
+    CODEX = "codex"
+
+
+@dataclass
+class RoleConfig:
+    """角色配置"""
+    platform: AgentPlatform    # 平台类型
+    system_prompt: str         # system prompt 内容
+    skills: List[str]          # skill 列表
+
+    # Codex 专用字段
+    codex_home: Optional[str] = None  # CODEX_HOME 路径
+
+    # 留白字段（之后实现）
+    permissions: Optional[dict] = None
+    tools: Optional[List[str]] = None
