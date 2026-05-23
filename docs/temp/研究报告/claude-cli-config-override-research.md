@@ -1,8 +1,17 @@
 # Claude CLI 配置覆盖机制研究报告
 
+> ⚠️ **文档状态：已被取代**
+>
+> 本文档的研究结论已被 [claude-codex-role-isolation-report.md](claude-codex-role-isolation-report.md) (2026-05-24) 更新。
+> 新研究发现 Claude 支持 `CLAUDE_CONFIG_DIR` 环境变量实现完整配置目录隔离，与 Codex 的 `CODEX_HOME` 方案完全对称。
+>
+> 本文档保留作为命令行参数能力的参考，但**不推荐作为角色隔离的主要实现方案**。
+
+---
+
 **研究日期**: 2026-05-23  
 **研究目标**: 验证 Claude CLI 是否支持通过命令行参数实现角色隔离，类似 Codex 的 `CODEX_HOME` 方案  
-**研究结论**: ✅ 完全可行，且比 Codex 方案更灵活
+**研究结论**: ✅ 命令行参数方式可行，但存在局限性（见注意事项）
 
 ---
 
@@ -479,9 +488,13 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
 - Auto-memory
 - Background prefetches
 - Keychain reads
-- CLAUDE.md auto-discovery
+- **CLAUDE.md auto-discovery**
 
-如果需要这些功能，可以不使用 `--bare` 模式，但需要注意可能会加载项目级配置。
+⚠️ **重要警告**：当使用 `CLAUDE_CONFIG_DIR` 做角色隔离时，角色目录下的 `CLAUDE.md` 对 CLI 来说是"全局 CLAUDE.md"，`--bare` 会跳过它，导致角色定义失效。
+
+**结论**：角色隔离场景下不能使用 `--bare`。
+
+详见 [claude-codex-role-isolation-report.md](claude-codex-role-isolation-report.md) 第 6.1 节。
 
 ### 7.3 `--print` 模式的限制
 
@@ -492,45 +505,50 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
 
 对于交互式会话，不要使用 `--print` 模式。
 
+### 7.4 认证隔离的局限性
+
+⚠️ **命令行参数方式无法隔离认证信息**
+
+Claude 的认证存储在系统 keychain 中，不随 `--settings` 参数隔离。如果多个角色需要使用不同的 API key：
+- 命令行参数方式：无法实现（keychain 是系统级的）
+- `CLAUDE_CONFIG_DIR` 方式：需要通过 `settings.json` 的 `env.ANTHROPIC_AUTH_TOKEN` 注入
+
+详见 [claude-codex-role-isolation-report.md](claude-codex-role-isolation-report.md) 第 6.2 节。
+
 ---
 
 ## 八、总结
 
 ### 8.1 核心结论
 
-✅ **Claude CLI 完全支持通过命令行参数实现角色隔离**
+✅ **Claude CLI 支持通过命令行参数实现角色配置控制**
 
 关键机制：
 1. `--append-system-prompt`：注入角色定义
 2. `--settings`：控制权限和环境变量（合并机制）
 3. `--mcp-config` + `--strict-mcp-config`：控制 MCP 服务器
 4. `--plugin-dir`：控制 plugins
-5. `--bare`：最小化模式，避免加载额外配置
 
-### 8.2 优势
+### 8.2 局限性
 
-相比 Codex 的 `CODEX_HOME` 方案，Claude CLI 的方案：
-- ✅ **更灵活**：参数化控制，无需维护完整配置目录
-- ✅ **更简单**：直接传参，无需派生 profile
-- ✅ **更精细**：可以单独控制每个组件（system prompt、permissions、MCP、plugins）
-- ✅ **支持并发**：不同参数可以并发运行
+⚠️ **命令行参数方式不适合用作主要的角色隔离方案**：
 
-### 8.3 推荐实现路径
+| 局限 | 说明 |
+|------|------|
+| 认证不隔离 | keychain 中的 API key 无法通过参数隔离 |
+| 配置合并 | 用户级配置会影响所有角色（deny 规则会叠加） |
+| --bare 冲突 | 无法使用 `--bare` 模式（会跳过角色 CLAUDE.md） |
 
-1. **短期**（MVP）：
-   - 为每个角色创建独立的配置文件（settings.json、system-prompt.txt）
-   - 使用 Python 封装启动逻辑
-   - 通过命令行参数组合配置
+### 8.3 推荐方案
 
-2. **中期**（优化）：
-   - 实现角色配置的热重载
-   - 添加角色配置的验证和测试
-   - 支持角色配置的版本管理
+**主要方案**：使用 `CLAUDE_CONFIG_DIR` 环境变量实现完整配置目录隔离
 
-3. **长期**（增强）：
-   - 实现角色配置的 UI 管理界面
-   - 支持角色之间的协作和通信
-   - 集成到 agents-hub 的整体架构中
+详见 [claude-codex-role-isolation-report.md](claude-codex-role-isolation-report.md)
+
+**命令行参数的适用场景**：
+- 临时覆盖某个角色的特定配置
+- 需要精细控制单个组件（如只改 MCP 配置）
+- 开发测试阶段的快速调试
 
 ---
 
