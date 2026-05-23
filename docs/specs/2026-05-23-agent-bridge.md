@@ -1,5 +1,5 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-05-23
 updated_at: 2026-05-24
 last_updated: RoleConfig 增加 claude_config_dir，移除留白字段
