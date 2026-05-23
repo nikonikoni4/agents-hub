@@ -1,5 +1,6 @@
 """ClaudeExecutor 单元测试"""
 
+import os
 import pytest
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform, CLAUDE_COMMAND
@@ -140,3 +141,29 @@ class TestClaudeExecutor:
 
         # prompt 是最后一个参数
         assert cmd[-1] == "审查 PR"
+
+    def test_build_env(self):
+        """测试构建环境变量"""
+        config = RoleConfig(
+            platform=AgentPlatform.CLAUDE,
+            system_prompt="测试",
+            skills=[],
+            claude_config_dir="/path/to/claude-config"
+        )
+        env = self.executor._build_env(config)
+
+        assert "CLAUDE_CONFIG_DIR" in env
+        assert env["CLAUDE_CONFIG_DIR"] == "/path/to/claude-config"
+
+    def test_build_env_no_claude_config_dir(self):
+        """测试没有 claude_config_dir 时环境变量"""
+        config = RoleConfig(
+            platform=AgentPlatform.CLAUDE,
+            system_prompt="测试",
+            skills=[]
+        )
+        env = self.executor._build_env(config)
+
+        # 应该保留原有的环境变量
+        assert "PATH" in env
+        assert "CLAUDE_CONFIG_DIR" not in env

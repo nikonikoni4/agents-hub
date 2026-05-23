@@ -26,6 +26,5 @@ class RoleConfig:
     # Codex 专用字段
     codex_home: Optional[str] = None  # CODEX_HOME 路径
 
-    # 留白字段（之后实现）
-    permissions: Optional[dict] = None
-    tools: Optional[List[str]] = None
+    # Claude 专用字段
+    claude_config_dir: Optional[str] = None  # CLAUDE_CONFIG_DIR 路径

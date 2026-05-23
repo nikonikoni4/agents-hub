@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from typing import AsyncIterator, Optional
 from agents_hub.agent_bridge.config import RoleConfig, CLAUDE_COMMAND
 
@@ -29,12 +30,14 @@ class ClaudeExecutor:
             AsyncIterator[str]: 原始 JSON 字符串流
         """
         cmd = self._build_command(prompt, config, session_id)
+        env = self._build_env(config)
 
         try:
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                env=env
             )
         except FileNotFoundError:
             logger.error("Claude CLI not found. Please ensure 'claude' is installed and in PATH.")
@@ -77,3 +80,10 @@ class ClaudeExecutor:
 
         cmd.append(prompt)
         return cmd
+
+    def _build_env(self, config: RoleConfig) -> dict:
+        """构建环境变量"""
+        env = os.environ.copy()
+        if config.claude_config_dir:
+            env["CLAUDE_CONFIG_DIR"] = config.claude_config_dir
+        return env

@@ -1,8 +1,8 @@
 ---
 version: 1.0
 created_at: 2026-05-23
-updated_at: 2026-05-23
-last_updated: 从设计文档过滤生成正式 spec
+updated_at: 2026-05-24
+last_updated: RoleConfig 增加 claude_config_dir，移除留白字段
 abstract: agent_bridge 模块的正式规格定义，描述其作为纯执行层的核心职责、统一事件契约和双接口设计
 id: spec-agent-bridge
 title: Agent Bridge 模块规格
@@ -25,6 +25,7 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 从设计文档过滤生成正式 spec 初稿 |
+| 1.1 | RoleConfig 增加 claude_config_dir，移除留白字段（permissions、tools） |
 
 ---
 
@@ -109,9 +110,8 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 | `platform` | AgentPlatform | 是 | 目标平台类型 |
 | `system_prompt` | str | 是 | 系统提示词内容 |
 | `skills` | list[str] | 是 | skill 标识列表 |
-| `codex_home` | str? | 否 | Codex 专用配置目录路径 |
-| `permissions` | dict? | 否 | 权限配置（留白） |
-| `tools` | list[str]? | 否 | 工具列表（留白） |
+| `codex_home` | str? | 否 | Codex 专用配置目录路径（注入 `CODEX_HOME` 环境变量） |
+| `claude_config_dir` | str? | 否 | Claude 专用配置目录路径（注入 `CLAUDE_CONFIG_DIR` 环境变量） |
 
 ### 统一事件格式（AgentEvent）
 
@@ -148,6 +148,8 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 核心参数：`--print`（非交互）、`--verbose`（详细输出）、`--output-format stream-json`（流式 JSON）、`--include-partial-messages`（逐字输出）、`--append-system-prompt`（追加系统提示词）
 
 会话恢复：`--resume <session_id>`
+
+环境变量：通过 `CLAUDE_CONFIG_DIR` 指定角色配置目录
 
 #### Codex CLI
 
