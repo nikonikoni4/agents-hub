@@ -1,8 +1,11 @@
 """Claude CLI 执行器"""
 
 import asyncio
+import logging
 from typing import AsyncIterator, Optional
 from ..config import RoleConfig
+
+logger = logging.getLogger(__name__)
 
 
 class ClaudeExecutor:
@@ -27,16 +30,26 @@ class ClaudeExecutor:
         """
         cmd = self._build_command(prompt, config, session_id)
 
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+        except FileNotFoundError:
+            logger.error("Claude CLI not found. Please ensure 'claude' is installed and in PATH.")
+            raise
 
         async for line in process.stdout:
             decoded = line.decode("utf-8").strip()
             if decoded:
                 yield decoded
+
+        # 等待进程结束并检查返回码
+        await process.wait()
+        if process.returncode != 0:
+            stderr = await process.stderr.read()
+            logger.warning(f"Claude CLI exited with code {process.returncode}: {stderr.decode('utf-8')}")
 
     def _build_command(
         self,
