@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 from typing import AsyncIterator, Optional
-from ..config import RoleConfig
+from agents_hub.agent_bridge.config import RoleConfig
 
 logger = logging.getLogger(__name__)
 

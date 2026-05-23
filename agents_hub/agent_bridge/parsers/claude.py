@@ -2,7 +2,7 @@
 
 import json
 from typing import Optional
-from .base import AgentEvent, AgentEventType
+from agents_hub.agent_bridge.parsers.base import AgentEvent, AgentEventType
 
 
 class ClaudeParser:

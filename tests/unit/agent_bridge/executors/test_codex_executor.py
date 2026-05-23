@@ -2,8 +2,8 @@
 
 import os
 import pytest
-from backend.agent_bridge.executors.codex import CodexExecutor
-from backend.agent_bridge.config import RoleConfig, AgentPlatform
+from agents_hub.agent_bridge.executors.codex import CodexExecutor
+from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform
 
 
 class TestCodexExecutor:

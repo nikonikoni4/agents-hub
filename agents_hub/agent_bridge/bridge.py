@@ -1,12 +1,12 @@
 """AgentBridge 统一接口"""
 
 from typing import AsyncIterator, Optional
-from .config import RoleConfig, AgentPlatform
-from .parsers.base import AgentEvent, AgentEventType
-from .executors.claude import ClaudeExecutor
-from .executors.codex import CodexExecutor
-from .parsers.claude import ClaudeParser
-from .parsers.codex import CodexParser
+from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform
+from agents_hub.agent_bridge.parsers.base import AgentEvent, AgentEventType
+from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
+from agents_hub.agent_bridge.executors.codex import CodexExecutor
+from agents_hub.agent_bridge.parsers.claude import ClaudeParser
+from agents_hub.agent_bridge.parsers.codex import CodexParser
 
 
 class AgentBridge:

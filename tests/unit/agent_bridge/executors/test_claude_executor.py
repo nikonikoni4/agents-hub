@@ -1,8 +1,8 @@
 """ClaudeExecutor 单元测试"""
 
 import pytest
-from backend.agent_bridge.executors.claude import ClaudeExecutor
-from backend.agent_bridge.config import RoleConfig, AgentPlatform
+from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
+from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform
 
 
 class TestClaudeExecutor:

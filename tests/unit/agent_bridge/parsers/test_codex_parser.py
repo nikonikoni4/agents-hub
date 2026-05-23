@@ -2,8 +2,8 @@
 
 import json
 import pytest
-from backend.agent_bridge.parsers.codex import CodexParser
-from backend.agent_bridge.parsers.base import AgentEventType
+from agents_hub.agent_bridge.parsers.codex import CodexParser
+from agents_hub.agent_bridge.parsers.base import AgentEventType
 
 
 class TestCodexParser:

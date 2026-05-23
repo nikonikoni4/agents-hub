@@ -2,9 +2,9 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from backend.agent_bridge.bridge import AgentBridge
-from backend.agent_bridge.config import RoleConfig, AgentPlatform
-from backend.agent_bridge.parsers.base import AgentEventType
+from agents_hub.agent_bridge.bridge import AgentBridge
+from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform
+from agents_hub.agent_bridge.parsers.base import AgentEventType
 
 
 class TestAgentBridge:
