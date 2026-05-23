@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 from typing import AsyncIterator, Optional
-from agents_hub.agent_bridge.config import RoleConfig
+from agents_hub.agent_bridge.config import RoleConfig, CODEX_COMMAND
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +61,21 @@ class CodexExecutor:
         session_id: Optional[str]
     ) -> list:
         """构建 Codex CLI 命令"""
-        cmd = [
-            "codex",
-            "exec",
-            "--json",
-        ]
-
-        # 添加 session_id（恢复会话）
         if session_id:
-            cmd.extend(["--session-id", session_id])
+            # 恢复已有会话
+            cmd = [
+                CODEX_COMMAND,
+                "exec",
+                "resume",
+                "--json",
+                session_id,
+            ]
+        else:
+            cmd = [
+                CODEX_COMMAND,
+                "exec",
+                "--json",
+            ]
 
         cmd.append(prompt)
         return cmd

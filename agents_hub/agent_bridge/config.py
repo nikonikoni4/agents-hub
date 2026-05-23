@@ -1,8 +1,13 @@
 """配置数据类和平台枚举"""
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, List
 from enum import Enum
+
+# CLI 命令路径
+CODEX_COMMAND = str(Path.home() / "AppData" / "Roaming" / "npm" / "codex.cmd")
+CLAUDE_COMMAND = str(Path.home() / ".local" / "bin" / "claude")
 
 
 class AgentPlatform(Enum):

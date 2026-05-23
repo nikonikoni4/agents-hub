@@ -8,11 +8,15 @@ from agents_hub.agent_bridge.parsers.base import AgentEvent, AgentEventType
 class CodexParser:
     """解析 Codex CLI 的流式输出"""
 
+    def __init__(self):
+        self._thread_id: str = ""
+
     def parse_event(self, raw_line: str) -> Optional[AgentEvent]:
         """
         解析单行 JSON 事件
 
         Codex 流式输出事件类型：
+        - thread.started -> 记录 thread_id（会话标识）
         - item.completed (agent_message) -> text_delta
         - item.completed (command_execution) -> tool_use
         - turn.completed -> turn_complete
@@ -23,6 +27,11 @@ class CodexParser:
             return None
 
         event_type = event.get("type")
+
+        # 线程开始事件：记录 thread_id
+        if event_type == "thread.started":
+            self._thread_id = event.get("thread_id", "")
+            return None
 
         # 项目完成事件
         if event_type == "item.completed":
@@ -39,8 +48,8 @@ class CodexParser:
         item = event.get("item", {})
         item_type = item.get("type")
 
-        # Codex CLI 的 JSON 输出使用 thread_id 作为会话标识
-        session_id = event.get("thread_id", "")
+        # 优先使用事件自带的 thread_id，否则用缓存的
+        session_id = event.get("thread_id", "") or self._thread_id
 
         # Agent 消息
         if item_type == "agent_message":

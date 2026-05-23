@@ -2,7 +2,7 @@
 
 import pytest
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
-from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform
+from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform, CLAUDE_COMMAND
 
 
 class TestClaudeExecutor:
@@ -20,7 +20,7 @@ class TestClaudeExecutor:
         )
         cmd = self.executor._build_command("审查代码", config, None)
 
-        assert "claude" in cmd
+        assert CLAUDE_COMMAND in cmd
         assert "--print" in cmd
         assert "--output-format" in cmd
         assert "stream-json" in cmd
@@ -118,7 +118,7 @@ class TestClaudeExecutor:
         cmd = self.executor._build_command("审查 PR", config, "session-abc")
 
         # 基本参数
-        assert "claude" in cmd
+        assert CLAUDE_COMMAND in cmd
         assert "--print" in cmd
         assert "--verbose" in cmd
         assert "--output-format" in cmd

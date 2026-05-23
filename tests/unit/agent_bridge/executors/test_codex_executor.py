@@ -3,7 +3,7 @@
 import os
 import pytest
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
-from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform
+from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform, CODEX_COMMAND
 
 
 class TestCodexExecutor:
@@ -22,13 +22,13 @@ class TestCodexExecutor:
         )
         cmd = self.executor._build_command("审查代码", config, None)
 
-        assert "codex" in cmd
+        assert CODEX_COMMAND in cmd
         assert "exec" in cmd
         assert "--json" in cmd
         assert "审查代码" in cmd
 
     def test_build_command_with_session_id(self):
-        """测试构建带 session_id 的命令"""
+        """测试构建恢复会话的命令（使用 resume 子命令）"""
         config = RoleConfig(
             platform=AgentPlatform.CODEX,
             system_prompt="测试",
@@ -37,8 +37,9 @@ class TestCodexExecutor:
         )
         cmd = self.executor._build_command("测试", config, "session-123")
 
-        assert "--session-id" in cmd
+        assert "resume" in cmd
         assert "session-123" in cmd
+        assert "--json" in cmd
 
     def test_build_env(self):
         """测试构建环境变量"""

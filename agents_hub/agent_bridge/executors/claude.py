@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from typing import AsyncIterator, Optional
-from agents_hub.agent_bridge.config import RoleConfig
+from agents_hub.agent_bridge.config import RoleConfig, CLAUDE_COMMAND
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class ClaudeExecutor:
     ) -> list:
         """构建 Claude CLI 命令"""
         cmd = [
-            "claude",
+            CLAUDE_COMMAND,
             "--print",
             "--verbose",
             "--output-format", "stream-json",
