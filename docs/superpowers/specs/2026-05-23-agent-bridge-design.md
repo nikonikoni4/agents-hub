@@ -25,7 +25,7 @@ agent_bridge 是一个**纯执行层**模块，负责：
 | 需求项 | 说明 |
 |--------|------|
 | **配置管理** | 角色配置固定，作为参数传入 |
-| **输出模式** | 只采用流式输出 |
+| **输出模式** | 底层统一流式输出，上层提供流式/非流式两种接口 |
 | **错误处理** | 留白，之后实现 |
 
 ### 1.3 设计原则
@@ -127,8 +127,9 @@ class RoleConfig:
 ### 3.2 protocols.py - 接口协议
 
 ```python
-from typing import Protocol, AsyncIterator, Dict, Any
+from typing import Protocol, AsyncIterator, Optional
 from .config import RoleConfig
+from .parsers.base import AgentEvent
 
 class Executor(Protocol):
     """执行器协议：负责启动 CLI 并返回原始输出流"""
@@ -136,7 +137,8 @@ class Executor(Protocol):
     async def execute(
         self, 
         prompt: str, 
-        config: RoleConfig
+        config: RoleConfig,
+        session_id: Optional[str] = None
     ) -> AsyncIterator[str]:
         """
         启动 CLI 并返回原始输出流
@@ -144,6 +146,7 @@ class Executor(Protocol):
         Args:
             prompt: 用户输入
             config: 角色配置
+            session_id: 会话 ID（可选,用于恢复已有会话或指定新会话ID）
             
         Returns:
             AsyncIterator[str]: 原始 JSON 字符串流（每行一个事件）
@@ -153,7 +156,7 @@ class Executor(Protocol):
 class Parser(Protocol):
     """解析器协议：负责解析原始输出为统一格式"""
     
-    def parse_event(self, raw_line: str) -> Dict[str, Any]:
+    def parse_event(self, raw_line: str) -> Optional[AgentEvent]:
         """
         解析单行 JSON 事件
         
@@ -161,7 +164,7 @@ class Parser(Protocol):
             raw_line: 原始 JSON 字符串
             
         Returns:
-            Dict[str, Any]: 统一格式的事件
+            Optional[AgentEvent]: 统一格式的事件（如果无法解析则返回 None）
         """
         ...
 ```
@@ -170,7 +173,7 @@ class Parser(Protocol):
 - 使用 `Protocol` 定义接口契约（而非抽象类）
 - Executor 和 Parser 都是无状态的
 - `config` 在执行时传入，而非初始化时
-- 不使用 `session_id` 参数，会话管理由 CLI 工具内部处理（Claude 和 Codex 都会自动管理会话）
+- `session_id` 会话 ID（可选，用于恢复已有会话或指定新会话 ID）
 
 ---
 
@@ -190,25 +193,37 @@ class Parser(Protocol):
 
 **命令示例**：
 ```bash
-claude --print --bare --verbose --output-format stream-json \
+# 新建会话
+claude --print --verbose --output-format stream-json \
   --include-partial-messages \
   --append-system-prompt <system_prompt> \
   --plugin-dir <skills_path> \
+  <prompt>
+
+# 恢复会话
+claude --print --verbose --output-format stream-json \
+  --include-partial-messages \
+  --append-system-prompt <system_prompt> \
+  --plugin-dir <skills_path> \
+  --resume <session_id> \
   <prompt>
 ```
 
 **参数说明**：
 - `--print` - 非交互模式，直接输出结果
-- `--bare` - 最小模式，跳过 hooks、LSP、plugin sync 等
 - `--verbose` - 详细输出（与 stream-json 配合使用）
 - `--output-format stream-json` - 流式 JSON 输出
 - `--include-partial-messages` - 包含部分消息（逐字输出）
 - `--append-system-prompt` - 追加 system prompt
 - `--plugin-dir` - 加载指定目录的 plugin（用于 skill）
+- `--resume <session_id>` - 恢复之前的会话（可选）
+- `--resume <session_id>` - 继续已有会话
+- `--session-id <uuid>` - 创建新会话并指定 ID（已存在则报错，不可用于恢复会话）
 
-**注意**：
-- 不使用 `--session-id` 参数，会话管理由调用方通过其他方式实现
-- skill 通过 `--plugin-dir` 加载（需要根据 config.skills 构建路径）
+**会话管理**（已验证）：
+- 恢复已有会话 → 使用 `--resume <session_id>`
+- 新建会话并指定 ID → 使用 `--session-id <uuid>`（UUID 已存在则报错 `Session ID <uuid> is already in use`）
+- 新建会话（系统自动生成 UUID）→ 不传 session 相关参数
 
 #### CodexExecutor
 
@@ -225,18 +240,23 @@ claude --print --bare --verbose --output-format stream-json \
 
 **命令示例**：
 ```bash
+# 新建会话
 CODEX_HOME=<codex_home> codex exec --json <prompt>
+
+# 恢复会话
+CODEX_HOME=<codex_home> codex exec --json --session-id <session_id> <prompt>
 ```
 
 **参数说明**：
 - `CODEX_HOME` - 环境变量，指向角色配置目录
 - `exec` - 执行命令
 - `--json` - JSON 格式输出（流式）
+- `--session-id` - 恢复会话（可选）
 
-**注意**：
+**会话管理**：
+- 如果有 session_id，使用 `--session-id` 恢复会话
+- 如果没有 session_id，创建新会话
 - Codex 通过 `CODEX_HOME` 目录下的配置文件控制 skill、权限等
-- 不使用 `--session-id` 参数，会话管理由 Codex 内部处理
-- `config.codex_home` 应指向包含 `AGENTS.md`、`config.toml`、`skills/` 等文件的目录
 
 ---
 
@@ -244,22 +264,43 @@ CODEX_HOME=<codex_home> codex exec --json <prompt>
 
 #### 统一事件格式
 
-所有平台的事件都转换为以下统一格式：
+所有平台的事件都转换为以下统一格式（使用 TypedDict）：
 
 ```python
-{
-    "type": str,           # 事件类型
-    "data": dict,          # 具体数据
-    "session_id": str,     # 会话 ID
-    "timestamp": str       # 时间戳（可选）
-}
+from typing import TypedDict
+from enum import Enum
+
+class AgentEventType(Enum):
+    """事件类型枚举，避免字符串拼写错误"""
+    INIT = "init"               # 会话开始元数据
+    TEXT_DELTA = "text_delta"   # 文本增量（流式输出的主要内容）
+    TOOL_USE = "tool_use"       # 工具调用（命令执行）
+    TURN_COMPLETE = "turn_complete"  # 回合完成（包含 token 使用统计）
+    RESULT = "result"           # 完整结果（非流式输出）
+
+class AgentEvent(TypedDict):
+    type: AgentEventType    # 事件类型（使用枚举）
+    data: dict              # 具体数据
+    session_id: str         # 会话 ID
+    timestamp: str          # 时间戳（可选）
 ```
 
-**事件类型**：
-- `text_delta` - 文本增量
-- `tool_use` - 工具调用
-- `init` - 初始化
-- `turn_complete` - 回合完成
+**事件类型说明**：
+- `init` - 会话开始元数据
+  - `data`: `{"model": str, "tools": list, ...}`
+- `text_delta` - 文本增量（流式输出的主要内容）
+  - `data`: `{"text": str}`
+- `tool_use` - 工具调用（命令执行）
+  - `data`: `{"command": str, "output": str, "exit_code": int, ...}`
+- `turn_complete` - 回合完成（包含 token 使用统计）
+  - `data`: `{"usage": dict}`
+- `result` - 完整结果（非流式 `execute()` 返回，内部拼接所有 `text_delta`）
+  - `data`: `{"text": str, "usage": dict}`
+
+**说明**：
+- 返回的是**流式事件**，每个事件是解析后的对象
+- 用户可以通过 `async for` 逐个接收事件
+- 最终结果是所有 `text_delta` 事件的文本拼接
 
 #### ClaudeParser
 
@@ -309,28 +350,64 @@ class AgentBridge:
     async def execute_stream(
         self,
         prompt: str,
-        config: RoleConfig
-    ) -> AsyncIterator[Dict[str, Any]]:
+        config: RoleConfig,
+        session_id: Optional[str] = None
+    ) -> AsyncIterator[AgentEvent]:
         """
-        流式执行 Agent 调用
-        
+        流式执行 Agent 调用（给人看）
+
         Args:
             prompt: 用户输入
             config: 角色配置
-            
+            session_id: 会话 ID（可选，用于恢复之前的会话）
+
         Yields:
-            Dict[str, Any]: 统一格式的事件流
+            AgentEvent: 统一格式的事件流
         """
-        # 选择对应的 executor 和 parser
         executor = self._executors[config.platform]
         parser = self._parsers[config.platform]
-        
-        # 执行并解析
-        raw_stream = executor.execute(prompt, config)
+
+        raw_stream = executor.execute(prompt, config, session_id)
         async for raw_line in raw_stream:
-            if raw_line.strip():  # 跳过空行
+            if raw_line.strip():
                 parsed_event = parser.parse_event(raw_line)
-                yield parsed_event
+                if parsed_event is not None:
+                    yield parsed_event
+
+    async def execute(
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: Optional[str] = None
+    ) -> AgentEvent:
+        """
+        非流式执行，返回完整结果（给 A2A 用）
+
+        内部复用 execute_stream()，拼接所有 text_delta 后返回单个 RESULT 事件。
+
+        Args:
+            prompt: 用户输入
+            config: 角色配置
+            session_id: 会话 ID（可选）
+
+        Returns:
+            AgentEvent: type 为 AgentEventType.RESULT 的完整结果事件
+        """
+        full_text = []
+        usage = None
+
+        async for event in self.execute_stream(prompt, config, session_id):
+            if event["type"] == AgentEventType.TEXT_DELTA:
+                full_text.append(event["data"]["text"])
+            elif event["type"] == AgentEventType.TURN_COMPLETE:
+                usage = event["data"].get("usage")
+
+        return AgentEvent(
+            type=AgentEventType.RESULT,
+            data={"text": "".join(full_text), "usage": usage},
+            session_id=session_id or "",
+            timestamp=""
+        )
 ```
 
 **设计要点**：
@@ -345,7 +422,7 @@ class AgentBridge:
 ### 4.1 基本使用
 
 ```python
-from agent_bridge import AgentBridge, RoleConfig, AgentPlatform
+from agent_bridge import AgentBridge, RoleConfig, AgentPlatform, AgentEventType
 
 # 创建 bridge（可复用）
 bridge = AgentBridge()
@@ -357,16 +434,30 @@ config = RoleConfig(
     skills=["code-review", "security-check"]
 )
 
-# 流式调用
+# 流式调用 - 给人看（新建会话）
 async for event in bridge.execute_stream(
     prompt="审查这段代码",
     config=config
 ):
-    print(event)
-    # 输出示例：
-    # {"type": "text_delta", "data": {"text": "我会"}, "session_id": "session_123"}
-    # {"type": "text_delta", "data": {"text": "审查"}, "session_id": "session_123"}
-    # ...
+    if event["type"] == AgentEventType.TEXT_DELTA:
+        print(event["data"]["text"], end="", flush=True)
+
+# 流式调用 - 恢复会话
+async for event in bridge.execute_stream(
+    prompt="继续审查",
+    config=config,
+    session_id="session_123"
+):
+    handle_event(event)
+
+# 非流式调用 - 给 A2A 用（返回完整结果）
+result = await bridge.execute(
+    prompt="审查这段代码",
+    config=config
+)
+# result["type"] == AgentEventType.RESULT
+# result["data"]["text"] == "完整审查结果文本"
+print(result["data"]["text"])
 ```
 
 ### 4.2 多角色使用
@@ -389,12 +480,12 @@ developer_config = RoleConfig(
 # 同一个 bridge 可以服务多个角色
 bridge = AgentBridge()
 
-# 角色 1
+# 角色 1（新建会话）
 async for event in bridge.execute_stream("审查代码", reviewer_config):
     handle_event(event)
 
-# 角色 2
-async for event in bridge.execute_stream("优化组件", developer_config):
+# 角色 2（恢复会话）
+async for event in bridge.execute_stream("优化组件", developer_config, session_id="xxx"):
     handle_event(event)
 ```
 
@@ -570,7 +661,28 @@ async def test_bridge_integration():
 2. 一个实例可以服务多个角色，提高复用性
 3. 更符合"纯执行层"的定位
 
-### 8.3 为什么使用 Protocol 而非抽象类？
+### 8.3 为什么提供流式和非流式两种接口？
+
+**决策**：底层统一流式输出，上层提供 `execute_stream()`（流式）和 `execute()`（非流式）两种接口
+
+**理由**：
+1. Codex 的非流式输出格式不好解析，底层统一走流式更可靠
+2. 用户交互场景需要流式输出（实时显示）
+3. A2A 场景（主 Agent 调用 Sub Agent）只需要完整结果，流式反而增加复杂度
+4. `execute()` 是 `execute_stream()` 的包装，不重复实现解析逻辑
+5. 通过 `AgentEventType.RESULT` 区分非流式返回，格式统一
+
+### 8.4 为什么使用枚举定义事件类型？
+
+**决策**：使用 `AgentEventType(Enum)` 定义事件类型，而非裸字符串
+
+**理由**：
+1. 避免字符串拼写错误（`text_dleta` 静默失败）
+2. IDE 自动补全，开发体验好
+3. 类型检查工具可以静态发现错误
+4. 事件类型是固定集合，适合用枚举
+
+### 8.5 为什么使用 Protocol 而非抽象类？
 
 **决策**：使用 `Protocol` 定义接口，而非 `ABC` 抽象类
 
@@ -622,8 +734,9 @@ async def test_bridge_integration():
 
 1. **架构对比研究**：`docs/temp/研究报告/agent-bridge-architecture-comparison.md`
 2. **CLI 输出研究**：`docs/temp/研究报告/claude-codex-cli-output-analysis.md`
-3. **Claude CLI 配置研究**：`docs/temp/claude-cli-config-override-research.md`
-4. **Codex 配置策略**：`docs/design-decisions/2026-05-23-codex-system-prompt-strategy.md`
+3. **Claude CLI 配置研究**：`docs/temp/研究报告/claude-cli-config-override-research.md`
+4. **Claude CLI 最小命令集**：`docs/temp/研究报告/claude-cli-minimal-command-set.md`
+5. **Codex 配置策略**：`docs/design-decisions/2026-05-23-codex-system-prompt-strategy.md`
 
 ---
 
