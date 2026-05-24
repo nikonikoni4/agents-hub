@@ -1,0 +1,142 @@
+"""RoleManager 类 - 角色生命周期管理"""
+
+import json
+import shutil
+from pathlib import Path
+from typing import List, Optional
+
+from agents_hub.agent_bridge.config import AgentPlatform
+from agents_hub.agents.models import RoleInfo
+from agents_hub.agents.role import Role
+from agents_hub.agents.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
+
+
+class RoleManager:
+    """角色生命周期管理"""
+
+    def __init__(self, agents_dir: Path):
+        """
+        Args:
+            agents_dir: agents 目录路径 (local_data/agents)
+        """
+        self.agents_dir = agents_dir
+
+    def list_roles(self) -> List[RoleInfo]:
+        """扫描 local_data/agents/*/role.json，返回所有角色摘要列表"""
+        roles = []
+        if not self.agents_dir.exists():
+            return roles
+
+        for role_dir in self.agents_dir.iterdir():
+            if role_dir.is_dir():
+                role_json = role_dir / "role.json"
+                if role_json.exists():
+                    data = json.loads(role_json.read_text(encoding="utf-8"))
+                    roles.append(RoleInfo(
+                        name=data["name"],
+                        platform=AgentPlatform(data["platform"]),
+                        avatar=data.get("avatar"),
+                        abilities=data.get("abilities", []),
+                        type=data.get("type"),
+                        scope=data.get("scope"),
+                    ))
+        return roles
+
+    def get_role(self, name: str) -> Role:
+        """按名称加载单个角色，返回 Role 实例"""
+        role_dir = self.agents_dir / name
+        if not role_dir.exists():
+            raise RoleNotFoundError(f"Role '{name}' not found")
+
+        role_json = role_dir / "role.json"
+        if not role_json.exists():
+            raise RoleNotFoundError(f"Role '{name}' not found (missing role.json)")
+
+        return Role(role_dir)
+
+    def create_role(
+        self,
+        name: str,
+        platform: AgentPlatform,
+        avatar: Optional[str] = None,
+        abilities: Optional[List[str]] = None,
+        type: Optional[str] = None,
+        scope: Optional[List[str]] = None,
+    ) -> Role:
+        """创建新角色，初始化目录结构和 role.json"""
+        role_dir = self.agents_dir / name
+        if role_dir.exists():
+            raise RoleAlreadyExistsError(f"Role '{name}' already exists")
+
+        # 创建目录结构
+        role_dir.mkdir(parents=True)
+        avatar_dir = role_dir / "avatar"
+        avatar_dir.mkdir()
+        work_root = role_dir / "work_root"
+        work_root.mkdir()
+        (work_root / "skills").mkdir()
+
+        # 根据 platform 复制配置
+        if platform == AgentPlatform.CLAUDE:
+            self._init_claude_config(work_root)
+        else:
+            self._init_codex_config(work_root)
+
+        # 写入 role.json
+        role_json = {
+            "name": name,
+            "platform": platform.value,
+            "avatar": avatar,
+            "abilities": abilities or [],
+            "type": type,
+            "scope": scope,
+            "skills": [],
+        }
+        (role_dir / "role.json").write_text(
+            json.dumps(role_json, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+
+        return Role(role_dir)
+
+    def delete_role(self, name: str) -> None:
+        """删除角色及其目录"""
+        role_dir = self.agents_dir / name
+        if not role_dir.exists():
+            raise RoleNotFoundError(f"Role '{name}' not found")
+
+        shutil.rmtree(role_dir)
+
+    def _init_claude_config(self, work_root: Path) -> None:
+        """初始化 Claude 平台配置"""
+        home_claude = Path.home() / ".claude"
+        if not home_claude.exists():
+            raise PlatformConfigNotFoundError(f"Claude config directory not found: {home_claude}")
+
+        # 复制 settings.json
+        settings_src = home_claude / "settings.json"
+        if settings_src.exists():
+            shutil.copy2(settings_src, work_root / "settings.json")
+
+        # 创建空白 CLAUDE.md
+        (work_root / "CLAUDE.md").write_text("", encoding="utf-8")
+
+    def _init_codex_config(self, work_root: Path) -> None:
+        """初始化 Codex 平台配置"""
+        home_codex = Path.home() / ".codex"
+        if not home_codex.exists():
+            raise PlatformConfigNotFoundError(f"Codex config directory not found: {home_codex}")
+
+        # 复制配置文件
+        for file_name in ["auth.json", "config.toml"]:
+            src = home_codex / file_name
+            if src.exists():
+                shutil.copy2(src, work_root / file_name)
+
+        # 复制 rules 目录
+        rules_src = home_codex / "rules"
+        if rules_src.exists():
+            shutil.copytree(rules_src, work_root / "rules")
+
+        # 创建空白 AGENTS.md
+        (work_root / "AGENTS.md").write_text("", encoding="utf-8")

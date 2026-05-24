@@ -1,7 +1,7 @@
 """角色配置模块"""
 
 from agents_hub.agents.role import Role
-# from agents_hub.agents.role_manager import RoleManager  # Task 3
+from agents_hub.agents.role_manager import RoleManager
 from agents_hub.agents.models import RoleInfo, SkillInfo
 from agents_hub.agents.exceptions import (
     RoleNotFoundError,
@@ -11,7 +11,7 @@ from agents_hub.agents.exceptions import (
 
 __all__ = [
     "Role",
-    # "RoleManager",
+    "RoleManager",
     "RoleInfo",
     "SkillInfo",
     "RoleNotFoundError",
