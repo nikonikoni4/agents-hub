@@ -25,8 +25,6 @@ class TestAgentBridge:
         """测试流式调用使用正确的执行器"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[]
         )
 
         # Mock executor - execute() is an async generator
@@ -60,8 +58,6 @@ class TestAgentBridge:
         """测试非流式调用返回 RESULT 事件"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[]
         )
 
         # Mock execute_stream

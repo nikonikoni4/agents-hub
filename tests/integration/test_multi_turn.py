@@ -22,8 +22,6 @@ def bridge():
 def claude_config():
     return RoleConfig(
         platform=AgentPlatform.CLAUDE,
-        system_prompt="你是一个测试助手。请简洁回答问题。",
-        skills=[],
     )
 
 
@@ -31,8 +29,6 @@ def claude_config():
 def codex_config():
     return RoleConfig(
         platform=AgentPlatform.CODEX,
-        system_prompt="你是一个测试助手。请简洁回答问题。",
-        skills=[],
         codex_home="D:/desktop/软件开发/test-codex/role-xiaoli",
     )
 

@@ -16,8 +16,6 @@ class TestClaudeExecutor:
         """测试构建基本命令"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="你是代码审查专家",
-            skills=[]
         )
         cmd = self.executor._build_command("审查代码", config, None)
 
@@ -25,52 +23,40 @@ class TestClaudeExecutor:
         assert "--print" in cmd
         assert "--output-format" in cmd
         assert "stream-json" in cmd
-        assert "--append-system-prompt" in cmd
-        assert "你是代码审查专家" in cmd
         assert "审查代码" in cmd
+
+    def test_build_command_no_system_prompt_flag(self):
+        """测试命令不再包含 --append-system-prompt（由 CLI 从目录自动加载）"""
+        config = RoleConfig(
+            platform=AgentPlatform.CLAUDE,
+        )
+        cmd = self.executor._build_command("测试", config, None)
+
+        assert "--append-system-prompt" not in cmd
+
+    def test_build_command_no_plugin_dir_flag(self):
+        """测试命令不再包含 --plugin-dir（由 CLI 从目录自动加载）"""
+        config = RoleConfig(
+            platform=AgentPlatform.CLAUDE,
+        )
+        cmd = self.executor._build_command("测试", config, None)
+
+        assert "--plugin-dir" not in cmd
 
     def test_build_command_with_session_id(self):
         """测试构建带 session_id 的命令"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[]
         )
         cmd = self.executor._build_command("测试", config, "session-123")
 
         assert "--resume" in cmd
         assert "session-123" in cmd
 
-    def test_build_command_with_skills(self):
-        """测试构建带 skills 的命令"""
-        config = RoleConfig(
-            platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=["code-review", "security-check"]
-        )
-        cmd = self.executor._build_command("测试", config, None)
-
-        assert "--plugin-dir" in cmd
-        assert "code-review" in cmd
-        assert "security-check" in cmd
-
-    def test_build_command_no_skills(self):
-        """测试不带 skills 时 --plugin-dir 不出现"""
-        config = RoleConfig(
-            platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[]
-        )
-        cmd = self.executor._build_command("测试", config, None)
-
-        assert "--plugin-dir" not in cmd
-
     def test_build_command_no_session_id(self):
         """测试不带 session_id 时 --resume 不出现"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[]
         )
         cmd = self.executor._build_command("测试", config, None)
 
@@ -80,8 +66,6 @@ class TestClaudeExecutor:
         """测试命令包含 --verbose"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[]
         )
         cmd = self.executor._build_command("测试", config, None)
 
@@ -91,8 +75,6 @@ class TestClaudeExecutor:
         """测试命令包含 --include-partial-messages"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[]
         )
         cmd = self.executor._build_command("测试", config, None)
 
@@ -102,19 +84,15 @@ class TestClaudeExecutor:
         """测试 prompt 是命令的最后一个参数"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="系统提示",
-            skills=[]
         )
         cmd = self.executor._build_command("用户输入", config, None)
 
         assert cmd[-1] == "用户输入"
 
     def test_build_command_full_scenario(self):
-        """测试完整场景：带 skills、session_id、system_prompt"""
+        """测试完整场景：带 session_id"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="你是安全审查专家",
-            skills=["code-review", "security-check"]
         )
         cmd = self.executor._build_command("审查 PR", config, "session-abc")
 
@@ -126,14 +104,9 @@ class TestClaudeExecutor:
         assert "stream-json" in cmd
         assert "--include-partial-messages" in cmd
 
-        # system prompt
-        assert "--append-system-prompt" in cmd
-        assert "你是安全审查专家" in cmd
-
-        # skills
-        assert "--plugin-dir" in cmd
-        assert "code-review" in cmd
-        assert "security-check" in cmd
+        # 不应包含 system_prompt 和 skills 相关参数
+        assert "--append-system-prompt" not in cmd
+        assert "--plugin-dir" not in cmd
 
         # session_id
         assert "--resume" in cmd
@@ -146,8 +119,6 @@ class TestClaudeExecutor:
         """测试构建环境变量"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[],
             claude_config_dir="/path/to/claude-config"
         )
         env = self.executor._build_env(config)
@@ -159,8 +130,6 @@ class TestClaudeExecutor:
         """测试没有 claude_config_dir 时环境变量"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            system_prompt="测试",
-            skills=[]
         )
         env = self.executor._build_env(config)
 

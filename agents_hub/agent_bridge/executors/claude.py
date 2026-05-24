@@ -67,12 +67,7 @@ class ClaudeExecutor:
             "--verbose",
             "--output-format", "stream-json",
             "--include-partial-messages",
-            "--append-system-prompt", config.system_prompt,
         ]
-
-        # 添加 skills（plugin-dir）
-        for skill in config.skills:
-            cmd.extend(["--plugin-dir", skill])
 
         # 添加 session_id（恢复会话）
         if session_id:

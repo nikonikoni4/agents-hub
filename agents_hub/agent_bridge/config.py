@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 from enum import Enum
 
 # CLI 命令路径
@@ -18,10 +18,13 @@ class AgentPlatform(Enum):
 
 @dataclass
 class RoleConfig:
-    """角色配置"""
+    """角色配置
+
+    system_prompt 和 skills 由 CLI 从目录自动加载，不在此配置。
+    - Claude: 从 CLAUDE.md 自动加载 system_prompt
+    - Codex: 从 AGENTS.md 自动加载 system_prompt
+    """
     platform: AgentPlatform    # 平台类型
-    system_prompt: str         # system prompt 内容
-    skills: List[str]          # skill 列表
 
     # Codex 专用字段
     codex_home: Optional[str] = None  # CODEX_HOME 路径
