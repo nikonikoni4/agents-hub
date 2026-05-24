@@ -180,7 +180,7 @@ def test_create_role_invalid_name(role_manager):
         role_manager.create_role("test role", AgentPlatform.CLAUDE)
 
     # 以点开头
-    with pytest.raises(ValueError, match="cannot start with"):
+    with pytest.raises(ValueError, match="Invalid role name"):
         role_manager.create_role(".hidden", AgentPlatform.CLAUDE)
 
     # 以连字符开头

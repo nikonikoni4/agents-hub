@@ -1,4 +1,4 @@
-"""RoleManager 类 - 角色生命周期管理"""
+"""RoleManager 类 - 角色生命周期管理。"""
 
 import json
 import re
@@ -13,33 +13,55 @@ from agents_hub.agents.exceptions import RoleNotFoundError, RoleAlreadyExistsErr
 
 
 class RoleManager:
-    """角色生命周期管理"""
+    """角色生命周期管理。
 
-    def __init__(self, agents_dir: Path):
-        """
+    负责角色的创建、删除、查询和列表功能。
+    管理 local_data/agents/ 目录下的所有角色。
+
+    Attributes:
+        agents_dir: agents 目录的路径。
+    """
+
+    def __init__(self, agents_dir: Path) -> None:
+        """初始化 RoleManager 实例。
+
         Args:
-            agents_dir: agents 目录路径 (local_data/agents)
+            agents_dir: agents 目录路径 (local_data/agents)。
         """
         self.agents_dir = agents_dir
 
     def _validate_role_name(self, name: str) -> None:
-        """验证角色名称是否为合法的目录名
+        """验证角色名称是否为合法的目录名。
+
+        规则：
+        - 名称不能为空
+        - 名称不能以 '-' 开头
+        - 名称只能包含字母、数字、下划线和连字符
 
         Args:
-            name: 角色名称
+            name: 要验证的角色名称。
 
         Raises:
-            ValueError: 名称不合法
+            ValueError: 名称不合法时抛出。
         """
         if not name:
             raise ValueError("Role name cannot be empty")
-        if name.startswith('.') or name.startswith('-'):
-            raise ValueError(f"Role name cannot start with '.' or '-'")
+        if name.startswith('-'):
+            raise ValueError("Role name cannot start with '-'")
         if not re.match(r'^[a-zA-Z0-9_-]+$', name):
-            raise ValueError(f"Invalid role name: '{name}'. Only alphanumeric, underscore and hyphen allowed.")
+            raise ValueError(
+                f"Invalid role name: '{name}'. Only alphanumeric, underscore and hyphen allowed."
+            )
 
     def list_roles(self) -> List[RoleInfo]:
-        """扫描 local_data/agents/*/role.json，返回所有角色摘要列表"""
+        """列出所有角色。
+
+        扫描 agents 目录下的所有子目录，读取 role.json 文件。
+        损坏的 role.json 会被跳过。
+
+        Returns:
+            RoleInfo 列表，如果没有角色则返回空列表。
+        """
         roles = []
         if not self.agents_dir.exists():
             return roles
@@ -50,7 +72,6 @@ class RoleManager:
                 if role_json.exists():
                     try:
                         data = json.loads(role_json.read_text(encoding="utf-8"))
-                        # 将 type 字符串转换为 RoleType 枚举
                         type_str = data.get("type")
                         role_type = RoleType(type_str) if type_str else None
                         roles.append(RoleInfo(
@@ -61,13 +82,23 @@ class RoleManager:
                             type=role_type,
                             scope=data.get("scope"),
                         ))
-                    except (json.JSONDecodeError, KeyError) as e:
-                        # 跳过损坏的 role.json
+                    except (json.JSONDecodeError, KeyError):
                         continue
         return roles
 
     def get_role(self, name: str) -> Role:
-        """按名称加载单个角色，返回 Role 实例"""
+        """按名称获取角色实例。
+
+        Args:
+            name: 角色名称。
+
+        Returns:
+            Role 实例。
+
+        Raises:
+            ValueError: 名称不合法。
+            RoleNotFoundError: 角色不存在。
+        """
         self._validate_role_name(name)
 
         role_dir = self.agents_dir / name
@@ -89,15 +120,33 @@ class RoleManager:
         type: Optional[str] = None,
         scope: Optional[List[str]] = None,
     ) -> Role:
-        """创建新角色，初始化目录结构和 role.json"""
-        # 验证名称合法性
+        """创建新角色。
+
+        创建角色目录结构，复制平台配置，生成 role.json 文件。
+        如果创建过程中失败，会自动清理已创建的目录。
+
+        Args:
+            name: 角色名称，必须是合法的目录名。
+            platform: 目标平台类型（claude 或 codex）。
+            avatar: 头像文件的相对路径，默认为空。
+            abilities: 能力标签列表，默认为空列表。
+            type: 角色类型（leader 或 team_member），默认为空。
+            scope: 所属群聊列表，默认为空。
+
+        Returns:
+            新创建的 Role 实例。
+
+        Raises:
+            ValueError: 名称不合法。
+            RoleAlreadyExistsError: 角色已存在。
+            PlatformConfigNotFoundError: 平台配置目录不存在。
+        """
         self._validate_role_name(name)
 
         role_dir = self.agents_dir / name
         if role_dir.exists():
             raise RoleAlreadyExistsError(f"Role '{name}' already exists")
 
-        # 创建目录结构
         role_dir.mkdir(parents=True)
         avatar_dir = role_dir / "avatar"
         avatar_dir.mkdir()
@@ -106,17 +155,14 @@ class RoleManager:
         (work_root / "skills").mkdir()
 
         try:
-            # 根据 platform 复制配置
             if platform == AgentPlatform.CLAUDE:
                 self._init_claude_config(work_root)
             else:
                 self._init_codex_config(work_root)
         except Exception:
-            # 初始化失败时清理已创建的目录
             shutil.rmtree(role_dir, ignore_errors=True)
             raise
 
-        # 写入 role.json
         role_json = {
             "name": name,
             "platform": platform.value,
@@ -134,7 +180,15 @@ class RoleManager:
         return Role(role_dir)
 
     def delete_role(self, name: str) -> None:
-        """删除角色及其目录"""
+        """删除角色及其目录。
+
+        Args:
+            name: 角色名称。
+
+        Raises:
+            ValueError: 名称不合法。
+            RoleNotFoundError: 角色不存在。
+        """
         self._validate_role_name(name)
 
         role_dir = self.agents_dir / name
@@ -144,35 +198,53 @@ class RoleManager:
         shutil.rmtree(role_dir)
 
     def _init_claude_config(self, work_root: Path) -> None:
-        """初始化 Claude 平台配置"""
+        """初始化 Claude 平台配置。
+
+        从 ~/.claude 复制 settings.json，创建空白 CLAUDE.md。
+
+        Args:
+            work_root: 角色的 work_root 目录路径。
+
+        Raises:
+            PlatformConfigNotFoundError: ~/.claude 目录不存在。
+        """
         home_claude = Path.home() / ".claude"
         if not home_claude.exists():
-            raise PlatformConfigNotFoundError(f"Claude config directory not found: {home_claude}")
+            raise PlatformConfigNotFoundError(
+                f"Claude config directory not found: {home_claude}"
+            )
 
-        # 复制 settings.json
         settings_src = home_claude / "settings.json"
         if settings_src.exists():
             shutil.copy2(settings_src, work_root / "settings.json")
 
-        # 创建空白 CLAUDE.md
         (work_root / "CLAUDE.md").write_text("", encoding="utf-8")
 
     def _init_codex_config(self, work_root: Path) -> None:
-        """初始化 Codex 平台配置"""
+        """初始化 Codex 平台配置。
+
+        从 ~/.codex 复制 auth.json、config.toml 和 rules/ 目录，
+        创建空白 AGENTS.md。
+
+        Args:
+            work_root: 角色的 work_root 目录路径。
+
+        Raises:
+            PlatformConfigNotFoundError: ~/.codex 目录不存在。
+        """
         home_codex = Path.home() / ".codex"
         if not home_codex.exists():
-            raise PlatformConfigNotFoundError(f"Codex config directory not found: {home_codex}")
+            raise PlatformConfigNotFoundError(
+                f"Codex config directory not found: {home_codex}"
+            )
 
-        # 复制配置文件
         for file_name in ["auth.json", "config.toml"]:
             src = home_codex / file_name
             if src.exists():
                 shutil.copy2(src, work_root / file_name)
 
-        # 复制 rules 目录
         rules_src = home_codex / "rules"
         if rules_src.exists():
             shutil.copytree(rules_src, work_root / "rules")
 
-        # 创建空白 AGENTS.md
         (work_root / "AGENTS.md").write_text("", encoding="utf-8")
