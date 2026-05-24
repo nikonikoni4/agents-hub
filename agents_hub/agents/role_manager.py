@@ -1,6 +1,7 @@
 """RoleManager 类 - 角色生命周期管理"""
 
 import json
+import re
 import shutil
 from pathlib import Path
 from typing import List, Optional
@@ -20,6 +21,22 @@ class RoleManager:
             agents_dir: agents 目录路径 (local_data/agents)
         """
         self.agents_dir = agents_dir
+
+    def _validate_role_name(self, name: str) -> None:
+        """验证角色名称是否为合法的目录名
+
+        Args:
+            name: 角色名称
+
+        Raises:
+            ValueError: 名称不合法
+        """
+        if not name:
+            raise ValueError("Role name cannot be empty")
+        if name.startswith('.') or name.startswith('-'):
+            raise ValueError(f"Role name cannot start with '.' or '-'")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', name):
+            raise ValueError(f"Invalid role name: '{name}'. Only alphanumeric, underscore and hyphen allowed.")
 
     def list_roles(self) -> List[RoleInfo]:
         """扫描 local_data/agents/*/role.json，返回所有角色摘要列表"""
@@ -64,6 +81,9 @@ class RoleManager:
         scope: Optional[List[str]] = None,
     ) -> Role:
         """创建新角色，初始化目录结构和 role.json"""
+        # 验证名称合法性
+        self._validate_role_name(name)
+
         role_dir = self.agents_dir / name
         if role_dir.exists():
             raise RoleAlreadyExistsError(f"Role '{name}' already exists")

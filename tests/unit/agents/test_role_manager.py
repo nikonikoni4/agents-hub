@@ -163,3 +163,26 @@ def test_delete_role_not_found(role_manager):
     """测试删除不存在的角色"""
     with pytest.raises(RoleNotFoundError):
         role_manager.delete_role("nonexistent_role")
+
+
+def test_create_role_invalid_name(role_manager):
+    """测试创建角色时名称验证"""
+    # 空名称
+    with pytest.raises(ValueError, match="cannot be empty"):
+        role_manager.create_role("", AgentPlatform.CLAUDE)
+
+    # 包含特殊字符
+    with pytest.raises(ValueError, match="Invalid role name"):
+        role_manager.create_role("test/role", AgentPlatform.CLAUDE)
+
+    # 包含空格
+    with pytest.raises(ValueError, match="Invalid role name"):
+        role_manager.create_role("test role", AgentPlatform.CLAUDE)
+
+    # 以点开头
+    with pytest.raises(ValueError, match="cannot start with"):
+        role_manager.create_role(".hidden", AgentPlatform.CLAUDE)
+
+    # 以连字符开头
+    with pytest.raises(ValueError, match="cannot start with"):
+        role_manager.create_role("-test", AgentPlatform.CLAUDE)
