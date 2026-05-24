@@ -48,19 +48,25 @@ class RoleManager:
             if role_dir.is_dir():
                 role_json = role_dir / "role.json"
                 if role_json.exists():
-                    data = json.loads(role_json.read_text(encoding="utf-8"))
-                    roles.append(RoleInfo(
-                        name=data["name"],
-                        platform=AgentPlatform(data["platform"]),
-                        avatar=data.get("avatar"),
-                        abilities=data.get("abilities", []),
-                        type=data.get("type"),
-                        scope=data.get("scope"),
-                    ))
+                    try:
+                        data = json.loads(role_json.read_text(encoding="utf-8"))
+                        roles.append(RoleInfo(
+                            name=data["name"],
+                            platform=AgentPlatform(data["platform"]),
+                            avatar=data.get("avatar"),
+                            abilities=data.get("abilities", []),
+                            type=data.get("type"),
+                            scope=data.get("scope"),
+                        ))
+                    except (json.JSONDecodeError, KeyError) as e:
+                        # 跳过损坏的 role.json
+                        continue
         return roles
 
     def get_role(self, name: str) -> Role:
         """按名称加载单个角色，返回 Role 实例"""
+        self._validate_role_name(name)
+
         role_dir = self.agents_dir / name
         if not role_dir.exists():
             raise RoleNotFoundError(f"Role '{name}' not found")
@@ -96,11 +102,16 @@ class RoleManager:
         work_root.mkdir()
         (work_root / "skills").mkdir()
 
-        # 根据 platform 复制配置
-        if platform == AgentPlatform.CLAUDE:
-            self._init_claude_config(work_root)
-        else:
-            self._init_codex_config(work_root)
+        try:
+            # 根据 platform 复制配置
+            if platform == AgentPlatform.CLAUDE:
+                self._init_claude_config(work_root)
+            else:
+                self._init_codex_config(work_root)
+        except Exception:
+            # 初始化失败时清理已创建的目录
+            shutil.rmtree(role_dir, ignore_errors=True)
+            raise
 
         # 写入 role.json
         role_json = {
@@ -121,6 +132,8 @@ class RoleManager:
 
     def delete_role(self, name: str) -> None:
         """删除角色及其目录"""
+        self._validate_role_name(name)
+
         role_dir = self.agents_dir / name
         if not role_dir.exists():
             raise RoleNotFoundError(f"Role '{name}' not found")

@@ -186,3 +186,48 @@ def test_create_role_invalid_name(role_manager):
     # 以连字符开头
     with pytest.raises(ValueError, match="cannot start with"):
         role_manager.create_role("-test", AgentPlatform.CLAUDE)
+
+
+def test_list_roles_with_corrupted_json(role_manager, agents_dir):
+    """测试列出角色时遇到损坏的 role.json"""
+    # 创建一个有效的角色
+    valid_dir = agents_dir / "valid_role"
+    valid_dir.mkdir()
+    valid_json = {"name": "valid_role", "platform": "claude", "avatar": None, "abilities": []}
+    (valid_dir / "role.json").write_text(json.dumps(valid_json), encoding="utf-8")
+
+    # 创建一个损坏的角色
+    corrupted_dir = agents_dir / "corrupted_role"
+    corrupted_dir.mkdir()
+    (corrupted_dir / "role.json").write_text("invalid json", encoding="utf-8")
+
+    # 应该只返回有效的角色
+    roles = role_manager.list_roles()
+    assert len(roles) == 1
+    assert roles[0].name == "valid_role"
+
+
+def test_create_role_cleanup_on_failure(role_manager, agents_dir):
+    """测试创建角色失败时清理目录"""
+    mock_home = Path(tempfile.mkdtemp()) / "empty_home"
+    mock_home.mkdir()
+
+    with patch("agents_hub.agents.role_manager.Path.home", return_value=mock_home):
+        with pytest.raises(PlatformConfigNotFoundError):
+            role_manager.create_role("test_role", AgentPlatform.CLAUDE)
+
+    # 验证目录已被清理
+    role_dir = agents_dir / "test_role"
+    assert not role_dir.exists()
+
+
+def test_get_role_invalid_name(role_manager):
+    """测试获取角色时名称验证"""
+    with pytest.raises(ValueError, match="Invalid role name"):
+        role_manager.get_role("test/role")
+
+
+def test_delete_role_invalid_name(role_manager):
+    """测试删除角色时名称验证"""
+    with pytest.raises(ValueError, match="Invalid role name"):
+        role_manager.delete_role("test/role")
