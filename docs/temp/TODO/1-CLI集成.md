@@ -119,22 +119,8 @@ export default (async ({ client, project, directory, $ }) => {
 - 配置文件路径明确，不会污染用户项目资产
 - 修改配置后需要重启 opencode 才能生效
 
-### 4. Codex 多角色并发补充
-
-并发限制需要按 CODEX_HOME profile 粒度定义，而不是按 Codex 平台整体定义：
-
-- 多个 Codex 角色可以同时创建，也可以同时执行。
-- 前提是每个 Codex 角色使用独立的 CODEX_HOME profile，并且每个角色同一时间只运行一个 Codex 子进程。
-- Python 或后端进程通过 subprocess 的 env 参数给每个 Codex 子进程注入不同的 CODEX_HOME，这属于子进程级环境变量，不会修改系统全局环境，也不会在多个子进程之间互相覆盖。
-- 同一个 CODEX_HOME profile 不能被多个 Codex 实例同时使用，需要在 agents-hub 层做单实例锁。
-- 文件读写冲突属于多个 agent 同时操作同一工作区的问题，不是 CODEX_HOME profile 方案本身的否决因素，后续应在任务调度和工作区隔离中单独处理。
-
-因此，正确约束是：一个 Codex 角色对应一个独立 CODEX_HOME profile，且该 profile 单活；不同 Codex 角色之间可以并行。
-
 
 ### 5. 不同角色的权限设置
 
 有待讨论
-
-### 6. 
 

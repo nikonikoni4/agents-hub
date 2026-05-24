@@ -56,3 +56,6 @@
 2. codex / claude 的权限设置 allowed deny 等，支持多权限配置实现cc-switch类似功能？
 
 
+## MVP
+
+1. 

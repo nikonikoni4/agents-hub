@@ -8,6 +8,7 @@
 
 | 文档类型 | 路径 | 文档说明 |
 |---------|------|------|
+| **仓库术语** | `CONTEXT.md` | 该仓库领域术语表 |
 | **架构地图** | `docs/ARCHITECTURE.md` | 顶层导航,说明主要模块、层级和依赖关系 |
 | **PRD** | `docs/PRD.md` | 产品定位，功能需求 |
 | **启动文档** | `docs/RUN.md` | 如何启动系统,包括启动指令、端口、运行前提 |
@@ -33,7 +34,7 @@
 5. **如果你是minimax模型**：必须阅读`docs/coding-rules/other-model-rules`
 6. **修复bug时**: 可以阅读`docs\history-bugs\index.md`来获取历史bug解决方法
 7. **修改前段UI/UX时** ： 必须阅读`docs/DESIGN.md`
-
+8. 自主决策时，参考`docs\design-decisions\user-design-summary.md`, 了解用户的决策习惯
 </<docs-read-rules>>
 
 ## 核心规则
@@ -58,3 +59,4 @@
 - **SRP**（Single Responsibility Principle）：单一职责，一个模块只做一件事
 - **DDD**（Domain-Driven Design）：领域驱动设计，以业务领域为核心构建软件
 - 不能修改全局系统变量
+- 不能执行任何破坏性命令行
