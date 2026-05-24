@@ -49,6 +49,22 @@ def test_get_info(claude_role):
     assert info.scope is None
 
 
+def test_update_name(claude_role):
+    """测试更新角色名称"""
+    claude_role.update_name("new_role_name")
+
+    # 验证 role.json 已更新
+    role_json = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
+    assert role_json["name"] == "new_role_name"
+
+    # 验证目录已重命名
+    assert claude_role.role_dir.name == "new_role_name"
+
+    # 验证后续操作仍然正常
+    info = claude_role.get_info()
+    assert info.name == "new_role_name"
+
+
 def test_update_abilities(claude_role):
     """测试更新能力标签"""
     claude_role.update_abilities(["coding", "testing", "documentation"])

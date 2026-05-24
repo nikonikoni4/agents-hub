@@ -23,8 +23,16 @@ class Role:
             role_dir: 角色目录路径 (local_data/agents/<role_name>)
         """
         self.role_dir = role_dir
-        self._role_json_path = role_dir / "role.json"
-        self._work_root = role_dir / "work_root"
+
+    @property
+    def _role_json_path(self) -> Path:
+        """动态计算 role.json 路径"""
+        return self.role_dir / "role.json"
+
+    @property
+    def _work_root(self) -> Path:
+        """动态计算 work_root 路径"""
+        return self.role_dir / "work_root"
 
     def _read_role_json(self) -> Dict[str, Any]:
         """读取 role.json"""
