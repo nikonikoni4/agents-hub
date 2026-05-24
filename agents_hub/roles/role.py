@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 from agents_hub.agent_bridge.config import AgentPlatform, RoleConfig
-from agents_hub.agents.models import RoleInfo, SkillInfo, RoleType
-from agents_hub.agents.exceptions import SkillNotFoundError, SkillAlreadyExistsError
+from agents_hub.roles.models import RoleInfo, SkillInfo, RoleType
+from agents_hub.roles.exceptions import SkillNotFoundError, SkillAlreadyExistsError
 
 
 class Role:
@@ -107,25 +107,16 @@ class Role:
         self.role_dir.rename(new_dir)
         self.role_dir = new_dir
 
-    def update_avatar(self, avatar_path: str) -> None:
-        """更新角色头像。
+    def update_avatar(self, avatar_filename: str) -> None:
+        """更新角色头像文件名引用。
 
-        如果已有头像，会将旧头像移入 history 目录。
+        只更新 role.json 中的 avatar 字段，头像文件统一存放在 assets/ 目录。
 
         Args:
-            avatar_path: 新头像的相对路径。
+            avatar_filename: 头像文件名（位于 assets/ 目录下）。
         """
         data = self._read_role_json()
-
-        if data.get("avatar"):
-            avatar_dir = self.role_dir / "avatar"
-            history_files = list(avatar_dir.glob("history_*.png"))
-            next_num = len(history_files) + 1
-            old_avatar = avatar_dir / data["avatar"]
-            if old_avatar.exists():
-                old_avatar.rename(avatar_dir / f"history_{next_num:02d}.png")
-
-        data["avatar"] = avatar_path
+        data["avatar"] = avatar_filename
         self._write_role_json(data)
 
     def update_abilities(self, abilities: List[str]) -> None:

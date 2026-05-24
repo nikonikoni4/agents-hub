@@ -222,3 +222,4 @@ settings1.json
 settings2.json
 .claude
 local_data
+.pytest_tmp

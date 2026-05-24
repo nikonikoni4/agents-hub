@@ -3,9 +3,9 @@
 import json
 import pytest
 from pathlib import Path
-from agents_hub.agents.role import Role
-from agents_hub.agents.models import RoleInfo, SkillInfo, RoleType
-from agents_hub.agents.exceptions import SkillNotFoundError, SkillAlreadyExistsError
+from agents_hub.roles.role import Role
+from agents_hub.roles.models import RoleInfo, SkillInfo, RoleType
+from agents_hub.roles.exceptions import SkillNotFoundError, SkillAlreadyExistsError
 from agents_hub.agent_bridge.config import AgentPlatform
 
 
@@ -77,11 +77,7 @@ def test_update_abilities(claude_role):
 
 
 def test_update_avatar(claude_role):
-    """测试更新头像"""
-    avatar_dir = claude_role.role_dir / "avatar"
-    avatar_dir.mkdir(exist_ok=True)
-    (avatar_dir / "test_avatar.png").write_bytes(b"fake image")
-
+    """测试更新头像文件名引用"""
     claude_role.update_avatar("test_avatar.png")
     info = claude_role.get_info()
     assert info.avatar == "test_avatar.png"

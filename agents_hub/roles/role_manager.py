@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import List, Optional
 
 from agents_hub.agent_bridge.config import AgentPlatform
-from agents_hub.agents.models import RoleInfo, RoleType
-from agents_hub.agents.role import Role
-from agents_hub.agents.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
+from agents_hub.roles.models import RoleInfo, RoleType
+from agents_hub.roles.role import Role
+from agents_hub.roles.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
 
 
 class RoleManager:
@@ -86,6 +86,24 @@ class RoleManager:
                         continue
         return roles
 
+    def list_avatars(self) -> List[str]:
+        """列出 assets/ 目录下所有可用头像文件名。
+
+        扫描 agents/assets/ 目录，返回所有图片文件的文件名列表。
+
+        Returns:
+            头像文件名列表，如果目录不存在或为空则返回空列表。
+        """
+        assets_dir = self.agents_dir / "assets"
+        if not assets_dir.exists():
+            return []
+
+        image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+        return [
+            f.name for f in assets_dir.iterdir()
+            if f.is_file() and f.suffix.lower() in image_extensions
+        ]
+
     def get_role(self, name: str) -> Role:
         """按名称获取角色实例。
 
@@ -122,7 +140,8 @@ class RoleManager:
     ) -> Role:
         """创建新角色。
 
-        创建角色目录结构，复制平台配置，生成 role.json 文件。
+        创建角色目录结构（work_root、skills），复制平台配置，生成 role.json 文件。
+        头像统一存放在 assets/ 目录，角色只存储文件名引用。
         如果创建过程中失败，会自动清理已创建的目录。
 
         Args:
@@ -148,8 +167,6 @@ class RoleManager:
             raise RoleAlreadyExistsError(f"Role '{name}' already exists")
 
         role_dir.mkdir(parents=True)
-        avatar_dir = role_dir / "avatar"
-        avatar_dir.mkdir()
         work_root = role_dir / "work_root"
         work_root.mkdir()
         (work_root / "skills").mkdir()

@@ -6,9 +6,9 @@ import pytest
 import shutil
 from pathlib import Path
 from unittest.mock import patch
-from agents_hub.agents.role_manager import RoleManager
-from agents_hub.agents.models import RoleInfo, RoleType
-from agents_hub.agents.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
+from agents_hub.roles.role_manager import RoleManager
+from agents_hub.roles.models import RoleInfo, RoleType
+from agents_hub.roles.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
 from agents_hub.agent_bridge.config import AgentPlatform
 
 
@@ -42,14 +42,13 @@ def test_create_claude_role(role_manager, agents_dir):
     mock_claude.mkdir()
     (mock_claude / "settings.json").write_text('{"permissions": {}}', encoding="utf-8")
 
-    with patch("agents_hub.agents.role_manager.Path.home", return_value=mock_home):
+    with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home):
         role = role_manager.create_role("test_claude", AgentPlatform.CLAUDE)
 
     # 验证目录结构
     role_dir = agents_dir / "test_claude"
     assert role_dir.exists()
     assert (role_dir / "role.json").exists()
-    assert (role_dir / "avatar").exists()
     assert (role_dir / "work_root").exists()
     assert (role_dir / "work_root" / "skills").exists()
     assert (role_dir / "work_root" / "CLAUDE.md").exists()
@@ -73,7 +72,7 @@ def test_create_codex_role(role_manager, agents_dir):
     (mock_codex / "config.toml").write_text('', encoding="utf-8")
     (mock_codex / "rules").mkdir()
 
-    with patch("agents_hub.agents.role_manager.Path.home", return_value=mock_home):
+    with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home):
         role = role_manager.create_role("test_codex", AgentPlatform.CODEX)
 
     # 验证目录结构
@@ -99,7 +98,7 @@ def test_create_role_platform_config_not_found(role_manager):
     mock_home = Path(tempfile.mkdtemp()) / "empty_home"
     mock_home.mkdir()
 
-    with patch("agents_hub.agents.role_manager.Path.home", return_value=mock_home):
+    with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home):
         with pytest.raises(PlatformConfigNotFoundError):
             role_manager.create_role("test_role", AgentPlatform.CLAUDE)
 
@@ -212,7 +211,7 @@ def test_create_role_cleanup_on_failure(role_manager, agents_dir):
     mock_home = Path(tempfile.mkdtemp()) / "empty_home"
     mock_home.mkdir()
 
-    with patch("agents_hub.agents.role_manager.Path.home", return_value=mock_home):
+    with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home):
         with pytest.raises(PlatformConfigNotFoundError):
             role_manager.create_role("test_role", AgentPlatform.CLAUDE)
 
@@ -231,3 +230,26 @@ def test_delete_role_invalid_name(role_manager):
     """测试删除角色时名称验证"""
     with pytest.raises(ValueError, match="Invalid role name"):
         role_manager.delete_role("test/role")
+
+
+def test_list_avatars_empty(role_manager):
+    """测试列出头像 - assets 目录不存在"""
+    avatars = role_manager.list_avatars()
+    assert avatars == []
+
+
+def test_list_avatars(role_manager, agents_dir):
+    """测试列出头像 - 正常情况"""
+    assets_dir = agents_dir / "assets"
+    assets_dir.mkdir()
+
+    # 创建图片文件
+    (assets_dir / "avatar_01.png").write_bytes(b"fake png")
+    (assets_dir / "avatar_02.jpg").write_bytes(b"fake jpg")
+    (assets_dir / "readme.txt").write_text("not an image")
+
+    avatars = role_manager.list_avatars()
+    assert len(avatars) == 2
+    assert "avatar_01.png" in avatars
+    assert "avatar_02.jpg" in avatars
+    assert "readme.txt" not in avatars

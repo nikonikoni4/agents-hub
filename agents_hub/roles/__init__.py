@@ -1,9 +1,9 @@
 """角色配置模块"""
 
-from agents_hub.agents.role import Role
-from agents_hub.agents.role_manager import RoleManager
-from agents_hub.agents.models import RoleInfo, SkillInfo, RoleType
-from agents_hub.agents.exceptions import (
+from agents_hub.roles.role import Role
+from agents_hub.roles.role_manager import RoleManager
+from agents_hub.roles.models import RoleInfo, SkillInfo, RoleType
+from agents_hub.roles.exceptions import (
     RoleNotFoundError,
     RoleAlreadyExistsError,
     PlatformConfigNotFoundError,
