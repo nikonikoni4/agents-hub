@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import patch
 from agents_hub.agents.role_manager import RoleManager
-from agents_hub.agents.models import RoleInfo
+from agents_hub.agents.models import RoleInfo, RoleType
 from agents_hub.agents.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
 from agents_hub.agent_bridge.config import AgentPlatform
 

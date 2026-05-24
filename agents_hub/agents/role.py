@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 from agents_hub.agent_bridge.config import AgentPlatform, RoleConfig
-from agents_hub.agents.models import RoleInfo, SkillInfo
+from agents_hub.agents.models import RoleInfo, SkillInfo, RoleType
 from agents_hub.agents.exceptions import SkillNotFoundError, SkillAlreadyExistsError
 
 
@@ -48,12 +48,15 @@ class Role:
     def get_info(self) -> RoleInfo:
         """返回角色摘要信息"""
         data = self._read_role_json()
+        # 将 type 字符串转换为 RoleType 枚举
+        type_str = data.get("type")
+        role_type = RoleType(type_str) if type_str else None
         return RoleInfo(
             name=data["name"],
             platform=AgentPlatform(data["platform"]),
             avatar=data.get("avatar"),
             abilities=data.get("abilities", []),
-            type=data.get("type"),
+            type=role_type,
             scope=data.get("scope"),
         )
 

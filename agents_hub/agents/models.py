@@ -1,8 +1,15 @@
 """角色配置模块的数据结构定义"""
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional, List
 from agents_hub.agent_bridge.config import AgentPlatform
+
+
+class RoleType(Enum):
+    """角色类型枚举"""
+    LEADER = "leader"
+    TEAM_MEMBER = "team_member"
 
 
 @dataclass
@@ -12,7 +19,7 @@ class RoleInfo:
     platform: AgentPlatform
     avatar: Optional[str]
     abilities: List[str]
-    type: Optional[str] = None  # "leader" | "team_member" | None
+    type: Optional[RoleType] = RoleType.TEAM_MEMBER  # 角色类型
     scope: Optional[List[str]] = None  # 所属群聊列表
 
 

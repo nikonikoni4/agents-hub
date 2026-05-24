@@ -4,7 +4,7 @@ import json
 import pytest
 from pathlib import Path
 from agents_hub.agents.role import Role
-from agents_hub.agents.models import RoleInfo, SkillInfo
+from agents_hub.agents.models import RoleInfo, SkillInfo, RoleType
 from agents_hub.agents.exceptions import SkillNotFoundError, SkillAlreadyExistsError
 from agents_hub.agent_bridge.config import AgentPlatform
 

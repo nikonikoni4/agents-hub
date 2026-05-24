@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from agents_hub.agent_bridge.config import AgentPlatform
-from agents_hub.agents.models import RoleInfo
+from agents_hub.agents.models import RoleInfo, RoleType
 from agents_hub.agents.role import Role
 from agents_hub.agents.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
 
@@ -50,12 +50,15 @@ class RoleManager:
                 if role_json.exists():
                     try:
                         data = json.loads(role_json.read_text(encoding="utf-8"))
+                        # 将 type 字符串转换为 RoleType 枚举
+                        type_str = data.get("type")
+                        role_type = RoleType(type_str) if type_str else None
                         roles.append(RoleInfo(
                             name=data["name"],
                             platform=AgentPlatform(data["platform"]),
                             avatar=data.get("avatar"),
                             abilities=data.get("abilities", []),
-                            type=data.get("type"),
+                            type=role_type,
                             scope=data.get("scope"),
                         ))
                     except (json.JSONDecodeError, KeyError) as e:
