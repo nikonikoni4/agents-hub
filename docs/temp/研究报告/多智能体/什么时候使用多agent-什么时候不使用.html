@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多 Agent 系统决策指南 · 可视化</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --ink: #1a1a2e;
+    --ink-secondary: #4a4a6a;
+    --ink-muted: #8888a8;
+    --surface: #fafaf8;
+    --surface-card: #ffffff;
+    --accent-rust: #c04a1a;
+    --accent-teal: #1a7a6a;
+    --accent-blue: #2a5a8a;
+    --accent-warm: #d4a853;
+    --border: #e8e8e4;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    --radius: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--surface);
+    color: var(--ink);
+    line-height: 1.7;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* === HERO === */
+  .hero {
+    padding: 80px 0 60px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-rust);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    font-family: 'EB Garamond', serif;
+    font-size: 42px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+
+  .hero .subtitle {
+    font-size: 17px;
+    color: var(--ink-secondary);
+    max-width: 640px;
+    margin: 0 auto;
+    font-weight: 300;
+  }
+
+  .hero .meta {
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--ink-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* === SECTION === */
+  section {
+    padding: 56px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  section:last-child { border-bottom: none; }
+
+  .section-num {
+    font-family: 'EB Garamond', serif;
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-family: 'EB Garamond', serif;
+    font-size: 30px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .section-lead {
+    font-size: 16px;
+    color: var(--ink-secondary);
+    max-width: 680px;
+    margin-bottom: 36px;
+    font-weight: 300;
+  }
+
+  /* === SINGLE VS MULTI COMPARISON === */
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin: 32px 0;
+  }
+
+  .comp-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+  }
+
+  .comp-card h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .comp-card h4::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .comp-single h4::before { background: var(--ink-muted); }
+  .comp-multi h4::before { background: var(--accent-teal); }
+
+  .comp-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .comp-card li {
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--ink-secondary);
+    border-bottom: 1px solid #f4f4f2;
+  }
+
+  .comp-card li:last-child { border-bottom: none; }
+
+  .comp-card li::before {
+    content: '—';
+    margin-right: 8px;
+    color: var(--ink-muted);
+  }
+
+  /* === COST BAR === */
+  .cost-bar-wrap {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin: 32px 0;
+    box-shadow: var(--shadow);
+  }
+
+  .cost-bar-wrap h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .cost-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .cost-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cost-label {
+    width: 140px;
+    font-size: 13px;
+    color: var(--ink-secondary);
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .cost-track {
+    flex: 1;
+    height: 24px;
+    background: #f4f4f2;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cost-fill {
+    height: 100%;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    color: white;
+    transition: width 0.8s ease;
+  }
+
+  .cost-fill.single { background: var(--ink-muted); }
+  .cost-fill.multi { background: var(--accent-rust); }
+
+  /* === THREE SCENARIOS === */
+  .scenarios {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 32px 0;
+  }
+
+  .scenario-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scenario-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+
+  .scenario-card:nth-child(1)::before { background: var(--accent-teal); }
+  .scenario-card:nth-child(2)::before { background: var(--accent-blue); }
+  .scenario-card:nth-child(3)::before { background: var(--accent-warm); }
+
+  .scenario-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .scenario-card:nth-child(1) .scenario-icon { background: #e6f5f2; color: var(--accent-teal); }
+  .scenario-card:nth-child(2) .scenario-icon { background: #e6eef5; color: var(--accent-blue); }
+  .scenario-card:nth-child(3) .scenario-icon { background: #f5f0e6; color: var(--accent-warm); }
+
+  .scenario-card h4 {
+    font-family: 'EB Garamond', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .scenario-card .en-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+
+  .scenario-card p {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    line-height: 1.65;
+  }
+
+  .scenario-card .when {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .scenario-card .when-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
+  }
+
+  .scenario-card .when ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .scenario-card .when li {
+    font-size: 13px;
+    color: var(--ink-secondary);
+    padding: 3px 0;
+    padding-left: 14px;
+    position: relative;
+  }
+
+  .scenario-card .when li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+
+  /* === DIAGRAM: CONTEXT POLLUTION === */
+  .diagram-box {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin: 32px 0;
+    box-shadow: var(--shadow);
+  }
+
+  .diagram-box h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .diagram-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+
+  .diagram-node {
+    padding: 12px 18px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    text-align: center;
+    min-width: 120px;
+  }
+
+  .diagram-arrow {
+    font-size: 18px;
+    color: var(--ink-muted);
+    padding: 0 8px;
+  }
+
+  .diagram-node.agent {
+    background: #e6eef5;
+    border: 1px solid #c0d4e8;
+    color: var(--accent-blue);
+    font-weight: 500;
+  }
+
+  .diagram-node.context {
+    background: #fef3ec;
+    border: 1px solid #f0d4b8;
+    color: var(--accent-rust);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .diagram-node.clean {
+    background: #e6f5f2;
+    border: 1px solid #b8e0d4;
+    color: var(--accent-teal);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* === DECISION TREE === */
+  .decision-tree {
+    margin: 32px 0;
+  }
+
+  .dt-node {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+
+  .dt-node.dt-question {
+    border-left: 3px solid var(--accent-blue);
+  }
+
+  .dt-node.dt-yes {
+    border-left: 3px solid var(--accent-teal);
+    margin-left: 32px;
+  }
+
+  .dt-node.dt-no {
+    border-left: 3px solid var(--accent-rust);
+    margin-left: 32px;
+  }
+
+  .dt-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .dt-question .dt-label { color: var(--accent-blue); }
+  .dt-yes .dt-label { color: var(--accent-teal); }
+  .dt-no .dt-label { color: var(--accent-rust); }
+
+  .dt-text {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  .dt-branch {
+    display: flex;
+    gap: 12px;
+    margin-left: 32px;
+    margin-bottom: 12px;
+  }
+
+  .dt-branch-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+
+  .dt-branch-tag.yes {
+    background: #e6f5f2;
+    color: var(--accent-teal);
+  }
+
+  .dt-branch-tag.no {
+    background: #fef3ec;
+    color: var(--accent-rust);
+  }
+
+  /* === SIGNALS TABLE === */
+  .signals-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 32px 0;
+    font-size: 14px;
+  }
+
+  .signals-table th {
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--ink);
+    font-weight: 500;
+  }
+
+  .signals-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink-secondary);
+    vertical-align: top;
+  }
+
+  .signals-table tr:last-child td { border-bottom: none; }
+
+  .signals-table .signal-name {
+    font-weight: 500;
+    color: var(--ink);
+    font-size: 14px;
+  }
+
+  /* === DECOMPOSITION === */
+  .decomp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin: 32px 0;
+  }
+
+  .decomp-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+  }
+
+  .decomp-card h4 {
+    font-family: 'EB Garamond', serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .decomp-card .decomp-subtitle {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 16px;
+    font-style: italic;
+  }
+
+  .decomp-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .decomp-card li {
+    padding: 6px 0;
+    font-size: 13px;
+    color: var(--ink-secondary);
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .decomp-card li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 13px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .decomp-good li::before { background: var(--accent-teal); }
+  .decomp-bad li::before { background: var(--accent-rust); }
+
+  /* === VERIFICATION PATTERN === */
+  .verify-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    margin: 32px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .verify-step {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    flex: 1;
+    min-width: 160px;
+    max-width: 220px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+
+  .verify-step .step-num {
+    font-family: 'EB Garamond', serif;
+    font-size: 24px;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
+  }
+
+  .verify-step h5 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .verify-step p {
+    font-size: 12px;
+    color: var(--ink-secondary);
+    line-height: 1.5;
+  }
+
+  .verify-arrow {
+    display: flex;
+    align-items: center;
+    font-size: 20px;
+    color: var(--ink-muted);
+  }
+
+  /* === CHECKLIST === */
+  .checklist {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin: 32px 0;
+    box-shadow: var(--shadow);
+  }
+
+  .checklist h4 {
+    font-family: 'EB Garamond', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .check-item {
+    display: flex;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f4f4f2;
+    align-items: flex-start;
+  }
+
+  .check-item:last-child { border-bottom: none; }
+
+  .check-box {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--accent-teal);
+  }
+
+  .check-text {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  .check-text strong {
+    font-weight: 600;
+  }
+
+  /* === ADVICE === */
+  .advice {
+    text-align: center;
+    padding: 48px 0;
+  }
+
+  .advice blockquote {
+    font-family: 'EB Garamond', serif;
+    font-size: 24px;
+    font-style: italic;
+    color: var(--ink);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .advice .attr {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--ink-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* === FOOTER === */
+  .footer {
+    text-align: center;
+    padding: 32px 0;
+    font-size: 12px;
+    color: var(--ink-muted);
+    border-top: 1px solid var(--border);
+  }
+
+  .footer a {
+    color: var(--accent-blue);
+    text-decoration: none;
+  }
+
+  /* === TOC === */
+  .toc {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+
+  .toc a {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--ink-muted);
+    text-decoration: none;
+    padding: 4px 0;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .toc a:hover {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 28px; }
+    .comparison, .decomp-grid { grid-template-columns: 1fr; }
+    .scenarios { grid-template-columns: 1fr; }
+    .verify-flow { flex-direction: column; align-items: center; }
+    .verify-arrow { transform: rotate(90deg); }
+    .container { padding: 0 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="container">
+    <div class="hero-label">Anthropic · Agents</div>
+    <h1>何时使用多 Agent 系统</h1>
+    <p class="subtitle">单 Agent 处理大多数工作流已足够，但多 Agent 架构能在特定场景释放额外价值。关键在于识别这些场景。</p>
+    <div class="meta">2026.01.23 · Cara Phillips</div>
+  </div>
+</header>
+
+<!-- TOC -->
+<nav class="container">
+  <div class="toc">
+    <a href="#single">单 Agent 优先</a>
+    <a href="#scenarios">三大场景</a>
+    <a href="#signals">越界信号</a>
+    <a href="#decomposition">上下文分解</a>
+    <a href="#verification">验证模式</a>
+    <a href="#checklist">决策清单</a>
+  </div>
+</nav>
+
+<!-- SECTION 1: WHY START SINGLE -->
+<section id="single">
+  <div class="container">
+    <div class="section-num">01</div>
+    <h2 class="section-title">为什么从单 Agent 开始</h2>
+    <p class="section-lead">每个额外的 Agent 都是一个潜在故障点、一组需要维护的 Prompt、一个意外行为的来源。</p>
+
+    <div class="comparison">
+      <div class="comp-card comp-single">
+        <h4>单 Agent</h4>
+        <ul>
+          <li>一个上下文，无交接损耗</li>
+          <li>Prompt 维护成本低</li>
+          <li>Token 消耗可控</li>
+          <li>调试简单，因果链清晰</li>
+        </ul>
+      </div>
+      <div class="comp-card comp-multi">
+        <h4>多 Agent</h4>
+        <ul>
+          <li>每次交接都丢失上下文</li>
+          <li>多套 Prompt 需同步维护</li>
+          <li>协调消息消耗额外 Token</li>
+          <li>调试困难，因果链分散</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cost-bar-wrap">
+      <h4>同等任务的 Token 消耗对比</h4>
+      <div class="cost-bars">
+        <div class="cost-row">
+          <div class="cost-label">单 Agent</div>
+          <div class="cost-track">
+            <div class="cost-fill single" style="width: 15%;">1×</div>
+          </div>
+        </div>
+        <div class="cost-row">
+          <div class="cost-label">多 Agent</div>
+          <div class="cost-track">
+            <div class="cost-fill multi" style="width: 60%;">3–10×</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2: THREE SCENARIOS -->
+<section id="scenarios">
+  <div class="container">
+    <div class="section-num">02</div>
+    <h2 class="section-title">多 Agent 擅长的三种场景</h2>
+    <p class="section-lead">多 Agent 架构应保留给那些能提供明确收益、足以证明额外成本合理的场景。</p>
+
+    <div class="scenarios">
+      <!-- Context Protection -->
+      <div class="scenario-card">
+        <div class="scenario-icon">①</div>
+        <h4>上下文保护</h4>
+        <div class="en-name">Context Protection</div>
+        <p>当子任务产生大量上下文但大部分与主任务无关时，子 Agent 提供隔离，每个 Agent 在自己干净的上下文中工作。</p>
+        <div class="when">
+          <div class="when-label">适用条件</div>
+          <ul>
+            <li>子任务产生 >1000 Token 上下文</li>
+            <li>大部分信息与主任务无关</li>
+            <li>查找/检索操作需要过滤</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Parallelization -->
+      <div class="scenario-card">
+        <div class="scenario-icon">②</div>
+        <h4>并行化</h4>
+        <div class="en-name">Parallelization</div>
+        <p>多个 Agent 并行运行，探索比单 Agent 更大的搜索空间。核心收益是覆盖广度，而非速度。</p>
+        <div class="when">
+          <div class="when-label">适用条件</div>
+          <ul>
+            <li>任务可分解为独立研究路径</li>
+            <li>需要搜索大量信息空间</li>
+            <li>子任务之间无需共享上下文</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Specialization -->
+      <div class="scenario-card">
+        <div class="scenario-icon">③</div>
+        <h4>专业化</h4>
+        <div class="en-name">Specialization</div>
+        <p>不同任务受益于不同的工具集、系统提示或领域专业知识。聚焦的 Agent 比全能 Generalist 更可靠。</p>
+        <div class="when">
+          <div class="when-label">三种专业化</div>
+          <ul>
+            <li>工具集：20+ 工具时拆分</li>
+            <li>系统提示：行为模式冲突时拆分</li>
+            <li>领域知识：深度上下文需隔离</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context Pollution Diagram -->
+    <div class="diagram-box">
+      <h4>上下文污染示意：客服场景</h4>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 16px;">
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent-rust); margin-bottom: 12px; letter-spacing: 0.1em;">单 Agent · 上下文被污染</div>
+          <div class="diagram-flow" style="flex-direction: column; align-items: stretch;">
+            <div class="diagram-node agent">用户报障</div>
+            <div class="diagram-arrow" style="text-align: center;">↓</div>
+            <div class="diagram-node context">查询订单 → +2000 Token 订单历史</div>
+            <div class="diagram-arrow" style="text-align: center;">↓</div>
+            <div class="diagram-node context">诊断技术问题 ← 注意力被稀释</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent-teal); margin-bottom: 12px; letter-spacing: 0.1em;">多 Agent · 上下文隔离</div>
+          <div class="diagram-flow" style="flex-direction: column; align-items: stretch;">
+            <div class="diagram-node agent">主 Agent · 收到报障</div>
+            <div class="diagram-arrow" style="text-align: center;">↓ 派发</div>
+            <div class="diagram-node clean">子 Agent · 查询订单 → 返回 50 Token 摘要</div>
+            <div class="diagram-arrow" style="text-align: center;">↓ 注入摘要</div>
+            <div class="diagram-node clean">主 Agent · 上下文干净，专注诊断</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 3: SIGNALS -->
+<section id="signals">
+  <div class="container">
+    <div class="section-num">03</div>
+    <h2 class="section-title">何时超越单 Agent 架构</h2>
+    <p class="section-lead">以下具体信号表明单 Agent 模式已不够用。但这些阈值会随模型改进而变化。</p>
+
+    <table class="signals-table">
+      <thead>
+        <tr>
+          <th style="width: 200px;">信号</th>
+          <th>描述</th>
+          <th style="width: 240px;">单 Agent 替代方案</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="signal-name">接近上下文上限</td>
+          <td>Agent 常规使用大量上下文且性能下降，上下文压力可能是瓶颈</td>
+          <td>上下文压缩（Compaction）可延长单 Agent 有效记忆</td>
+        </tr>
+        <tr>
+          <td class="signal-name">工具过多</td>
+          <td>Agent 有 15–20+ 工具，模型花大量注意力理解选项</td>
+          <td>Tool Search Tool 动态发现工具，减少 85% Token</td>
+        </tr>
+        <tr>
+          <td class="signal-name">可并行的子任务</td>
+          <td>任务自然分解为独立部分（多源研究、多组件测试）</td>
+          <td>单 Agent 串行处理，但简单任务仍更快</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION 4: DECOMPOSITION -->
+<section id="decomposition">
+  <div class="container">
+    <div class="section-num">04</div>
+    <h2 class="section-title">以上下文为中心的分解</h2>
+    <p class="section-lead">最关键的架构决策：如何划分 Agent 之间的工作。按上下文边界分解，而非按工作类型。</p>
+
+    <div class="decomp-grid">
+      <div class="decomp-card decomp-good">
+        <h4>有效的分解边界</h4>
+        <div class="decomp-subtitle">上下文可以真正隔离</div>
+        <ul>
+          <li>独立研究路径（亚洲市场 vs 欧洲市场）</li>
+          <li>有清晰接口的独立组件（前后端）</li>
+          <li>黑盒验证（只需运行测试并报告）</li>
+        </ul>
+      </div>
+      <div class="decomp-card decomp-bad">
+        <h4>有问题的分解边界</h4>
+        <div class="decomp-subtitle">上下文大量重叠</div>
+        <ul>
+          <li>同一工作的顺序阶段（规划→实现→测试）</li>
+          <li>紧密耦合的组件（需频繁来回沟通）</li>
+          <li>需要共享状态的工作（需频繁同步理解）</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Problem-centric vs Context-centric -->
+    <div class="diagram-box">
+      <h4>两种分解方式对比</h4>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 16px;">
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent-rust); margin-bottom: 12px; letter-spacing: 0.1em;">按工作类型分解（常适得其反）</div>
+          <div style="font-size: 13px; color: var(--ink-secondary); line-height: 1.8;">
+            Agent A 写功能 → 交接 → Agent B 写测试 → 交接 → Agent C 审查代码<br>
+            <span style="color: var(--accent-rust);">每次交接丢失上下文，协调 Token > 执行 Token</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent-teal); margin-bottom: 12px; letter-spacing: 0.1em;">按上下文边界分解（通常有效）</div>
+          <div style="font-size: 13px; color: var(--ink-secondary); line-height: 1.8;">
+            Agent A：功能 + 它的测试（已拥有上下文）<br>
+            Agent B：独立模块 + 它的测试<br>
+            <span style="color: var(--accent-teal);">仅在上下文可真正隔离时才拆分</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 5: VERIFICATION -->
+<section id="verification">
+  <div class="container">
+    <div class="section-num">05</div>
+    <h2 class="section-title">验证子 Agent 模式</h2>
+    <p class="section-lead">跨领域始终表现良好的一种模式。验证天然需要最少的上下文传递——验证者是黑盒测试。</p>
+
+    <div class="verify-flow">
+      <div class="verify-step">
+        <div class="step-num">1</div>
+        <h5>主 Agent 完成工作</h5>
+        <p>实现功能、生成内容、执行任务</p>
+      </div>
+      <div class="verify-arrow">→</div>
+      <div class="verify-step">
+        <div class="step-num">2</div>
+        <h5>派发验证子 Agent</h5>
+        <p>传递产出物 + 成功标准 + 验证工具</p>
+      </div>
+      <div class="verify-arrow">→</div>
+      <div class="verify-step">
+        <div class="step-num">3</div>
+        <h5>黑盒验证</h5>
+        <p>不需要理解构建过程，只判断是否达标</p>
+      </div>
+      <div class="verify-arrow">→</div>
+      <div class="verify-step">
+        <div class="step-num">4</div>
+        <h5>通过 / 重试</h5>
+        <p>通过则继续；失败则将问题注入下次尝试</p>
+      </div>
+    </div>
+
+    <div class="diagram-box" style="margin-top: 24px;">
+      <h4>「早胜问题」与缓解策略</h4>
+      <p style="font-size: 14px; color: var(--ink-secondary); margin-bottom: 16px;">验证者跑了一两个测试就宣布成功——最常见的失败模式。</p>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+        <div style="font-size: 13px; color: var(--ink-secondary); padding: 10px 14px; background: #f8f8f6; border-radius: 4px;">
+          <strong style="color: var(--ink);">具体标准</strong><br>
+          「运行完整测试套件并报告所有失败」而非「确保它能用」
+        </div>
+        <div style="font-size: 13px; color: var(--ink-secondary); padding: 10px 14px; background: #f8f8f6; border-radius: 4px;">
+          <strong style="color: var(--ink);">全面检查</strong><br>
+          要求验证者测试多个场景和边界情况
+        </div>
+        <div style="font-size: 13px; color: var(--ink-secondary); padding: 10px 14px; background: #f8f8f6; border-radius: 4px;">
+          <strong style="color: var(--ink);">负面测试</strong><br>
+          指示验证者尝试应该失败的输入并确认它们确实失败
+        </div>
+        <div style="font-size: 13px; color: var(--ink-secondary); padding: 10px 14px; background: #f8f8f6; border-radius: 4px;">
+          <strong style="color: var(--ink);">显式指令</strong><br>
+          「你必须运行完整测试套件才能标记为通过」——不可或缺
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 6: CHECKLIST -->
+<section id="checklist">
+  <div class="container">
+    <div class="section-num">06</div>
+    <h2 class="section-title">决策清单</h2>
+    <p class="section-lead">在引入多 Agent 复杂性之前，确认以下三点。</p>
+
+    <div class="checklist">
+      <div class="check-item">
+        <div class="check-box">□</div>
+        <div class="check-text"><strong>存在真正的约束</strong> — 多 Agent 能解决的：上下文限制、并行化机会、或专业化需求</div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">□</div>
+        <div class="check-text"><strong>按上下文分解，非按工作类型</strong> — 按所需上下文分组工作，而非按工作性质</div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">□</div>
+        <div class="check-text"><strong>存在清晰的验证点</strong> — 子 Agent 可以在不需要完整上下文的情况下验证工作</div>
+      </div>
+    </div>
+
+    <div class="advice">
+      <blockquote>「从最简单的可行方案开始，只在有证据支持时才增加复杂性。」</blockquote>
+      <div class="attr">— Anthropic</div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    基于 <a href="https://claude.com/blog/building-multi-agent-systems-when-and-how-to-use-them">Anthropic Blog</a> 可视化 · 2026.01.23
+  </div>
+</footer>
+
+</body>
+</html>

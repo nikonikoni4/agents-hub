@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetaGPT 深度分析汇总</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f1117;
+    color: #e1e4e8;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .header {
+    text-align: center;
+    padding: 48px 20px 24px;
+    border-bottom: 1px solid #21262d;
+    background: linear-gradient(180deg, #161b22 0%, #0f1117 100%);
+  }
+  .header h1 { font-size: 32px; font-weight: 700; color: #f0f6fc; }
+  .header p { font-size: 16px; color: #8b949e; margin-top: 8px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+  /* Nav */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #161b22; border-bottom: 1px solid #21262d;
+    padding: 12px 20px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+    justify-content: center;
+  }
+  .nav a {
+    color: #8b949e; text-decoration: none; font-size: 14px;
+    padding: 6px 14px; border-radius: 4px; transition: all 0.15s;
+  }
+  .nav a:hover { background: #21262d; color: #f0f6fc; }
+
+  /* Section */
+  .section { margin: 40px 0; }
+  .section-title {
+    font-size: 24px; font-weight: 600; color: #f0f6fc;
+    margin-bottom: 20px; padding-bottom: 10px;
+    border-bottom: 1px solid #21262d;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #1f6feb; color: #fff; font-size: 16px; font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* Cards */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 8px; padding: 18px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #58a6ff; }
+  .card-title {
+    font-size: 17px; font-weight: 600; color: #f0f6fc;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-body { font-size: 15px; color: #8b949e; }
+  .card-body ul { padding-left: 18px; margin-top: 8px; }
+  .card-body li { margin-bottom: 4px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; margin: 16px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th {
+    background: #161b22; border: 1px solid #30363d;
+    padding: 12px 16px; text-align: left; font-weight: 600; color: #f0f6fc;
+  }
+  td {
+    border: 1px solid #21262d; padding: 12px 16px; vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #161b22; }
+  tr:nth-child(odd) td { background: #0d1117; }
+
+  /* Code */
+  .code-block {
+    background: #0d1117; border: 1px solid #21262d;
+    border-radius: 6px; padding: 16px 18px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 14px; line-height: 1.7;
+    overflow-x: auto; white-space: pre; color: #8b949e;
+    margin: 10px 0;
+  }
+  .code-block .kw { color: #c084fc; }
+  .code-block .fn { color: #d2a8ff; }
+  .code-block .str { color: #86efac; }
+  .code-block .cm { color: #484f58; }
+  .code-block .hl { color: #79c0ff; }
+
+  /* Highlight box */
+  .note-box {
+    background: #1c2128; border-left: 3px solid #f0883e;
+    border-radius: 0 6px 6px 0; padding: 14px 18px;
+    margin: 14px 0; font-size: 15px; color: #8b949e;
+  }
+  .note-box strong { color: #f0883e; }
+
+  /* Badge */
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 10px;
+    font-size: 12px; font-weight: 600;
+  }
+  .badge-blue { background: #1f3a5f; color: #58a6ff; }
+  .badge-purple { background: #2a1f3a; color: #bc8cff; }
+  .badge-green { background: #1f3a2a; color: #3fb950; }
+  .badge-orange { background: #3a2a1f; color: #f0883e; }
+  .badge-pink { background: #3a1f2a; color: #f778ba; }
+
+  /* Flow */
+  .flow-diagram {
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 8px; padding: 24px; overflow-x: auto;
+  }
+  .flow-step {
+    background: #0d1117; border: 1px solid #21262d;
+    border-radius: 6px; padding: 12px 16px;
+    margin: 6px 0; font-size: 14px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    line-height: 1.7; color: #8b949e;
+  }
+  .flow-step .num-tag {
+    display: inline-block; width: 22px; height: 22px;
+    border-radius: 50%; background: #1f6feb; color: #fff;
+    text-align: center; line-height: 22px;
+    font-size: 12px; font-weight: 600; margin-right: 6px;
+  }
+  .flow-arrow { text-align: center; color: #30363d; font-size: 14px; margin: 4px 0; }
+
+  /* Class card (interactive) */
+  .class-card {
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 8px; width: 100%; overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .class-card:hover { border-color: #58a6ff; }
+  .class-header {
+    padding: 14px 18px; font-weight: 600; font-size: 16px;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; user-select: none;
+  }
+  .class-header .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .class-body { padding: 0 18px 18px; }
+  .class-body.hidden { display: none; }
+  .field, .method {
+    font-size: 14px; padding: 3px 0;
+    font-family: 'Cascadia Code', 'Fira Code', monospace; line-height: 1.6;
+  }
+  .field .name { color: #79c0ff; }
+  .method .name { color: #d2a8ff; }
+  .field .type, .method .type { color: #8b949e; }
+  .lbl {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: #484f58; margin: 12px 0 4px;
+    padding-bottom: 3px; border-bottom: 1px solid #21262d;
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin: 20px 0;
+  }
+  .stat-card {
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 8px; padding: 16px; text-align: center;
+  }
+  .stat-value { font-size: 32px; font-weight: 700; color: #58a6ff; }
+  .stat-label { font-size: 14px; color: #8b949e; margin-top: 4px; }
+
+  /* VS */
+  .vs-grid {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    gap: 16px; align-items: start;
+  }
+  .vs-divider {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 700; color: #30363d; padding-top: 60px;
+  }
+
+  /* Tree */
+  .tree-block {
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 8px; padding: 24px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 15px; line-height: 1.8;
+    overflow-x: auto; white-space: pre;
+  }
+
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .vs-grid { grid-template-columns: 1fr; }
+    .vs-divider { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>MetaGPT 深度分析汇总</h1>
+  <p>基于源码验证 · Agent 编排机制 · 类关系 · 记忆系统 · 三合一</p>
+</div>
+
+<div class="nav">
+  <a href="#s1">概述</a>
+  <a href="#s2">数据结构</a>
+  <a href="#s3">Action与工具</a>
+  <a href="#s4">消息过滤</a>
+  <a href="#s5">角色列表</a>
+  <a href="#s6">反应模式</a>
+  <a href="#s7">消息处理</a>
+  <a href="#s8">记忆机制</a>
+  <a href="#s9">TeamLeader</a>
+  <a href="#s10">框架对比</a>
+</div>
+
+<div class="container">
+
+<!-- ============ Section 1: 概述 ============ -->
+<div class="section" id="s1">
+  <div class="section-title"><span class="num">1</span> 概述与架构</div>
+  <p style="color:#8b949e; margin-bottom:20px;">
+    MetaGPT 是一个基于 LLM 的多 Agent 协作框架，将软件开发过程中的不同角色（产品经理、架构师、工程师等）抽象为独立 Agent，通过消息传递和 SOP 任务流程实现自动化开发。
+  </p>
+
+  <div class="note-box">
+    <strong>核心设计理念：</strong>采用"公司化"组织结构，Agent 视为公司中的不同角色。TeamLeader 作为项目经理负责整体协调，各专业角色专注于自己的领域。通过标准化消息协议和 SOP 流程实现高效协作。
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value">6+</div><div class="stat-label">核心 Agent 角色</div></div>
+    <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">反应模式</div></div>
+    <div class="stat-card"><div class="stat-value">8</div><div class="stat-label">核心数据结构</div></div>
+    <div class="stat-card"><div class="stat-value">Pub-Sub</div><div class="stat-label">消息架构</div></div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 12px;">四层架构</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">Team（团队层）</div>
+      <div class="card-body">
+        最高层容器，管理所有角色和环境。
+        <ul>
+          <li>负责 hire（雇佣）角色</li>
+          <li>投资预算管理（investment）</li>
+          <li>项目启动和运行控制</li>
+          <li>use_mgx 控制是否使用 MGX 模式</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Environment（环境层）</div>
+      <div class="card-body">
+        消息传递和角色协调的中枢。
+        <ul>
+          <li>发布-订阅消息系统</li>
+          <li>消息路由和分发（is_send_to）</li>
+          <li>角色状态管理</li>
+          <li>并行调度（asyncio.gather）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Role（角色层）</div>
+      <div class="card-body">
+        各种 Agent 的基类，定义行为模式。
+        <ul>
+          <li>观察-思考-行动循环（_observe → _think → _act）</li>
+          <li>记忆管理（Memory）</li>
+          <li>动作执行（Action）</li>
+          <li>支持三种反应模式</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Action（动作层）</div>
+      <div class="card-body">
+        角色执行的具体任务单元。
+        <ul>
+          <li>原子化任务执行</li>
+          <li>LLM 调用封装（_aask）</li>
+          <li>ActionNode 支持结构化输出</li>
+          <li>结果输出为 Message</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Section 2: 核心数据结构 ============ -->
+<div class="section" id="s2">
+  <div class="section-title"><span class="num">2</span> 核心数据结构（最小知识集）</div>
+  <p style="color:#8b949e; margin-bottom:16px;">理解 MetaGPT 的编排机制，只需理解以下 8 个核心类。点击类名可展开/折叠详情。</p>
+
+  <div class="note-box">
+    <strong>类关系总览：</strong>Team 持有 Environment → Environment 持有多个 Role → 每个 Role 持有多个 Action → Action 执行后产生 Message → Message 通过 Environment 路由到其他 Role 的 MessageQueue → Role 的 _observe 过滤后存入 Memory
+  </div>
+
+  <div class="tree-block" style="margin:16px 0;">
+<span style="color:#f0883e">Team</span>
+ └─ <span style="color:#f0883e">Environment</span>
+     ├─ <span style="color:#3fb950">history</span>: <span style="color:#f778ba">Memory</span>
+     ├─ <span style="color:#58a6ff">roles</span>: dict[str, <span style="color:#58a6ff">Role</span>]
+     └─ <span style="color:#58a6ff">Role</span>
+         ├─ <span style="color:#bc8cff">actions</span>: list[<span style="color:#bc8cff">Action</span>]
+         │   └─ <span style="color:#bc8cff">Action</span>
+         │       ├─ <span style="color:#79c0ff">llm</span>: BaseLLM
+         │       └─ <span style="color:#d2a8ff">run</span>() → <span style="color:#f778ba">Message</span>
+         └─ <span style="color:#3fb950">rc</span>: <span style="color:#3fb950">RoleContext</span>
+             ├─ <span style="color:#f778ba">msg_buffer</span>: <span style="color:#f778ba">MessageQueue</span>  ← 私有收件箱
+             ├─ <span style="color:#f778ba">memory</span>: <span style="color:#f778ba">Memory</span>          ← 已处理的消息
+             ├─ <span style="color:#d2a8ff">watch</span>: set[str]           ← 订阅的 Action 类名
+             ├─ <span style="color:#bc8cff">todo</span>: <span style="color:#bc8cff">Action</span> | None      ← 当前要执行的 Action
+             ├─ <span style="color:#79c0ff">state</span>: int               ← 当前 action 索引
+             └─ <span style="color:#f0883e">env</span>: <span style="color:#f0883e">Environment</span>         ← 反向引用
+  </div>
+
+  <!-- Team -->
+  <div class="class-card">
+    <div class="class-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+      <div class="dot" style="background:#f0883e"></div>
+      <span>Team</span>
+      <span class="badge badge-orange">orchestrator</span>
+    </div>
+    <div class="class-body">
+      <div class="lbl">字段</div>
+      <div class="field"><span class="name">env</span>: Optional[Environment] = None</div>
+      <div class="field"><span class="name">investment</span>: float = 10.0</div>
+      <div class="field"><span class="name">idea</span>: str = ""</div>
+      <div class="field"><span class="name">use_mgx</span>: bool = True <span style="color:#f0883e">← 控制 MGX 模式</span></div>
+      <div class="lbl">方法</div>
+      <div class="method"><span class="name">hire</span>(roles: list[Role])</div>
+      <div class="method"><span class="name">run_project</span>(idea, send_to="")</div>
+      <div class="method"><span class="name">run</span>(n_round=3, idea="", send_to="", auto_archive=True)</div>
+      <div class="method"><span class="name">invest</span>(investment: float)</div>
+    </div>
+  </div>
+
+  <!-- Environment -->
+  <div class="class-card">
+    <div class="class-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+      <div class="dot" style="background:#f0883e"></div>
+      <span>Environment</span>
+      <span class="badge badge-orange">message hub</span>
+    </div>
+    <div class="class-body">
+      <div class="lbl">字段</div>
+      <div class="field"><span class="name">roles</span>: dict[str, Role] <span style="color:#f0883e">← 不是 list，是 dict</span></div>
+      <div class="field"><span class="name">member_addrs</span>: Dict[Role, Set]</div>
+      <div class="field"><span class="name">history</span>: Memory</div>
+      <div class="lbl">方法</div>
+      <div class="method"><span class="name">publish_message</span>(msg) → 遍历 member_addrs 做路由匹配</div>
+      <div class="method"><span class="name">run</span>(k=1) → asyncio.gather 并行执行所有非 idle Role</div>
+      <div class="method"><span class="name">is_idle</span> → 所有 Role 都空闲时返回 True</div>
+      <div class="method"><span class="name">add_role</span>(role) / <span class="name">add_roles</span>(roles)</div>
+    </div>
+  </div>
+
+  <!-- Role -->
+  <div class="class-card">
+    <div class="class-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+      <div class="dot" style="background:#58a6ff"></div>
+      <span>Role</span>
+      <span class="badge badge-blue">agent</span>
+    </div>
+    <div class="class-body">
+      <div class="lbl">字段</div>
+      <div class="field"><span class="name">name</span>: str = ""</div>
+      <div class="field"><span class="name">profile</span>: str = ""</div>
+      <div class="field"><span class="name">goal</span>: str = ""</div>
+      <div class="field"><span class="name">constraints</span>: str = ""</div>
+      <div class="field"><span class="name">actions</span>: list[Action] = []</div>
+      <div class="field"><span class="name">rc</span>: RoleContext</div>
+      <div class="field"><span class="name">addresses</span>: set[str]</div>
+      <div class="field"><span class="name">planner</span>: Planner <span style="color:#f0883e">← PLAN_AND_ACT 模式使用</span></div>
+      <div class="lbl">核心方法</div>
+      <div class="method"><span class="name">run</span>(with_message=None) → Message</div>
+      <div class="method"><span class="name">react</span>() → 路由到 _react() 或 _plan_and_act()</div>
+      <div class="method"><span class="name">_observe</span>() → int（从 msg_buffer 取消息并过滤）</div>
+      <div class="method"><span class="name">_think</span>() → bool（选择下一个 Action）</div>
+      <div class="method"><span class="name">_act</span>() → Message（执行 Action）</div>
+      <div class="method"><span class="name">_react</span>() → Message（REACT/BY_ORDER 共用循环）</div>
+      <div class="method"><span class="name">_plan_and_act</span>() → Message（PLAN_AND_ACT 独立循环）</div>
+      <div class="method"><span class="name">_watch</span>(actions) <span style="color:#8b949e">// 订阅 Action 类型</span></div>
+    </div>
+  </div>
+
+  <!-- RoleContext -->
+  <div class="class-card">
+    <div class="class-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+      <div class="dot" style="background:#3fb950"></div>
+      <span>RoleContext (rc)</span>
+      <span class="badge badge-green">runtime state</span>
+    </div>
+    <div class="class-body">
+      <div class="lbl">字段（定义在 roles/role.py 中）</div>
+      <div class="field"><span class="name">env</span>: BaseEnvironment</div>
+      <div class="field"><span class="name">msg_buffer</span>: MessageQueue</div>
+      <div class="field"><span class="name">memory</span>: Memory</div>
+      <div class="field"><span class="name">working_memory</span>: Memory <span style="color:#f0883e">← HTML 未提及</span></div>
+      <div class="field"><span class="name">watch</span>: set[str] <span style="color:#f0883e">// 存的是字符串，不是类对象</span></div>
+      <div class="field"><span class="name">todo</span>: Action | None</div>
+      <div class="field"><span class="name">state</span>: int = -1 <span style="color:#8b949e">// -1 = 初始/终止态</span></div>
+      <div class="field"><span class="name">react_mode</span>: RoleReactMode = REACT</div>
+      <div class="field"><span class="name">max_react_loop</span>: int = 1</div>
+      <div class="field"><span class="name">news</span>: list[Message]</div>
+      <div class="lbl">属性</div>
+      <div class="method"><span class="name">history</span> → memory.get()（返回全部消息）</div>
+    </div>
+  </div>
+
+  <!-- Action -->
+  <div class="class-card">
+    <div class="class-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+      <div class="dot" style="background:#bc8cff"></div>
+      <span>Action</span>
+      <span class="badge badge-purple">unit of work</span>
+    </div>
+    <div class="class-body">
+      <div class="lbl">字段</div>
+      <div class="field"><span class="name">name</span>: str</div>
+      <div class="field"><span class="name">i_context</span>: Any <span style="color:#8b949e">// 输入上下文</span></div>
+      <div class="field"><span class="name">prefix</span>: str <span style="color:#8b949e">// system prompt</span></div>
+      <div class="field"><span class="name">node</span>: ActionNode = None</div>
+      <div class="field"><span class="name">desc</span>: str = ""</div>
+      <div class="lbl">方法</div>
+      <div class="method"><span class="name">run</span>(*args) → Message | str</div>
+      <div class="method"><span class="name">_aask</span>(prompt, system_msgs=None) → str</div>
+      <div class="method"><span class="name">_run_action_node</span>(*args) <span style="color:#8b949e">// node 存在时委托给它</span></div>
+      <div class="lbl">子类示例</div>
+      <div style="color:#8b949e; font-size:12px;">WritePRD · WriteDesign · WriteCode · WriteTest · WriteTasks · SummarizeCode · ...</div>
+    </div>
+  </div>
+
+  <!-- Message -->
+  <div class="class-card">
+    <div class="class-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+      <div class="dot" style="background:#f778ba"></div>
+      <span>Message</span>
+      <span class="badge badge-pink">communication</span>
+    </div>
+    <div class="class-body">
+      <div class="lbl">字段（定义在 schema.py）</div>
+      <div class="field"><span class="name">id</span>: str <span style="color:#8b949e">// 自动生成 uuid</span></div>
+      <div class="field"><span class="name">content</span>: str <span style="color:#8b949e">// 消息正文</span></div>
+      <div class="field"><span class="name">cause_by</span>: str <span style="color:#8b949e">// 产生此消息的 Action 类名（全限定名）</span></div>
+      <div class="field"><span class="name">sent_from</span>: str <span style="color:#8b949e">// 发送者</span></div>
+      <div class="field"><span class="name">send_to</span>: set[str] = {"&lt;all&gt;"} <span style="color:#8b949e">// 接收者集合</span></div>
+      <div class="field"><span class="name">instruct_content</span>: BaseModel | None</div>
+      <div class="field"><span class="name">role</span>: str = "user"</div>
+      <div class="field"><span class="name">metadata</span>: Dict[str, Any] = {}</div>
+      <div class="lbl">子类</div>
+      <div style="color:#8b949e; font-size:12px;">AIMessage · UserMessage · SystemMessage</div>
+    </div>
+  </div>
+
+  <!-- MessageQueue & Memory -->
+  <div class="cards-grid">
+    <div class="class-card">
+      <div class="class-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+        <div class="dot" style="background:#3fb950"></div>
+        <span>MessageQueue</span>
+        <span class="badge badge-green">buffer</span>
+      </div>
+      <div class="class-body">
+        <div class="lbl">定义在 schema.py 中</div>
+        <div class="field"><span class="name">_queue</span>: asyncio.Queue（私有）</div>
+        <div class="lbl">方法</div>
+        <div class="method"><span class="name">push</span>(msg)</div>
+        <div class="method"><span class="name">pop</span>() → Message | None</div>
+        <div class="method"><span class="name">pop_all</span>() → list[Message]</div>
+        <div class="method"><span class="name">empty</span>() → bool</div>
+      </div>
+    </div>
+    <div class="class-card">
+      <div class="class-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+        <div class="dot" style="background:#3fb950"></div>
+        <span>Memory</span>
+        <span class="badge badge-green">storage</span>
+      </div>
+      <div class="class-body">
+        <div class="lbl">字段</div>
+        <div class="field"><span class="name">storage</span>: list[Message]</div>
+        <div class="field"><span class="name">index</span>: DefaultDict[str, list[Message]] <span style="color:#8b949e">// 按 cause_by 倒排索引</span></div>
+        <div class="lbl">核心方法</div>
+        <div class="method"><span class="name">add</span>(msg) / <span class="name">add_batch</span>(msgs)</div>
+        <div class="method"><span class="name">get</span>(k=0) → list[Message] <span style="color:#8b949e">// k=0 返回全部</span></div>
+        <div class="method"><span class="name">get_by_actions</span>(actions) → list[Message]</div>
+        <div class="method"><span class="name">try_remember</span>(keyword) → list[Message]</div>
+        <div class="method"><span class="name">find_news</span>(observed, k=0)</div>
+        <div class="method"><span class="name">delete</span>(msg) / <span class="name">clear</span>() / <span class="name">count</span>()</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Flow -->
+  <h3 style="color:#f0f6fc; margin:24px 0 12px;">消息传递流程（PM → Architect 为例）</h3>
+  <div class="flow-diagram">
+    <div class="flow-step"><span class="num-tag">1</span><span style="color:#58a6ff">env.publish_message</span> — Team.run_project() 发布用户需求
+      <div style="color:#79c0ff; margin-top:4px;">Message(content="需求", cause_by=UserRequirement, send_to=ALL)</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">2</span><span style="color:#58a6ff">路由匹配</span> — 遍历 member_addrs，is_send_to() 检查地址
+      <div style="color:#79c0ff; margin-top:4px;">for role, addrs in member_addrs: if is_send_to(msg, addrs): role.put_message(msg)</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">3</span><span style="color:#58a6ff">msg_buffer.push</span> — 消息进入各角色私有队列</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">4</span><span style="color:#58a6ff">role._observe()</span> — 取出 + 兴趣过滤
+      <div style="color:#79c0ff; margin-top:4px;">news = msg_buffer.pop_all() → 过滤: (cause_by in watch OR name in send_to) AND not in old_messages</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">5</span><span style="color:#58a6ff">role._think()</span> — 选择要执行的 Action
+      <div style="color:#79c0ff; margin-top:4px;">BY_ORDER: state += 1 | REACT: LLM 选 state | PLAN_AND_ACT: 走 _plan_and_act()</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">6</span><span style="color:#58a6ff">role._act()</span> — 执行 Action，产出 Message
+      <div style="color:#79c0ff; margin-top:4px;">response = await todo.run(history) → msg = AIMessage(cause_by=todo, sent_from=self)</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">7</span><span style="color:#58a6ff">publish_message</span> — 结果发回环境，触发下游 → 回到步骤 2</div>
+  </div>
+<!-- ============ Section 3: Action 与工具调用 ============ -->
+<div class="section" id="s3">
+  <div class="section-title"><span class="num">3</span> Action 与工具调用机制</div>
+  <p style="color:#8b949e; margin-bottom:16px;">Action 是 MetaGPT 中"做事情"的基本单元。普通 Role 和 Leader 使用 Action 的方式完全不同。</p>
+
+  <h3 style="color:#f0f6fc; margin:16px 0 10px;">普通 Role 的 Action — 预定义工作流</h3>
+  <div class="code-block"><span class="cm"># 普通 Role 的 Action 是预定义的具体类</span>
+<span class="kw">class</span> WritePRD(Action):
+    <span class="kw">async def</span> <span class="fn">run</span>(self, context):
+        result = <span class="kw">await</span> self._aask(prompt)
+        <span class="kw">return</span> result
+
+<span class="cm"># ProductManager 的 actions 列表</span>
+self.set_actions([PrepareDocuments, WritePRD])
+<span class="cm"># _think 时按 BY_ORDER 顺序选择：先 PrepareDocuments，再 WritePRD</span></div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">Leader 的 Action — tool_execution_map（工具调用）</h3>
+  <div class="note-box">
+    <strong>关键区别：</strong>Leader 的 self.actions 只有一个空壳 RunCommand。它的真正动作空间是 tool_execution_map — 一个命令名→函数的映射表。LLM 在 _think 阶段输出 JSON 命令数组，_act 阶段解析 JSON 并调用对应函数。
+  </div>
+  <div class="code-block"><span class="cm"># Leader 的 _act 不调用 action.run()，而是直接解析 LLM 输出的 JSON 命令</span>
+commands = json.loads(self.command_rsp)  <span class="cm"># LLM 输出的命令数组</span>
+<span class="kw">for</span> cmd <span class="kw">in</span> commands:
+    <span class="kw">if</span> cmd[<span class="str">"command_name"</span>] <span class="kw">in</span> self.tool_execution_map:
+        result = <span class="kw">await</span> self.tool_execution_map[cmd[<span class="str">"command_name"</span>]](**cmd[<span class="str">"args"</span>])</div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">TeamLeader 的完整工具集</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">Plan 管理</div>
+      <div class="card-body">
+        <ul>
+          <li><code>Plan.append_task</code></li>
+          <li><code>Plan.reset_task</code></li>
+          <li><code>Plan.replace_task</code></li>
+          <li><code>Plan.finish_current_task</code>（特殊命令）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">团队调度</div>
+      <div class="card-body">
+        <ul>
+          <li><code>TeamLeader.publish_team_message</code></li>
+          <li><code>TeamLeader.publish_message</code>（别名）</li>
+          <li><code>RoleZero.ask_human</code></li>
+          <li><code>RoleZero.reply_to_human</code></li>
+          <li><code>end</code>（终止，特殊命令）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">浏览器工具（10 个）</div>
+      <div class="card-body">
+        <ul>
+          <li><code>Browser.goto</code> / <code>click</code> / <code>type</code></li>
+          <li><code>Browser.scroll</code> / <code>go_back</code> / <code>close_tab</code></li>
+          <li><code>Browser.select</code> / <code>scroll_to_text</code></li>
+          <li><code>Browser.get_page_html</code> / <code>get_all_text</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">编辑器工具（16 个）</div>
+      <div class="card-body">
+        <ul>
+          <li><code>Editor.create_file</code> / <code>write</code> / <code>read</code></li>
+          <li><code>Editor.open_file</code> / <code>edit_file_by_replace</code></li>
+          <li><code>Editor.search_file</code> / <code>search_dir</code></li>
+          <li><code>Editor.write</code> / <code>open</code> / <code>create</code> ...</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">本质对比</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>维度</th><th>普通 Role 的 Action</th><th>Leader 的 tool_execution_map</th></tr>
+      <tr><td><strong>选择范围</strong></td><td>self.actions 列表（2-3 个）</td><td>tool_execution_map（20+ 个命令）</td></tr>
+      <tr><td><strong>选择方式</strong></td><td>_think 中 LLM 返回数字编号</td><td>_think 中 LLM 输出 JSON 命令数组</td></tr>
+      <tr><td><strong>执行方式</strong></td><td>action.run(history)</td><td>tool_execution_map[name](**args)</td></tr>
+      <tr><td><strong>本质</strong></td><td>Action 可能包含复杂逻辑（内嵌 LLM 调用）</td><td>更接近标准 tool calling（直接函数调用）</td></tr>
+      <tr><td><strong>共同点</strong></td><td colspan="2">都是"从有限工具集中选择并执行"，Agent 不能调用未注册的工具</td></tr>
+    </table>
+  </div>
+<!-- ============ Section 4: 消息过滤机制 ============ -->
+<div class="section" id="s4">
+  <div class="section-title"><span class="num">4</span> 消息过滤机制（cause_by + watch + _observe）</div>
+  <p style="color:#8b949e; margin-bottom:16px;">MetaGPT 的消息过滤是一个事件驱动的发布-订阅系统。cause_by 记录"刚才发生了什么动作"，watch 是每个角色的"触发列表"。</p>
+
+  <div class="note-box">
+    <strong>核心概念纠偏：</strong>cause_by 不是"下一步该执行的 Action"，而是"上一步刚完成的 Action"。比如 PM 执行完 WritePRD 后，消息的 cause_by=WritePRD。Architect 的 watch={WritePRD} 表示"当 WritePRD 发生时，触发我开始工作"。这是事件触发机制，不是指令传递机制。
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">一、cause_by 与 watch 的本质</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">cause_by — "刚才发生了什么"</div>
+      <div class="card-body">
+        <p>每条消息都有 cause_by 字段，记录产生这条消息的 Action <strong>全限定类名</strong>。</p>
+        <div class="code-block" style="margin-top:8px;"><span class="cm"># role.py — _act() 中自动设置</span>
+msg = AIMessage(
+    content=response.content,
+    cause_by=self.rc.todo,  <span class="cm"># 自动转为类名字符串</span>
+    sent_from=self,
+)
+<span class="cm"># 例: cause_by = "metagpt.actions.write_prd.WritePRD"</span></div>
+        <p style="margin-top:6px;"><strong>关键：</strong>cause_by 记录的是"已经发生的动作"，存储为全限定类名字符串。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">watch — "什么事件触发我"</div>
+      <div class="card-body">
+        <p>每个 Role 声明自己关心哪些 Action 产生的消息：</p>
+        <div class="code-block" style="margin-top:8px;"><span class="cm"># _watch() 将 Action 类转为字符串集合</span>
+<span class="kw">def</span> <span class="fn">_watch</span>(self, actions):
+    self.rc.watch = {any_to_str(t) <span class="kw">for</span> t <span class="kw">in</span> actions}
+
+<span class="cm"># ProductManager</span>
+self._watch([UserRequirement, PrepareDocuments])
+<span class="cm"># Architect</span>
+self._watch({WritePRD})</div>
+        <p style="margin-top:6px;"><strong>本质：</strong>watch 是一个事件触发列表——"当 X Action 完成时，触发我开始工作"。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-box" style="margin-top:12px;">
+    <strong>类比理解：</strong>就像基于 topic 的消息队列（如 Kafka）：cause_by = topic（消息标签），watch = subscription（订阅列表），Environment = message broker（消息代理），_observe() = consumer filter（消费者过滤器）。
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">二、两层过滤机制</h3>
+
+  <h4 style="color:#e1e4e8; margin:12px 0 8px;">第一层：Environment 路由（地址匹配）</h4>
+  <div class="code-block"><span class="cm"># base_env.py — Environment.publish_message()</span>
+<span class="kw">def</span> <span class="fn">publish_message</span>(self, message):
+    <span class="kw">for</span> role, addrs <span class="kw">in</span> self.member_addrs.items():
+        <span class="kw">if</span> is_send_to(message, addrs):     <span class="cm"># send_to 与角色地址有交集？</span>
+            role.put_message(message)       <span class="cm"># 是 → 推入该角色的 msg_buffer</span>
+    self.history.add(message)
+
+<span class="cm"># is_send_to() — utils/common.py</span>
+<span class="kw">def</span> <span class="fn">is_send_to</span>(message, addresses):
+    <span class="kw">if</span> MESSAGE_ROUTE_TO_ALL <span class="kw">in</span> message.send_to:
+        <span class="kw">return True</span>  <span class="cm"># send_to={"&lt;all&gt;"} → 所有人匹配</span>
+    <span class="kw">for</span> i <span class="kw">in</span> addresses:
+        <span class="kw">if</span> i <span class="kw">in</span> message.send_to:
+            <span class="kw">return True</span>
+    <span class="kw">return False</span></div>
+  <p style="color:#8b949e; margin:8px 0;">这一层只做地址匹配，是纯内存操作（微秒级），不涉及 LLM 调用。</p>
+
+  <h4 style="color:#e1e4e8; margin:16px 0 8px;">第二层：_observe 兴趣过滤（事件匹配）</h4>
+  <div class="code-block"><span class="cm"># role.py — Role._observe()</span>
+<span class="kw">async def</span> <span class="fn">_observe</span>(self) -> int:
+    news = self.rc.msg_buffer.pop_all()
+    old_messages = [] <span class="kw">if not</span> self.enable_memory <span class="kw">else</span> self.rc.memory.get()
+
+    self.rc.news = [
+        n <span class="kw">for</span> n <span class="kw">in</span> news
+        <span class="kw">if</span> (n.cause_by <span class="kw">in</span> self.rc.watch     <span class="cm"># 条件A：事件匹配</span>
+            <span class="kw">or</span> self.name <span class="kw">in</span> n.send_to)       <span class="cm"># 条件B：精确匹配</span>
+        <span class="kw">and</span> n <span class="kw">not in</span> old_messages             <span class="cm"># 条件C：去重</span>
+    ]
+    self.rc.memory.add_batch(self.rc.news)
+    <span class="kw">return</span> len(self.rc.news)</div>
+
+  <div class="cards-grid" style="margin-top:12px;">
+    <div class="card">
+      <div class="card-title">条件 A：cause_by in watch</div>
+      <div class="card-body">消息的 cause_by 是否在我的 watch 中。这是发布-订阅的核心：发送者不管谁接收，接收者自己声明关心什么。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">条件 B：name in send_to</div>
+      <div class="card-body">消息的 send_to 是否包含我的名字。用于点对点发送场景，如 TeamLeader 的 publish_team_message。</div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">三、两种消息路由方式</h3>
+  <div class="cards-grid">
+    <div class="card" style="border-color:#58a6ff;">
+      <div class="card-title">广播 + 事件过滤（经典 SOP 模式）</div>
+      <div class="card-body">
+        <ul>
+          <li>消息 send_to={"&lt;all&gt;"}，所有人收到</li>
+          <li>各角色通过 cause_by in watch 自行过滤</li>
+          <li>只有匹配的角色被唤醒执行</li>
+          <li>新增角色只需声明 watch，不改现有代码</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="border-color:#bc8cff;">
+      <div class="card-title">精确指定接收者（MGX 模式 TeamLeader）</div>
+      <div class="card-body">
+        <ul>
+          <li>消息 send_to={"Bob"}，只有 Bob 收到</li>
+          <li>通过条件 B（name in send_to）匹配</li>
+          <li>不依赖 watch 机制</li>
+          <li>TL 的 LLM 动态决定发给谁</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">四、各角色 watch 订阅表（源码验证）</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>事件（cause_by）</th><th>产生者</th><th>触发谁（watch 匹配）</th><th>含义</th></tr>
+      <tr><td><code>UserRequirement</code></td><td>用户输入</td><td><span class="badge badge-blue">ProductManager</span> <span class="badge badge-orange">TeamLeader</span></td><td>用户发需求 → PM/TL 开始工作</td></tr>
+      <tr><td><code>PrepareDocuments</code></td><td>ProductManager</td><td><span class="badge badge-blue">ProductManager</span></td><td>项目初始化 → PM 继续写 PRD（BY_ORDER 链内）</td></tr>
+      <tr><td><code>WritePRD</code></td><td>ProductManager</td><td><span class="badge badge-purple">Architect</span></td><td>PRD 完成 → Architect 开始设计</td></tr>
+      <tr><td><code>WriteDesign</code></td><td>Architect</td><td><span class="badge badge-orange">ProjectManager</span></td><td>设计完成 → PM 开始拆任务</td></tr>
+      <tr><td><code>WriteTasks</code></td><td>ProjectManager</td><td><span class="badge badge-green">Engineer</span></td><td>任务列表完成 → Engineer 开始写代码</td></tr>
+      <tr><td><code>WriteCode</code></td><td>Engineer</td><td><span class="badge badge-green">Engineer</span>（自己）</td><td>代码写完 → 继续总结</td></tr>
+      <tr><td><code>SummarizeCode</code></td><td>Engineer</td><td><span class="badge badge-green">Engineer</span> + <span class="badge badge-pink">QaEngineer</span></td><td>代码总结完成 → QA 开始测试</td></tr>
+    </table>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">五、本质：事件驱动的 Workflow</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">传统 Workflow（显式定义下一步）</div>
+      <div class="card-body">
+        <div class="code-block">Step1: PM 执行 WritePRD → next = Architect
+Step2: Architect 执行 WriteDesign → next = PM
+Step3: PM 执行 WriteTasks → next = Engineer</div>
+      </div>
+    </div>
+    <div class="card" style="border-color:#58a6ff;">
+      <div class="card-title">MetaGPT（事件触发）</div>
+      <div class="card-body">
+        <div class="code-block">PM 执行 WritePRD → 发布事件 cause_by=WritePRD
+    → Architect 的 watch 包含 WritePRD → 被触发
+Architect 执行 WriteDesign → 发布事件 cause_by=WriteDesign
+    → PM 的 watch 包含 WriteDesign → 被触发</div>
+      </div>
+    </div>
+  </div>
+  <p style="color:#8b949e; margin-top:12px;">结果一样，但机制不同。传统 Workflow 是"我告诉你去找谁"，MetaGPT 是"我广播我做了什么，谁关心谁来接"。好处是解耦——新增角色只需声明 watch，不改现有代码。</p>
+<!-- ============ Section 5: 角色列表 ============ -->
+<div class="section" id="s5">
+  <div class="section-title"><span class="num">5</span> Agent 角色列表与职责（源码验证）</div>
+
+  <div class="table-wrap">
+    <table>
+      <tr><th>角色名称</th><th>类名</th><th>继承</th><th>职责</th><th>watch</th><th>react_mode</th></tr>
+      <tr>
+        <td><strong>Mike</strong>（TeamLeader）</td><td><code>TeamLeader</code></td><td>RoleZero → Role</td>
+        <td>团队协调、任务分发、进度跟踪</td>
+        <td><span class="badge badge-blue">UserRequirement</span>（默认）</td>
+        <td><span class="badge badge-purple">react</span> max_loop=3</td>
+      </tr>
+      <tr>
+        <td><strong>Alice</strong>（ProductManager）</td><td><code>ProductManager</code></td><td>RoleZero → Role</td>
+        <td>需求分析、PRD 编写</td>
+        <td><span class="badge badge-blue">UserRequirement</span> <span class="badge badge-blue">PrepareDocuments</span></td>
+        <td><span class="badge badge-orange">BY_ORDER</span>（use_fixed_sop=True 时）</td>
+      </tr>
+      <tr>
+        <td><strong>Bob</strong>（Architect）</td><td><code>Architect</code></td><td>RoleZero → Role</td>
+        <td>系统架构设计、技术选型</td>
+        <td><span class="badge badge-blue">WritePRD</span></td>
+        <td><span class="badge badge-purple">react</span>（继承 RoleZero）</td>
+      </tr>
+      <tr>
+        <td><strong>Eve</strong>（ProjectManager）</td><td><code>ProjectManager</code></td><td>RoleZero → Role</td>
+        <td>任务拆解、依赖分析</td>
+        <td><span class="badge badge-blue">WriteDesign</span></td>
+        <td><span class="badge badge-purple">react</span>（继承 RoleZero）</td>
+      </tr>
+      <tr>
+        <td><strong>Alex</strong>（Engineer）</td><td><code>Engineer</code></td><td><span style="color:#f0883e">Role（直接继承）</span></td>
+        <td>代码编写、审查、总结</td>
+        <td><span class="badge badge-blue">WriteTasks</span> <span class="badge badge-blue">SummarizeCode</span> <span class="badge badge-blue">WriteCode</span> <span class="badge badge-blue">WriteCodeReview</span> <span class="badge badge-blue">FixBug</span> <span class="badge badge-blue">WriteCodePlanAndChange</span></td>
+        <td><span class="badge badge-green">自定义 _think/_act</span></td>
+      </tr>
+      <tr>
+        <td><strong>Edward</strong>（QaEngineer）</td><td><code>QaEngineer</code></td><td><span style="color:#f0883e">Role（直接继承）</span></td>
+        <td>测试用例、测试执行、Bug 调试</td>
+        <td><span class="badge badge-blue">SummarizeCode</span> <span class="badge badge-blue">WriteTest</span> <span class="badge badge-blue">RunCode</span> <span class="badge badge-blue">DebugError</span></td>
+        <td><span class="badge badge-green">自定义 _think/_act</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note-box">
+    <strong>源码验证发现：</strong>Engineer 和 QaEngineer 直接继承 Role（非 RoleZero），并完全覆盖 _think() 和 _act() 方法，不使用标准的 react 循环。ProductManager 只有在 use_fixed_sop=True 时才设 BY_ORDER，否则继承 RoleZero 的 react 模式。Architect 和 ProjectManager 继承 RoleZero 但未显式设置 react_mode，默认为 react。
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 12px;">角色层级关系</h3>
+  <div class="flow-diagram" style="text-align:center;">
+    <div style="display:inline-block; padding:8px 20px; background:#1f6feb; border-radius:6px; color:#fff; font-weight:600;">用户需求</div>
+    <div style="color:#30363d; margin:6px;">↓</div>
+    <div style="display:inline-block; padding:8px 20px; background:#f0883e; border-radius:6px; color:#fff; font-weight:600;">TeamLeader (Mike)</div>
+    <div style="color:#30363d; margin:6px;">↓ 协调分发</div>
+    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+      <div style="padding:8px 16px; background:#1f6feb; border-radius:6px; color:#fff;">ProductManager</div>
+      <div style="padding:8px 16px; background:#1f6feb; border-radius:6px; color:#fff;">Architect</div>
+      <div style="padding:8px 16px; background:#1f6feb; border-radius:6px; color:#fff;">ProjectManager</div>
+    </div>
+    <div style="color:#30363d; margin:6px;">↓ 任务执行</div>
+    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+      <div style="padding:8px 16px; background:#3fb950; border-radius:6px; color:#fff;">Engineer</div>
+      <div style="padding:8px 16px; background:#3fb950; border-radius:6px; color:#fff;">QaEngineer</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Section 6: 反应模式 ============ -->
+<div class="section" id="s6">
+  <div class="section-title"><span class="num">6</span> 三种反应模式（源码验证）</div>
+
+  <h3 style="color:#f0f6fc; margin:16px 0 10px;">模式概览</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">ReAct 模式</div>
+      <div class="card-body">
+        <p>思考-行动交替循环，LLM 动态选择下一步动作。</p>
+        <div class="code-block">_think → _act → _think → _act → ...
+（共用 _react() 循环骨架）</div>
+        <p>使用者：RoleZero、TeamLeader、SWEAgent</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">BY_ORDER 模式</div>
+      <div class="card-body">
+        <p>按注册顺序依次执行，state += 1 机械递增。</p>
+        <div class="code-block">Action0 → Action1 → Action2 → ...
+（共用 _react() 循环骨架）</div>
+        <p>使用者：ProductManager（固定 SOP）、Researcher、TutorialAssistant</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">PLAN_AND_ACT 模式</div>
+      <div class="card-body">
+        <p>先用 LLM 生成 Plan，再按 Plan 逐步执行。</p>
+        <div class="code-block">planner.update_plan(goal)
+→ while planner.current_task:
+    _act_on_task(task)
+（独立的 _plan_and_act() 循环）</div>
+        <p>使用者：DataInterpreter</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">核心流程：react() 入口路由</h3>
+  <div class="code-block"><span class="cm"># role.py — react() 是入口，根据模式分流</span>
+<span class="kw">async def</span> <span class="fn">react</span>(self) -> Message:
+    <span class="kw">if</span> self.rc.react_mode == RoleReactMode.REACT \
+       <span class="kw">or</span> self.rc.react_mode == RoleReactMode.BY_ORDER:
+        rsp = <span class="kw">await</span> self._react()         <span class="cm"># REACT 和 BY_ORDER 共用</span>
+    <span class="kw">elif</span> self.rc.react_mode == RoleReactMode.PLAN_AND_ACT:
+        rsp = <span class="kw">await</span> self._plan_and_act()  <span class="cm"># PLAN_AND_ACT 完全独立</span>
+    self._set_state(state=-1)
+    ...</div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">_react() — REACT 和 BY_ORDER 共用的循环</h3>
+  <div class="code-block"><span class="kw">async def</span> <span class="fn">_react</span>(self) -> Message:
+    actions_taken = 0
+    <span class="kw">while</span> actions_taken < self.rc.max_react_loop:
+        has_todo = <span class="kw">await</span> self._think()   <span class="cm"># ← 在此分叉</span>
+        <span class="kw">if not</span> has_todo:
+            <span class="kw">break</span>
+        rsp = <span class="kw">await</span> self._act()          <span class="cm"># ← 所有模式共用</span>
+        actions_taken += 1
+    <span class="kw">return</span> rsp</div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">_think() — 选择下一个 Action</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">BY_ORDER — 机械递增</div>
+      <div class="card-body">
+        <div class="code-block"><span class="kw">if</span> self.rc.react_mode == BY_ORDER:
+    <span class="kw">if</span> self.rc.max_react_loop != len(self.actions):
+        self.rc.max_react_loop = len(self.actions)
+    self._set_state(self.rc.state + 1)
+    <span class="kw">return</span> self.rc.state >= 0 \
+       <span class="kw">and</span> self.rc.state < len(self.actions)</div>
+        <p style="margin-top:6px;"><strong>本质就是一个 for 循环</strong>，自动同步 max_react_loop = len(actions)。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">REACT — LLM 自主决策</div>
+      <div class="card-body">
+        <div class="code-block">prompt += STATE_TEMPLATE.format(
+    history=self.rc.history,
+    states=<span class="str">"0. WritePRD\n1. WriteDesign"</span>,
+    previous_state=self.rc.state,
+)
+next_state = <span class="kw">await</span> self.llm.aask(prompt)
+<span class="cm"># LLM 可选任意顺序，可返回 -1 终止</span></div>
+        <p style="margin-top:6px;"><strong>唯一真正的 ReAct 模式</strong>，LLM 自由决策。</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">_plan_and_act() — PLAN_AND_ACT 独立循环</h3>
+  <div class="code-block"><span class="kw">async def</span> <span class="fn">_plan_and_act</span>(self) -> Message:
+    <span class="kw">if not</span> self.planner.plan.goal:
+        goal = self.rc.memory.get()[-1].content
+        <span class="kw">await</span> self.planner.update_plan(goal=goal)  <span class="cm"># 用 LLM 生成计划</span>
+
+    <span class="kw">while</span> self.planner.current_task:               <span class="cm"># 按任务列表遍历</span>
+        task = self.planner.current_task
+        task_result = <span class="kw">await</span> self._act_on_task(task)  <span class="cm"># 抽象方法，子类实现</span>
+        <span class="kw">await</span> self.planner.process_task_result(task_result)
+
+    rsp = self.planner.get_useful_memories()[0]</div>
+  <div class="note-box">
+    <strong>源码验证发现：</strong>PLAN_AND_ACT 调用的是 _act_on_task()（抽象方法，返回 TaskResult），不是 _act()（返回 Message）。_think() 中没有 PLAN_AND_ACT 分支——它在 react() 入口就分流了，完全绕过 _react() 循环。
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">三种模式本质区别</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>维度</th><th>BY_ORDER</th><th>REACT</th><th>PLAN_AND_ACT</th></tr>
+      <tr><td><strong>_think 选 action</strong></td><td>state += 1 机械递增</td><td>LLM 看历史回答数字</td><td>LLM 先生成 Plan，按 Plan 执行</td></tr>
+      <tr><td><strong>执行顺序</strong></td><td>固定 0→1→2</td><td>LLM 自由选择</td><td>按 Plan 的拓扑序</td></tr>
+      <tr><td><strong>终止条件</strong></td><td>遍历完自动终止</td><td>LLM 返回 -1 或 max_loop</td><td>Plan 完成后终止</td></tr>
+      <tr><td><strong>循环骨架</strong></td><td colspan="2">共用 _react()</td><td>独立 _plan_and_act()</td></tr>
+      <tr><td><strong>执行方法</strong></td><td colspan="2">共用 _act() → action.run()</td><td>_act_on_task()（抽象方法）</td></tr>
+      <tr><td><strong>是否用 LLM 决策</strong></td><td>否（硬编码）</td><td>是（每轮调 LLM）</td><td>是（规划时调一次）</td></tr>
+      <tr><td><strong>本质</strong></td><td>for 循环的伪装</td><td>真正的 ReAct</td><td>Plan-then-Execute</td></tr>
+    </table>
+  </div>
+<!-- ============ Section 7: 消息处理机制 ============ -->
+<div class="section" id="s7">
+  <div class="section-title"><span class="num">7</span> 消息处理机制（经典 SOP vs MGX）</div>
+
+  <h3 style="color:#f0f6fc; margin:16px 0 10px;">经典 SOP 模式：广播 + 事件驱动</h3>
+  <div class="note-box">
+    <strong>核心特征：</strong>没有 TeamLeader。消息默认广播给所有人，靠 cause_by in watch 自动触发下一个角色。整个流程是事件驱动的链式触发。
+  </div>
+  <div class="code-block"><span class="cm"># base_env.py — Environment.publish_message()</span>
+<span class="kw">def</span> <span class="fn">publish_message</span>(self, message):
+    <span class="kw">for</span> role, addrs <span class="kw">in</span> self.member_addrs.items():
+        <span class="kw">if</span> is_send_to(message, addrs):     <span class="cm"># send_to={"&lt;all&gt;"} → 所有人匹配</span>
+            role.put_message(message)
+    self.history.add(message)</div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">MGX 复杂模式：TeamLeader 中心化路由</h3>
+  <div class="note-box">
+    <strong>核心特征：</strong>有 TeamLeader 作为消息中枢。子 Agent 的消息默认经过 TeamLeader，由 TL 的 LLM 动态决定下一步发给谁。
+  </div>
+
+  <h4 style="color:#e1e4e8; margin:12px 0 8px;">MGXEnv 的四条路由路径（源码验证）</h4>
+  <div class="code-block"><span class="cm"># mgx_env.py — MGXEnv.publish_message() 的四条路径</span>
+<span class="kw">def</span> <span class="fn">publish_message</span>(self, message, user_defined_recipient="", publicer=""):
+    tl = self.get_role(TEAMLEADER_NAME)
+
+    <span class="kw">if</span> user_defined_recipient:
+        <span class="cm"># 路径1：用户直接 @某角色 → 绕过 TL</span>
+        self._publish_message(message)
+
+    <span class="kw">elif</span> message.sent_from <span class="kw">in</span> self.direct_chat_roles:
+        <span class="cm"># 路径2：直聊回复 → 非公开时完全不发布</span>
+        self.direct_chat_roles.remove(message.sent_from)
+        <span class="kw">if</span> self.is_public_chat:
+            self._publish_message(message)
+
+    <span class="kw">elif</span> publicer == tl.profile:
+        <span class="cm"># 路径3：TL 自己发的消息 → 直接发布</span>
+        self._publish_message(message)
+
+    <span class="kw">else</span>:
+        <span class="cm"># 路径4（默认）：子 Agent 消息 → 自动加 TL 到 send_to</span>
+        message.send_to.add(tl.name)       <span class="cm"># ← 关键</span>
+        self._publish_message(message)</div>
+
+  <h4 style="color:#e1e4e8; margin:16px 0 8px;">消息内容改写</h4>
+  <div class="code-block"><span class="cm"># mgx_env.py — move_message_info_to_content()</span>
+<span class="cm"># 在发布前改写 content，让 TL 的 LLM 能看到路由信息</span>
+converted_msg.content = <span class="str">f"[Message] from {sent_from} to {send_to}: {content}"</span>
+<span class="cm"># 例: "[Message] from Bob to Mike: Designing is complete..."</span></div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">两种模式核心区别</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>维度</th><th>经典 SOP 模式</th><th>MGX 复杂模式</th></tr>
+      <tr><td><strong>消息路由</strong></td><td>广播 + cause_by in watch 事件过滤</td><td>TL 中心化路由 + send_to 精确指定</td></tr>
+      <tr><td><strong>子 Agent 结果去哪</strong></td><td>广播给所有人，下一个角色 watch 自动匹配</td><td>自动回到 TeamLeader（send_to.add(tl.name)）</td></tr>
+      <tr><td><strong>谁决定下一个执行者</strong></td><td>watch 声明（静态，编译时确定）</td><td>TL 的 LLM（动态，运行时决策）</td></tr>
+      <tr><td><strong>是否需要 TeamLeader</strong></td><td>不需要</td><td>必须，所有消息经过 TL</td></tr>
+      <tr><td><strong>消息内容是否改写</strong></td><td>不改写</td><td>改写为 [Message] from X to Y: ... 格式</td></tr>
+      <tr><td><strong>新增角色代价</strong></td><td>只需声明 watch</td><td>需注册到 TL 团队信息</td></tr>
+      <tr><td><strong>本质</strong></td><td>事件驱动 Workflow（静态链式触发）</td><td>中心化调度（LLM 动态路由）</td></tr>
+    </table>
+  </div>
+
+  <div class="note-box">
+    <strong>MGX 模式的混合特性：</strong>TeamLeader → 子 Agent 是 LLM 动态路由（不走 watch），但子 Agent 内部的多步执行（如 Engineer 的 WriteCode → SummarizeCode）仍然走 BY_ORDER 的固定 SOP。两种机制共存：宏观上是 TL 动态调度，微观上是子 Agent 内部的固定 Workflow。
+  </div>
+<!-- ============ Section 8: 记忆机制 ============ -->
+<div class="section" id="s8">
+  <div class="section-title"><span class="num">8</span> 记忆机制全景（源码验证）</div>
+  <p style="color:#8b949e; margin-bottom:16px;">MetaGPT 有三套并行的记忆实现，不同场景不同方案——从简单列表到 RAG 向量检索。</p>
+
+  <h3 style="color:#f0f6fc; margin:16px 0 10px;">继承关系</h3>
+  <div class="tree-block">
+<span style="color:#79c0ff">Memory</span> <span style="color:#484f58"># memory.py — 基类，纯内存消息列表</span>
+│   storage: list[Message]
+│   index: DefaultDict[str, list[Message]]  <span style="color:#484f58"># 按 cause_by 倒排索引</span>
+│
+├── <span style="color:#79c0ff">LongTermMemory</span> <span style="color:#484f58"># longterm_memory.py — 第一代，FAISS ⚠️ 已废弃</span>
+│       memory_storage: MemoryStorage (FAISS)
+│       <span style="color:#f85149">⚠️ __init__.py 中已注释掉，不参与主流程</span>
+│
+└── <span style="color:#79c0ff">RoleZeroLongTermMemory</span> <span style="color:#484f58"># role_zero_memory.py — 第二代，ChromaDB</span>
+        persist_path: ".role_memory_data"
+        memory_k: 200  <span style="color:#484f58"># 短期容量上限</span>
+        similarity_top_k: 5  <span style="color:#484f58"># 检索返回数</span>
+        _rag_engine: SimpleEngine (ChromaDB)
+
+<span style="color:#f778ba">BrainMemory</span> <span style="color:#484f58"># brain_memory.py — 第三代，独立体系</span>
+│   history: List[Message]
+│   knowledge: List[Message]
+│   historical_summary: str  <span style="color:#484f58"># LLM 压缩后的摘要</span>
+│   <span style="color:#f0883e">不继承 Memory，直接继承 BaseModel</span></div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">三套记忆系统对比</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title"><span style="color:#3fb950">Memory</span> <span class="badge badge-green">基础</span></div>
+      <div class="card-body">
+        <p><strong>存储：</strong>Python list，按时间追加；DefaultDict 按 cause_by 建倒排索引</p>
+        <p><strong>检索：</strong>get(k) 最近 k 条、get_by_actions 按 Action 类型、try_remember 子串匹配</p>
+        <p><strong>淘汰：</strong><span style="color:#f85149">无淘汰，storage 无限增长</span></p>
+        <p><strong>持久化：</strong>无，进程结束即丢失</p>
+        <p><strong>用途：</strong>所有角色的基础记忆，短期对话上下文</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span style="color:#bc8cff">RoleZeroLongTermMemory</span> <span class="badge badge-purple">RAG</span></div>
+      <div class="card-body">
+        <p><strong>存储：</strong>继承 Memory 的 list + ChromaDB 向量数据库存溢出的旧消息</p>
+        <p><strong>写入条件：</strong>消息数超过 memory_k=200 → 第 201 条旧消息转入 ChromaDB</p>
+        <p><strong>检索条件：</strong>三条件同时满足才 RAG 检索 top-5：
+          <br>① k != 0
+          <br>② 最后消息来自用户/TeamLeader
+          <br>③ 消息总数 > 200
+        </p>
+        <p><strong>淘汰：</strong><span style="color:#f0883e">滑动窗口转移：旧消息复制到 ChromaDB，但不从 storage 删除</span></p>
+        <p><strong>用途：</strong>MGX 模式下 RoleZero 角色的长期记忆</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span style="color:#f778ba">BrainMemory</span> <span class="badge badge-pink">压缩</span></div>
+      <div class="card-body">
+        <p><strong>存储：</strong>history（对话历史）+ knowledge（知识库）+ historical_summary（LLM 摘要）</p>
+        <p><strong>压缩：</strong>调用 LLM 将 history 压缩成摘要 → 存入 historical_summary → 清空 history</p>
+        <p><strong>持久化：</strong>Redis 缓存，TTL 30 分钟，key = {prefix}:{user_id}:{chat_id}</p>
+        <p><strong>淘汰：</strong><span style="color:#3fb950">LLM 摘要压缩 + Redis TTL 过期</span></p>
+        <p><strong>用途：</strong>AgentStore 在线服务的单用户对话</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">记忆如何喂给 LLM</h3>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    <div class="flow-diagram">
+      <h4 style="color:#58a6ff; margin-bottom:12px; font-size:13px;">经典 SOP 模式</h4>
+      <div class="flow-step"><span class="num-tag">1</span> Role._act() 被调用</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><span class="num-tag">2</span> <span style="color:#d2a8ff">self.rc.todo.run(self.rc.history)</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><span class="num-tag">3</span> Action._run_action_node() 构建 context:
+        <div style="color:#79c0ff; margin-top:4px;">context = "## History Messages\n" + "\n".join(reversed(history))</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><span class="num-tag">4</span> <span style="color:#58a6ff">LLM 收到完整 history 作为上下文</span></div>
+      <div class="note-box" style="margin-top:12px;">
+        <strong>问题：</strong>history 无限增长，最终会超出 context window。没有任何截断或压缩策略。
+      </div>
+    </div>
+    <div class="flow-diagram">
+      <h4 style="color:#bc8cff; margin-bottom:12px; font-size:13px;">MGX 模式 (RoleZero)</h4>
+      <div class="flow-step"><span class="num-tag">1</span> RoleZero._think() 被调用</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><span class="num-tag">2</span> <span style="color:#d2a8ff">memory.get(200)</span> — 取最近 200 条</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><span class="num-tag">3</span> 如果满足三条件 → RAG 检索 ChromaDB → top-5 相关历史</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><span class="num-tag">4</span> <span style="color:#d2a8ff">final = related_memories + memories</span>（长期在前 + 短期在后）</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step"><span class="num-tag">5</span> <span style="color:#58a6ff">LLM 收到 最近200条 + top-5 相关历史</span></div>
+      <div class="note-box" style="margin-top:12px;">
+        <strong>改进：</strong>memory_k=200 截断 + RAG 语义检索。但存储的仍是原始消息，无抽象。
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">记忆生命周期</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">写入时机</div>
+      <div class="card-body">
+        <div class="flow-step" style="border-left:3px solid #3fb950;">memory.add_batch(self.rc.news)<div style="color:#484f58; font-size:11px;">Role._observe() — 过滤后的环境消息</div></div>
+        <div class="flow-step" style="border-left:3px solid #3fb950;">memory.add(msg)<div style="color:#484f58; font-size:11px;">Role._act() — Action 执行结果</div></div>
+        <div class="flow-step" style="border-left:3px solid #3fb950;">memory.add(AIMessage(content=command_rsp))<div style="color:#484f58; font-size:11px;">RoleZero._act() — LLM 命令响应</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">读取时机</div>
+      <div class="card-body">
+        <div class="flow-step" style="border-left:3px solid #58a6ff;">self.rc.history<div style="color:#484f58; font-size:11px;">Role._think() / _act() — 决定和执行 Action</div></div>
+        <div class="flow-step" style="border-left:3px solid #58a6ff;">memory.get(memory_k)<div style="color:#484f58; font-size:11px;">RoleZero._think() — 构建 LLM prompt</div></div>
+        <div class="flow-step" style="border-left:3px solid #58a6ff;">rag_engine.retrieve(query)<div style="color:#484f58; font-size:11px;">RoleZeroLongTermMemory.get() — RAG 检索</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">淘汰策略</div>
+      <div class="card-body">
+        <div class="flow-step" style="border-left:3px solid #f85149;">Memory: 无淘汰，storage 无限增长</div>
+        <div class="flow-step" style="border-left:3px solid #f0883e;">RoleZeroLongTermMemory: 超 200 条时复制到 ChromaDB，但 storage 不删除</div>
+        <div class="flow-step" style="border-left:3px solid #3fb950;">BrainMemory: LLM 摘要压缩 + Redis TTL 30分钟（唯一有真正清理的）</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">MetaGPT vs Claude 记忆机制</h3>
+  <div class="vs-grid">
+    <div class="card" style="border-color:#3fb950;">
+      <div class="card-title" style="color:#3fb950;">MetaGPT Memory</div>
+      <div class="card-body">
+        <p>存储<strong>原始 Message 对话原文</strong></p>
+        <p>每条消息都存，量大无筛选</p>
+        <p>向量相似度匹配原文内容</p>
+        <p>无抽象、无总结、无提炼</p>
+        <p>本质：<strong>聊天记录的 Ctrl+F</strong></p>
+        <p>用途：给 LLM 提供"我做到哪了"的上下文</p>
+      </div>
+    </div>
+    <div class="vs-divider">VS</div>
+    <div class="card" style="border-color:#f778ba;">
+      <div class="card-title" style="color:#f778ba;">Claude Memory</div>
+      <div class="card-body">
+        <p>存储<strong>从对话中提炼的结构化知识</strong></p>
+        <p>只存有价值的，精简筛选</p>
+        <p>按主题索引，人工判断相关性</p>
+        <p>LLM 总结后写入结构化文档</p>
+        <p>本质：<strong>助理帮你做的笔记</strong></p>
+        <p>用途：让 Claude 记住"用户是谁"</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:24px 0 10px;">关键结论</h3>
+  <div class="card" style="border-color:#f0883e;">
+    <div class="card-body">
+      <p><strong>1. Memory 基类是"对话上下文"，不是"记忆"。</strong>只是一个 list，把所有 Message 存起来拼成 LLM 的 prompt。没有遗忘、没有抽象、没有检索。</p>
+      <p style="margin-top:8px;"><strong>2. RoleZeroLongTermMemory 是"聊天记录的语义搜索"。</strong>用 ChromaDB 做向量检索，但存的仍是原始消息。检索到的内容很长、有噪音，直接塞进 prompt。</p>
+      <p style="margin-top:8px;"><strong>3. BrainMemory 是唯一有"压缩"的设计。</strong>用 LLM 把对话摘要后存 Redis，但只用于 AgentStore 在线服务，团队协作模式不使用。</p>
+      <p style="margin-top:8px;"><strong>4. 三套系统是并行的，不是叠加的。</strong>不同场景用不同实现，没有统一的记忆层。</p>
+      <p style="margin-top:8px;"><strong>5. 与 Claude 记忆的核心差距：没有"从对话中提炼知识"的机制。</strong>MetaGPT 存原文取原文，Claude 存总结取总结。</p>
+    </div>
+  </div>
+<!-- ============ Section 9: TeamLeader ============ -->
+<div class="section" id="s9">
+  <div class="section-title"><span class="num">9</span> TeamLeader 调度机制（源码验证）</div>
+
+  <div class="note-box">
+    <strong>TeamLeader 定位：</strong>继承链 TeamLeader → RoleZero → Role。name="Mike"，profile="Team Leader"，max_react_loop=3。使用 @register_tool 装饰器注册工具，通过 tool_execution_map 实现命令式调度。
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">核心能力</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">需求接收</div>
+      <div class="card-body">
+        <ul>
+          <li>接收用户原始需求</li>
+          <li>解析需求意图</li>
+          <li>判断任务类型（快速问答/复杂任务）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">任务规划</div>
+      <div class="card-body">
+        <ul>
+          <li>使用 Planner 制定执行计划</li>
+          <li>任务拆解和排序</li>
+          <li>依赖关系分析</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">消息分发</div>
+      <div class="card-body">
+        <ul>
+          <li>publish_team_message 分发任务</li>
+          <li>指定接收者和任务内容</li>
+          <li>创建 UserMessage 让目标角色当用户请求处理</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">进度跟踪</div>
+      <div class="card-body">
+        <ul>
+          <li>监控任务完成状态</li>
+          <li>处理异常和错误</li>
+          <li>子 Agent 结果自动回流到 TL</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">调度流程</h3>
+  <div class="code-block"><span class="cm"># TeamLeader._think() — 注入团队信息后调用父类</span>
+<span class="kw">async def</span> <span class="fn">_think</span>(self) -> bool:
+    self.instruction = TL_INSTRUCTION.format(team_info=self._get_team_info())
+    <span class="kw">return await</span> super()._think()  <span class="cm"># RoleZero._think() 做 LLM 调用</span>
+
+<span class="cm"># TeamLeader.publish_team_message() — 分发任务</span>
+<span class="kw">def</span> <span class="fn">publish_team_message</span>(self, content: str, send_to: str):
+    self._set_state(-1)  <span class="cm"># 暂停 TL，等待子 Agent 响应</span>
+    self.publish_message(
+        UserMessage(content=content, sent_from=self.name,
+                    send_to=send_to, cause_by=RunCommand),
+        send_to=send_to
+    )
+
+<span class="cm"># TeamLeader.publish_message() — 传递 publicer 标记</span>
+<span class="kw">def</span> <span class="fn">publish_message</span>(self, msg, send_to="no one"):
+    msg.send_to = send_to
+    self.rc.env.publish_message(msg, publicer=self.profile)  <span class="cm"># → 路径3</span></div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">并行调度</h3>
+  <div class="code-block"><span class="cm"># base_env.py — Environment.run() 并行执行所有非 idle Role</span>
+<span class="kw">async def</span> <span class="fn">run</span>(self, k=1):
+    <span class="kw">for</span> _ <span class="kw">in</span> range(k):
+        futures = []
+        <span class="kw">for</span> role <span class="kw">in</span> self.roles.values():
+            <span class="kw">if</span> role.is_idle:
+                <span class="kw">continue</span>
+            futures.append(role.run())
+        <span class="kw">if</span> futures:
+            <span class="kw">await</span> asyncio.gather(*futures)  <span class="cm"># 并行执行</span></div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">上下文传递机制</h3>
+  <div class="flow-diagram">
+    <div class="flow-step"><span class="num-tag">1</span><strong>结构化内容传递</strong> — 通过 instruct_content 传递结构化数据（PRD、设计文档、任务列表）</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">2</span><strong>文件引用</strong> — 使用文件路径而非文件内容，减少消息体积</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">3</span><strong>记忆继承</strong> — 每个 Agent 维护独立 Memory，通过消息订阅获取相关上下文</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">4</span><strong>共享工作空间</strong> — 通过 ProjectRepo 和 Git 管理共享的代码和文档</div>
+  </div>
+</div>
+
+<!-- ============ Section 10: 框架对比 ============ -->
+<div class="section" id="s10">
+  <div class="section-title"><span class="num">10</span> 与其他框架的对比</div>
+
+  <div class="cards-grid">
+    <div class="card" style="border-color:#58a6ff;">
+      <div class="card-title" style="color:#58a6ff;">MetaGPT</div>
+      <div class="card-body">
+        <ul>
+          <li>固定角色定义（PM、Architect、Engineer）</li>
+          <li>标准化 SOP 流程</li>
+          <li>发布-订阅消息系统</li>
+          <li>TeamLeader 中心化协调</li>
+          <li>支持代码生成全流程</li>
+          <li>内置代码审查和测试</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">AutoGen</div>
+      <div class="card-body">
+        <ul>
+          <li>灵活的对话式协作</li>
+          <li>动态角色创建</li>
+          <li>人类参与循环</li>
+          <li>无固定 SOP</li>
+          <li>需手动定义流程</li>
+          <li>支持多种 LLM</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">CrewAI</div>
+      <div class="card-body">
+        <ul>
+          <li>基于角色的协作</li>
+          <li>任务委派机制</li>
+          <li>工具集成</li>
+          <li>无代码生成特化</li>
+          <li>简单易用</li>
+          <li>灵活的任务定义</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">LangGraph</div>
+      <div class="card-body">
+        <ul>
+          <li>图状态机架构</li>
+          <li>精确流程控制</li>
+          <li>可视化工作流</li>
+          <li>学习曲线陡峭</li>
+          <li>高度可定制</li>
+          <li>支持复杂逻辑</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="color:#f0f6fc; margin:20px 0 10px;">MetaGPT 的独特优势</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">领域特化</div>
+      <div class="card-body">专为软件开发场景设计，内置完整的开发流程（需求→设计→编码→测试），开箱即用。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">标准化 SOP</div>
+      <div class="card-body">定义了清晰的角色职责和工作流程，减少了随机性，提高了输出质量的稳定性。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">结构化通信</div>
+      <div class="card-body">通过 instruct_content 传递结构化数据，确保信息在角色间准确传递，减少信息损失。</div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center; padding:40px 20px; border-top:1px solid #21262d; margin-top:40px;">
+  <p style="color:#484f58; font-size:12px;">
+    基于 MetaGPT 源码验证 · 调研时间：2026年5月 · 合并自 agent-orchestration-analysis / class-tree / memory-mechanism
+  </p>
+</div>
+
+</div>
+
+<script>
+// Toggle class cards
+document.querySelectorAll('.class-header').forEach(h => {
+  h.addEventListener('click', () => {
+    const body = h.nextElementSibling;
+    if (body) body.classList.toggle('hidden');
+  });
+});
+</script>
+
+</body>
+</html>
