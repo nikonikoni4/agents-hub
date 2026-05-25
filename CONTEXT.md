@@ -24,7 +24,7 @@
 - 不关心业务逻辑、会话管理、权限控制
 - 提供 `execute()` 和 `execute_stream()` 两个接口
 
-### agents（角色管理层）
+### roles（角色管理层）
 - 角色配置、skill 管理
 - 为 agent_bridge 提供 RoleConfig
 
@@ -40,7 +40,7 @@
 
 ### RoleConfig（系统内部配置）
 - 面向 agent_bridge 的运行时配置
-- 由 agents 模块从 role.json + 目录结构派生
+- 由 roles 模块从 role.json + 目录结构派生
 - 包含：platform、codex_home / claude_config_dir
 - 不包含 system_prompt 和 skills（由 CLI 从目录自动加载）
 
