@@ -3,7 +3,7 @@ from enum import Enum
 from agents_hub.roles import Role,RoleManager,RoleType, role_manager
 from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.roles.models import RoleConfig
-from agents_hub.agent_bridge import AgentBridge,AgentEvent
+from agents_hub.agent_bridge import AgentBridge, AgentResult
 from pydantic import BaseModel, field_validator
 from uuid import uuid4
 from pathlib import Path
@@ -112,7 +112,7 @@ class GroupChat:
             else:
                 other_members = [name for name in self.team_members_name if name != agent.name]
                 return await agent.execute(f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己")
-        result:list[AgentEvent] = await asyncio.gather(
+        result: list[AgentResult] = await asyncio.gather(
             start_conversation(self.manager)
             ,*[
             start_conversation(work) for _,work in self.works.items()
@@ -126,7 +126,7 @@ class GroupChatSession:
     updated_at : datetime = field(default_factory=datetime.now)
     last_compacted_loc : int = 0 # 上一次compact的位置 
 
-    def add_message(self,agent_event:AgentEvent):
+    def add_message(self, agent_result: AgentResult):
         pass
 
 
@@ -216,7 +216,7 @@ class GroupChatContext:
         sanitized = re.sub(r'-+', '-', sanitized)
         return sanitized
 
-    def add_message(self,agent_event:AgentEvent):
+    def add_message(self, agent_result: AgentResult):
         self.messages.append()
 
 agent_platform_client = AgentBridge()

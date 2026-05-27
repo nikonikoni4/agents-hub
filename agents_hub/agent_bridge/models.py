@@ -6,7 +6,7 @@
 
 from enum import Enum
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, Union, List, Optional
 
 # CLI 命令路径
 CODEX_COMMAND = str(Path.home() / "AppData" / "Roaming" / "npm" / "codex.cmd")
@@ -32,11 +32,25 @@ class AgentEventType(Enum):
     RESULT = "result"                   # 完整结果（非流式输出）
 
 
-class AgentEvent(TypedDict):
-    """统一事件格式"""
+class StreamEvent(TypedDict):
+    """流式事件格式（TEXT_DELTA、TOOL_USE、TURN_COMPLETE 等）"""
     type: AgentEventType        # 事件类型（使用枚举）
     content: dict               # 具体数据
     session_id: str             # 会话 ID
     timestamp: str              # 时间戳
     agent_name: str             # 当前 agent 名称
     platform: AgentPlatform     # agent 所属平台
+
+
+class AgentResult(TypedDict):
+    """完整结果格式（非流式调用的返回值）"""
+    text: str                           # 完整文本
+    usage: Optional[dict]               # token 使用统计
+    session_id: str                     # 会话 ID
+    timestamp: str                      # 时间戳
+    agent_name: str                     # 当前 agent 名称
+    platform: AgentPlatform             # agent 所属平台
+
+
+# 向后兼容别名（待废弃）
+AgentEvent = StreamEvent

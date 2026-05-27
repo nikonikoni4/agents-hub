@@ -1,7 +1,7 @@
 """Executor 和 Parser 协议定义"""
 
 from typing import Protocol, AsyncIterator, Optional
-from agents_hub.agent_bridge.models import AgentEvent
+from agents_hub.agent_bridge.models import StreamEvent
 from agents_hub.roles.models import RoleConfig
 
 
@@ -31,7 +31,7 @@ class Executor(Protocol):
 class Parser(Protocol):
     """解析器协议：负责解析原始输出为统一格式"""
 
-    def parse_event(self, raw_line: str) -> Optional[AgentEvent]:
+    def parse_event(self, raw_line: str) -> Optional[StreamEvent]:
         """
         解析单行 JSON 事件
 
@@ -39,6 +39,6 @@ class Parser(Protocol):
             raw_line: 原始 JSON 字符串
 
         Returns:
-            Optional[AgentEvent]: 统一格式的事件（如果无法解析则返回 None）
+            Optional[StreamEvent]: 统一格式的流式事件（如果无法解析则返回 None）
         """
         ...

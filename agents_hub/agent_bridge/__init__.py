@@ -2,18 +2,22 @@
 
 from agents_hub.agent_bridge.models import (
     AgentPlatform,
-    AgentEvent,
+    StreamEvent,
+    AgentResult,
     AgentEventType,
     CODEX_COMMAND,
     CLAUDE_COMMAND,
+    AgentEvent,  # 向后兼容别名
 )
 from agents_hub.agent_bridge.bridge import AgentBridge
 
 __all__ = [
     "AgentPlatform",
-    "AgentEvent",
+    "StreamEvent",
+    "AgentResult",
     "AgentEventType",
     "AgentBridge",
     "CODEX_COMMAND",
     "CLAUDE_COMMAND",
+    "AgentEvent",  # 向后兼容
 ]

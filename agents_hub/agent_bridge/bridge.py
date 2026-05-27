@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import AsyncIterator, Optional
-from agents_hub.agent_bridge.models import AgentPlatform, AgentEvent, AgentEventType
+from agents_hub.agent_bridge.models import AgentPlatform, StreamEvent, AgentResult, AgentEventType
 from agents_hub.roles.models import RoleConfig
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
@@ -29,9 +29,9 @@ class AgentBridge:
         prompt: str,
         config: RoleConfig,
         session_id: Optional[str] = None
-    ) -> AsyncIterator[AgentEvent]:
+    ) -> AsyncIterator[StreamEvent]:
         """
-        流式执行 Agent 调用（给人看）
+        流式执行 Agent 调用
 
         Args:
             prompt: 用户输入
@@ -39,7 +39,7 @@ class AgentBridge:
             session_id: 会话 ID（可选，用于恢复之前的会话）
 
         Yields:
-            AgentEvent: 统一格式的事件流
+            StreamEvent: 统一格式的流式事件
         """
         executor = self._executors[config.platform]
         parser = self._parsers[config.platform]
@@ -58,11 +58,11 @@ class AgentBridge:
         prompt: str,
         config: RoleConfig,
         session_id: Optional[str] = None
-    ) -> AgentEvent:
+    ) -> AgentResult:
         """
-        非流式执行，返回完整结果（给 A2A 用）
+        非流式执行，返回完整结果
 
-        内部复用 execute_stream()，拼接所有 text_delta 后返回单个 RESULT 事件。
+        内部复用 execute_stream()，拼接所有 text_delta 后返回完整结果。
 
         Args:
             prompt: 用户输入
@@ -70,7 +70,7 @@ class AgentBridge:
             session_id: 会话 ID（可选）
 
         Returns:
-            AgentEvent: type 为 AgentEventType.RESULT 的完整结果事件
+            AgentResult: 完整结果
         """
         full_text = []
         usage = None
@@ -85,9 +85,9 @@ class AgentBridge:
             if not result_session_id and event.get("session_id"):
                 result_session_id = event["session_id"]
 
-        return AgentEvent(
-            type=AgentEventType.RESULT,
-            content={"text": "".join(full_text), "usage": usage},
+        return AgentResult(
+            text="".join(full_text),
+            usage=usage,
             session_id=result_session_id,
             timestamp=datetime.now().isoformat(),
             agent_name=config.name,

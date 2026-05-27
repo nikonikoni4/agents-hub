@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 from typing import Optional
-from agents_hub.agent_bridge.models import AgentEvent, AgentEventType
+from agents_hub.agent_bridge.models import StreamEvent, AgentEventType
 
 
 class CodexParser:
@@ -12,7 +12,7 @@ class CodexParser:
     def __init__(self):
         self._thread_id: str = ""
 
-    def parse_event(self, raw_line: str) -> Optional[AgentEvent]:
+    def parse_event(self, raw_line: str) -> Optional[StreamEvent]:
         """
         解析单行 JSON 事件
 
@@ -44,7 +44,7 @@ class CodexParser:
 
         return None
 
-    def _parse_item_completed(self, event: dict) -> Optional[AgentEvent]:
+    def _parse_item_completed(self, event: dict) -> Optional[StreamEvent]:
         """解析项目完成事件"""
         item = event.get("item", {})
         item_type = item.get("type")
@@ -54,17 +54,18 @@ class CodexParser:
 
         # Agent 消息
         if item_type == "agent_message":
-            return AgentEvent(
+            return StreamEvent(
                 type=AgentEventType.TEXT_DELTA,
                 content={"text": item.get("text", "")},
                 session_id=session_id,
                 timestamp=datetime.now().isoformat(),
-                agent_name=""
+                agent_name="",
+                platform=None  # type: ignore
             )
 
         # 命令执行
         if item_type == "command_execution":
-            return AgentEvent(
+            return StreamEvent(
                 type=AgentEventType.TOOL_USE,
                 content={
                     "command": item.get("command", ""),
@@ -74,18 +75,20 @@ class CodexParser:
                 },
                 session_id=session_id,
                 timestamp=datetime.now().isoformat(),
-                agent_name=""
+                agent_name="",
+                platform=None  # type: ignore
             )
 
         return None
 
-    def _parse_turn_completed(self, event: dict) -> Optional[AgentEvent]:
+    def _parse_turn_completed(self, event: dict) -> Optional[StreamEvent]:
         """解析回合完成事件"""
         usage = event.get("usage", {})
-        return AgentEvent(
+        return StreamEvent(
             type=AgentEventType.TURN_COMPLETE,
             content={"usage": usage},
             session_id=event.get("thread_id", ""),
             timestamp=datetime.now().isoformat(),
-            agent_name=""
+            agent_name="",
+            platform=None  # type: ignore
         )

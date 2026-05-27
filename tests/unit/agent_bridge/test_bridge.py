@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from agents_hub.agent_bridge.bridge import AgentBridge
-from agents_hub.agent_bridge.models import AgentPlatform, AgentEventType
+from agents_hub.agent_bridge.models import AgentPlatform, AgentEventType, StreamEvent
 from agents_hub.roles.models import RoleConfig
 
 
@@ -24,6 +24,7 @@ class TestAgentBridge:
     async def test_execute_stream_calls_correct_executor(self):
         """测试流式调用使用正确的执行器"""
         config = RoleConfig(
+            name="test-agent",
             platform=AgentPlatform.CLAUDE,
         )
 
@@ -54,9 +55,10 @@ class TestAgentBridge:
         assert events[0]["type"] == AgentEventType.INIT
 
     @pytest.mark.asyncio
-    async def test_execute_returns_result_event(self):
-        """测试非流式调用返回 RESULT 事件"""
+    async def test_execute_returns_result(self):
+        """测试非流式调用返回 AgentResult"""
         config = RoleConfig(
+            name="test-agent",
             platform=AgentPlatform.CLAUDE,
         )
 
@@ -79,6 +81,6 @@ class TestAgentBridge:
 
         result = await self.bridge.execute("测试", config)
 
-        assert result["type"] == AgentEventType.RESULT
-        assert result["content"]["text"] == "你好"
-        assert result["content"]["usage"]["input_tokens"] == 100
+        assert result["text"] == "你好"
+        assert result["usage"]["input_tokens"] == 100
+        assert result["session_id"] == "123"
