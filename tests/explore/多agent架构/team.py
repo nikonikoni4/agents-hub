@@ -94,37 +94,84 @@ class GroupChat:
         self.project_path = None
         self.group_chat_context = GroupChatContext(group_chat_id,project_path)
 
-    async def start(self):
-        # 1. 初始化team manager
-        self.manager = Manager()
-        # 2. 初始化team worker
-        
-        if not self.team_members_name:
-            print("warning : 无团队成员")
-            return
-        role_manager = RoleManager()
-        for role in self.team_members_name:
-            
-            self.works[role] = Worker(role_manager.get_role(role)) # 关于角色这部分，可能有优化的地方，每次都需要读取文件夹
+    async def _initialize_new_members(self):
+        """
+        初始化新成员（第一次进入群聊的成员）
 
+        检查哪些成员没有 session_id，对这些成员执行初始化流程（打招呼）。
+
+        注意：
+        - 只在 GroupChat 初始化时通过 start() 调用
+        - 如果项目已经启动一段时间后再添加新的 worker，不会自动执行此操作
+        - 需要手动调用此方法来初始化新加入的成员
+        """
         import asyncio
-        # 向manager和worker发送信息，获取session_id以及将每个成员的消息返回到群聊中
-        async def start_conversation(agent : Agent):
+
+        # 获取需要初始化的成员（没有 session_id 的成员）
+        new_members = []
+
+        # 检查 manager 是否需要初始化
+        if self.manager and self.manager.name not in self.group_chat_context.agent_session_id:
+            new_members.append(self.manager)
+
+        # 检查 workers 是否需要初始化
+        for name, worker in self.works.items():
+            if name not in self.group_chat_context.agent_session_id:
+                new_members.append(worker)
+
+        # 如果没有新成员，直接返回
+        if not new_members:
+            return
+
+        # 定义打招呼函数
+        async def start_conversation(agent:Agent):
             if agent.role_type == RoleType.LEADER:
-                return await agent.execute(f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己")
+                return await agent.execute(
+                    f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己"
+                )
             else:
                 other_members = [name for name in self.team_members_name if name != agent.name]
-                return await agent.execute(f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己")
+                return await agent.execute(
+                    f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己"
+                )
+
+        # 并发执行所有新成员的初始化
         results: list[AgentResult] = await asyncio.gather(
-            start_conversation(self.manager)
-            ,*[
-            start_conversation(work) for _,work in self.works.items()
-        ])
+            *[start_conversation(member) for member in new_members]
+        )
+
+        # 保存结果
         for result in results:
             self.group_chat_context.update_agent_session_id(result)
             self.group_chat_context.group_chat_session.add_message(result)
+
         self.group_chat_context.save_agent_session_id()
         self.group_chat_context.save_group_chat_session()
+
+    async def start(self):
+        """
+        启动群聊
+
+        1. 初始化 manager
+        2. 初始化所有 workers
+        3. 对第一次进入群聊的成员执行初始化（打招呼）
+
+        注意：此方法只在 GroupChat 创建时调用一次
+        """
+        # 1. 初始化team manager
+        self.manager = Manager()
+
+        # 2. 初始化team worker
+        if not self.team_members_name:
+            print("warning : 无团队成员")
+            return
+
+        role_manager = RoleManager()
+        for role in self.team_members_name:
+            self.works[role] = Worker(role_manager.get_role(role))
+
+        # 3. 初始化新成员（第一次会话的成员）
+        await self._initialize_new_members()
 @dataclass
 class AgentSessionInfo:
     """Agent 的会话信息"""
