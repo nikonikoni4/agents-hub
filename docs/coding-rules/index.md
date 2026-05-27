@@ -1,10 +1,5 @@
-<index-write-guide>
-导航文档每一项模板：
-## xxxx
- - updated_at : YYYY-MM-DD
- - path:
- - 触发规则：
- - 内容摘要：
-
-当写入第一条数据之后删除该内容（index-write-guide）
-</index-write-guide>
+## 后端编码风格规范
+ - updated_at: 2026-05-27
+ - path: docs/coding-rules/backend-style.md
+ - 触发规则：编写后端代码时，需要创建或选择数据类型文件（types.py/models.py/schemas.py）
+ - 内容摘要：定义数据类型文件的命名规范，明确 types.py（跨模块共享基础类型）、models.py（模块内数据模型）、schemas.py（配置验证）的使用场景和判断标准

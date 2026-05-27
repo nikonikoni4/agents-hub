@@ -2,7 +2,8 @@
 
 from datetime import datetime
 from typing import AsyncIterator, Optional
-from agents_hub.agent_bridge.models import AgentPlatform, StreamEvent, AgentResult, AgentEventType
+from agents_hub.config.types import AgentPlatform
+from agents_hub.agent_bridge.models import StreamEvent, AgentResult, AgentEventType
 from agents_hub.roles.models import RoleConfig
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.executors.codex import CodexExecutor

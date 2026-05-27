@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from agents_hub.agent_bridge.models import AgentPlatform
+from agents_hub.config.types import AgentPlatform
 from agents_hub.roles.models import RoleConfig, RoleInfo, SkillInfo, RoleType
 from agents_hub.roles.exceptions import SkillNotFoundError, SkillAlreadyExistsError
 

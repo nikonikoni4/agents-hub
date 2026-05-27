@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from agents_hub.agent_bridge.models import AgentPlatform
+from agents_hub.config.types import AgentPlatform
 from agents_hub.roles.models import RoleInfo, RoleType
 from agents_hub.roles.role import Role
 from agents_hub.roles.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError

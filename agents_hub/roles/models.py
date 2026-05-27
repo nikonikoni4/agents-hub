@@ -1,10 +1,9 @@
-"""角色配置模块的数据结构定义。"""
+"""角色配置模块的数据结构定义"""
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Optional, List
 
-from agents_hub.agent_bridge.models import AgentPlatform
+from agents_hub.config.types import AgentPlatform, RoleType
 
 
 @dataclass
@@ -18,17 +17,7 @@ class RoleConfig:
     name: str                  # 角色名称
     platform: AgentPlatform    # 平台类型
     work_root: Optional[str] = None  # 角色工作目录路径（注入 CODEX_HOME / CLAUDE_CONFIG_DIR）
-
-
-class RoleType(Enum):
-    """角色类型枚举。
-
-    Attributes:
-        LEADER: 领导者角色，负责任务分派和协调。
-        TEAM_MEMBER: 团队成员角色，执行具体任务。
-    """
-    LEADER = "leader"
-    TEAM_MEMBER = "team_member"
+    role_type: RoleType = RoleType.TEAM_MEMBER  # 角色类型，默认为团队成员
 
 
 @dataclass
