@@ -27,7 +27,7 @@ class TestCodexParser:
 
         assert result is not None
         assert result["type"] == AgentEventType.TEXT_DELTA
-        assert result["data"]["text"] == "我会帮你审查代码"
+        assert result["content"]["text"] == "我会帮你审查代码"
         assert result["session_id"] == "thread-123"
 
     def test_parse_command_execution(self):
@@ -48,8 +48,8 @@ class TestCodexParser:
 
         assert result is not None
         assert result["type"] == AgentEventType.TOOL_USE
-        assert result["data"]["command"] == "ls -la"
-        assert result["data"]["exit_code"] == 0
+        assert result["content"]["command"] == "ls -la"
+        assert result["content"]["exit_code"] == 0
         assert result["session_id"] == "thread-123"
 
     def test_parse_turn_completed(self):
@@ -67,7 +67,7 @@ class TestCodexParser:
 
         assert result is not None
         assert result["type"] == AgentEventType.TURN_COMPLETE
-        assert result["data"]["usage"]["input_tokens"] == 100
+        assert result["content"]["usage"]["input_tokens"] == 100
         assert result["session_id"] == "thread-123"
 
     def test_parse_unknown_event_returns_none(self):

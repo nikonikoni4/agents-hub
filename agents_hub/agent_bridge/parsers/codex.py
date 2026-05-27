@@ -1,6 +1,7 @@
 """Codex CLI 输出解析器"""
 
 import json
+from datetime import datetime
 from typing import Optional
 from agents_hub.agent_bridge.parsers.base import AgentEvent, AgentEventType
 
@@ -55,23 +56,25 @@ class CodexParser:
         if item_type == "agent_message":
             return AgentEvent(
                 type=AgentEventType.TEXT_DELTA,
-                data={"text": item.get("text", "")},
+                content={"text": item.get("text", "")},
                 session_id=session_id,
-                timestamp=""
+                timestamp=datetime.now().isoformat(),
+                agent_name=""
             )
 
         # 命令执行
         if item_type == "command_execution":
             return AgentEvent(
                 type=AgentEventType.TOOL_USE,
-                data={
+                content={
                     "command": item.get("command", ""),
                     "output": item.get("aggregated_output", ""),
                     "exit_code": item.get("exit_code"),
                     "status": item.get("status", ""),
                 },
                 session_id=session_id,
-                timestamp=""
+                timestamp=datetime.now().isoformat(),
+                agent_name=""
             )
 
         return None
@@ -81,7 +84,8 @@ class CodexParser:
         usage = event.get("usage", {})
         return AgentEvent(
             type=AgentEventType.TURN_COMPLETE,
-            data={"usage": usage},
+            content={"usage": usage},
             session_id=event.get("thread_id", ""),
-            timestamp=""
+            timestamp=datetime.now().isoformat(),
+            agent_name=""
         )

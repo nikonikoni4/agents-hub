@@ -1,5 +1,6 @@
 """AgentBridge 统一接口"""
 
+from datetime import datetime
 from typing import AsyncIterator, Optional
 from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform
 from agents_hub.agent_bridge.parsers.base import AgentEvent, AgentEventType
@@ -48,6 +49,7 @@ class AgentBridge:
             if raw_line.strip():
                 parsed_event = parser.parse_event(raw_line)
                 if parsed_event is not None:
+                    parsed_event["agent_name"] = config.name
                     yield parsed_event
 
     async def execute(
@@ -75,16 +77,17 @@ class AgentBridge:
 
         async for event in self.execute_stream(prompt, config, session_id):
             if event["type"] == AgentEventType.TEXT_DELTA:
-                full_text.append(event["data"]["text"])
+                full_text.append(event["content"]["text"])
             elif event["type"] == AgentEventType.TURN_COMPLETE:
-                usage = event["data"].get("usage")
+                usage = event["content"].get("usage")
             # 记录第一个返回的 session_id
             if not result_session_id and event.get("session_id"):
                 result_session_id = event["session_id"]
 
         return AgentEvent(
             type=AgentEventType.RESULT,
-            data={"text": "".join(full_text), "usage": usage},
+            content={"text": "".join(full_text), "usage": usage},
             session_id=result_session_id,
-            timestamp=""
+            timestamp=datetime.now().isoformat(),
+            agent_name=config.name
         )

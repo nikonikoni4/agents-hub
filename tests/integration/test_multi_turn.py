@@ -29,7 +29,7 @@ def claude_config():
 def codex_config():
     return RoleConfig(
         platform=AgentPlatform.CODEX,
-        codex_home="D:/desktop/软件开发/test-codex/role-xiaoli",
+        work_root="D:/desktop/软件开发/test-codex/role-xiaoli",
     )
 
 
@@ -38,7 +38,7 @@ async def _multi_turn_test(bridge: AgentBridge, config: RoleConfig):
     # 第一轮：自我介绍
     first_event = await bridge.execute("你好，我是nico", config)
     assert first_event["type"] == AgentEventType.RESULT
-    first_text = first_event["data"]["text"].strip()
+    first_text = first_event["content"]["text"].strip()
     assert first_text, "第一轮回复不应为空"
 
     # 提取 session_id
@@ -48,7 +48,7 @@ async def _multi_turn_test(bridge: AgentBridge, config: RoleConfig):
     # 第二轮：询问名字
     second_event = await bridge.execute("我的名字是什么？", config, session_id=session_id)
     assert second_event["type"] == AgentEventType.RESULT
-    second_text = second_event["data"]["text"].strip()
+    second_text = second_event["content"]["text"].strip()
     assert second_text, "第二轮回复不应为空"
 
     # 验证上下文记忆：第二轮应回答 "nico"

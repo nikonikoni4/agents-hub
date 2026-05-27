@@ -1,6 +1,6 @@
 """事件类型定义"""
 
-from typing import TypedDict
+from typing import TypedDict, NotRequired
 from enum import Enum
 
 
@@ -16,6 +16,7 @@ class AgentEventType(Enum):
 class AgentEvent(TypedDict):
     """统一事件格式"""
     type: AgentEventType    # 事件类型（使用枚举）
-    data: dict              # 具体数据
+    content: dict           # 具体数据
     session_id: str         # 会话 ID
-    timestamp: str          # 时间戳（可选）
+    timestamp: str          # 时间戳
+    agent_name: str            # 当前 agent 名称

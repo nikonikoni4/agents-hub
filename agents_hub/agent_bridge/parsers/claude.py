@@ -1,6 +1,7 @@
 """Claude CLI 输出解析器"""
 
 import json
+from datetime import datetime
 from typing import Optional
 from agents_hub.agent_bridge.parsers.base import AgentEvent, AgentEventType
 
@@ -45,9 +46,10 @@ class ClaudeParser:
             if delta.get("type") == "text_delta":
                 return AgentEvent(
                     type=AgentEventType.TEXT_DELTA,
-                    data={"text": delta.get("text", "")},
+                    content={"text": delta.get("text", "")},
                     session_id=session_id,
-                    timestamp=""
+                    timestamp=datetime.now().isoformat(),
+                    agent_name=""
                 )
 
         return None
@@ -60,12 +62,13 @@ class ClaudeParser:
         if subtype == "init":
             return AgentEvent(
                 type=AgentEventType.INIT,
-                data={
+                content={
                     "model": event.get("model", ""),
                     "tools": event.get("tools", []),
                 },
                 session_id=session_id,
-                timestamp=""
+                timestamp=datetime.now().isoformat(),
+                agent_name=""
             )
 
         return None

@@ -39,7 +39,7 @@ class TestAgentBridge:
         mock_parser = MagicMock()
         mock_parser.parse_event.return_value = {
             "type": AgentEventType.INIT,
-            "data": {},
+            "content": {},
             "session_id": "123",
             "timestamp": ""
         }
@@ -64,13 +64,13 @@ class TestAgentBridge:
         async def mock_stream(prompt, config, session_id=None):
             yield {
                 "type": AgentEventType.TEXT_DELTA,
-                "data": {"text": "你好"},
+                "content": {"text": "你好"},
                 "session_id": "123",
                 "timestamp": ""
             }
             yield {
                 "type": AgentEventType.TURN_COMPLETE,
-                "data": {"usage": {"input_tokens": 100}},
+                "content": {"usage": {"input_tokens": 100}},
                 "session_id": "123",
                 "timestamp": ""
             }
@@ -80,5 +80,5 @@ class TestAgentBridge:
         result = await self.bridge.execute("测试", config)
 
         assert result["type"] == AgentEventType.RESULT
-        assert result["data"]["text"] == "你好"
-        assert result["data"]["usage"]["input_tokens"] == 100
+        assert result["content"]["text"] == "你好"
+        assert result["content"]["usage"]["input_tokens"] == 100

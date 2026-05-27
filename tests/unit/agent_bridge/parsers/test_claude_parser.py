@@ -27,7 +27,7 @@ class TestClaudeParser:
 
         assert result is not None
         assert result["type"] == AgentEventType.TEXT_DELTA
-        assert result["data"]["text"] == "你好"
+        assert result["content"]["text"] == "你好"
         assert result["session_id"] == "test-session-123"
 
     def test_parse_init(self):
@@ -43,8 +43,8 @@ class TestClaudeParser:
 
         assert result is not None
         assert result["type"] == AgentEventType.INIT
-        assert result["data"]["model"] == "claude-opus-4-7"
-        assert "Bash" in result["data"]["tools"]
+        assert result["content"]["model"] == "claude-opus-4-7"
+        assert "Bash" in result["content"]["tools"]
 
     def test_parse_unknown_event_returns_none(self):
         """测试解析未知事件返回 None"""
