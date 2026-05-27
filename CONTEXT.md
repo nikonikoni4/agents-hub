@@ -41,7 +41,7 @@
 ### RoleConfig（系统内部配置）
 - 面向 agent_bridge 的运行时配置
 - 由 roles 模块从 role.json + 目录结构派生
-- 包含：platform、codex_home / claude_config_dir
+- 包含：platform、work_root
 - 不包含 system_prompt 和 skills（由 CLI 从目录自动加载）
 
 ## 关键决策
