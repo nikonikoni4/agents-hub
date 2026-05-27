@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from typing import Optional
 from agents_hub.agent_bridge.models import StreamEvent, AgentEventType
+from agents_hub.config.types import AgentPlatform, RoleType
 
 
 class CodexParser:
@@ -59,8 +60,9 @@ class CodexParser:
                 content={"text": item.get("text", "")},
                 session_id=session_id,
                 timestamp=datetime.now().isoformat(),
-                agent_name="",
-                platform=None  # type: ignore
+                agent_name="",  # 将在 bridge 中填充
+                platform=AgentPlatform.CODEX,
+                role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
             )
 
         # 命令执行
@@ -75,8 +77,9 @@ class CodexParser:
                 },
                 session_id=session_id,
                 timestamp=datetime.now().isoformat(),
-                agent_name="",
-                platform=None  # type: ignore
+                agent_name="",  # 将在 bridge 中填充
+                platform=AgentPlatform.CODEX,
+                role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
             )
 
         return None
@@ -89,6 +92,7 @@ class CodexParser:
             content={"usage": usage},
             session_id=event.get("thread_id", ""),
             timestamp=datetime.now().isoformat(),
-            agent_name="",
-            platform=None  # type: ignore
+            agent_name="",  # 将在 bridge 中填充
+            platform=AgentPlatform.CODEX,
+            role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
         )

@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from typing import Optional
 from agents_hub.agent_bridge.models import StreamEvent, AgentEventType
+from agents_hub.config.types import AgentPlatform, RoleType
 
 
 class ClaudeParser:
@@ -49,8 +50,9 @@ class ClaudeParser:
                     content={"text": delta.get("text", "")},
                     session_id=session_id,
                     timestamp=datetime.now().isoformat(),
-                    agent_name="",
-                    platform=None  # type: ignore
+                    agent_name="",  # 将在 bridge 中填充
+                    platform=AgentPlatform.CLAUDE,
+                    role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
                 )
 
         return None
@@ -69,8 +71,9 @@ class ClaudeParser:
                 },
                 session_id=session_id,
                 timestamp=datetime.now().isoformat(),
-                agent_name="",
-                platform=None  # type: ignore
+                agent_name="",  # 将在 bridge 中填充
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
             )
 
         return None

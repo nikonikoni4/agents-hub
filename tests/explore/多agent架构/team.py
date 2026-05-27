@@ -58,7 +58,7 @@ teams.json
 
 class Team(BaseModel):
     team_members_name : list[str]
-    team_name : str
+    team_name : str = "default_team"  # 设置默认值
     @field_validator('team_members_name')
     @classmethod
     def validate_team_members(cls, team_members_name):
@@ -115,12 +115,16 @@ class GroupChat:
             else:
                 other_members = [name for name in self.team_members_name if name != agent.name]
                 return await agent.execute(f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己")
-        result: list[AgentResult] = await asyncio.gather(
+        results: list[AgentResult] = await asyncio.gather(
             start_conversation(self.manager)
             ,*[
             start_conversation(work) for _,work in self.works.items()
         ])
-
+        for result in results:
+            self.group_chat_context.update_agent_session_id(result)
+            self.group_chat_context.group_chat_session.add_message(result)
+        self.group_chat_context.save_agent_session_id()
+        self.group_chat_context.save_group_chat_session()
 @dataclass
 class AgentSessionInfo:
     """Agent 的会话信息"""
@@ -288,6 +292,35 @@ class GroupChatContext:
         with open(self.session_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
+    def update_agent_session_id(self, agent_result: AgentResult):
+        """
+        根据 AgentResult 更新 agent session id
+
+        如果 agent 不存在，创建新的 AgentSessionInfo
+        如果 session_id 不同于 main_session，添加到 btw_session
+
+        Args:
+            agent_result: Agent 执行结果
+        """
+        agent_name = agent_result.agent_name
+        session_id = agent_result.session_id
+
+        # 如果 agent 不存在，创建新的
+        if agent_name not in self.agent_session_id:
+            self.agent_session_id[agent_name] = AgentSessionInfo(
+                main_session=session_id,
+                btw_session=[]
+            )
+        else:
+            session_info = self.agent_session_id[agent_name]
+
+            # 如果是第一次设置 main_session
+            if not session_info.main_session:
+                session_info.main_session = session_id
+            # 如果 session_id 不同于 main_session，且不在 btw_session 中
+            elif session_id != session_info.main_session and session_id not in session_info.btw_session:
+                session_info.btw_session.append(session_id)
+
     @staticmethod
     def sanitize_project_path(project_path: str) -> str:
         """
@@ -335,7 +368,7 @@ async def main():
     role_manager.create_role("小赵",AgentPlatform.CODEX,type = RoleType.TEAM_MEMBER)
     role_manager.create_role("Leader",AgentPlatform.CLAUDE,type = RoleType.LEADER)
     team_member_list = ["小李","小赵"]
-    team = Team(team_members_name=team_member_list)
+    team = Team(team_name= "测试",team_members_name=team_member_list)
     group_chat = GroupChat(team,GroupChatType.MANAGER_ORCHESTRATE,project_path='D:/desktop/软件开发/agents-hub')
     await group_chat.start()
 

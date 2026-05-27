@@ -50,8 +50,9 @@ class AgentBridge:
             if raw_line.strip():
                 parsed_event = parser.parse_event(raw_line)
                 if parsed_event is not None:
-                    parsed_event["agent_name"] = config.name
-                    parsed_event["platform"] = config.platform
+                    parsed_event.agent_name = config.name
+                    parsed_event.platform = config.platform
+                    parsed_event.role_type = config.role_type
                     yield parsed_event
 
     async def execute(
@@ -78,19 +79,20 @@ class AgentBridge:
         result_session_id = session_id or ""
 
         async for event in self.execute_stream(prompt, config, session_id):
-            if event["type"] == AgentEventType.TEXT_DELTA:
-                full_text.append(event["content"]["text"])
-            elif event["type"] == AgentEventType.TURN_COMPLETE:
-                usage = event["content"].get("usage")
+            if event.type == AgentEventType.TEXT_DELTA:
+                full_text.append(event.content["text"])
+            elif event.type == AgentEventType.TURN_COMPLETE:
+                usage = event.content.get("usage")
             # 记录第一个返回的 session_id
-            if not result_session_id and event.get("session_id"):
-                result_session_id = event["session_id"]
+            if not result_session_id and event.session_id:
+                result_session_id = event.session_id
 
         return AgentResult(
             text="".join(full_text),
-            usage=usage,
             session_id=result_session_id,
             timestamp=datetime.now().isoformat(),
             agent_name=config.name,
             platform=config.platform,
+            role_type=config.role_type,
+            usage=usage
         )
