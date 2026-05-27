@@ -79,6 +79,6 @@ class ClaudeExecutor:
     def _build_env(self, config: RoleConfig) -> dict:
         """构建环境变量"""
         env = os.environ.copy()
-        if config.claude_config_dir:
-            env["CLAUDE_CONFIG_DIR"] = config.claude_config_dir
+        if config.work_root:
+            env["CLAUDE_CONFIG_DIR"] = config.work_root
         return env

@@ -22,13 +22,13 @@ class RoleManager:
         agents_dir: agents 目录的路径。
     """
 
-    def __init__(self, agents_dir: Path) -> None:
+    def __init__(self, agents_dir: Path | None = None) -> None:
         """初始化 RoleManager 实例。
 
         Args:
             agents_dir: agents 目录路径 (local_data/agents)。
         """
-        self.agents_dir = agents_dir
+        self.agents_dir = agents_dir or Path('local_data/agents')
 
     def _validate_role_name(self, name: str) -> None:
         """验证角色名称是否为合法的目录名。
@@ -85,6 +85,14 @@ class RoleManager:
                     except (json.JSONDecodeError, KeyError):
                         continue
         return roles
+
+    def list_role_names(self) -> List[str]:
+        """列出所有角色的名称。
+
+        Returns:
+            角色名称列表，如果没有角色则返回空列表。
+        """
+        return [role.name for role in self.list_roles()]
 
     def list_avatars(self) -> List[str]:
         """列出 assets/ 目录下所有可用头像文件名。

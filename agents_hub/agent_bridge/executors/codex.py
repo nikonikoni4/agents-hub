@@ -83,6 +83,6 @@ class CodexExecutor:
     def _build_env(self, config: RoleConfig) -> dict:
         """构建环境变量"""
         env = os.environ.copy()
-        if config.codex_home:
-            env["CODEX_HOME"] = config.codex_home
+        if config.work_root:
+            env["CODEX_HOME"] = config.work_root
         return env

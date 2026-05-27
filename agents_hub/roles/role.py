@@ -9,7 +9,6 @@ from agents_hub.agent_bridge.config import AgentPlatform, RoleConfig
 from agents_hub.roles.models import RoleInfo, SkillInfo, RoleType
 from agents_hub.roles.exceptions import SkillNotFoundError, SkillAlreadyExistsError
 
-
 class Role:
     """单个角色的配置管理。
 
@@ -269,6 +268,5 @@ class Role:
 
         return RoleConfig(
             platform=platform,
-            codex_home=str(self._work_root) if platform == AgentPlatform.CODEX else None,
-            claude_config_dir=str(self._work_root) if platform == AgentPlatform.CLAUDE else None
+            work_root=str(self._work_root),
         )

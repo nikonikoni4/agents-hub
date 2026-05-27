@@ -25,9 +25,4 @@ class RoleConfig:
     - Codex: 从 AGENTS.md 自动加载 system_prompt
     """
     platform: AgentPlatform    # 平台类型
-
-    # Codex 专用字段
-    codex_home: Optional[str] = None  # CODEX_HOME 路径
-
-    # Claude 专用字段
-    claude_config_dir: Optional[str] = None  # CLAUDE_CONFIG_DIR 路径
+    work_root: Optional[str] = None  # 角色工作目录路径（注入 CODEX_HOME / CLAUDE_CONFIG_DIR）
