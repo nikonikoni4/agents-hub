@@ -1,0 +1,2353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeerFlow 多Agent架构与消息机制 - 可视化分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #7c3aed;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.7;
+            font-size: 18px;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 2.5rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 3.5rem 2.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .section h2 {
+            font-size: 1.8rem;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section h2::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--primary-color);
+            border-radius: 50%;
+        }
+
+        .section h3 {
+            font-size: 1.4rem;
+            color: var(--secondary-color);
+            margin: 1.5rem 0 1rem;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-color);
+            border-radius: 8px;
+            padding: 1.75rem;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h4 {
+            color: var(--primary-color);
+            margin-bottom: 0.75rem;
+            font-size: 1.25rem;
+        }
+
+        .card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card li {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .card li:last-child {
+            border-bottom: none;
+        }
+
+        .card li::before {
+            content: '•';
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 1rem 1.25rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: var(--bg-color);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: var(--primary-color);
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .flow-step {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-left: 4px solid var(--primary-color);
+            padding: 1.25rem 1.75rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .flow-step strong {
+            color: var(--primary-color);
+        }
+
+        .data-structure {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 16px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .data-structure .keyword {
+            color: #c084fc;
+        }
+
+        .data-structure .string {
+            color: #86efac;
+        }
+
+        .data-structure .comment {
+            color: #64748b;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-color);
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            padding: 1.25rem 1.75rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .toc-list {
+            list-style: decimal;
+            padding-left: 1.5rem;
+            columns: 2;
+            column-gap: 2.5rem;
+        }
+
+        .toc-list > li {
+            break-inside: avoid;
+            margin-bottom: 0.85rem;
+        }
+
+        .toc-link {
+            display: inline-block;
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 0.15rem 0.25rem;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .toc-link:hover {
+            background: var(--bg-color);
+            color: var(--primary-color);
+        }
+
+        .toc-sublist {
+            list-style: none;
+            padding-left: 1rem;
+            margin-top: 0.35rem;
+            border-left: 2px solid var(--border-color);
+        }
+
+        .toc-sublist li {
+            margin: 0.2rem 0;
+        }
+
+        .toc-sublist .toc-link {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .toc-list {
+                columns: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🦌 DeerFlow 多Agent架构与消息机制</h1>
+            <p>Deep Exploration and Efficient Research Flow - 字节跳动开源的 Super Agent Harness</p>
+        </header>
+
+        <nav class="section toc" aria-labelledby="toc-title">
+            <h2 id="toc-title">目录</h2>
+            <ol class="toc-list">
+                <li><a class="toc-link" href="#overview">项目概览</a></li>
+                <li><a class="toc-link" href="#architecture">整体架构</a></li>
+                <li>
+                    <a class="toc-link" href="#nginx-gateway">Nginx 与 Gateway</a>
+                    <ol class="toc-sublist">
+                        <li><a class="toc-link" href="#nginx-basics">基础概念</a></li>
+                        <li><a class="toc-link" href="#nginx-responsibilities">两者的分工</a></li>
+                        <li><a class="toc-link" href="#nginx-config">DeerFlow 中的 Nginx 配置</a></li>
+                        <li><a class="toc-link" href="#gateway-implementation">DeerFlow 中的 Gateway 实现</a></li>
+                        <li><a class="toc-link" href="#auth-middleware">认证中间件示例</a></li>
+                        <li><a class="toc-link" href="#request-journey">一次完整请求的旅程</a></li>
+                    </ol>
+                </li>
+                <li>
+                    <a class="toc-link" href="#agent-subagent">Agent 与 SubAgent 设计</a>
+                    <ol class="toc-sublist">
+                        <li><a class="toc-link" href="#class-hierarchy">类层次结构</a></li>
+                        <li><a class="toc-link" href="#middleware-order">中间件链执行顺序</a></li>
+                        <li><a class="toc-link" href="#subagent-lifecycle">SubAgent 生命周期</a></li>
+                        <li><a class="toc-link" href="#subagent-concurrency">SubAgent 并发执行模型</a></li>
+                    </ol>
+                </li>
+                <li>
+                    <a class="toc-link" href="#middleware-detail">Middleware 机制详解</a>
+                    <ol class="toc-sublist">
+                        <li><a class="toc-link" href="#what-is-middleware">什么是 Middleware？</a></li>
+                        <li><a class="toc-link" href="#middleware-hooks">Middleware 挂钩点</a></li>
+                        <li><a class="toc-link" href="#middleware-map">20 层 Middleware 全景</a></li>
+                        <li><a class="toc-link" href="#lead-agent-memory">Lead Agent 记忆机制</a></li>
+                        <li><a class="toc-link" href="#metagpt-comparison">Middleware 与 MetaGPT Action SOP 的对比</a></li>
+                        <li><a class="toc-link" href="#what-vs-how">核心区别：做什么 vs 怎么跑</a></li>
+                    </ol>
+                </li>
+                <li>
+                    <a class="toc-link" href="#full-lifecycle">完整链路与数据生命周期</a>
+                    <ol class="toc-sublist">
+                        <li><a class="toc-link" href="#request-flow">完整请求链路（12 步）</a></li>
+                        <li><a class="toc-link" href="#data-lifecycle">关键数据的生命周期</a></li>
+                        <li><a class="toc-link" href="#middleware-position">Middleware 在链路中的精确位置</a></li>
+                        <li><a class="toc-link" href="#dataflow-overview">数据流向全景</a></li>
+                    </ol>
+                </li>
+                <li>
+                    <a class="toc-link" href="#langgraph-role">LangGraph 在 DeerFlow 中的真正角色</a>
+                    <ol class="toc-sublist">
+                        <li><a class="toc-link" href="#why-langgraph">为什么单节点还要用 LangGraph？</a></li>
+                        <li><a class="toc-link" href="#langgraph-structure">真实的 LangGraph 图结构</a></li>
+                        <li><a class="toc-link" href="#subagent-side-effect">SubAgent 不是节点，是工具的副作用</a></li>
+                        <li><a class="toc-link" href="#checkpoint-timing">Checkpoint 什么时候保存？</a></li>
+                        <li><a class="toc-link" href="#metagpt-graph-comparison">与 MetaGPT 的图结构对比</a></li>
+                    </ol>
+                </li>
+                <li>
+                    <a class="toc-link" href="#messaging">消息机制</a>
+                    <ol class="toc-sublist">
+                        <li><a class="toc-link" href="#messagebus-architecture">MessageBus 架构</a></li>
+                        <li><a class="toc-link" href="#message-structure">消息数据结构</a></li>
+                        <li><a class="toc-link" href="#message-lifecycle">消息生命周期</a></li>
+                    </ol>
+                </li>
+                <li>
+                    <a class="toc-link" href="#data-model">数据模型</a>
+                    <ol class="toc-sublist">
+                        <li><a class="toc-link" href="#orm-relations">ORM 模型关系</a></li>
+                        <li><a class="toc-link" href="#runtime-memory-model">运行时内存模型</a></li>
+                    </ol>
+                </li>
+                <li>
+                    <a class="toc-link" href="#runtime">Runtime 运行时</a>
+                    <ol class="toc-sublist">
+                        <li><a class="toc-link" href="#runtime-components">核心组件</a></li>
+                        <li><a class="toc-link" href="#run-state-machine">Run 状态机</a></li>
+                        <li><a class="toc-link" href="#streambridge-flow">StreamBridge 数据流</a></li>
+                    </ol>
+                </li>
+                <li><a class="toc-link" href="#design-patterns">关键设计模式</a></li>
+            </ol>
+        </nav>
+
+        <!-- 项目概览 -->
+        <section class="section">
+            <h2 id="overview">项目概览</h2>
+            <div class="highlight">
+                <strong>DeerFlow 2.0</strong> 是一次彻底重写。它把 <strong>sub-agents</strong>、<strong>memory</strong> 和 <strong>sandbox</strong> 组织在一起，再配合可扩展的 <strong>skills</strong>，让 agent 可以完成几乎任何事情。
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <h4>技术栈</h4>
+                    <ul>
+                        <li>后端: Python 3.12+, FastAPI, LangGraph, LangChain</li>
+                        <li>前端: Next.js, TypeScript</li>
+                        <li>数据库: SQLite / PostgreSQL</li>
+                        <li>部署: Docker, Nginx</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>核心特性</h4>
+                    <ul>
+                        <li>Skills 与 Tools 系统</li>
+                        <li>Sub-Agents 并行执行</li>
+                        <li>Sandbox 与文件系统隔离</li>
+                        <li>Context Engineering</li>
+                        <li>长期记忆管理</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>支持的IM渠道</h4>
+                    <ul>
+                        <li>飞书 (Feishu) - 支持流式</li>
+                        <li>企业微信 (WeCom) - 支持流式</li>
+                        <li>Slack, Telegram, Discord</li>
+                        <li>钉钉 (DingTalk), 微信公众号</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 整体架构 -->
+        <section class="section">
+            <h2 id="architecture">整体架构</h2>
+            <p>DeerFlow 采用 <strong>Harness/App 两层分离架构</strong>，依赖方向单向：App 可以 import deerflow，但 deerflow 绝不能 import app。</p>
+
+            <div class="mermaid">
+                graph TB
+                    subgraph Frontend["前端层 (Next.js)"]
+                        UI[Web UI<br/>端口 3000]
+                    end
+
+                    subgraph Nginx["Nginx 统一入口"]
+                        N[端口 2026]
+                    end
+
+                    subgraph Gateway["Gateway API 层 (FastAPI)"]
+                        G[Gateway<br/>端口 8001]
+                        R1[threads 路由]
+                        R2[runs 路由]
+                        R3[memory 路由]
+                        R4[skills 路由]
+                        R5[其他 12 个路由]
+                    end
+
+                    subgraph Channels["IM 渠道层"]
+                        C1[飞书]
+                        C2[企业微信]
+                        C3[Slack]
+                        C4[Telegram]
+                        C5[其他渠道]
+                        MB[MessageBus]
+                    end
+
+                    subgraph Harness["Harness 核心层 (deerflow)"]
+                        subgraph Agents["Agents 模块"]
+                            LA[Lead Agent]
+                            SA[SubAgents]
+                            MW[Middlewares<br/>14+ 个]
+                        end
+                        subgraph Runtime["Runtime 运行时"]
+                            RM[RunManager]
+                            RB[StreamBridge]
+                            RJ[RunJournal]
+                        end
+                        subgraph Support["支撑模块"]
+                            SK[Skills]
+                            TL[Tools]
+                            SB[Sandbox]
+                            MM[Memory]
+                            MCP[MCP]
+                        end
+                    end
+
+                    subgraph Persistence["持久化层"]
+                        DB[(SQLite/PostgreSQL)]
+                        CP[LangGraph Checkpointer]
+                    end
+
+                    UI --> N
+                    N -->|"/api/*"| G
+                    N -->|"/"| UI
+                    G --> R1 & R2 & R3 & R4 & R5
+                    C1 & C2 & C3 & C4 & C5 --> MB
+                    MB -->|publish_inbound| G
+                    G -->|publish_outbound| MB
+                    G --> LA
+                    LA --> SA
+                    LA --> MW
+                    LA --> Runtime
+                    Runtime --> DB
+                    Runtime --> CP
+                    Agents --> Support
+            </div>
+        </section>
+
+        <!-- Nginx 与 Gateway -->
+        <section class="section">
+            <h2 id="nginx-gateway">Nginx 与 Gateway</h2>
+
+            <h3 id="nginx-basics">基础概念</h3>
+            <div class="grid">
+                <div class="card">
+                    <h4>Nginx — 反向代理 / 流量调度</h4>
+                    <ul>
+                        <li><strong>是什么</strong>：Web 服务器 + 反向代理</li>
+                        <li><strong>做什么</strong>：统一接收所有请求，根据 URL 路径转发给不同后端服务</li>
+                        <li><strong>类比</strong>：大楼前台 — 所有访客先到前台，前台引导到对应办公室</li>
+                        <li><strong>核心价值</strong>：客户端只需知道一个入口地址，无需关心后端有几个服务、各自在哪个端口</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Gateway — API 网关</h4>
+                    <ul>
+                        <li><strong>是什么</strong>：后端 API 的统一入口（通常是一个 Web 应用）</li>
+                        <li><strong>做什么</strong>：处理认证、鉴权、CSRF 防护、路由分发等公共逻辑</li>
+                        <li><strong>类比</strong>：公司门卫 — 验证身份、检查权限，再放行到具体部门</li>
+                        <li><strong>核心价值</strong>：公共逻辑只写一次，所有路由自动受益</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 id="nginx-responsibilities">两者的分工</h3>
+            <div class="highlight">
+                <strong>Nginx 管基础设施</strong>（端口转发、负载均衡、SSL），
+                <strong>Gateway 管业务逻辑</strong>（认证、鉴权、路由到具体处理函数）。
+                两者配合，形成完整的请求处理链。
+            </div>
+
+            <div class="mermaid">
+                flowchart LR
+                    Browser["浏览器"] -->|"请求 /api/models<br/>浏览器不知道后面有谁"| Nginx["Nginx<br/>端口 2026"]
+                    Nginx -->|"/api/* → 转发"| Gateway["Gateway<br/>FastAPI 端口 8001"]
+                    Nginx -->|"其他路径 → 转发"| Frontend["前端<br/>Next.js 端口 3000"]
+                    Gateway --> Auth["AuthMiddleware<br/>验证身份"]
+                    Auth --> CSRF["CSRFMiddleware<br/>CSRF 防护"]
+                    CSRF --> Router["路由匹配<br/>models / threads / ..."]
+                    Router --> Handler["具体处理函数"]
+            </div>
+
+            <h3 id="nginx-config">DeerFlow 中的 Nginx 配置</h3>
+            <p>DeerFlow 的 Nginx 配置在 <code>docker/nginx/nginx.local.conf</code>，核心逻辑非常简单：以 <code>/api/</code> 开头的请求转给 Gateway，其他请求转给前端。</p>
+
+            <div class="data-structure">
+                <span class="comment"># 定义后端服务地址</span><br>
+                <span class="keyword">upstream</span> gateway { server 127.0.0.1:<span class="string">8001</span>; }<br>
+                <span class="keyword">upstream</span> frontend { server 127.0.0.1:<span class="string">3000</span>; }<br><br>
+                <span class="keyword">server</span> {<br>
+                &nbsp;&nbsp;listen <span class="string">2026</span>;&nbsp;&nbsp;<span class="comment">// 统一入口端口</span><br><br>
+                &nbsp;&nbsp;<span class="comment"># /api/langgraph/* → 去掉前缀后转给 Gateway</span><br>
+                &nbsp;&nbsp;location /api/langgraph/ {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;rewrite ^/api/langgraph/(.*) /api/$1 break;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;proxy_pass http://gateway;<br>
+                &nbsp;&nbsp;}<br><br>
+                &nbsp;&nbsp;<span class="comment"># /api/models → 转给 Gateway</span><br>
+                &nbsp;&nbsp;location /api/models { proxy_pass http://gateway; }<br><br>
+                &nbsp;&nbsp;<span class="comment"># /api/memory → 转给 Gateway</span><br>
+                &nbsp;&nbsp;location /api/memory { proxy_pass http://gateway; }<br><br>
+                &nbsp;&nbsp;<span class="comment"># /api/skills → 转给 Gateway</span><br>
+                &nbsp;&nbsp;location /api/skills { proxy_pass http://gateway; }<br><br>
+                &nbsp;&nbsp;<span class="comment"># /api/threads/*/uploads → 转给 Gateway（允许 100M 上传）</span><br>
+                &nbsp;&nbsp;location ~ ^/api/threads/[^/]+/uploads {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;proxy_pass http://gateway;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;client_max_body_size <span class="string">100M</span>;<br>
+                &nbsp;&nbsp;}<br><br>
+                &nbsp;&nbsp;<span class="comment"># 兜底：其他 /api/* 全转给 Gateway</span><br>
+                &nbsp;&nbsp;location /api/ { proxy_pass http://gateway; }<br><br>
+                &nbsp;&nbsp;<span class="comment"># 其他所有请求 → 转给前端</span><br>
+                &nbsp;&nbsp;location / { proxy_pass http://frontend; }<br>
+                }
+            </div>
+
+            <h3 id="gateway-implementation">DeerFlow 中的 Gateway 实现</h3>
+            <p>Gateway 是一个 <strong>FastAPI 应用</strong>（<code>backend/app/gateway/app.py</code>），核心职责：注册中间件 + 注册路由。</p>
+
+            <div class="data-structure">
+                <span class="keyword">def</span> create_app() -> FastAPI:<br>
+                &nbsp;&nbsp;app = FastAPI(title=<span class="string">"DeerFlow API Gateway"</span>)<br><br>
+                &nbsp;&nbsp;<span class="comment"># 注册中间件（请求进来时按顺序执行）</span><br>
+                &nbsp;&nbsp;app.add_middleware(AuthMiddleware)&nbsp;&nbsp;<span class="comment"># 1. 验证身份</span><br>
+                &nbsp;&nbsp;app.add_middleware(CSRFMiddleware)&nbsp;&nbsp;<span class="comment"># 2. CSRF 防护</span><br>
+                &nbsp;&nbsp;app.add_middleware(CORSMiddleware)&nbsp;<span class="comment"># 3. 跨域处理</span><br><br>
+                &nbsp;&nbsp;<span class="comment"># 注册路由（URL → 处理函数）</span><br>
+                &nbsp;&nbsp;app.include_router(auth.router)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># /api/v1/auth/*</span><br>
+                &nbsp;&nbsp;app.include_router(thread_runs.router)&nbsp;<span class="comment"># /api/threads/*/runs/*</span><br>
+                &nbsp;&nbsp;app.include_router(models.router)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># /api/models/*</span><br>
+                &nbsp;&nbsp;app.include_router(mcp.router)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># /api/mcp/*</span><br>
+                &nbsp;&nbsp;app.include_router(memory.router)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># /api/memory/*</span><br>
+                &nbsp;&nbsp;app.include_router(skills.router)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># /api/skills/*</span><br>
+                &nbsp;&nbsp;<span class="comment"># ... 还有 agents, uploads, artifacts 等路由</span><br>
+                &nbsp;&nbsp;<span class="keyword">return</span> app
+            </div>
+
+            <h3 id="auth-middleware">认证中间件示例</h3>
+            <p>Gateway 的 <code>AuthMiddleware</code>（<code>auth_middleware.py</code>）是"门卫"的核心实现：每个请求进来先过这道关。</p>
+
+            <div class="data-structure">
+                <span class="keyword">class</span> AuthMiddleware:<br>
+                &nbsp;&nbsp;<span class="keyword">async def</span> dispatch(self, request, call_next):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># 1. 公开路径（如 /health、/login）直接放行</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> _is_public(request.url.path):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return await</span> call_next(request)<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># 2. 没有 access_token cookie → 返回 401</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if not</span> request.cookies.get(<span class="string">"access_token"</span>):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span> JSONResponse(status_code=<span class="string">401</span>)<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># 3. 验证 JWT，解析出用户</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;user = <span class="keyword">await</span> get_current_user_from_request(request)<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># 4. 把用户信息挂到 request 上，下游都能用</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;request.state.user = user<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return await</span> call_next(request)
+            </div>
+
+            <h3 id="request-journey">一次完整请求的旅程</h3>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant B as 浏览器
+                    participant N as Nginx :2026
+                    participant G as Gateway :8001
+                    participant A as AuthMiddleware
+                    participant R as thread_runs 路由
+                    participant AG as Agent
+
+                    B->>N: POST /api/threads/123/runs/stream
+                    Note over B: 浏览器只认 Nginx，不知道后面有谁
+
+                    N->>G: 转发请求
+                    Note over N: 路径 /api/threads/*<br/>匹配 location /api/ → 转给 gateway
+
+                    G->>A: 进入中间件
+                    A->>A: 检查 access_token cookie
+                    A->>A: 验证 JWT，解析用户
+                    A-->>G: 认证通过，request.state.user = user
+
+                    G->>R: 路由匹配 POST /{thread_id}/runs/stream
+                    R->>R: @require_permission 检查权限
+                    R->>AG: start_run() 启动 Agent
+                    AG-->>R: SSE 流式响应
+                    R-->>G: StreamingResponse
+                    G-->>N: 响应
+                    N-->>B: 响应
+            </div>
+        </section>
+
+        <!-- Agent 与 SubAgent 设计 -->
+        <section class="section">
+            <h2 id="agent-subagent">Agent 与 SubAgent 设计</h2>
+
+            <h3 id="class-hierarchy">类层次结构</h3>
+            <div class="mermaid">
+                classDiagram
+                    class AgentState {
+                        +messages: list~BaseMessage~
+                    }
+
+                    class ThreadState {
+                        +sandbox: SandboxState
+                        +thread_data: ThreadDataState
+                        +title: str
+                        +artifacts: list~str~
+                        +todos: list
+                        +uploaded_files: list~dict~
+                        +viewed_images: dict
+                    }
+
+                    class AgentMiddleware {
+                        +before_agent()
+                        +before_model()
+                        +after_model()
+                        +wrap_tool_call()
+                        +after_agent()
+                    }
+
+                    class SubagentConfig {
+                        +name: str
+                        +description: str
+                        +system_prompt: str
+                        +tools: list~str~
+                        +skills: list~str~
+                        +model: str
+                        +max_turns: int
+                        +timeout_seconds: int
+                    }
+
+                    class SubagentResult {
+                        +task_id: str
+                        +trace_id: str
+                        +status: SubagentStatus
+                        +result: str
+                        +error: str
+                        +cancel_event: Event
+                    }
+
+                    class SubagentExecutor {
+                        +execute(task)
+                        +execute_async(task)
+                        +cancel()
+                    }
+
+                    AgentState <|-- ThreadState
+                    AgentMiddleware <|-- ThreadDataMiddleware
+                    AgentMiddleware <|-- SandboxMiddleware
+                    AgentMiddleware <|-- MemoryMiddleware
+                    AgentMiddleware <|-- SubagentLimitMiddleware
+                    AgentMiddleware <|-- ClarificationMiddleware
+
+                    SubagentConfig --> SubagentExecutor
+                    SubagentExecutor --> SubagentResult
+            </div>
+
+            <h3 id="middleware-order">中间件链执行顺序</h3>
+            <div class="data-structure">
+                <span class="comment">// Lead Agent 中间件链组装顺序</span><br>
+                [<span class="keyword">0</span>]  ThreadDataMiddleware      <span class="comment">// 创建线程目录</span><br>
+                [<span class="keyword">1</span>]  UploadsMiddleware         <span class="comment">// 注入上传文件列表</span><br>
+                [<span class="keyword">2</span>]  SandboxMiddleware         <span class="comment">// 获取/创建沙箱</span><br>
+                [<span class="keyword">3</span>]  DanglingToolCallMiddleware <span class="comment">// 修补中断导致的悬空 tool_call</span><br>
+                [<span class="keyword">4</span>]  LLMErrorHandlingMiddleware <span class="comment">// LLM 调用异常→可恢复错误</span><br>
+                [<span class="keyword">5</span>]  GuardrailMiddleware       <span class="comment">// (可选) 工具调用授权</span><br>
+                [<span class="keyword">6</span>]  SandboxAuditMiddleware    <span class="comment">// 沙箱操作审计</span><br>
+                [<span class="keyword">7</span>]  ToolErrorHandlingMiddleware <span class="comment">// 工具异常→错误 ToolMessage</span><br>
+                [<span class="keyword">8</span>]  DynamicContextMiddleware  <span class="comment">// 注入日期+memory 到首条 HumanMessage</span><br>
+                [<span class="keyword">9</span>]  SummarizationMiddleware   <span class="comment">// (可选) 上下文压缩</span><br>
+                [<span class="keyword">10</span>] TodoMiddleware            <span class="comment">// (可选) plan_mode 任务跟踪</span><br>
+                [<span class="keyword">11</span>] TokenUsageMiddleware      <span class="comment">// (可选) token 用量记录</span><br>
+                [<span class="keyword">12</span>] TitleMiddleware           <span class="comment">// 自动生成会话标题</span><br>
+                [<span class="keyword">13</span>] MemoryMiddleware          <span class="comment">// 会话→记忆更新队列</span><br>
+                [<span class="keyword">14</span>] ViewImageMiddleware       <span class="comment">// (可选) 图片 base64 注入</span><br>
+                [<span class="keyword">15</span>] DeferredToolFilterMiddleware <span class="comment">// (可选) 延迟工具 schema 隐藏</span><br>
+                [<span class="keyword">16</span>] SubagentLimitMiddleware   <span class="comment">// (可选) 并行子 agent 限制</span><br>
+                [<span class="keyword">17</span>] LoopDetectionMiddleware   <span class="comment">// 重复调用检测</span><br>
+                [<span class="keyword">18</span>] SafetyFinishReasonMiddleware <span class="comment">// (可选) 安全终止处理</span><br>
+                [<span class="keyword">19</span>] ClarificationMiddleware   <span class="comment">// 始终最后，拦截 ask_clarification</span>
+            </div>
+
+            <h3 id="subagent-lifecycle">SubAgent 生命周期</h3>
+            <div class="mermaid">
+                stateDiagram-v2
+                    [*] --> PENDING: 创建
+                    PENDING --> RUNNING: 提交到线程池
+                    RUNNING --> COMPLETED: 执行成功
+                    RUNNING --> FAILED: 执行失败
+                    RUNNING --> CANCELLED: 用户取消
+                    RUNNING --> TIMED_OUT: 超时(15min)
+
+                    COMPLETED --> [*]
+                    FAILED --> [*]
+                    CANCELLED --> [*]
+                    TIMED_OUT --> [*]
+            </div>
+
+            <h3 id="subagent-concurrency">SubAgent 并发执行模型</h3>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant User as 用户
+                    participant LA as Lead Agent
+                    participant SA1 as SubAgent 1
+                    participant SA2 as SubAgent 2
+                    participant SA3 as SubAgent 3
+
+                    User->>LA: 复杂任务请求
+                    LA->>LA: LLM 分析任务，决定拆分
+                    LA->>SA1: task("子任务1")
+                    LA->>SA2: task("子任务2")
+                    LA->>SA3: task("子任务3")
+
+                    par 并行执行
+                        SA1->>SA1: 执行子任务1
+                    and
+                        SA2->>SA2: 执行子任务2
+                    and
+                        SA3->>SA3: 执行子任务3
+                    end
+
+                    SA1-->>LA: 结果1
+                    SA2-->>LA: 结果2
+                    SA3-->>LA: 结果3
+
+                    LA->>LA: 汇总所有结果
+                    LA-->>User: 最终输出
+            </div>
+        </section>
+
+        <!-- Middleware 机制详解 -->
+        <section class="section">
+            <h2 id="middleware-detail">Middleware 机制详解：DeerFlow 的"中间链条"</h2>
+
+            <h3 id="what-is-middleware">什么是 Middleware？</h3>
+            <div class="highlight">
+                <strong>Middleware 是包裹在 Agent 循环外部的拦截层。</strong>DeerFlow 的 Agent 本质是一个单节点 LangGraph 图，运行着
+                <code>model call → tool execution → model call → ...</code> 的循环。Middleware 不参与业务决策，而是在这个循环的每个阶段注入<strong>横切关注点</strong>（cross-cutting concerns）——错误处理、沙箱管理、记忆注入、安全审计等。
+            </div>
+
+            <p>可以把 Agent 循环想象成一条流水线，Middleware 就是流水线两侧的质检工位：产品（消息）在流水线上流动，每个工位检查、修改或记录产品状态，但工位本身不决定产品是什么。</p>
+
+            <h3 id="middleware-hooks">Middleware 挂钩点</h3>
+            <p>每个 Middleware 可以实现以下钩子，在 Agent 循环的不同阶段插入逻辑：</p>
+            <div class="mermaid">
+                flowchart LR
+                    subgraph Agent循环["Agent 循环（单节点 LangGraph 图）"]
+                        direction LR
+                        BA["before_agent()"] --> BM["before_model()"]
+                        BM --> LLM["🤖 LLM 调用"]
+                        LLM --> AM["after_model()"]
+                        AM --> TC["wrap_tool_call()"]
+                        TC --> Tool["🔧 工具执行"]
+                        Tool --> AM2["after_model()"]
+                        AM2 --> AA["after_agent()"]
+                    end
+
+                    style BA fill:#dbeafe,stroke:#2563eb
+                    style BM fill:#dbeafe,stroke:#2563eb
+                    style AM fill:#dbeafe,stroke:#2563eb
+                    style TC fill:#dbeafe,stroke:#2563eb
+                    style AA fill:#dbeafe,stroke:#2563eb
+                    style LLM fill:#fef3c7,stroke:#f59e0b
+                    style Tool fill:#d1fae5,stroke:#10b981
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>钩子</th>
+                        <th>触发时机</th>
+                        <th>典型用途</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>before_agent()</code></td>
+                        <td>Agent 循环启动前</td>
+                        <td>创建线程目录、获取沙箱</td>
+                    </tr>
+                    <tr>
+                        <td><code>before_model()</code></td>
+                        <td>每次 LLM 调用前</td>
+                        <td>注入记忆上下文、注入图片 base64、上下文压缩</td>
+                    </tr>
+                    <tr>
+                        <td><code>after_model()</code></td>
+                        <td>每次 LLM 返回后</td>
+                        <td>记录 token 用量、生成标题、检测循环</td>
+                    </tr>
+                    <tr>
+                        <td><code>wrap_tool_call()</code></td>
+                        <td>工具执行时（包裹调用）</td>
+                        <td>错误处理、安全审计、权限守卫</td>
+                    </tr>
+                    <tr>
+                        <td><code>after_agent()</code></td>
+                        <td>Agent 循环结束后</td>
+                        <td>记忆持久化、资源清理</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 id="middleware-map">20 层 Middleware 全景：按职责分类</h3>
+            <p>DeerFlow 的 20 个 Middleware 可以按职责分为 5 大类：</p>
+
+            <div class="grid">
+                <div class="card">
+                    <h4>🏗️ 基础设施层</h4>
+                    <ul>
+                        <li><strong>ThreadDataMiddleware</strong> — 创建线程工作目录</li>
+                        <li><strong>UploadsMiddleware</strong> — 注入上传文件列表</li>
+                        <li><strong>SandboxMiddleware</strong> — 获取/创建沙箱环境</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>🛡️ 安全与错误处理层</h4>
+                    <ul>
+                        <li><strong>DanglingToolCallMiddleware</strong> — 修补悬空 tool_call</li>
+                        <li><strong>LLMErrorHandlingMiddleware</strong> — LLM 异常→可恢复</li>
+                        <li><strong>ToolErrorHandlingMiddleware</strong> — 工具异常→错误消息</li>
+                        <li><strong>GuardrailMiddleware</strong> — 工具调用授权守卫</li>
+                        <li><strong>SandboxAuditMiddleware</strong> — 沙箱操作审计</li>
+                        <li><strong>SafetyFinishReasonMiddleware</strong> — 安全终止处理</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>🧠 上下文工程层</h4>
+                    <ul>
+                        <li><strong>DynamicContextMiddleware</strong> — 注入日期+记忆</li>
+                        <li><strong>SummarizationMiddleware</strong> — 上下文压缩</li>
+                        <li><strong>ViewImageMiddleware</strong> — 图片 base64 注入</li>
+                        <li><strong>DeferredToolFilterMiddleware</strong> — 延迟工具 schema 隐藏</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>📊 观测与记录层</h4>
+                    <ul>
+                        <li><strong>TokenUsageMiddleware</strong> — token 用量记录</li>
+                        <li><strong>TitleMiddleware</strong> — 自动生成会话标题</li>
+                        <li><strong>MemoryMiddleware</strong> — 会话→记忆更新队列</li>
+                        <li><strong>TodoMiddleware</strong> — plan_mode 任务跟踪</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>⚡ 流程控制层</h4>
+                    <ul>
+                        <li><strong>SubagentLimitMiddleware</strong> — 并行子 Agent 限制</li>
+                        <li><strong>LoopDetectionMiddleware</strong> — 重复调用检测与打断</li>
+                        <li><strong>ClarificationMiddleware</strong> — 拦截澄清请求，中断执行</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 id="lead-agent-memory">Lead Agent 记忆机制：读写分离的长期记忆</h3>
+            <div class="highlight">
+                <strong>默认只有 Lead Agent 挂载 DeerFlow 的长期记忆链路。</strong>主应用通过 <code>DynamicContextMiddleware</code> 读取并注入记忆，通过 <code>MemoryMiddleware</code> 在一轮对话结束后排队更新记忆。SubAgent 默认拥有独立 state 和消息列表，不会自动继承这套长期记忆，除非创建时显式挂载同类 middleware。
+            </div>
+
+            <div class="mermaid">
+                flowchart LR
+                    subgraph ReadPath["读记忆：进入 Agent 前"]
+                        R1["读取 memory.json"] --> R2["format_memory_for_injection"]
+                        R2 --> R3["隐藏 system-reminder HumanMessage"]
+                        R3 --> R4["Lead Agent LLM"]
+                    end
+
+                    subgraph WritePath["写记忆：Agent 结束后"]
+                        W1["过滤用户输入 + 最终 AI 回复"] --> W2["MemoryUpdateQueue"]
+                        W2 --> W3["30s 防抖 / 摘要前立即 flush"]
+                        W3 --> W4["MemoryUpdater 调用 LLM 抽取"]
+                        W4 --> W5["更新 summaries + facts"]
+                        W5 --> W6["保存 memory.json"]
+                    end
+
+                    R4 --> W1
+                    W6 -."下一次会话".-> R1
+
+                    style R3 fill:#dbeafe,stroke:#2563eb
+                    style W2 fill:#fee2e2,stroke:#ef4444
+                    style W4 fill:#fef3c7,stroke:#f59e0b
+                    style W6 fill:#d1fae5,stroke:#10b981
+            </div>
+
+            <h4>记忆提取什么？</h4>
+            <p>记忆不是完整聊天记录，而是从可复用上下文中提取出的结构化资料。输入会先过滤掉 tool call 中间消息、纯上传文件消息和临时上传路径，只保留用户输入与最终 assistant 回复。</p>
+
+            <div class="grid">
+                <div class="card">
+                    <h4>摘要型记忆</h4>
+                    <ul>
+                        <li><strong>workContext</strong> — 用户工作背景、项目、技术栈</li>
+                        <li><strong>personalContext</strong> — 语言偏好、沟通风格、个人偏好</li>
+                        <li><strong>topOfMind</strong> — 近期关注的多个主题和活跃任务</li>
+                        <li><strong>recentMonths</strong> — 近几个月活动和技术探索</li>
+                        <li><strong>earlierContext</strong> — 更早但仍有价值的历史模式</li>
+                        <li><strong>longTermBackground</strong> — 长期稳定背景和核心能力</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>事实型记忆</h4>
+                    <ul>
+                        <li><strong>preference</strong> — 偏好的工具、风格、处理方式</li>
+                        <li><strong>knowledge</strong> — 掌握的技术和领域知识</li>
+                        <li><strong>context</strong> — 项目、团队、角色、环境背景</li>
+                        <li><strong>behavior</strong> — 工作习惯、沟通习惯、决策模式</li>
+                        <li><strong>goal</strong> — 目标、学习方向、项目意图</li>
+                        <li><strong>correction</strong> — 用户纠正过的误解和以后应避免的错误</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h4>记忆为什么放在 HumanMessage，而不是 system prompt？</h4>
+            <p>当前实现把记忆放进隐藏的 <code>HumanMessage</code>，不是为了把它当作用户原文，而是为了保持静态 system prompt 不变，提升 provider prefix cache 的命中率。如果把用户记忆直接拼进 system prompt，每个用户、每个 Agent、每次记忆变化都会改变 prompt 前缀，缓存复用会明显变差。</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>位置</th>
+                        <th>用途</th>
+                        <th>取舍</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>静态 system prompt</td>
+                        <td>长期规则、角色、工具使用规范</td>
+                        <td>保持稳定，利于 prefix cache；适合放强约束</td>
+                    </tr>
+                    <tr>
+                        <td>隐藏 system-reminder HumanMessage</td>
+                        <td>用户记忆、当前日期等运行时上下文</td>
+                        <td>每个会话可变；语义上提醒模型，但角色层级仍是 user-role 内容</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="data-structure">
+                <span class="comment">// DynamicContextMiddleware 注入的隐藏消息形态</span><br>
+                &lt;system-reminder&gt;<br>
+                &nbsp;&nbsp;&lt;memory&gt;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;User Context:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;- Work: ...<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;- Current Focus: ...<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;History:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;- Recent: ...<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;Facts:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;- [preference | 0.95] User prefers concise technical explanations<br>
+                &nbsp;&nbsp;&lt;/memory&gt;<br><br>
+                &nbsp;&nbsp;&lt;current_date&gt;2026-05-25, Monday&lt;/current_date&gt;<br>
+                &lt;/system-reminder&gt;
+            </div>
+
+            <p><code>&lt;system-reminder&gt;</code> 不是模型 API 的正式角色，也不是标准 XML 协议。它是一种提示标签约定，用来告诉模型“这段是运行时提醒，不是用户请求本身”。Claude 系工具中经常用类似标签注入当前日期、文件状态、工具规则或上下文提醒。真正的权限层级仍由消息 role 决定：API 层面的 <code>system</code> 高于 <code>user</code>，因此这类标签适合放记忆和环境提示，不适合放不可违反的安全策略。</p>
+
+            <h3 id="metagpt-comparison">Middleware 与 MetaGPT Action SOP 的对比</h3>
+            <div class="highlight">
+                两者都是<strong>预定义、可重复执行的线性管道</strong>，但解决的问题层级不同。
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>维度</th>
+                        <th>DeerFlow Middleware 链</th>
+                        <th>MetaGPT Action SOP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>组成单元</strong></td>
+                        <td>Middleware（基础设施关注点）</td>
+                        <td>Action（业务领域步骤）</td>
+                    </tr>
+                    <tr>
+                        <td><strong>典型节点</strong></td>
+                        <td>ErrorHandling, Memory, Guardrail, Sandbox</td>
+                        <td>WritePRD, Design, WriteCode, SummarizeCode</td>
+                    </tr>
+                    <tr>
+                        <td><strong>编排方式</strong></td>
+                        <td>线性链，append 顺序执行</td>
+                        <td>线性链（BY_ORDER），顺序执行</td>
+                    </tr>
+                    <tr>
+                        <td><strong>关注层级</strong></td>
+                        <td><span class="badge badge-primary">横切关注点</span> 基础设施：怎么跑</td>
+                        <td><span class="badge badge-success">纵向业务流</span> 领域流程：做什么</td>
+                    </tr>
+                    <tr>
+                        <td><strong>产出物</strong></td>
+                        <td>无独立产出，修饰 Agent 行为</td>
+                        <td>每步产出 Message / Artifact</td>
+                    </tr>
+                    <tr>
+                        <td><strong>与 LLM 的关系</strong></td>
+                        <td>Middleware 本身不调用 LLM，只拦截 LLM 的输入/输出</td>
+                        <td>Action 内部调用 LLM 完成具体业务</td>
+                    </tr>
+                    <tr>
+                        <td><strong>可复用性</strong></td>
+                        <td>跨场景通用，可插拔组合</td>
+                        <td>按角色预定义，绑定特定 SOP</td>
+                    </tr>
+                    <tr>
+                        <td><strong>类比</strong></td>
+                        <td>流水线两侧的质检工位</td>
+                        <td>流水线上的加工工位</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 id="what-vs-how">核心区别：做什么 vs 怎么跑</h3>
+            <div class="mermaid">
+                flowchart TB
+                    subgraph MetaGPT["MetaGPT：Action SOP（做什么）"]
+                        direction TB
+                        M1["WritePRD<br/>📝 产出 PRD 文档"] --> M2["Design<br/>📐 产出设计文档"]
+                        M2 --> M3["WriteCode<br/>💻 产出代码"]
+                        M3 --> M4["SummarizeCode<br/>📋 产出摘要"]
+                    end
+
+                    subgraph DeerFlow["DeerFlow：Middleware 链（怎么跑）"]
+                        direction TB
+                        D1["SandboxMiddleware<br/>🏗️ 准备沙箱"] --> D2["DynamicContextMiddleware<br/>🧠 注入记忆"]
+                        D2 --> D3["GuardrailMiddleware<br/>🛡️ 检查权限"]
+                        D3 --> D4["ToolErrorHandlingMiddleware<br/>🔧 兜底异常"]
+                    end
+
+                    User["用户请求"] --> MetaGPT
+                    User --> DeerFlow
+                    MetaGPT --> Output["业务产出：PRD、代码、文档"]
+                    DeerFlow --> Env["运行环境：安全、可观测、有记忆"]
+
+                    style MetaGPT fill:#d1fae5,stroke:#10b981
+                    style DeerFlow fill:#dbeafe,stroke:#2563eb
+                    style Output fill:#d1fae5,stroke:#10b981
+                    style Env fill:#dbeafe,stroke:#2563eb
+            </div>
+
+            <p>MetaGPT 的 Action SOP 回答的是 <strong>"先做什么、再做什么"</strong>——写 PRD、做设计、写代码，每一步都产出业务制品。DeerFlow 的 Middleware 链回答的是 <strong>"在做任何事之前/之后，环境需要准备什么、检查什么、记录什么"</strong>——沙箱就绪了吗？记忆注入了吗？异常兜住了吗？</p>
+
+            <p>两者是同一棵编排树上的两个不同分支，共享"预定义线性管道"这个骨架。它们可以叠加：你可以在 MetaGPT 的某个 Action 内部跑一个 DeerFlow 风格的 Middleware 链，也可以在 DeerFlow 的 Agent 循环里调用一个 MetaGPT 风格的 Action 序列。</p>
+        </section>
+
+        <!-- 完整链路与数据生命周期 -->
+        <section class="section">
+            <h2 id="full-lifecycle">完整链路与数据生命周期</h2>
+
+            <div class="highlight">
+                <strong>场景设定：</strong>用户在 Web 界面输入"帮我开发一个用户登录功能，包含前端页面和后端 API"，DeerFlow 需要拆分为前端 SubAgent 和后端 SubAgent 并行执行。以下从这条请求出发，逐步追踪它经过的每一个模块。
+            </div>
+
+            <!-- ===== 第一部分：完整请求链路 ===== -->
+            <h3 id="request-flow">一、完整请求链路（12 步）</h3>
+
+            <h4>图 A：请求接入 → run_agent 启动</h4>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant User as 👤 用户
+                    participant FE as 🖥️ 前端 Next.js
+                    participant N as 🔀 Nginx :2026
+                    participant GW as 🚪 Gateway FastAPI
+                    participant Auth as 🔐 AuthMiddleware
+                    participant Svc as 📋 services.py
+                    participant Worker as ⚙️ run_agent()
+
+                    User->>FE: "开发登录功能：前端+后端"
+                    FE->>N: POST /api/threads/abc/runs/stream
+                    N->>GW: 转发 /api/*
+                    GW->>Auth: AuthMiddleware 验证 JWT
+                    Auth-->>GW: ✅ user_id=u123
+                    GW->>Svc: start_run()
+                    Svc->>Svc: 创建 RunRecord + 规范化输入<br/>+ merge context + 注入 user_id
+                    Svc->>Worker: asyncio.create_task(run_agent)
+                    Note over Worker: RunJournal 初始化<br/>Mark running<br/>快照 checkpoint<br/>构建 Runtime context
+            </div>
+
+            <h4>图 B：Agent 执行 → SubAgent 并行 → 响应返回</h4>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant Worker as ⚙️ run_agent()
+                    participant Factory as 🏭 make_lead_agent()
+                    participant MW as 🔗 Middleware 链
+                    participant Agent as 🤖 Lead Agent (LLM)
+                    participant TaskTool as 📦 task tool
+                    participant SubBE as 🔧 后端 SubAgent
+                    participant SubFE as 🎨 前端 SubAgent
+                    participant SSE as 📡 SSE 流
+                    participant User as 👤 用户
+
+                    Worker->>Factory: make_lead_agent(config)
+                    Factory->>MW: 组装 20 层 Middleware 链
+                    Factory-->>Worker: CompiledStateGraph
+                    Worker->>Agent: agent.astream(state)
+
+                    Note over MW: before_agent hooks<br/>ThreadData → Sandbox<br/>→ DynamicContext 注入记忆+日期
+
+                    Agent->>Agent: LLM 分析任务，决定拆分
+
+                    Agent->>TaskTool: task("后端登录API")
+                    Agent->>TaskTool: task("前端登录页面")
+
+                    Note over MW: wrap_tool_call hooks<br/>SubagentLimit 截断超额<br/>ToolErrorHandling 兜底异常
+
+                    par 并行执行
+                        TaskTool->>SubBE: execute_async()
+                        SubBE->>SubBE: SubAgent 内部 Middleware<br/>+ LLM + 工具执行
+                        SubBE-->>TaskTool: ✅ 后端API完成
+                    and
+                        TaskTool->>SubFE: execute_async()
+                        SubFE->>SubFE: SubAgent 内部 Middleware<br/>+ LLM + 工具执行
+                        SubFE-->>TaskTool: ✅ 前端页面完成
+                    end
+
+                    TaskTool-->>Agent: 两个 ToolMessage 返回
+                    Agent->>Agent: LLM 汇总结果
+
+                    Note over MW: after_agent hooks<br/>TitleMiddleware 生成标题<br/>MemoryMiddleware 入队记忆
+
+                    Agent-->>Worker: 流式 chunks
+                    Worker-->>SSE: bridge.publish()
+                    SSE-->>User: SSE 事件流 → 展示结果
+            </div>
+
+            <h4>Step 1-2：用户请求 → 前端 → Nginx</h4>
+            <div class="flow-step">
+                <strong>用户</strong>在 Next.js 界面输入任务。<strong>前端</strong>将消息序列化为 <code>RunCreateRequest</code>，发送 <code>POST /api/threads/{thread_id}/runs/stream</code>。<strong>Nginx</strong> 匹配 <code>location /api/</code>，将请求转发到 Gateway :8001。
+            </div>
+
+            <h4>Step 3：Gateway 认证层</h4>
+            <div class="flow-step">
+                <strong>AuthMiddleware</strong> 检查 <code>access_token</code> cookie → 验证 JWT → 解析出 <code>user_id</code>，挂到 <code>request.state.user</code>。<strong>CSRFMiddleware</strong> 验证 Double Submit Cookie。<strong>CORSMiddleware</strong> 处理跨域。
+            </div>
+
+            <h4>Step 4：Router → start_run()</h4>
+            <div class="flow-step">
+                <code>thread_runs.py::stream_run()</code> 接收请求，调用 <code>start_run()</code>：<br>
+                ① <code>run_mgr.create_or_reject()</code> → 创建 <strong>RunRecord</strong>（run_id, thread_id, status=pending）<br>
+                ② <code>normalize_input()</code> → 将 dict 消息转为 LangChain Message 对象<br>
+                ③ <code>build_run_config()</code> → 注入 thread_id、recursion_limit=100<br>
+                ④ <code>merge_run_context_overrides()</code> → 注入 model_name、subagent_enabled=true 等<br>
+                ⑤ <code>asyncio.create_task(run_agent(...))</code> → 后台启动 Agent<br>
+                ⑥ 返回 <code>StreamingResponse</code>，绑定 SSE consumer
+            </div>
+
+            <h4>Step 5-6：run_agent() → make_lead_agent()</h4>
+            <div class="flow-step">
+                <strong>run_agent()</strong> 初始化 RunJournal、标记 status=running、快照 checkpoint（用于回滚）、构建 Runtime context、注入 LangChain 回调。<br>
+                然后调用 <strong>make_lead_agent(config)</strong>：解析模型名 → 组装 Middleware 链 → 获取 Tools → 调用 <code>create_agent()</code> 编译为 LangGraph StateGraph。
+            </div>
+
+            <h4>Step 7：Middleware 链执行（before_agent 阶段）</h4>
+            <div class="flow-step">
+                Agent 循环启动前，<strong>before_agent</strong> 挂钩按顺序执行：<br>
+                ① <strong>ThreadDataMiddleware</strong> → 创建 <code>/data/users/u123/threads/abc/</code> 工作目录<br>
+                ② <strong>UploadsMiddleware</strong> → 扫描上传文件列表注入 state<br>
+                ③ <strong>SandboxMiddleware</strong> → 获取沙箱实例，写入 <code>sandbox_id</code><br>
+                ...<br>
+                ⑧ <strong>DynamicContextMiddleware</strong> → 从记忆系统读取用户偏好，注入 <code>&lt;memory&gt;</code> 标签 + 当前日期到首条 HumanMessage 前
+            </div>
+
+            <h4>Step 8：Lead Agent LLM 决策</h4>
+            <div class="flow-step">
+                LLM 收到系统提示 + 注入的记忆上下文 + 用户消息，分析后决定：<br>
+                → 调用 <code>task("实现后端登录API，包括JWT认证、用户表、登录注册接口", subagent_type="general-purpose")</code><br>
+                → 调用 <code>task("实现前端登录页面，包括表单、验证、API对接", subagent_type="general-purpose")</code><br>
+                两个 tool_call 在同一轮 AIMessage 中发出。
+            </div>
+
+            <h4>Step 9：Middleware 链执行（wrap_tool_call 阶段）</h4>
+            <div class="flow-step">
+                每个 tool_call 经过 <strong>wrap_tool_call</strong> 挂钩：<br>
+                ① <strong>SubagentLimitMiddleware</strong> → 检查并行数（默认上限 3），截断超额调用<br>
+                ② <strong>ToolErrorHandlingMiddleware</strong> → try/except 包裹工具执行，异常转为错误 ToolMessage<br>
+                ③ <strong>SandboxAuditMiddleware</strong> → 记录沙箱操作审计日志<br>
+                ④ <strong>GuardrailMiddleware</strong> → 可选的工具调用授权检查
+            </div>
+
+            <h4>Step 10：task_tool() → SubAgent 执行</h4>
+            <div class="flow-step">
+                <strong>task_tool()</strong> 为每个子任务：<br>
+                ① 验证 subagent_type，提取父级上下文（sandbox_state, thread_data, trace_id）<br>
+                ② 创建 <strong>SubagentExecutor</strong>，提交到线程池（3 workers）<br>
+                ③ <code>execute_async()</code> → 在独立 asyncio 事件循环中运行 <code>_aexecute()</code><br>
+                ④ SubAgent 内部也有自己的 Middleware 链（ThreadData + Sandbox + ErrorHandling 等基础设施层）<br>
+                ⑤ Lead Agent 的 <strong>task_tool 轮询</strong>每 5 秒检查一次，通过 <code>get_stream_writer()</code> 将 SubAgent 进度推送给前端 SSE<br>
+                ⑥ 两个 SubAgent <strong>并行执行</strong>，各自独立的沙箱和工作目录
+            </div>
+
+            <h4>Step 11：结果汇总 → 最终响应</h4>
+            <div class="flow-step">
+                两个 SubAgent 完成 → task_tool 返回 <code>"Task Succeeded. Result: ..."</code> 作为 ToolMessage。<br>
+                Lead Agent LLM 收到两个 ToolMessage，生成汇总响应："登录功能开发完成，后端 API 包含...前端页面包含..."
+            </div>
+
+            <h4>Step 12：收尾 → SSE 关闭</h4>
+            <div class="flow-step">
+                <strong>after_agent</strong> 挂钩执行：<br>
+                ① <strong>MemoryMiddleware</strong> → 将本次对话过滤后入队记忆更新（30s 去抖后异步写入）<br>
+                ② <strong>TitleMiddleware</strong> → 自动生成会话标题"用户登录功能开发"<br>
+                <strong>run_agent()</strong> → flush journal、持久化 token 用量、同步标题到 thread_meta、发布 <code>end</code> 事件<br>
+                <strong>sse_consumer()</strong> → 流结束，HTTP 连接关闭
+            </div>
+
+            <!-- ===== 第二部分：关键数据生命周期 ===== -->
+            <h3 id="data-lifecycle">二、关键数据的生命周期</h3>
+
+            <h4>2.1 RunRecord — 一次任务的身份证</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>阶段</th>
+                        <th>RunRecord 状态</th>
+                        <th>关键字段变化</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>创建</td>
+                        <td><span class="badge badge-warning">pending</span></td>
+                        <td>run_id 生成, thread_id 绑定, task=None</td>
+                    </tr>
+                    <tr>
+                        <td>Agent 启动</td>
+                        <td><span class="badge badge-primary">running</span></td>
+                        <td>task = asyncio.Task 句柄, 开始统计 token</td>
+                    </tr>
+                    <tr>
+                        <td>执行中</td>
+                        <td><span class="badge badge-primary">running</span></td>
+                        <td>token 用量持续累加, abort_event 可被设置</td>
+                    </tr>
+                    <tr>
+                        <td>正常完成</td>
+                        <td><span class="badge badge-success">success</span></td>
+                        <td>token 用量最终快照, journal flush</td>
+                    </tr>
+                    <tr>
+                        <td>异常/超时/取消</td>
+                        <td><span class="badge badge-danger">error/timeout/interrupted</span></td>
+                        <td>checkpoint 用于回滚, error 信息记录</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>2.2 ThreadState — Agent 循环中的核心状态</h4>
+            <p>ThreadState 是 LangGraph 的状态对象，每次 LLM 调用前后的 Middleware 都读写它。在一次任务中，它的字段这样演变：</p>
+
+            <div class="mermaid">
+                flowchart TD
+                    subgraph 初始化["初始状态 (start_run)"]
+                        I1["messages: [HumanMessage('开发登录功能')]"]
+                        I2["sandbox: null"]
+                        I3["thread_data: null"]
+                        I4["artifacts: []"]
+                        I5["todos: null"]
+                    end
+
+                    subgraph BeforeAgent["before_agent 阶段 (Middleware)"]
+                        B1["ThreadDataMiddleware →<br/>thread_data = {path: '/data/users/u123/threads/abc'}"]
+                        B2["SandboxMiddleware →<br/>sandbox = {sandbox_id: 'sb_xyz'}"]
+                        B3["DynamicContextMiddleware →<br/>messages 前插入 <memory> 标签 + 日期"]
+                    end
+
+                    subgraph LLMRound1["第 1 轮 LLM 调用"]
+                        L1["LLM 输出 AIMessage<br/>tool_calls: [task('后端'), task('前端')]"]
+                    end
+
+                    subgraph ToolExec["工具执行阶段"]
+                        T1["task_tool → SubAgent 并行执行"]
+                        T2["后端 SubAgent 完成 → ToolMessage"]
+                        T3["前端 SubAgent 完成 → ToolMessage"]
+                        T4["messages: [..., AIMessage, ToolMsg1, ToolMsg2]"]
+                    end
+
+                    subgraph LLMRound2["第 2 轮 LLM 调用"]
+                        L2["LLM 汇总 → AIMessage('登录功能开发完成...')"]
+                    end
+
+                    subgraph AfterAgent["after_agent 阶段 (Middleware)"]
+                        A1["TitleMiddleware →<br/>title = '用户登录功能开发'"]
+                        A2["MemoryMiddleware →<br/>入队记忆更新"]
+                        A3["最终 state 写入 checkpoint"]
+                    end
+
+                    初始化 --> BeforeAgent
+                    BeforeAgent --> LLMRound1
+                    LLMRound1 --> ToolExec
+                    ToolExec --> LLMRound2
+                    LLMRound2 --> AfterAgent
+            </div>
+
+            <h4>2.3 messages 列表 — 对话的完整生命周期</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>消息类型</th>
+                        <th>来源</th>
+                        <th>内容</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><span class="badge badge-primary">HumanMessage</span></td>
+                        <td>DynamicContextMiddleware</td>
+                        <td><code>&lt;memory&gt;用户偏好: ...&lt;/memory&gt; 当前日期: 2026-05-25</code></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><span class="badge badge-primary">HumanMessage</span></td>
+                        <td>用户输入</td>
+                        <td><code>"帮我开发一个用户登录功能，包含前端页面和后端 API"</code></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><span class="badge badge-success">AIMessage</span></td>
+                        <td>Lead Agent LLM</td>
+                        <td>tool_calls: [task("后端登录API"), task("前端登录页面")]</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><span class="badge badge-warning">ToolMessage</span></td>
+                        <td>后端 SubAgent</td>
+                        <td><code>"Task Succeeded. Result: 后端API包含登录/注册/JWT..."</code></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><span class="badge badge-warning">ToolMessage</span></td>
+                        <td>前端 SubAgent</td>
+                        <td><code>"Task Succeeded. Result: 前端页面包含表单/验证..."</code></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td><span class="badge badge-success">AIMessage</span></td>
+                        <td>Lead Agent LLM</td>
+                        <td>"登录功能开发完成，后端包含...前端包含..."</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>2.4 SubAgent 内部的消息流（以后端 SubAgent 为例）</h4>
+            <p>SubAgent 有自己独立的 state 和消息列表，与 Lead Agent 完全隔离：</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>消息类型</th>
+                        <th>来源</th>
+                        <th>内容</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><span class="badge badge-primary">SystemMessage</span></td>
+                        <td>SubAgent 初始化</td>
+                        <td>系统提示 + Skills 内容</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><span class="badge badge-primary">HumanMessage</span></td>
+                        <td>task_tool 传入</td>
+                        <td><code>"实现后端登录API，包括JWT认证、用户表、登录注册接口"</code></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><span class="badge badge-success">AIMessage</span></td>
+                        <td>SubAgent LLM</td>
+                        <td>tool_calls: [write_file("auth.py", ...), write_file("models.py", ...)]</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><span class="badge badge-warning">ToolMessage</span></td>
+                        <td>write_file 工具</td>
+                        <td><code>"File written successfully"</code></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><span class="badge badge-success">AIMessage</span></td>
+                        <td>SubAgent LLM</td>
+                        <td>"后端登录 API 已完成，包含以下文件..."（这是最终结果，返回给 Lead Agent）</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>2.5 SSE 事件流 — 前端看到什么</h4>
+            <p>整个过程中，前端通过 SSE 持续接收事件：</p>
+
+            <div class="mermaid">
+                flowchart LR
+                    subgraph SSE["SSE 事件流时间线"]
+                        direction TB
+                        E1["🔵 metadata<br/>{run_id: 'r_xxx', thread_id: 'abc'}"]
+                        E2["🟢 messages (chunk 1)<br/>AIMessage: tool_calls: [task...]
+                        E3["🟡 custom: task_started<br/>{task_id: 't1', desc: '后端登录API'}"]
+                        E4["🟡 custom: task_started<br/>{task_id: 't2', desc: '前端登录页面'}"]
+                        E5["🟡 custom: task_running<br/>{task_id: 't1', msg: '正在创建用户表...'}"]
+                        E6["🟡 custom: task_running<br/>{task_id: 't2', msg: '正在创建登录表单...'}"]
+                        E7["🟡 custom: task_completed<br/>{task_id: 't1'}"]
+                        E8["🟡 custom: task_completed<br/>{task_id: 't2'}"]
+                        E9["🟢 messages (chunk 2)<br/>ToolMessage x2"]
+                        E10["🟢 messages (chunk 3)<br/>AIMessage: '登录功能开发完成...'"]
+                        E11["🔴 end"]
+                    end
+
+                    E1 --> E2 --> E3 --> E4 --> E5 --> E6 --> E7 --> E8 --> E9 --> E10 --> E11
+            </div>
+
+            <h4>2.6 Checkpoint — 断点续传的保障</h4>
+            <div class="highlight">
+                LangGraph 的 Checkpointer 在<strong>每一步</strong>（每次 LLM 调用、每次工具执行）后自动保存 ThreadState 快照到数据库。这意味着：
+                <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                    <li>如果 run_agent 崩溃或超时，可以从最近的 checkpoint 恢复</li>
+                    <li>用户可以在任意步骤中断后继续（Human-in-the-loop）</li>
+                    <li>run_agent 启动时会先快照 pre-run checkpoint，用于 rollback</li>
+                </ul>
+            </div>
+
+            <h3 id="middleware-position">三、Middleware 在链路中的精确位置</h3>
+            <p>将 Middleware 挂钩放回到完整链路中，可以清楚看到每个挂钩在什么时候被触发：</p>
+
+            <div class="mermaid">
+                flowchart TB
+                    subgraph 请求阶段["HTTP 请求阶段（无 Middleware）"]
+                        R1["Nginx 转发"] --> R2["Gateway Auth/CSRF"]
+                        R2 --> R3["start_run() 创建 RunRecord"]
+                        R3 --> R4["run_agent() 初始化"]
+                    end
+
+                    subgraph BA["before_agent 挂钩"]
+                        BA1["① ThreadDataMiddleware → 创建工作目录"]
+                        BA1 --> BA2["② UploadsMiddleware → 注入文件列表"]
+                        BA2 --> BA3["③ SandboxMiddleware → 获取沙箱"]
+                        BA3 --> BA4["④ DynamicContextMiddleware → 注入记忆+日期"]
+                    end
+
+                    subgraph LLM["LLM 调用"]
+                        L1["Lead Agent LLM 生成响应"]
+                    end
+
+                    subgraph BM["before_model 挂钩"]
+                        BM1["⑤ SummarizationMiddleware → 压缩上下文(可选)"]
+                        BM1 --> BM2["⑥ ViewImageMiddleware → 注入图片(可选)"]
+                    end
+
+                    subgraph AM["after_model 挂钩"]
+                        AM1["⑦ TokenUsageMiddleware → 记录 token"]
+                        AM1 --> AM2["⑧ LoopDetectionMiddleware → 检测循环"]
+                        AM2 --> AM3["⑨ SubagentLimitMiddleware → 截断超额 task 调用"]
+                    end
+
+                    subgraph TC["wrap_tool_call 挂钩"]
+                        TC1["⑩ ToolErrorHandlingMiddleware → 异常兜底"]
+                        TC1 --> TC2["⑪ SandboxAuditMiddleware → 审计日志"]
+                        TC2 --> TC3["⑫ ClarificationMiddleware → 拦截澄清(终止)"]
+                    end
+
+                    subgraph SubAgent["SubAgent 执行"]
+                        SA1["task_tool() → SubagentExecutor"]
+                        SA1 --> SA2["SubAgent 独立 Middleware 链"]
+                        SA2 --> SA3["SubAgent LLM + 工具执行"]
+                        SA3 --> SA4["结果返回 Lead Agent"]
+                    end
+
+                    subgraph AA["after_agent 挂钩"]
+                        AA1["⑬ TitleMiddleware → 生成标题"]
+                        AA1 --> AA2["⑭ MemoryMiddleware → 入队记忆更新"]
+                    end
+
+                    subgraph 收尾["收尾阶段（无 Middleware）"]
+                        E1["flush journal + 持久化 token"]
+                        E1 --> E2["发布 end SSE 事件"]
+                    end
+
+                    请求阶段 --> BA
+                    BA --> BM
+                    BM --> LLM
+                    LLM --> AM
+                    AM --> TC
+                    TC --> SubAgent
+                    SubAgent --> LLM
+                    LLM --> AA
+                    AA --> 收尾
+            </div>
+
+            <h3 id="dataflow-overview">四、一张图总结：数据流向全景</h3>
+            <div class="mermaid">
+                flowchart TB
+                    subgraph 外部["外部"]
+                        U["👤 用户请求"]
+                        SSE_OUT["📡 SSE 响应"]
+                    end
+
+                    subgraph 网关["网关层"]
+                        NG["Nginx"]
+                        GW["Gateway"]
+                        AUTH["AuthMiddleware"]
+                    end
+
+                    subgraph 调度["调度层"]
+                        SVC["start_run()"]
+                        RR["RunRecord"]
+                        WK["run_agent()"]
+                    end
+
+                    subgraph Agent层["Agent 层"]
+                        FACT["make_lead_agent()"]
+                        MW_CHAIN["Middleware 链 × 20"]
+                        LEAD["Lead Agent LLM"]
+                        STATE["ThreadState"]
+                        CKPT["Checkpoint DB"]
+                    end
+
+                    subgraph 子任务["SubAgent 层"]
+                        TASK["task_tool()"]
+                        EXEC["SubagentExecutor"]
+                        SUB_BE["🔧 后端 SubAgent"]
+                        SUB_FE["🎨 前端 SubAgent"]
+                    end
+
+                    subgraph 记忆["记忆层"]
+                        MEM_Q["MemoryQueue"]
+                        MEM_STORE["memory.json"]
+                    end
+
+                    U -->|"HTTP POST"| NG
+                    NG -->|"/api/*"| GW
+                    GW --> AUTH
+                    AUTH -->|"user_id"| SVC
+                    SVC -->|"RunRecord"| RR
+                    SVC -->|"asyncio.create_task"| WK
+                    WK --> FACT
+                    FACT --> MW_CHAIN
+                    MW_CHAIN --> LEAD
+                    LEAD <-->|"读写"| STATE
+                    STATE -->|"每步快照"| CKPT
+                    LEAD -->|"tool_calls"| TASK
+                    TASK --> EXEC
+                    EXEC --> SUB_BE
+                    EXEC --> SUB_FE
+                    SUB_BE -->|"结果"| TASK
+                    SUB_FE -->|"结果"| TASK
+                    TASK -->|"ToolMessage"| LEAD
+                    LEAD -->|"最终 AIMessage"| WK
+                    WK -->|"bridge.publish"| SSE_OUT
+                    SSE_OUT -->|"SSE 事件"| U
+                    WK -->|"after_agent"| MEM_Q
+                    MEM_Q -->|"30s 去抖"| MEM_STORE
+
+                    style U fill:#dbeafe,stroke:#2563eb
+                    style SSE_OUT fill:#dbeafe,stroke:#2563eb
+                    style STATE fill:#fef3c7,stroke:#f59e0b
+                    style CKPT fill:#fef3c7,stroke:#f59e0b
+                    style SUB_BE fill:#d1fae5,stroke:#10b981
+                    style SUB_FE fill:#d1fae5,stroke:#10b981
+                    style MEM_Q fill:#fee2e2,stroke:#ef4444
+                    style MEM_STORE fill:#fee2e2,stroke:#ef4444
+            </div>
+        </section>
+
+        <!-- LangGraph 的真正角色 -->
+        <section class="section">
+            <h2 id="langgraph-role">LangGraph 在 DeerFlow 中的真正角色</h2>
+
+            <div class="highlight">
+                <strong>核心结论：DeerFlow 用的是 LangGraph 的运行时基础设施，不是它的图编排能力。</strong>Lead Agent 在 LangGraph 层面只有<strong>一个节点</strong>，SubAgent 不是图节点，是工具函数内部启动的独立线程。
+            </div>
+
+            <h3 id="why-langgraph">为什么单节点还要用 LangGraph？</h3>
+            <p>如果不用 LangGraph，以下能力全部要自己实现：</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>LangGraph 提供的能力</th>
+                        <th>不用 LangGraph 要自己写</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Checkpoint 自动持久化</td>
+                        <td>状态快照 + 存储 + 恢复逻辑</td>
+                    </tr>
+                    <tr>
+                        <td>Interrupt / Resume（Human-in-the-loop）</td>
+                        <td>中断点管理 + 恢复上下文重建</td>
+                    </tr>
+                    <tr>
+                        <td><code>add_messages</code> 状态合并器</td>
+                        <td>消息去重、追加、替换的手动处理</td>
+                    </tr>
+                    <tr>
+                        <td>SSE 流式输出（values / updates / messages 三种模式）</td>
+                        <td>生产者-消费者 + 序列化 + 断线重连</td>
+                    </tr>
+                    <tr>
+                        <td><code>create_agent()</code> 标准 ReAct 循环</td>
+                        <td>while 循环 + tool_call 解析 + 错误重试</td>
+                    </tr>
+                    <tr>
+                        <td>Middleware 钩子系统</td>
+                        <td>before / after 拦截器链</td>
+                    </tr>
+                    <tr>
+                        <td>Checkpointer 插件化（SQLite / Postgres）</td>
+                        <td>适配不同存储后端</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>LangGraph 在这里不是"图编排引擎"，而是"带状态持久化的 Agent 运行时"。</strong>类比：你买车用来代步，但车里有空调、音响、倒车雷达——你用的是这些功能，不是因为"需要一辆有四个轮子的东西"。</p>
+
+            <h3 id="langgraph-structure">真实的 LangGraph 图结构</h3>
+            <div class="mermaid">
+                graph LR
+                    subgraph 编译后的图["CompiledStateGraph（单节点）"]
+                        START(("START")) --> A["agent_node"]
+                        A -->|"有 tool_call"| A
+                        A -->|"无 tool_call"| END(("END"))
+                    end
+
+                    subgraph 节点内部["agent_node 内部（ReAct 循环）"]
+                        direction TB
+                        L1["🤖 LLM 调用"] --> L2{"有 tool_calls?"}
+                        L2 -->|是| L3["🔧 执行工具"]
+                        L3 --> L4["ToolMessage 加入 state"]
+                        L4 --> L1
+                        L2 -->|否| L5["✅ 返回 AIMessage"]
+                    end
+
+                    A -.->|"展开"| 节点内部
+
+                    style 编译后的图 fill:#dbeafe,stroke:#2563eb
+                    style 节点内部 fill:#fef3c7,stroke:#f59e0b
+            </div>
+
+            <h3 id="subagent-side-effect">SubAgent 不是节点，是工具的副作用</h3>
+            <p>SubAgent 的启动发生在 <code>task</code> 工具的 Python 函数内部，对 LangGraph 来说跟调用 <code>write_file</code> 或 <code>bash</code> 没有区别：</p>
+
+            <div class="mermaid">
+                sequenceDiagram
+                    participant Graph as LangGraph 引擎
+                    participant Node as agent_node
+                    participant LLM as 🤖 LLM
+                    participant Task as 📦 task_tool()
+                    participant Exec as SubagentExecutor
+                    participant SubAgent as 🔧 SubAgent 实例
+
+                    Graph->>Node: 执行第 N 轮
+                    Node->>LLM: 发送 messages
+                    LLM-->>Node: tool_calls: [task("后端API")]
+                    Node->>Node: wrap_tool_call hooks
+                    Node->>Task: handler(request)
+                    Task->>Exec: execute_async(prompt)
+                    Exec->>SubAgent: 新线程 create_agent()
+                    Note over SubAgent: 独立的 LangGraph 图<br/>独立的 state<br/>独立的 Middleware 链
+                    SubAgent-->>Exec: "后端API完成"
+                    Exec-->>Task: result string
+                    Task-->>Node: ToolMessage
+                    Note over Graph: checkpoint 保存
+                    Graph->>Node: 执行第 N+1 轮
+            </div>
+
+            <h3 id="checkpoint-timing">Checkpoint 什么时候保存？</h3>
+            <p><strong>每个节点每次执行完毕后保存一次。</strong>对于单节点 ReAct 循环，就是每次 LLM 返回后保存：</p>
+
+            <div class="data-structure">
+                <span class="comment">// 一次包含 2 次 LLM 调用的 run，产生 3 个 checkpoint</span><br><br>
+                <span class="keyword">第 1 轮</span>: LLM → tool_calls = [task("后端"), task("前端")]<br>
+                &nbsp;&nbsp;<span class="string">── checkpoint ① ──</span> &nbsp;<span class="comment">// 快照: messages + sandbox + artifacts</span><br><br>
+                <span class="keyword">第 2 轮</span>: 工具执行 → 两个 ToolMessage 加入 state<br>
+                &nbsp;&nbsp;<span class="string">── checkpoint ② ──</span> &nbsp;<span class="comment">// 快照: messages 多了 2 条 ToolMessage</span><br><br>
+                <span class="keyword">第 3 轮</span>: LLM → 最终 AIMessage（无 tool_call）→ 结束<br>
+                &nbsp;&nbsp;<span class="string">── checkpoint ③ ──</span> &nbsp;<span class="comment">// 快照: 终态</span>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h4>Checkpoint 存了什么？</h4>
+                    <ul>
+                        <li><strong>ThreadState 全量快照</strong>：messages、sandbox、artifacts、todos、title</li>
+                        <li><strong>元数据</strong>：thread_id、step 序号、时间戳</li>
+                        <li><strong>写入位置</strong>：SQLite / PostgreSQL（通过 Checkpointer 插件）</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Checkpoint 的用途</h4>
+                    <ul>
+                        <li><strong>崩溃恢复</strong>：run_agent 崩溃后从最近 checkpoint 恢复</li>
+                        <li><strong>Human-in-the-loop</strong>：用户暂停后可以从断点继续</li>
+                        <li><strong>回滚</strong>：run_agent 启动时快照 pre-run checkpoint，失败可回滚</li>
+                        <li><strong>会话历史</strong>：thread 恢复时加载最近 checkpoint 的 state</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 id="metagpt-graph-comparison">与 MetaGPT 的图结构对比</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>维度</th>
+                        <th>MetaGPT</th>
+                        <th>DeerFlow</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>图的结构</strong></td>
+                        <td>多节点图（每个 Role 是一个节点）</td>
+                        <td>单节点图（ReAct 循环）</td>
+                    </tr>
+                    <tr>
+                        <td><strong>编排方式</strong></td>
+                        <td>显式：Environment 广播 → Role watch 过滤</td>
+                        <td>隐式：LLM 通过 tool_call 决定做什么</td>
+                    </tr>
+                    <tr>
+                        <td><strong>子任务执行</strong></td>
+                        <td>Role 是图节点，消息在节点间流动</td>
+                        <td>SubAgent 是工具内部的线程，对图不可见</td>
+                    </tr>
+                    <tr>
+                        <td><strong>状态持久化</strong></td>
+                        <td>无内置 checkpoint（需自己实现）</td>
+                        <td>LangGraph 自动 checkpoint</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LangGraph 的价值</strong></td>
+                        <td>不使用 LangGraph</td>
+                        <td>用的是运行时，不是图编排</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 消息机制 -->
+        <section class="section">
+            <h2 id="messaging">消息机制</h2>
+
+            <h3 id="messagebus-architecture">MessageBus 架构</h3>
+            <div class="mermaid">
+                graph LR
+                    subgraph External["外部 IM 平台"]
+                        E1[飞书]
+                        E2[Slack]
+                        E3[Telegram]
+                        E4[钉钉]
+                        E5[企业微信]
+                    end
+
+                    subgraph Bus["MessageBus"]
+                        IQ[Inbound Queue<br/>asyncio.Queue]
+                        OL[Outbound Listeners<br/>list of callbacks]
+                    end
+
+                    subgraph Internal["Agent 调度器"]
+                        CM[Channel Manager]
+                        GW[Gateway API]
+                    end
+
+                    E1 & E2 & E3 & E4 & E5 -->|"publish_inbound()"| IQ
+                    IQ -->|"get_inbound()"| CM
+                    CM --> GW
+                    GW -->|"publish_outbound()"| OL
+                    OL -->|"send()"| E1 & E2 & E3 & E4 & E5
+            </div>
+
+            <h3 id="message-structure">消息数据结构</h3>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('inbound')">InboundMessage</button>
+                <button class="tab" onclick="showTab('outbound')">OutboundMessage</button>
+                <button class="tab" onclick="showTab('attachment')">ResolvedAttachment</button>
+            </div>
+
+            <div id="inbound" class="tab-content active">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>字段</th>
+                            <th>类型</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>channel_name</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>来源渠道名（如 "feishu", "slack"）</td>
+                        </tr>
+                        <tr>
+                            <td><code>chat_id</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>平台特定的会话标识</td>
+                        </tr>
+                        <tr>
+                            <td><code>user_id</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>平台特定的用户标识</td>
+                        </tr>
+                        <tr>
+                            <td><code>text</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>消息文本</td>
+                        </tr>
+                        <tr>
+                            <td><code>msg_type</code></td>
+                            <td><span class="badge badge-warning">InboundMessageType</span></td>
+                            <td>CHAT 或 COMMAND</td>
+                        </tr>
+                        <tr>
+                            <td><code>thread_ts</code></td>
+                            <td><span class="badge badge-success">str | None</span></td>
+                            <td>平台线程标识</td>
+                        </tr>
+                        <tr>
+                            <td><code>topic_id</code></td>
+                            <td><span class="badge badge-success">str | None</span></td>
+                            <td>会话主题标识，映射到 DeerFlow thread</td>
+                        </tr>
+                        <tr>
+                            <td><code>files</code></td>
+                            <td><span class="badge badge-primary">list[dict]</span></td>
+                            <td>文件附件列表</td>
+                        </tr>
+                        <tr>
+                            <td><code>metadata</code></td>
+                            <td><span class="badge badge-primary">dict</span></td>
+                            <td>任意附加数据</td>
+                        </tr>
+                        <tr>
+                            <td><code>created_at</code></td>
+                            <td><span class="badge badge-primary">float</span></td>
+                            <td>Unix 时间戳</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="outbound" class="tab-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>字段</th>
+                            <th>类型</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>channel_name</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>目标渠道名</td>
+                        </tr>
+                        <tr>
+                            <td><code>chat_id</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>目标会话标识</td>
+                        </tr>
+                        <tr>
+                            <td><code>thread_id</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>DeerFlow thread ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>text</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>响应文本</td>
+                        </tr>
+                        <tr>
+                            <td><code>artifacts</code></td>
+                            <td><span class="badge badge-primary">list[str]</span></td>
+                            <td>Agent 产出的文件路径列表</td>
+                        </tr>
+                        <tr>
+                            <td><code>attachments</code></td>
+                            <td><span class="badge badge-warning">list[ResolvedAttachment]</span></td>
+                            <td>已解析的文件附件</td>
+                        </tr>
+                        <tr>
+                            <td><code>is_final</code></td>
+                            <td><span class="badge badge-danger">bool</span></td>
+                            <td>是否为最终消息</td>
+                        </tr>
+                        <tr>
+                            <td><code>thread_ts</code></td>
+                            <td><span class="badge badge-success">str | None</span></td>
+                            <td>平台线程标识</td>
+                        </tr>
+                        <tr>
+                            <td><code>metadata</code></td>
+                            <td><span class="badge badge-primary">dict</span></td>
+                            <td>任意附加数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="attachment" class="tab-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>字段</th>
+                            <th>类型</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>virtual_path</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>虚拟路径（如 /mnt/user-data/outputs/xxx）</td>
+                        </tr>
+                        <tr>
+                            <td><code>actual_path</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>宿主机文件系统路径</td>
+                        </tr>
+                        <tr>
+                            <td><code>filename</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>文件名</td>
+                        </tr>
+                        <tr>
+                            <td><code>mime_type</code></td>
+                            <td><span class="badge badge-primary">str</span></td>
+                            <td>MIME 类型</td>
+                        </tr>
+                        <tr>
+                            <td><code>size</code></td>
+                            <td><span class="badge badge-primary">int</span></td>
+                            <td>文件大小（字节）</td>
+                        </tr>
+                        <tr>
+                            <td><code>is_image</code></td>
+                            <td><span class="badge badge-danger">bool</span></td>
+                            <td>是否为图片</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 id="message-lifecycle">消息生命周期</h3>
+            <div class="mermaid">
+                flowchart TD
+                    A[外部平台 Webhook/WS] -->|接收| B[Channel.start]
+                    B -->|构造| C[InboundMessage]
+                    C -->|publish_inbound| D[MessageBus.inbound_queue]
+                    D -->|get_inbound| E[ChannelManager._dispatch_loop]
+                    E -->|路由| F{msg_type?}
+                    F -->|COMMAND| G[_handle_command]
+                    F -->|CHAT| H[_handle_chat]
+                    H -->|查询| I{thread 存在?}
+                    I -->|否| J[创建新 thread]
+                    I -->|是| K[获取 thread_id]
+                    J --> K
+                    K -->|调用| L[client.runs.stream/wait]
+                    L -->|Agent 执行| M[Gateway API]
+                    M -->|返回| N[OutboundMessage]
+                    N -->|publish_outbound| O[MessageBus.outbound_listeners]
+                    O -->|过滤| P[Channel._on_outbound]
+                    P -->|send| Q[外部平台]
+            </div>
+        </section>
+
+        <!-- 数据模型 -->
+        <section class="section">
+            <h2 id="data-model">数据模型</h2>
+
+            <h3 id="orm-relations">ORM 模型关系</h3>
+            <div class="mermaid">
+                erDiagram
+                    USERS {
+                        string id PK
+                        string email UK
+                        string password_hash
+                        string system_role
+                        datetime created_at
+                        string oauth_provider
+                        string oauth_id
+                    }
+
+                    THREADS_META {
+                        string thread_id PK
+                        string assistant_id
+                        string user_id FK
+                        string display_name
+                        string status
+                        json metadata_json
+                        datetime created_at
+                        datetime updated_at
+                    }
+
+                    RUNS {
+                        string run_id PK
+                        string thread_id FK
+                        string assistant_id
+                        string user_id FK
+                        string status
+                        string model_name
+                        int total_tokens
+                        int llm_call_count
+                        datetime created_at
+                    }
+
+                    RUN_EVENTS {
+                        int id PK
+                        string thread_id FK
+                        string run_id FK
+                        string user_id FK
+                        string event_type
+                        string category
+                        text content
+                        int seq
+                        datetime created_at
+                    }
+
+                    FEEDBACK {
+                        string feedback_id PK
+                        string run_id FK
+                        string thread_id FK
+                        string user_id FK
+                        string message_id
+                        int rating
+                        text comment
+                        datetime created_at
+                    }
+
+                    USERS ||--o{ THREADS_META : "拥有"
+                    USERS ||--o{ RUNS : "拥有"
+                    USERS ||--o{ RUN_EVENTS : "产生"
+                    USERS ||--o{ FEEDBACK : "提交"
+                    THREADS_META ||--o{ RUNS : "包含"
+                    THREADS_META ||--o{ RUN_EVENTS : "记录"
+                    RUNS ||--o{ RUN_EVENTS : "产生"
+                    RUNS ||--o{ FEEDBACK : "收集"
+            </div>
+
+            <h3 id="runtime-memory-model">运行时内存模型</h3>
+            <div class="grid">
+                <div class="card">
+                    <h4>RunRecord</h4>
+                    <ul>
+                        <li><code>run_id</code>: 运行唯一标识</li>
+                        <li><code>thread_id</code>: 线程标识</li>
+                        <li><code>status</code>: RunStatus 枚举</li>
+                        <li><code>task</code>: asyncio.Task 句柄</li>
+                        <li><code>abort_event</code>: 取消信号</li>
+                        <li>Token 用量统计字段</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>ThreadState</h4>
+                    <ul>
+                        <li><code>messages</code>: 对话消息列表</li>
+                        <li><code>sandbox</code>: SandboxState</li>
+                        <li><code>thread_data</code>: 工作目录路径</li>
+                        <li><code>artifacts</code>: 产出文件列表</li>
+                        <li><code>todos</code>: 任务跟踪</li>
+                        <li><code>uploaded_files</code>: 上传文件</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Runtime 运行时 -->
+        <section class="section">
+            <h2 id="runtime">Runtime 运行时</h2>
+
+            <h3 id="runtime-components">核心组件</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>组件</th>
+                        <th>职责</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>RunManager</code></td>
+                        <td>运行记录的内存注册表 + 可选持久化 RunStore</td>
+                    </tr>
+                    <tr>
+                        <td><code>RunRecord</code></td>
+                        <td>单次运行的可变记录（status, token 用量, task 引用等）</td>
+                    </tr>
+                    <tr>
+                        <td><code>RunContext</code></td>
+                        <td>基础设施依赖打包（checkpointer, store, event_store）</td>
+                    </tr>
+                    <tr>
+                        <td><code>run_agent()</code></td>
+                        <td>后台 agent 执行引擎</td>
+                    </tr>
+                    <tr>
+                        <td><code>RunJournal</code></td>
+                        <td>LangChain 回调处理器，捕获事件写入 RunEventStore</td>
+                    </tr>
+                    <tr>
+                        <td><code>StreamBridge</code></td>
+                        <td>生产者-消费者解耦（agent worker → SSE endpoint）</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 id="run-state-machine">Run 状态机</h3>
+            <div class="mermaid">
+                stateDiagram-v2
+                    [*] --> pending
+                    pending --> running: 开始执行
+                    running --> success: 正常完成
+                    running --> error: 执行异常
+                    running --> timeout: 超时
+                    running --> interrupted: 用户取消/rollback
+
+                    success --> [*]
+                    error --> [*]
+                    timeout --> [*]
+                    interrupted --> [*]
+            </div>
+
+            <h3 id="streambridge-flow">StreamBridge 数据流</h3>
+            <div class="mermaid">
+                graph LR
+                    subgraph Producer["Agent Worker (生产者)"]
+                        A[agent.astream]
+                        A -->|"publish()"| B[StreamBridge]
+                    end
+
+                    subgraph Events["事件类型"]
+                        E1["metadata<br/>run_id + thread_id"]
+                        E2["values<br/>完整状态快照"]
+                        E3["messages<br/>消息增量"]
+                        E4["updates<br/>节点写入"]
+                        E5["custom<br/>StreamWriter 转发"]
+                        E6["error<br/>异常信息"]
+                    end
+
+                    subgraph Consumer["SSE Endpoint (消费者)"]
+                        B -->|"subscribe()"| C[AsyncIterator]
+                        C --> D[客户端]
+                    end
+
+                    B --> E1 & E2 & E3 & E4 & E5 & E6
+            </div>
+        </section>
+
+        <!-- 关键设计模式 -->
+        <section class="section">
+            <h2 id="design-patterns">关键设计模式</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h4>1. Harness/App 分层</h4>
+                    <ul>
+                        <li>persistence 属于 harness 层（可发布包）</li>
+                        <li>app/gateway 属于应用层</li>
+                        <li>依赖单向：app 导入 deerflow，反之禁止</li>
+                        <li>CI 测试强制执行边界</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>2. 双轨持久化</h4>
+                    <ul>
+                        <li>LangGraph Checkpointer: 管理图执行状态</li>
+                        <li>应用 ORM: 管理业务元数据</li>
+                        <li>共享物理数据库但代码完全独立</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>3. Repository 模式 + 用户隔离</h4>
+                    <ul>
+                        <li>所有数据访问通过 Repository 抽象</li>
+                        <li>user_id 通过 ContextVar 自动传播</li>
+                        <li>实现行级数据隔离</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>4. 内存优先 + Store 兜底</h4>
+                    <ul>
+                        <li>RunManager 在内存维护活跃运行状态</li>
+                        <li>同步持久化到 Store</li>
+                        <li>支持进程重启恢复</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>5. 事件溯源</h4>
+                    <ul>
+                        <li>RunEventStore 以 append-only 方式记录</li>
+                        <li>按 seq 全局递增</li>
+                        <li>支持分页查询和审计</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>6. 消息总线解耦</h4>
+                    <ul>
+                        <li>MessageBus 完全解耦 Channel 和 Agent</li>
+                        <li>Channel 不知道哪个 Agent 处理消息</li>
+                        <li>Agent 不知道消息来自哪个平台</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>调研时间: 2026-05-24 | 基于 <a href="https://github.com/bytedance/deer-flow" target="_blank">DeerFlow</a> 官方仓库分析</p>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            securityLevel: 'loose'
+        });
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+    </script>
+</body>
+</html>

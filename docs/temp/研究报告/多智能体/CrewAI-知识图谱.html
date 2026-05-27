@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrewAI 知识图谱</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --ink-light: #555;
+      --ink-muted: #888;
+      --bg: #f8f6f1;
+      --bg-card: #ffffff;
+      --accent-1: #c04a1a;
+      --accent-2: #2d6a4f;
+      --accent-3: #1d3557;
+      --accent-4: #7b2d8b;
+      --accent-5: #b5651d;
+      --border: #e0dcd4;
+      --shadow: 0 2px 20px rgba(0,0,0,0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Noto Sans SC", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.65;
+    }
+    .hero {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 64px 24px 28px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--accent-1);
+      font: 600 13px "JetBrains Mono", Consolas, monospace;
+    }
+    h1, h2, h3 {
+      font-family: "Noto Serif SC", "SimSun", serif;
+      letter-spacing: 0;
+    }
+    h1 {
+      margin: 16px 0 10px;
+      font-size: 44px;
+      line-height: 1.18;
+    }
+    .hero p {
+      margin: 0 auto;
+      max-width: 780px;
+      color: var(--ink-light);
+      font-size: 17px;
+    }
+    .section-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      padding: 14px 24px 32px;
+    }
+    .section-nav a {
+      color: var(--ink);
+      text-decoration: none;
+      background: #fff;
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .content-section {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px 56px;
+    }
+    .section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      margin: 0 0 22px;
+      overflow: hidden;
+    }
+    .section-header {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      flex: 0 0 auto;
+    }
+    .section-title-block h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .subtitle {
+      color: var(--ink-muted);
+      font-size: 14px;
+    }
+    .section-body { padding: 22px 24px 26px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .info-block {
+      border-left: 4px solid var(--accent-3);
+      background: #fafafa;
+      padding: 14px 16px;
+      border-radius: 6px;
+    }
+    .info-block.green { border-left-color: var(--accent-2); }
+    .info-block.purple { border-left-color: var(--accent-4); }
+    .info-block.orange { border-left-color: var(--accent-1); }
+    .info-block h3 { margin: 0 0 8px; font-size: 18px; }
+    .info-block p, .info-block ul { margin: 0; color: var(--ink-light); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #f1eee7; }
+    code {
+      font-family: "JetBrains Mono", Consolas, monospace;
+      background: #f3f0e8;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .diagram-section {
+      background: #fffdf8;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .callout {
+      margin: 14px 0;
+      padding: 14px 16px;
+      background: #fff8f1;
+      border-left: 4px solid var(--accent-1);
+      border-radius: 6px;
+      color: var(--ink-light);
+    }
+    @media (max-width: 700px) {
+      h1 { font-size: 32px; }
+      .section-header { align-items: flex-start; }
+      .section-body, .section-header { padding-left: 16px; padding-right: 16px; }
+      table { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-badge">other/crewAI research</div>
+    <h1>CrewAI 知识图谱</h1>
+    <p>面向多智能体框架实现的源码调研：仓库结构、Agent 设计、工具调用、记忆机制、Crew→Task→Agent 执行链路、Agent 间消息传递、功能开发场景执行过程，以及 Memory 读写机制、Tool Schema 生成和错误处理的深度分析。</p>
+  </div>
+
+  <nav class="section-nav">
+    <a href="#overview">阅读路线</a>
+    <a href="#architecture">仓库框架</a>
+    <a href="#agent">单 Agent</a>
+    <a href="#tools">工具调用</a>
+    <a href="#memory">记忆机制</a>
+    <a href="#multi-agent">多 Agent</a>
+    <a href="#execution-chain">执行链路</a>
+    <a href="#runtime">动态执行</a>
+    <a href="#deep-memory-write">Memory写入</a>
+    <a href="#deep-memory-read">Memory读取</a>
+    <a href="#deep-tool-schema">Tool Schema</a>
+    <a href="#deep-tool-error">Tool错误处理</a>
+  </nav>
+
+  <main class="content-section">
+    <section class="section-card" id="overview">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-1);">0</div>
+        <div class="section-title-block">
+          <h2>第一次看仓库</h2>
+          <div class="subtitle">先建立 CrewAI 的基本心智模型，再进入源码</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="grid">
+          <div class="info-block"><h3>用户建模层</h3><p>用 <code>Agent</code> 描述谁来做，用 <code>Task</code> 描述做什么，用 <code>Crew</code> 描述任务如何执行。</p></div>
+          <div class="info-block green"><h3>执行器层</h3><p>executor 维护 messages，调用 LLM，识别工具调用，把工具结果回写给 LLM。</p></div>
+          <div class="info-block purple"><h3>能力扩展层</h3><p>工具、记忆、知识库、MCP、文件输入和平台集成都在执行前接入 Agent。</p></div>
+          <div class="info-block orange"><h3>运行治理层</h3><p>事件、tracing、checkpoint、guardrail 和 callbacks 负责观测、恢复和质量控制。</p></div>
+        </div>
+        <table>
+          <thead><tr><th>阅读顺序</th><th>先看什么</th><th>为什么</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>README.md</code> 的 YAML crew 示例</td><td>先理解用户如何声明 Agent、Task、Crew。</td></tr>
+            <tr><td>2</td><td><code>lib/crewai/src/crewai/crew.py</code></td><td>Crew 是入口，<code>kickoff()</code> 展示整个系统如何启动。</td></tr>
+            <tr><td>3</td><td><code>lib/crewai/src/crewai/task.py</code></td><td>Task 是流程节点，负责把 context、agent、tools 组合成一次执行。</td></tr>
+            <tr><td>4</td><td><code>lib/crewai/src/crewai/agent/core.py</code></td><td>Agent 是角色和能力容器。</td></tr>
+            <tr><td>5</td><td><code>lib/crewai/src/crewai/agents/crew_agent_executor.py</code></td><td>这里能看到 LLM 循环、工具调用、消息维护和错误处理。</td></tr>
+            <tr><td>6</td><td><code>tools/</code> 与 <code>memory/</code></td><td>再理解工具 schema、委派工具、记忆提取和检索。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section-card" id="architecture">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-3);">1</div>
+        <div class="section-title-block">
+          <h2>仓库框架</h2>
+          <div class="subtitle">uv workspace 下的核心运行时和工具生态</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="callout">运行时主链路是：用户项目创建 <code>Crew</code>，Crew 持有多个 <code>Task</code> 和 <code>Agent</code>；执行 Task 时找到 Agent；Agent 通过 executor 调 LLM；LLM 可能触发 Tool；Tool 结果回到 Agent，再形成 TaskOutput 和 CrewOutput。</div>
+        <div class="grid">
+          <div class="info-block"><h3>核心包</h3><p><code>lib/crewai</code> 承载 Crew、Agent、Task、Flow、Memory、Tool 和事件系统。</p></div>
+          <div class="info-block green"><h3>工具生态</h3><p><code>lib/crewai-tools</code> 提供搜索、文件、数据库、云服务、浏览器、MCP 等工具。</p></div>
+          <div class="info-block purple"><h3>支撑包</h3><p><code>crewai-core</code>、<code>crewai-files</code>、<code>cli</code> 分别处理平台基础能力、文件和命令行。</p></div>
+        </div>
+        <table>
+          <thead><tr><th>workspace 包</th><th>作用</th><th>架构位置</th></tr></thead>
+          <tbody>
+            <tr><td><code>lib/crewai</code></td><td>核心运行时，定义 Agent、Crew、Task、Flow、LLM、Tool、Memory，并负责执行循环、任务编排、事件、追踪和 checkpoint。</td><td>多 Agent 编排核心</td></tr>
+            <tr><td><code>lib/crewai-tools</code></td><td>官方工具集合和适配层，覆盖搜索、网页抓取、文件、数据库、云服务、浏览器、Bedrock、Platform、MCP/RAG 等工具。</td><td>外部能力接入</td></tr>
+            <tr><td><code>lib/cli</code></td><td>用户项目命令行，负责创建 crew 项目、运行、依赖安装、部署和模板生成。</td><td>开发者入口</td></tr>
+            <tr><td><code>lib/crewai-core</code></td><td>跨包共享基础能力，如 settings、paths、project、plus_api、telemetry、token_manager、tool_credentials。</td><td>平台基础层</td></tr>
+            <tr><td><code>lib/crewai-files</code></td><td>文件 URL、解析、校验和 provider 上传，为 task/agent 的文件输入和 multimodal 能力提供统一文件对象。</td><td>文件输入层</td></tr>
+            <tr><td><code>lib/devtools</code></td><td>文档检查、TOML 更新和开发辅助 CLI。</td><td>仓库维护层</td></tr>
+          </tbody>
+        </table>
+        <table>
+          <thead><tr><th>核心子模块</th><th>作用</th><th>关键理解</th></tr></thead>
+          <tbody>
+            <tr><td><code>crew.py</code>, <code>crews/</code></td><td>Crew 编排入口，负责 kickoff、sequential/hierarchical process、task 顺序、manager 创建和 CrewOutput。</td><td>多 Agent 主协调层</td></tr>
+            <tr><td><code>agent/</code>, <code>agents/</code></td><td>Agent 配置和执行器，维护 LLM 调用循环、工具调用、消息列表和 step callback。</td><td>单 Agent 推理闭环</td></tr>
+            <tr><td><code>task.py</code>, <code>tasks/</code></td><td>Task 定义、执行、结构化输出、guardrail、conditional task 和 task output。</td><td>流程与上下文边界</td></tr>
+            <tr><td><code>tools/</code></td><td>BaseTool、CrewStructuredTool、tool usage、memory tools、delegation tools、file tools。</td><td>外部能力与 Agent 协作工具</td></tr>
+            <tr><td><code>memory/</code></td><td>统一记忆系统，支持提取、保存、scope/slice、encoding flow、recall flow 和存储 backend。</td><td>长期/共享上下文能力</td></tr>
+            <tr><td><code>flow/</code></td><td>事件驱动工作流，提供 Flow、start/listen/router、状态持久化和可视化。</td><td>确定性生产流程</td></tr>
+            <tr><td><code>llms/</code>, <code>llm.py</code></td><td>LLM 抽象和 provider 适配，判断 function calling、multimodal 等模型能力。</td><td>模型适配层</td></tr>
+            <tr><td><code>events/</code>, <code>telemetry/</code></td><td>事件总线、事件类型、监听器、tracing 和 usage metrics。</td><td>可观测性</td></tr>
+            <tr><td><code>knowledge/</code>, <code>rag/</code></td><td>知识源、RAG、embedding 和向量存储接入。</td><td>知识上下文</td></tr>
+            <tr><td><code>project/</code></td><td>CrewBase、agent/task/crew 装饰器和 YAML 配置装配。</td><td>用户项目 DSL</td></tr>
+            <tr><td><code>mcp/</code>, <code>a2a/</code></td><td>MCP 工具解析和 Agent-to-Agent 远程协作能力。</td><td>外部协议扩展</td></tr>
+            <tr><td><code>state/</code>, <code>security/</code></td><td>checkpoint/runtime state、安全 fingerprint 和执行恢复。</td><td>恢复与安全</td></tr>
+            <tr><td><code>skills/</code>, <code>utilities/</code></td><td>skill 加载、i18n、prompt、日志、序列化、训练、规划、上下文窗口处理等辅助能力。</td><td>横切支撑</td></tr>
+          </tbody>
+        </table>
+        <div class="diagram-section">
+          <div class="mermaid">
+graph TD
+  App[用户项目 crew.py/main.py] --> Crew[Crew]
+  App --> Flow[Flow]
+  Crew --> Task[Task]
+  Crew --> Agent[Agent]
+  Task --> Agent
+  Agent --> Executor[AgentExecutor/CrewAgentExecutor]
+  Executor --> LLM[BaseLLM/LLM Provider]
+  Executor --> ToolRuntime[Tool Runtime]
+  ToolRuntime --> BaseTool[BaseTool/CrewStructuredTool]
+  BaseTool --> Tools[crewai-tools]
+  Crew --> Memory[Memory]
+  Agent --> Memory
+  Memory --> Storage[LanceDB/Qdrant Edge]
+  Memory --> Embedder[Embedding Provider]
+  Crew --> Events[Event Bus/Telemetry/Tracing]
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" id="agent">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-2);">2</div>
+        <div class="section-title-block">
+          <h2>单 Agent 设计</h2>
+          <div class="subtitle">角色配置、执行器循环、工具 schema 和错误处理</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="callout">CrewAI 里的 Agent 不是长期在线的 worker 进程，更像“角色 + 能力 + 执行配置”。它描述身份、目标、工具、记忆、知识源和执行策略，真正的 LLM 循环由 executor 完成。</div>
+        <table>
+          <thead><tr><th>部分</th><th>说明</th><th>关键实现</th></tr></thead>
+          <tbody>
+            <tr><td>Agent 模型</td><td>role、goal、backstory、llm、tools、memory、guardrail、planning_config、allow_delegation。</td><td><code>agent/core.py</code></td></tr>
+            <tr><td>角色来源</td><td>框架不内置固定业务角色；<code>role</code>、<code>goal</code>、<code>backstory</code> 由使用者在代码或 YAML 中自定义。</td><td><code>Agent(...)</code></td></tr>
+            <tr><td>Manager 例外</td><td><code>Process.hierarchical</code> 需要 manager agent；可由用户提供，也可由 <code>manager_llm</code> 触发默认 manager 创建。</td><td><code>crew.py</code></td></tr>
+            <tr><td>执行循环</td><td>LLM 输出 final answer 或 tool call；工具结果回写 messages 后继续推理。</td><td><code>agents/crew_agent_executor.py</code></td></tr>
+            <tr><td>工具 schema</td><td>Pydantic <code>args_schema</code>，可显式提供，也可从 <code>_run/_arun</code> 签名推断。</td><td><code>tools/base_tool.py</code></td></tr>
+            <tr><td>错误处理</td><td>参数错误、执行异常、工具不存在均转成 observation/result，并计入 task tool errors。</td><td><code>tools/tool_usage.py</code></td></tr>
+          </tbody>
+        </table>
+        <div class="callout">CrewAI 预设的是“用角色描述 Agent”的建模方式，不预设“产品经理、工程师、测试、审查者”这类具体岗位。角色由用户自定义，因此设计质量取决于用户是否按真实上下文边界拆分，而不是机械按岗位拆分。</div>
+        <table>
+          <thead><tr><th>字段</th><th>初学者理解</th><th>影响范围</th></tr></thead>
+          <tbody>
+            <tr><td><code>role</code></td><td>Agent 的身份标签，也是委派匹配和日志里的核心语义。</td><td>prompt、delegation、事件日志</td></tr>
+            <tr><td><code>goal</code></td><td>告诉模型这个角色要优化什么目标。</td><td>prompt</td></tr>
+            <tr><td><code>backstory</code></td><td>补充行为风格和专业背景。</td><td>prompt</td></tr>
+            <tr><td><code>tools</code></td><td>Agent 能调用的外部能力。</td><td>工具调用</td></tr>
+            <tr><td><code>memory</code></td><td>Agent 专属记忆；为空时可能使用 Crew 级 memory。</td><td>记忆检索/保存</td></tr>
+            <tr><td><code>allow_delegation</code></td><td>是否允许通过工具调用其他 Agent。</td><td>多 Agent 协作</td></tr>
+          </tbody>
+        </table>
+        <div class="diagram-section">
+          <div class="mermaid">
+sequenceDiagram
+  participant Agent
+  participant Exec as Executor
+  participant LLM
+  participant Tool
+  Agent->>Exec: execute_task(task, context, tools)
+  Exec->>LLM: messages + tool schemas
+  LLM-->>Exec: final answer or tool call
+  alt tool call
+    Exec->>Tool: validate args + invoke
+    Tool-->>Exec: result or error text
+    Exec->>LLM: append tool result
+  else final answer
+    Exec-->>Agent: AgentFinish
+  end
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" id="tools">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-3);">T</div>
+        <div class="section-title-block">
+          <h2>工具调用</h2>
+          <div class="subtitle">LLM 通过结构化工具访问外部系统、文件、API 和其他 Agent</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="grid">
+          <div class="info-block"><h3>工具是什么</h3><p>工具把搜索、数据库、文件、浏览器、API 或委派 Agent 的能力包装成可被模型选择的调用单元。</p></div>
+          <div class="info-block green"><h3>schema 为什么重要</h3><p><code>args_schema</code> 用 Pydantic 描述输入，减少模型编错参数，并在执行前校验。</p></div>
+          <div class="info-block purple"><h3>失败如何处理</h3><p>默认把错误转成 observation/result 返回给 Agent，让它继续修正，而不是立刻中断 Crew。</p></div>
+        </div>
+        <table>
+          <thead><tr><th>维度</th><th>原生 function calling</th><th>ReAct 文本解析</th></tr></thead>
+          <tbody>
+            <tr><td>LLM 输出</td><td>结构化 tool call 对象</td><td>文本中的 Action / Action Input</td></tr>
+            <tr><td>稳定性</td><td>通常更稳定，但依赖 provider 支持</td><td>兼容性更广，但更容易格式错误</td></tr>
+            <tr><td>结果回写</td><td><code>role=tool</code> message</td><td>observation 文本</td></tr>
+            <tr><td>源码入口</td><td><code>_invoke_loop_native_tools()</code></td><td><code>_invoke_loop_react()</code></td></tr>
+          </tbody>
+        </table>
+        <div class="callout">排查工具问题时，第一步是确认当前 LLM 是否支持 native function calling。两条路径的错误栈、message 结构和结果回写方式都不同。</div>
+      </div>
+    </section>
+
+    <section class="section-card" id="memory">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-4);">3</div>
+        <div class="section-title-block">
+          <h2>记忆机制</h2>
+          <div class="subtitle">统一 MemoryRecord，而不是割裂的短期/长期/实体存储</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="callout">源码中当前记忆系统核心是 <code>Memory</code>：通过 scope、categories、metadata、importance、source、private 表达不同记忆语义，再用 semantic、recency、importance 综合排序。</div>
+        <div class="callout">CrewAI 的 memory 不是把完整聊天历史塞进向量库，而是先用 LLM 提取离散、可复用的记忆 statement，再保存成 <code>MemoryRecord</code>。</div>
+        <table>
+          <thead><tr><th>字段</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>content</code></td><td>离散、可复用的事实、决策、偏好、经验或观察。</td></tr>
+            <tr><td><code>scope/categories</code></td><td>层级隔离和分类检索。</td></tr>
+            <tr><td><code>importance</code></td><td>重要性分数，参与检索排序。</td></tr>
+            <tr><td><code>embedding</code></td><td>向量检索基础，序列化时排除。</td></tr>
+            <tr><td><code>source/private</code></td><td>来源和隐私过滤。</td></tr>
+          </tbody>
+        </table>
+        <table>
+          <thead><tr><th>机制</th><th>说明</th><th>适合保存什么</th></tr></thead>
+          <tbody>
+            <tr><td>Crew 级 memory</td><td><code>Crew(memory=True)</code> 创建共享记忆根，多个 Agent 可使用。</td><td>团队共享经验、跨 Agent 可复用事实。</td></tr>
+            <tr><td>Agent 级 memory</td><td>某个 Agent 自己的记忆，执行时优先使用。</td><td>角色专属偏好、专属经验。</td></tr>
+            <tr><td>自动保存</td><td>Agent 执行结束后从 task + result 提取记忆。</td><td>任务结论、决策、经验教训。</td></tr>
+            <tr><td>主动保存</td><td>Agent 调用 <code>Save to memory</code> 工具。</td><td>执行中明确发现的事实或观察。</td></tr>
+          </tbody>
+        </table>
+        <div class="diagram-section">
+          <div class="mermaid">
+sequenceDiagram
+  participant Exec as AgentExecutor
+  participant Memory
+  participant Extract as LLM Extractor
+  participant Flow as EncodingFlow
+  participant Store as Vector Store
+  Exec->>Memory: task + result
+  Memory->>Extract: extract_memories
+  Extract-->>Memory: reusable memory statements
+  Memory->>Flow: remember_many
+  Flow->>Flow: embed, dedup, analyze, consolidate
+  Flow->>Store: insert/update/delete MemoryRecord
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" id="multi-agent">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-1);">4</div>
+        <div class="section-title-block">
+          <h2>多 Agent 通信</h2>
+          <div class="subtitle">任务产物传递、委派工具和共享记忆</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="grid">
+          <div class="info-block"><h3>Sequential</h3><p>前序 <code>TaskOutput.raw</code> 聚合为后续 task 的 context。</p></div>
+          <div class="info-block green"><h3>Hierarchical</h3><p>manager agent 通过 Delegate/Ask 工具调用 worker agent。</p></div>
+          <div class="info-block purple"><h3>共享背景</h3><p>多个 Agent 可通过 memory 和 knowledge 获取共同上下文。</p></div>
+        </div>
+        <div class="callout">整体上，CrewAI 更像任务编排型 Orchestrator-Subagent：用户定义角色化 Agent，再把 Task 指派给 Agent，或由 manager 按角色委派。它具备 Agent 上下文隔离能力，但不强制按 context-centric decomposition 设计。</div>
+        <table>
+          <thead><tr><th>机制</th><th>传递什么</th><th>是否主通道</th></tr></thead>
+          <tbody>
+            <tr><td>Task context</td><td>前序 task 的输出文本</td><td>是，尤其在 sequential 中</td></tr>
+            <tr><td>Delegation tool</td><td>worker 临时 task 的结果</td><td>hierarchical 中常用</td></tr>
+            <tr><td>Memory</td><td>被提取后的长期记忆</td><td>辅助通道</td></tr>
+            <tr><td>Event bus</td><td>生命周期事件</td><td>不是业务消息通道</td></tr>
+          </tbody>
+        </table>
+        <div class="callout">不要把 CrewAI 理解成 Agent 通过 event bus 互相发消息。源码中的 event bus 更像运行时观测系统，真正的 Agent 间信息流主要是 TaskOutput、delegation result 和 memory recall。</div>
+
+        <h3 style="margin-top:20px;">Hierarchical 模式下 Worker 能否委派</h3>
+        <div class="callout" style="border-left-color: var(--accent-2);"><strong>不能。</strong> Worker 之间不能互相委派。这是 hierarchical 模式的设计约束。</div>
+        <p>源码证据在 <code>_prepare_tools()</code>（<code>crew.py:1583-1599</code>）：</p>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5;"><code>def _prepare_tools(self, agent, task, tools):
+    if hasattr(agent, "allow_delegation") and getattr(agent, "allow_delegation", False):
+        if self.process == Process.hierarchical:
+            if self.manager_agent:
+                tools = self._update_manager_tools(task, tools)  # 只给 manager 委派工具
+            else:
+                raise ValueError(...)
+        elif agent:
+            tools = self._add_delegation_tools(task, tools)  # sequential 才给 agent 委派工具</code></pre>
+        <p>当 manager 委派给 worker 时，调用链是：</p>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5;"><code>DelegateWorkTool._execute()
+  → selected_agent.execute_task(temp_task, context)  ← 直接调用 Agent，绕过 Crew._prepare_tools()</code></pre>
+        <table>
+          <thead><tr><th>模式</th><th>谁执行 task</th><th>谁有委派工具</th><th>Worker 能否委派</th></tr></thead>
+          <tbody>
+            <tr><td>Sequential</td><td><code>task.agent</code></td><td>每个 <code>allow_delegation=True</code> 的 agent</td><td>能</td></tr>
+            <tr><td>Hierarchical</td><td>永远是 <code>manager_agent</code></td><td>只有 manager</td><td><strong>不能</strong></td></tr>
+          </tbody>
+        </table>
+        <p style="color: var(--ink-light); margin-top:8px;">hierarchical 模式是严格的星型拓扑：manager 是中心节点，worker 是叶子节点，worker 之间没有直接通信能力。</p>
+
+        <h3 style="margin-top:28px; padding-top:20px; border-top:1px solid var(--border);">Manager → Worker 通信详解</h3>
+
+        <h4 style="margin-top:18px;">数据结构：Manager 发送给 Worker 的信息格式</h4>
+        <p>Manager 通过 <code>DelegateWorkTool</code> 发送信息，工具调用时传入三个参数：</p>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5;"><code># delegate_work_tool.py
+class DelegateWorkToolSchema(BaseModel):
+    task: str = Field(..., description="The task to delegate")
+    context: str = Field(..., description="The context for the task")
+    coworker: str = Field(..., description="The role/name of the coworker to delegate to")</code></pre>
+        <p>工具内部构造一个临时 Task 对象，然后直接调用 worker：</p>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5;"><code># base_agent_tools.py:117-125
+task_with_assigned_agent = Task(
+    description=task,           # manager 写的任务描述
+    agent=selected_agent,       # 被委派的 worker
+    expected_output="Your best answer to your coworker asking you this, accounting for the context shared."
+)
+return selected_agent.execute_task(task_with_assigned_agent, context)</code></pre>
+
+        <h4 style="margin-top:18px;">Manager 的 Prompt：如何指导 Manager 委派</h4>
+        <p>Manager 的系统 prompt 由三部分组成：</p>
+
+        <div class="info-block" style="margin:12px 0;">
+          <h3>1. 角色设定（role_playing）</h3>
+          <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5; margin:8px 0 0;"><code>You are Crew Manager. You are a seasoned manager with a knack for getting
+the best out of your team. You are also known for your ability to delegate
+work to the right people, and to ask the right questions to get the best
+out of your team. Even though you don't perform tasks by yourself, you have
+a lot of experience in the field, which allows you to properly evaluate the
+work of your team members.
+Your personal goal is: Manage the team to complete the task in the best way possible.</code></pre>
+        </div>
+
+        <div class="info-block green" style="margin:12px 0;">
+          <h3>2. 工具说明（tools）</h3>
+          <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5; margin:8px 0 0;"><code>You ONLY have access to the following tools, and should NEVER make up tools
+that are not listed here:
+
+Delegate work to coworker: Delegate a specific task to one of the following
+coworkers: [worker_a, worker_b, ...]
+The input to this tool should be the coworker, the task you want them to do,
+and ALL necessary context to execute the task, they know nothing about the
+task, so share absolutely everything you know, don't reference things but
+instead explain them.
+
+Ask question to coworker: Ask a specific question to one of the following
+coworkers: [worker_a, worker_b, ...]
+The input to this tool should be the coworker, the question you have for
+them, and ALL necessary context to ask the question properly, they know
+nothing about the question, so share absolutely everything you know, don't
+reference things but instead explain them.</code></pre>
+        </div>
+
+        <div class="info-block purple" style="margin:12px 0;">
+          <h3>3. 当前任务（task）</h3>
+          <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5; margin:8px 0 0;"><code>Current Task: {manager 的 task description}
+
+This is the expected criteria for your final answer: {expected_output}
+you MUST return the actual complete content as the final answer, not a summary.</code></pre>
+        </div>
+
+        <h4 style="margin-top:18px;">Manager 编写委派内容的实际例子</h4>
+        <p>当 Manager 调用 <code>Delegate work to coworker</code> 时，它填的参数类似：</p>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5;"><code>coworker: "research_analyst"
+task: "分析 Python 多智能体框架的市场趋势"
+context: "我们需要一份报告，比较 CrewAI、AutoGen、LangGraph 三个框架的
+         GitHub stars、最近 6 个月的增长率、主要企业用户。报告格式要求：
+         每个框架一段，包含数据表格和简要分析。最终输出为 Markdown 格式。
+         注意：数据来源需要标注，如果找不到确切数据请注明估算。"</code></pre>
+        <p>这个 <code>task</code> + <code>context</code> 就是 Manager 发送给 Worker 的全部信息。</p>
+
+        <h4 style="margin-top:18px;">SubAgent 的 Context 组成</h4>
+        <p>Worker 收到委派后，<code>Agent.execute_task()</code> 构建 prompt 的完整链路：</p>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5;"><code>_prepare_task_execution(task, context)
+  ├─ 1. task.prompt()
+  │     ├─ description: manager 写的 task
+  │     └─ expected_output: "Your best answer to your coworker asking you this..."
+  ├─ 2. build_task_prompt_with_schema()
+  │     └─ 如果有 output_pydantic/json，追加 schema 指令
+  ├─ 3. format_task_with_context(task_prompt, context)
+  │     └─ 追加 manager 写的 context
+  └─ 4. _retrieve_memory_context()
+        └─ 从 memory 检索相关记忆，追加到 prompt
+
+_finalize_task_prompt(task_prompt, tools, task)
+  ├─ 5. prepare_tools(): 注入工具说明
+  └─ 6. apply_training_data(): 追加训练数据
+
+executor.invoke(inputs)
+  └─ _setup_messages(inputs)
+        ├─ system message: role_playing + tools 指令
+        └─ user message: task prompt（包含以上所有内容）</code></pre>
+
+        <h4 style="margin-top:18px;">Worker 的完整 Context 示例</h4>
+        <p>假设 Worker 是一个 "research_analyst" Agent，收到 Manager 的委派后，它看到的完整 prompt 结构：</p>
+        <div class="diagram-section">
+          <div style="font-family:'JetBrains Mono',Consolas,monospace; font-size:13px; line-height:1.6;">
+<div style="font-weight:bold; color:var(--accent-3); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px;">SYSTEM MESSAGE</div>
+<div style="color:var(--accent-2); font-weight:600;"># 角色设定 (role_playing)</div>
+<div>You are Research Analyst. You are an expert in market</div>
+<div>research with deep knowledge of technology trends...</div>
+<div>Your personal goal is: Provide accurate and actionable market insights.</div>
+<br>
+<div style="color:var(--accent-2); font-weight:600;"># 工具说明 (tools)</div>
+<div>You ONLY have access to the following tools:</div>
+<div>&nbsp;&nbsp;search: Search the web for information</div>
+<div>&nbsp;&nbsp;read_file: Read content from a file</div>
+<div>&nbsp;&nbsp;Search memory: Search through the team's shared memory...</div>
+<div>&nbsp;&nbsp;Save to memory: Store important facts in memory...</div>
+<br>
+<div>IMPORTANT: Use the following format in your response:</div>
+<div>&nbsp;&nbsp;Thought: you should always think about what to do</div>
+<div>&nbsp;&nbsp;Action: the action to take</div>
+<div>&nbsp;&nbsp;Action Input: the input to the action</div>
+<div>&nbsp;&nbsp;Observation: the result of the action</div>
+<br>
+<div style="font-weight:bold; color:var(--accent-3); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px;">USER MESSAGE</div>
+<div style="color:var(--accent-4); font-weight:600;"># 任务描述 (task.description)</div>
+<div>Current Task: 分析 Python 多智能体框架的市场趋势</div>
+<br>
+<div style="color:var(--accent-4); font-weight:600;"># 输出标准 (expected_output)</div>
+<div>This is the expected criteria for your final answer:</div>
+<div>Your best answer to your coworker asking you this, accounting for the context shared.</div>
+<div>you MUST return the actual complete content as the final answer, not a summary.</div>
+<br>
+<div style="color:var(--accent-4); font-weight:600;"># Manager 提供的上下文 (context)</div>
+<div>This is the context you're working with:</div>
+<div>我们需要一份报告，比较 CrewAI、AutoGen、LangGraph 三个框架的</div>
+<div>GitHub stars、最近 6 个月的增长率、主要企业用户。报告格式要求：</div>
+<div>每个框架一段，包含数据表格和简要分析。最终输出为 Markdown 格式。</div>
+<br>
+<div style="color:var(--accent-4); font-weight:600;"># 记忆上下文 (memory)</div>
+<div style="color:var(--ink-light);"># Memories from past conversations:</div>
+<div style="color:var(--ink-light);">- CrewAI 在 2025 年 Q3 获得了 1800 万美元融资</div>
+<div style="color:var(--ink-light);">- AutoGen 由微软研究院维护，主要用户是企业客户</div>
+<div style="color:var(--ink-light);">- LangGraph 与 LangChain 生态深度集成</div>
+<br>
+<div style="color:var(--accent-4); font-weight:600;"># 知识上下文 (knowledge)</div>
+<div style="color:var(--ink-muted);">[如果配置了 knowledge_sources，会追加检索到的知识片段]</div>
+<br>
+<div style="color:var(--accent-4); font-weight:600;"># 训练数据 (training data)</div>
+<div style="color:var(--ink-muted);">[如果有训练数据，会追加相关指令]</div>
+          </div>
+        </div>
+
+        <h4 style="margin-top:18px;">Context 组成总结</h4>
+        <table>
+          <thead><tr><th>组成部分</th><th>来源</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td>角色设定</td><td>Agent 配置</td><td><code>role</code> + <code>backstory</code> + <code>goal</code></td></tr>
+            <tr><td>工具说明</td><td>Agent + Crew 注入</td><td>Agent 自身工具 + memory tools + delegation tools（如果有）</td></tr>
+            <tr><td>任务描述</td><td>Manager 的 <code>task</code> 参数</td><td>Manager 写的委派任务</td></tr>
+            <tr><td>输出标准</td><td>固定模板</td><td><code>"Your best answer to your coworker asking you this..."</code></td></tr>
+            <tr><td>上下文</td><td>Manager 的 <code>context</code> 参数</td><td>Manager 写的详细说明</td></tr>
+            <tr><td>记忆</td><td>Memory 系统</td><td>从 memory 检索的相关记忆（最多 5 条）</td></tr>
+            <tr><td>知识</td><td>Knowledge 系统</td><td>从 knowledge_sources 检索的知识片段</td></tr>
+            <tr><td>训练数据</td><td>Training 系统</td><td>历史训练数据中的指令</td></tr>
+          </tbody>
+        </table>
+        <div class="callout" style="border-left-color: var(--accent-2);"><strong>Worker 看不到</strong>：Manager 的完整对话历史、Manager 的推理过程、其他 Worker 的执行结果。它只看到 Manager 在委派工具调用中显式写的内容。</div>
+        <div class="diagram-section">
+          <div class="mermaid">
+sequenceDiagram
+  participant Crew
+  participant Manager as Manager Agent
+  participant Tool as Delegation Tool
+  participant Worker as Worker Agent
+  participant Task as Temporary Task
+  Crew->>Manager: execute original task
+  Manager->>Tool: Delegate work / Ask question
+  Tool->>Worker: match by role
+  Tool->>Task: create temporary task
+  Task->>Worker: execute_task(context)
+  Worker-->>Tool: worker result
+  Tool-->>Manager: observation/result
+  Manager-->>Crew: final task output
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" id="execution-chain">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-4);">5</div>
+        <div class="section-title-block">
+          <h2>Crew → Task → Agent 执行链路</h2>
+          <div class="subtitle">从 kickoff() 到 CrewOutput 的完整调用链</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="callout"><strong>Crew 是编排器</strong>（决定顺序和上下文传递），<strong>Task 是执行单元</strong>（定义做什么和交付什么），<strong>Agent 是推理引擎</strong>（调 LLM、用工具、产出结果）。</div>
+
+        <h3>完整调用链</h3>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5;"><code>crew.kickoff(inputs)
+  ├─ 1. prepare_kickoff(): 插值 inputs、处理文件、发事件
+  ├─ 2. 根据 process 分派：
+  │     ├─ sequential → _run_sequential_process()
+  │     └─ hierarchical → _run_hierarchical_process() (创建 manager agent)
+  └─ 3. _execute_tasks(tasks)  ← 核心循环
+        │  对每个 task：
+        ├─ prepare_task_execution(): 确定 agent、tools、条件跳过
+        ├─ _get_context(): 聚合前序 task 输出作为 context
+        └─ task.execute_sync(agent, context, tools)
+              └─ task._execute_core()
+                    ├─ agent.execute_task(task, context, tools)  ← 进入 Agent
+                    │     ├─ _prepare_task_execution(): 构建 prompt
+                    │     ├─ _finalize_task_prompt(): 注入工具、训练数据
+                    │     └─ agent_executor.invoke(prompt)  ← LLM 循环
+                    │           └─ 调 LLM → 工具调用 or 最终答案 → 循环
+                    ├─ 构建 TaskOutput
+                    ├─ guardrail / callback / 保存文件
+                    └─ 发出 TaskCompletedEvent
+        └─ _create_crew_output(task_outputs) → CrewOutput</code></pre>
+
+        <h3 style="margin-top:20px;">三层职责分工</h3>
+        <div class="grid">
+          <div class="info-block"><h3>Crew 层</h3><p>编排 + 上下文传递。<code>_get_context()</code> 把前序 TaskOutput 聚合成字符串传给后续 task，<code>_prepare_tools()</code> 注入 delegation/memory/mcp 工具。</p></div>
+          <div class="info-block green"><h3>Task 层</h3><p>执行边界 + 输出契约。回答三个问题：做什么（<code>description</code>）、交付什么（<code>expected_output</code>）、谁来做（<code>agent</code>）。核心就一行：<code>agent.execute_task(task, context, tools)</code>。</p></div>
+          <div class="info-block purple"><h3>Agent 层</h3><p>推理闭环。组装 prompt → executor 循环（调 LLM → 工具调用 → 结果写回 messages → 继续）→ 返回结果 + 保存记忆。Agent 之间不共享 messages。</p></div>
+        </div>
+
+        <h3 style="margin-top:20px;">上下文传递机制</h3>
+        <p>Agent 之间传递信息的方式是 <strong>TaskOutput 的 raw 文本</strong>，不是共享聊天历史。核心在 <code>_get_context()</code>（<code>crew.py:1813-1821</code>）：</p>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5;"><code>@staticmethod
+def _get_context(task: Task, task_outputs: list[TaskOutput]) -> str:
+    if not task.context:
+        return ""
+    # NOT_SPECIFIED = 默认取所有前序输出
+    # 否则只取 task.context 显式指定的任务输出
+    return (
+        aggregate_raw_outputs_from_task_outputs(task_outputs)
+        if task.context is NOT_SPECIFIED
+        else aggregate_raw_outputs_from_tasks(task.context)
+    )</code></pre>
+
+        <h3 style="margin-top:20px;">两种 Process 模式</h3>
+        <table>
+          <thead><tr><th>维度</th><th>Sequential</th><th>Hierarchical</th></tr></thead>
+          <tbody>
+            <tr><td>谁执行 task</td><td><code>task.agent</code>（每个 task 自己的 agent）</td><td>永远是 <code>manager_agent</code></td></tr>
+            <tr><td>上下文传递</td><td>前序 TaskOutput 自动聚合为 context</td><td>manager 通过 delegation tool 获取 worker 结果</td></tr>
+            <tr><td>委派能力</td><td>每个 <code>allow_delegation=True</code> 的 agent 都能委派</td><td>只有 manager 有委派工具</td></tr>
+            <tr><td>Worker 间通信</td><td>通过 TaskOutput context 间接传递</td><td>不能直接通信</td></tr>
+          </tbody>
+        </table>
+
+        <div class="diagram-section">
+          <div class="mermaid">
+graph TD
+  Crew[Crew.kickoff] --> PT[prepare_kickoff]
+  PT --> EX[_execute_tasks]
+  EX --> PE[prepare_task_execution]
+  PE --> CTX[_get_context 聚合前序输出]
+  CTX --> TE[task.execute_sync]
+  TE --> TC[task._execute_core]
+  TC --> AE[agent.execute_task]
+  AE --> PP[构建 prompt: task + context + memory + knowledge]
+  PP --> EL[executor LLM 循环]
+  EL --> TOOL{工具调用?}
+  TOOL -- 是 --> EXEC[执行工具]
+  EXEC --> EL
+  TOOL -- 否 --> OUT[返回 output]
+  OUT --> TO[构建 TaskOutput]
+  TO --> GR[guardrail / callback]
+  GR --> CO[_create_crew_output]
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" id="runtime">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-5);">6</div>
+        <div class="section-title-block">
+          <h2>功能开发场景</h2>
+          <div class="subtitle">从用户需求到 CrewOutput 的动态执行过程</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="callout">下面的“需求分析师 -> 工程师 -> 测试工程师”只是用来解释执行过程，不代表推荐总是按岗位拆。真实功能开发里，同一个 feature 的需求、实现和局部测试通常共享大量上下文，过度拆分会造成上下文接力损耗。</div>
+        <div class="diagram-section">
+          <div class="mermaid">
+flowchart TD
+  A[用户输入: 功能需求] --> B[Crew.kickoff inputs]
+  B --> C[prepare_kickoff]
+  C --> D[Task1 需求澄清]
+  D --> E[Agent 检索 memory/knowledge]
+  E --> F[LLM 推理]
+  F --> G{需要工具?}
+  G -- 是 --> H[执行工具]
+  H --> F
+  G -- 否 --> I[生成 TaskOutput]
+  I --> J[Task2 实现代码]
+  J --> K[工程师 Agent 工具调用或委派]
+  K --> L[实现结果]
+  L --> M[Task3 测试验证]
+  M --> N[测试报告]
+  N --> O[提取并保存记忆]
+  O --> P[CrewOutput]
+          </div>
+        </div>
+        <p>关键链路是 <code>Crew.kickoff()</code> -> <code>_execute_tasks()</code> -> <code>Task._execute_core()</code> -> <code>Agent.execute_task()</code> -> executor LLM/tool loop -> memory save -> final <code>CrewOutput</code>。</p>
+        <table>
+          <thead><tr><th>拆法</th><th>示例</th><th>优点</th><th>风险</th></tr></thead>
+          <tbody>
+            <tr><td>按岗位/流程拆</td><td>需求 Agent -> 编码 Agent -> 测试 Agent -> Review Agent</td><td>符合组织分工直觉。</td><td>每次交接都会损失上下文。</td></tr>
+            <tr><td>按上下文边界拆</td><td>主开发 Agent + 搜索 Agent + 验证 Agent + 安全扫描 Agent</td><td>主线保留完整上下文，子 Agent 处理可隔离任务。</td><td>需要先判断哪些任务真的独立。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Deep: Memory 写入 ===== -->
+    <section class="section-card" id="deep-memory-write">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-1);">W</div>
+        <div class="section-title-block">
+          <h2>Memory 写入机制（深度）</h2>
+          <div class="subtitle">写入时机、依据内容、完整 Prompt 和 EncodingFlow</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="callout">写入依据是 Task 描述 + Agent 角色 + 预期输出标准 + 实际执行结果，<strong>不是完整的工具调用链或对话历史</strong>。这避免了把中间噪声存入长期记忆。</div>
+
+        <h3>写入时机</h3>
+        <table>
+          <thead><tr><th>触发点</th><th>时机</th><th>代码位置</th><th>条件</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Agent 完成 Task 后自动写入</strong></td><td>executor invoke/ainvoke 循环结束后</td><td><code>base_agent_executor.py:_save_to_memory()</code></td><td>output 不含 "Delegate work to coworker"</td></tr>
+            <tr><td>LiteAgent kickoff 完成后</td><td>LiteAgent 执行结束</td><td><code>lite_agent.py:_save_kickoff_to_memory()</code></td><td>已废弃路径</td></tr>
+            <tr><td>Agent 主动调用 "Save to memory"</td><td>Agent 在 ReAct 循环中自行决定</td><td><code>tools/memory_tools.py:RememberTool._run()</code></td><td>Agent 判断有值得保存的内容</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:20px;">写入依据的原始文本</h3>
+        <pre style="background:#f3f0e8; padding:16px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.6;"><code>Task: {task.description}
+Agent: {agent.role}
+Expected result: {task.expected_output}
+Result: {output.text}</code></pre>
+
+        <h3 style="margin-top:20px;">记忆提取 Prompt（extract_memories_system）</h3>
+        <pre style="background:#f3f0e8; padding:16px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.6;"><code>You extract discrete, reusable memory statements from raw content
+(e.g. a task description and its result, or a conversation between a user and an assistant).
+
+For the given content, output a list of memory statements. Each memory must:
+- Be one clear sentence or short statement
+- Be understandable without the original context
+- Capture a decision, fact, outcome, preference, lesson, or observation worth remembering
+- NOT be a vague summary or a restatement of the task description
+- NOT duplicate the same idea in different words
+
+When the content is a conversation, pay special attention to facts stated by the user
+(first-person statements). These personal facts are HIGH PRIORITY and must always be extracted:
+- What the user did, bought, made, visited, attended, or completed
+- Names of people, pets, places, brands, and specific items the user mentions
+- Quantities, durations, dates, and measurements the user states
+- Subordinate clauses and casual asides often contain important personal details
+
+Preserve exact names and numbers -- never generalize.
+
+Additional extraction rules:
+- Presupposed facts: extract indirectly revealed facts as separate memories
+- Date precision: preserve full date including day-of-month
+- Life events in passing: extract as its own memory
+
+If there is nothing worth remembering, return an empty list.
+Output a JSON object with a single key "memories" whose value is a list of strings.</code></pre>
+
+        <h3 style="margin-top:20px;">保存分析 Prompt（save_system）</h3>
+        <pre style="background:#f3f0e8; padding:16px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.6;"><code>You analyze content to be stored in a hierarchical memory system.
+Given the content and the existing scopes and categories, output:
+1. suggested_scope: The best matching existing scope path, or a new path if none fit.
+2. categories: A list of categories (reuse existing when relevant, add new ones if needed).
+3. importance: A number from 0.0 to 1.0 indicating how significant this memory is.
+4. extracted_metadata: A JSON object with any entities, dates, or topics you can extract.</code></pre>
+
+        <h3 style="margin-top:20px;">合并/去重 Prompt（consolidation_system）</h3>
+        <pre style="background:#f3f0e8; padding:16px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.6;"><code>You are comparing new content against existing memories to decide how to consolidate them.
+
+For each existing memory, choose one action:
+- 'keep': Still accurate and not redundant with the new content.
+- 'update': Should be updated with new information. Provide updated content.
+- 'delete': Outdated, superseded, or contradicted by the new content.
+
+Also decide whether the new content should be inserted as a separate memory:
+- insert_new=true: Adds information not fully captured by existing memories.
+- insert_new=false: Fully captured by the existing memories (after updates).
+
+Be conservative: prefer 'keep' when unsure.</code></pre>
+
+        <h3 style="margin-top:20px;">EncodingFlow 5 步 Pipeline</h3>
+        <table>
+          <thead><tr><th>步骤</th><th>操作</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>batch_embed</code></td><td>一次 embedder 调用，批量生成所有条目的向量</td></tr>
+            <tr><td>2</td><td><code>intra_batch_dedup</code></td><td>batch 内余弦相似度去重</td></tr>
+            <tr><td>3</td><td><code>parallel_find_similar</code></td><td>并发搜索 storage 中的相似记录（最多 8 线程）</td></tr>
+            <tr><td>4</td><td><code>parallel_analyze</code></td><td>分 4 组 LLM 分析（字段完整度 x 有无相似）</td></tr>
+            <tr><td>5</td><td><code>execute_plans</code></td><td>批量 delete/update(含重新 embed)/insert</td></tr>
+          </tbody>
+        </table>
+        <table>
+          <thead><tr><th>分组</th><th>条件</th><th>LLM 调用次数</th><th>处理</th></tr></thead>
+          <tbody>
+            <tr><td>Group A</td><td>字段齐全 + 无相似</td><td>0</td><td>直接插入</td></tr>
+            <tr><td>Group B</td><td>字段齐全 + 有相似</td><td>1</td><td>合并分析</td></tr>
+            <tr><td>Group C</td><td>字段缺失 + 无相似</td><td>1</td><td>字段推断</td></tr>
+            <tr><td>Group D</td><td>字段缺失 + 有相似</td><td>2（并发）</td><td>字段推断 + 合并分析</td></tr>
+          </tbody>
+        </table>
+
+        <div class="diagram-section">
+          <div class="mermaid">
+flowchart TD
+    A["Agent 完成 Task"] --> B["_save_to_memory()"]
+    B --> C["拼接 Task+Agent+Expected+Result"]
+    C --> D["extract_memories(raw) LLM 提取"]
+    D --> E["remember_many → 后台线程池"]
+    E --> F["1. batch_embed"]
+    F --> G["2. intra_batch_dedup"]
+    G --> H["3. parallel_find_similar"]
+    H --> I["4. parallel_analyze"]
+    I --> J["5. execute_plans"]
+    J --> K["Storage 写入"]
+    K --> L["drain_writes()"]
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Deep: Memory 读取 ===== -->
+    <section class="section-card" id="deep-memory-read">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-2);">R</div>
+        <div class="section-title-block">
+          <h2>Memory 读取机制（深度）</h2>
+          <div class="subtitle">主动读取 vs 工具调用读取、recall 实现和排序算法</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="callout">两条路径最终都调用同一个 <code>Memory.recall()</code> 方法，检索逻辑完全一致。区别在于时机（自动 vs 按需）、query 来源（task 描述 vs Agent 自行构造）、limit（5 vs 20）以及结果注入 prompt 的方式（文本拼接 vs 工具返回值）。</div>
+
+        <h3>两条读取路径对比</h3>
+        <table>
+          <thead><tr><th>维度</th><th>主动读取</th><th>工具调用读取</th></tr></thead>
+          <tbody>
+            <tr><td>触发方式</td><td>Agent 执行 task/kickoff 前自动调用</td><td>Agent 在 ReAct 循环中决定调用</td></tr>
+            <tr><td>query 来源</td><td>task.description 或 formatted_messages</td><td>Agent 自己构造的搜索查询</td></tr>
+            <tr><td>limit</td><td>5（Crew）或 20（kickoff）</td><td>20</td></tr>
+            <tr><td>depth</td><td>deep（RecallFlow）</td><td>deep（RecallFlow）</td></tr>
+            <tr><td>结果注入方式</td><td>追加到 task_prompt 文本中</td><td>作为工具返回值</td></tr>
+            <tr><td>Agent 感知</td><td>被动接收</td><td>主动搜索，可多次用不同 query</td></tr>
+            <tr><td>检索逻辑</td><td colspan="2" style="text-align:center;">完全相同（同一个 Memory.recall）</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:20px;">主动读取注入的 Prompt</h3>
+        <pre style="background:#f3f0e8; padding:16px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.6;"><code># Memories from past conversations:
+{memory}
+
+IMPORTANT: The memories above are an automatic selection and may be INCOMPLETE.
+If the task involves counting, listing, or summing items
+(e.g. 'how many', 'total', 'list all'),
+you MUST use the Search memory tool with several different queries before answering —
+do NOT rely solely on the memories shown above.</code></pre>
+        <div class="callout"><strong>设计意图</strong>：主动读取是"保险"——确保 Agent 至少看到一些相关记忆。工具调用是"增强"——让 Agent 在需要时深入搜索。prompt 中的 IMPORTANT 段落明确告诉 Agent：自动注入的记忆可能不完整，涉及计数/列举时<strong>必须</strong>用 Search memory 工具多次搜索。</div>
+
+        <h3 style="margin-top:20px;">Recall 实现：shallow vs deep</h3>
+        <div class="grid">
+          <div class="info-block"><h3>Shallow Recall</h3><p>query embedding → storage.search() → composite score 排序。速度快，无 LLM 调用。</p></div>
+          <div class="info-block purple"><h3>Deep Recall（RecallFlow）</h3><p>LLM 分析 query → 1-3 个子查询 → 并行搜索 → confidence 路由 → 去重排序。短查询（&lt;200字符）跳过 LLM 分析。</p></div>
+        </div>
+
+        <h3 style="margin-top:20px;">排序算法：composite score</h3>
+        <pre style="background:#f3f0e8; padding:14px; border-radius:6px; overflow-x:auto; font-size:13px;"><code>composite = (
+    0.5 * semantic_score        # 向量相似度（余弦）
+  + 0.3 * recency_decay         # 0.5^(age_days / 30)，30天衰减到0.5
+  + 0.2 * importance             # 存储时 LLM 推断的 0-1 分数
+)</code></pre>
+
+        <h3 style="margin-top:20px;">"Search memory" 工具</h3>
+        <table>
+          <thead><tr><th>维度</th><th>详情</th></tr></thead>
+          <tbody>
+            <tr><td>参数</td><td><code>queries: list[str]</code>（支持多 query 批量搜索）</td></tr>
+            <tr><td>limit</td><td>20 per query</td></tr>
+            <tr><td>depth</td><td>deep</td></tr>
+            <tr><td>去重</td><td>跨 query 的 seen_ids 去重</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Deep: Tool Schema ===== -->
+    <section class="section-card" id="deep-tool-schema">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-3);">S</div>
+        <div class="section-title-block">
+          <h2>Tool Schema 生成（深度）</h2>
+          <div class="subtitle">args_schema 来源、7 步 strict pipeline、两种路线格式</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <h3>args_schema 的三种来源</h3>
+        <div class="grid">
+          <div class="info-block"><h3>用户显式提供</h3><p>继承 BaseTool，设置 <code>args_schema = MyModel</code>。最稳妥的写法。</p></div>
+          <div class="info-block green"><h3>从 _run 签名自动推断</h3><p>用 <code>create_model()</code> 动态创建 Pydantic model。<code>base_tool.py:_default_args_schema</code></p></div>
+          <div class="info-block purple"><h3>from_function(infer_schema)</h3><p>从普通函数推断。<code>structured_tool.py:from_function()</code></p></div>
+        </div>
+
+        <h3 style="margin-top:20px;">Schema 转换 7 步 Pipeline</h3>
+        <table>
+          <thead><tr><th>步骤</th><th>操作</th><th>目的</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>model.model_json_schema()</code></td><td>获取原始 JSON Schema</td></tr>
+            <tr><td>2</td><td><code>force_additional_properties_false</code></td><td>所有 object 强制 additionalProperties: false</td></tr>
+            <tr><td>3</td><td><code>strip_unsupported_formats</code></td><td>移除 OpenAI 不支持的 format</td></tr>
+            <tr><td>4</td><td><code>ensure_type_in_schemas</code></td><td>确保 anyOf/oneOf 中每个 variant 都有 type</td></tr>
+            <tr><td>5</td><td><code>resolve_refs</code></td><td>内联所有 $ref 引用</td></tr>
+            <tr><td>6</td><td><code>convert_oneof_to_anyof</code></td><td>oneOf 转 anyOf</td></tr>
+            <tr><td>7</td><td><code>ensure_all_properties_required</code></td><td>所有 properties 加入 required 数组</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:20px;">两种路线的 Schema 格式</h3>
+        <div class="grid">
+          <div class="info-block"><h3>ReAct 路线</h3><p>schema 嵌入 description 文本：<code>Tool Name: {name}\nTool Arguments: {json}\nTool Description: {desc}</code></p></div>
+          <div class="info-block purple"><h3>Native Function Calling</h3><p>OpenAI 格式：<code>{"type":"function","function":{"name":...,"parameters":...,"strict":true}}</code></p></div>
+        </div>
+
+        <h3 style="margin-top:20px;">参数校验对比</h3>
+        <table>
+          <thead><tr><th>校验层</th><th>位置</th><th>行为</th></tr></thead>
+          <tbody>
+            <tr><td>Pydantic model_validate</td><td><code>CrewStructuredTool._parse_args()</code></td><td>严格校验，失败附带 schema hint</td></tr>
+            <tr><td>参数过滤</td><td>ReAct <code>_use()</code></td><td>只传 args_schema 中定义的参数</td></tr>
+            <tr><td>Native 路线</td><td><code>_execute_single_native_tool_call</code></td><td><strong>无 Pydantic 校验</strong>，直接透传</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Deep: Tool 错误处理 ===== -->
+    <section class="section-card" id="deep-tool-error">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-5);">E</div>
+        <div class="section-title-block">
+          <h2>Tool 错误处理（深度）</h2>
+          <div class="subtitle">两条路线的错误处理差异、重试机制和参数解析容错</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <h3>Native Function Calling 路线错误处理</h3>
+        <table>
+          <thead><tr><th>失败类型</th><th>处理方式</th><th>错误消息</th><th>重试</th></tr></thead>
+          <tbody>
+            <tr><td>JSON 解析失败</td><td>返回 tool result</td><td>"Error: Failed to parse tool arguments as JSON"</td><td>无</td></tr>
+            <tr><td>工具执行异常</td><td>try/except 捕获</td><td>"Error executing tool: {e}"</td><td>无</td></tr>
+            <tr><td>工具不存在</td><td>返回默认值</td><td>"Tool not found"</td><td>无</td></tr>
+            <tr><td>使用次数超限</td><td>检查计数</td><td>"Tool has reached its usage limit"</td><td>无</td></tr>
+            <tr><td>Hook 拦截</td><td>before hook 返回 False</td><td>"Tool execution blocked by hook"</td><td>无</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>错误回写</strong>：作为 <code>role: "tool"</code> 消息追加到 messages，带 tool_call_id。LLM 看到错误后自行决定下一步。<strong>无重试机制</strong>。</div>
+
+        <h3 style="margin-top:20px;">ReAct 文本解析路线错误处理</h3>
+        <table>
+          <thead><tr><th>失败类型</th><th>处理方式</th><th>重试</th></tr></thead>
+          <tbody>
+            <tr><td>工具名不匹配</td><td>SequenceMatcher 模糊匹配（阈值 0.85）</td><td>匹配失败抛异常</td></tr>
+            <tr><td>参数解析失败</td><td>四层容错：json → ast → json5 → repair_json</td><td>递归重试</td></tr>
+            <tr><td>工具执行异常</td><td><code>_run_attempts++</code>，超限返回 "Moving on then."</td><td>递归重试</td></tr>
+            <tr><td>重复调用</td><td><code>_check_tool_repeated_usage</code> 检测</td><td>返回错误</td></tr>
+            <tr><td>使用次数超限</td><td><code>_check_usage_limit</code></td><td>无</td></tr>
+          </tbody>
+        </table>
+
+        <div class="grid">
+          <div class="info-block orange"><h3>重试机制</h3><p><code>_max_parsing_attempts</code> 默认 3，OpenAI 大模型设为 2。超限后返回 "Moving on then." + 工具列表。递归调用 <code>self.use()</code>。</p></div>
+          <div class="info-block"><h3>参数解析四层容错</h3><p>1. json.loads → 2. ast.literal_eval → 3. json5.loads → 4. repair_json。四层都失败才抛异常。</p></div>
+        </div>
+
+        <h3 style="margin-top:20px;">两条路线错误处理全面对比</h3>
+        <table>
+          <thead><tr><th>维度</th><th>Native Function Calling</th><th>ReAct 文本解析</th></tr></thead>
+          <tbody>
+            <tr><td>工具选择</td><td>LLM 结构化 tool_call</td><td>SequenceMatcher 模糊匹配 > 0.85</td></tr>
+            <tr><td>参数解析</td><td>只做 JSON parse</td><td>四层容错</td></tr>
+            <tr><td><strong>参数校验</strong></td><td><strong>无 Pydantic 校验</strong></td><td>Pydantic 严格校验</td></tr>
+            <tr><td>异常处理</td><td>"Error executing tool" 作为 tool result</td><td>递归重试 + "Moving on then."</td></tr>
+            <tr><td><strong>重试机制</strong></td><td><strong>无重试</strong></td><td>最多 3 次（大模型 2 次）</td></tr>
+            <tr><td>错误消息角色</td><td>role: "tool"</td><td>assistant 消息文本</td></tr>
+            <tr><td>重复调用检查</td><td>无</td><td>有</td></tr>
+            <tr><td>Hook 支持</td><td>before/after hooks</td><td>无</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>核心差异</strong>：Native 路线更"宽容"——错误直接反馈给 LLM，无重试。ReAct 路线更"积极"——自动重试 + 严格校验。Native 不做 Pydantic 校验可能是有意简化——provider 返回的参数通常符合 schema。</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+      sequence: { useMaxWidth: true }
+    });
+  </script>
+</body>
+</html>

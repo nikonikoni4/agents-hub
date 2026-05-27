@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoGen 多智能体知识图谱</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --ink: #1f2933;
+    --muted: #617080;
+    --bg: #f7f4ee;
+    --panel: #ffffff;
+    --line: #ded8cc;
+    --blue: #1d4f73;
+    --green: #2d6a4f;
+    --orange: #bb5a24;
+    --purple: #6f3d86;
+    --shadow: 0 10px 30px rgba(34, 31, 25, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans SC", "Microsoft YaHei", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.75;
+  }
+  .hero {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 60px 28px 28px;
+  }
+  .badge {
+    display: inline-block;
+    border: 1px solid var(--orange);
+    color: var(--orange);
+    padding: 3px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: Georgia, "Noto Serif SC", serif;
+    font-size: 38px;
+    line-height: 1.2;
+    margin: 0 0 14px;
+    letter-spacing: 0;
+  }
+  .subtitle {
+    color: var(--muted);
+    max-width: 760px;
+    margin: 0;
+  }
+  nav {
+    max-width: 980px;
+    margin: 0 auto 24px;
+    padding: 0 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  nav a {
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 12px;
+    text-decoration: none;
+    font-size: 13px;
+  }
+  section {
+    max-width: 980px;
+    margin: 0 auto 22px;
+    padding: 0 28px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 26px;
+  }
+  h2 {
+    font-family: Georgia, "Noto Serif SC", serif;
+    font-size: 24px;
+    margin: 0 0 14px;
+    letter-spacing: 0;
+  }
+  h3 { font-size: 17px; margin: 22px 0 8px; }
+  p { margin: 0 0 12px; }
+  ul { margin-top: 8px; padding-left: 20px; }
+  li { margin: 4px 0; }
+  code {
+    font-family: "JetBrains Mono", Consolas, monospace;
+    background: #f0ede6;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre {
+    background: #1f2933;
+    color: #e5e7eb;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th { background: var(--blue); color: #fff; text-align: left; padding: 10px; }
+  td { border-bottom: 1px solid var(--line); padding: 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #faf8f3; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .note {
+    border-left: 4px solid var(--orange);
+    background: #fff7ed;
+    padding: 12px 14px;
+    border-radius: 6px;
+  }
+  .block {
+    border-left: 4px solid var(--green);
+    background: #edf7f1;
+    padding: 12px 14px;
+    border-radius: 6px;
+  }
+  .prompt-block {
+    border-left: 4px solid var(--purple);
+    background: #f5f0fa;
+    padding: 12px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+  }
+  .diagram {
+    background: #faf9f5;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  .mermaid { min-width: 620px; }
+  @media (max-width: 720px) {
+    h1 { font-size: 30px; }
+    .grid { grid-template-columns: 1fr; }
+    .card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="badge">Knowledge Graph · 2026-05-26 · 深度调研版</div>
+    <h1>AutoGen 多智能体知识图谱</h1>
+    <p class="subtitle">基于 <code>other/autogen</code> 源码的深度调研，涵盖框架结构、Memory 机制（写入/读取/prompt）、工具调用（schema/错误处理）、Agent 间通信（消息格式/context 组成）和消息机制（发布订阅/流转链路）。</p>
+  </header>
+
+  <nav>
+    <a href="#structure">框架结构</a>
+    <a href="#agent">单 Agent</a>
+    <a href="#memory-detail">Memory 详情</a>
+    <a href="#tool-detail">工具调用详情</a>
+    <a href="#comm-detail">Agent 通信详情</a>
+    <a href="#speaker-buffer">发言模式与 Buffer</a>
+    <a href="#msg-detail">消息机制详情</a>
+    <a href="#workflow">动态流程</a>
+  </nav>
+
+  <section id="structure"><div class="card">
+    <h2>1. 框架结构</h2>
+    <p>AutoGen Python 侧是分层架构：<code>autogen-core</code> 负责运行时、消息、工具、模型、上下文和记忆接口；<code>autogen-agentchat</code> 提供高层 agent/team API；<code>autogen-ext</code> 承载模型、MCP、代码执行和长期记忆等集成。</p>
+    <div class="diagram"><div class="mermaid">
+graph TD
+  App[用户应用 / samples / Studio] --> AgentChat[autogen-agentchat]
+  App --> Ext[autogen-ext]
+  AgentChat --> Core[autogen-core]
+  Ext --> Core
+  Ext --> Providers[OpenAI / Anthropic / MCP / Docker / ChromaDB / Redis / Mem0]
+  AgentChat --> Ext
+  Core --> Pydantic[Pydantic / jsonref / protobuf / opentelemetry]
+    </div></div>
+    <table>
+      <tr><th>模块</th><th>职责</th><th>关键代码</th></tr>
+      <tr><td><code>autogen-core</code></td><td>事件运行时、agent 注册、send/publish 消息、工具 schema、memory 接口、model context。</td><td><code>_single_threaded_agent_runtime.py</code>, <code>tools/_base.py</code>, <code>memory/_base_memory.py</code></td></tr>
+      <tr><td><code>autogen-agentchat</code></td><td>面向应用的 <code>AssistantAgent</code>、群聊团队、终止条件、消息类型。</td><td><code>agents/_assistant_agent.py</code>, <code>teams/_group_chat/*</code></td></tr>
+      <tr><td><code>autogen-ext</code></td><td>OpenAI/MCP/代码执行/ChromaDB/Redis/Mem0 等实现。</td><td><code>models/openai</code>, <code>tools/mcp</code>, <code>memory/*</code></td></tr>
+    </table>
+  </div></section>
+
+  <section id="agent"><div class="card">
+    <h2>2. 单 Agent 设计</h2>
+    <div class="grid">
+      <div class="block"><strong>核心状态</strong><br><code>system_message</code>、<code>model_client</code>、<code>model_context</code>、<code>memory</code>、<code>tools/workbench</code>、<code>handoffs</code>、<code>max_tool_iterations</code>。</div>
+      <div class="block"><strong>执行入口</strong><br><code>AssistantAgent.on_messages_stream()</code>：入上下文、注入记忆、调用模型、执行工具、反思或汇总。</div>
+    </div>
+    <div class="diagram"><div class="mermaid">
+sequenceDiagram
+  participant User as 用户/Team
+  participant Agent as AssistantAgent
+  participant Ctx as ChatCompletionContext
+  participant Mem as Memory
+  participant LLM as ModelClient
+  participant WB as Workbench/Tool
+  User->>Agent: run/task/messages
+  Agent->>Ctx: add incoming messages
+  Agent->>Mem: update_context(ctx)
+  Mem->>Ctx: 注入相关记忆
+  Agent->>LLM: create(messages, tools)
+  alt 文本输出
+    LLM-->>Agent: Text/Structured
+    Agent-->>User: Response
+  else 工具调用
+    LLM-->>Agent: FunctionCall[]
+    Agent->>WB: call_tool
+    WB-->>Agent: ToolResult
+    Agent->>Ctx: FunctionExecutionResultMessage
+    Agent->>LLM: 可选反思推理
+    Agent-->>User: 最终答复或工具摘要
+  end
+    </div></div>
+  </div></section>
+
+  <!-- ============ Memory 详情 ============ -->
+  <section id="memory-detail"><div class="card">
+    <h2>3. Memory 机制详情</h2>
+
+    <h3>3.1 写入机制</h3>
+    <div class="note">
+      <strong>关键发现：标准 Memory 接口没有自动写入机制！</strong><br>
+      AssistantAgent 的处理流程只有读取（STEP 2: <code>memory.update_context()</code>），没有自动调用 <code>memory.add()</code>。写入必须由外部显式调用或通过 Task-Centric Memory 的学习机制触发。
+    </div>
+
+    <h4>写入时机与方式</h4>
+    <table>
+      <tr><th>方式</th><th>时机</th><th>触发方</th></tr>
+      <tr><td>手动预加载</td><td>agent 初始化前</td><td>外部代码显式调用 <code>memory.add()</code></td></tr>
+      <tr><td>从失败中学习</td><td>任务执行失败后</td><td>Task-Centric Memory 的 <code>train_on_task()</code></td></tr>
+      <tr><td>从用户消息提取</td><td>处理用户消息时</td><td>Task-Centric Memory 的 <code>consider_memo_storage()</code></td></tr>
+    </table>
+
+    <h4>Task-Centric Memory 写入流程</h4>
+    <div class="diagram"><div class="mermaid">
+flowchart TD
+  Input[用户消息/任务失败] --> ExtractTask[提取任务 extract_task prompt]
+  ExtractTask --> IsFailure{是否失败?}
+  IsFailure -- 是 --> LearnFromFailure[从失败中学习]
+  IsFailure -- 否 --> ExtractAdvice[提取建议]
+  LearnFromFailure --> Generalize[泛化任务]
+  ExtractAdvice --> Generalize
+  Generalize --> FindTopics[提取索引主题]
+  FindTopics --> Store[存储 洞察+主题+任务]
+  Store --> Persist[持久化到磁盘]
+    </div></div>
+
+    <h4>写入相关 Prompt</h4>
+
+    <div class="prompt-block">
+      <strong>Prompt 1: 从失败中学习 (learn_from_failure)</strong>
+      <pre><code>system: You are a patient and thorough teacher.
+        Your job is to review work done by students and help them learn how to do better.
+
+# 步骤1: 分析错误
+user: # A team of students made a mistake on the following task:
+      {task_description}
+      {memory_section}
+      # Here's the expected answer, which would have been correct:
+      {expected_answer}
+      # Here is the students' answer, which was INCORRECT:
+      {final_response}
+      # Please review the students' work which follows:
+      **----- START OF STUDENTS' WORK -----**
+      {work_history}
+      **----- END OF STUDENTS' WORK -----**
+
+# 步骤2: 识别误解
+user: Now put yourself in the mind of the students.
+      What misconception led them to their incorrect answer?
+
+# 步骤3: 提炼洞察（关键！）
+user: Please express your key insights in the form of short, general advice
+      that will be given to the students. Just one or two sentences,
+      or they won't bother to read it.</code></pre>
+    </div>
+
+    <div class="prompt-block">
+      <strong>Prompt 2: 提取建议 (extract_advice)</strong>
+      <pre><code>system: You are a helpful and thoughtful assistant.
+
+user: Does the following text contain any information or advice that might be useful later?
+      - If so, please copy the information or advice, adding no extra commentary or formatting.
+      - If there is no potentially useful information or advice at all,
+        simply write "None" with no punctuation.
+      # Text to analyze
+      {text}</code></pre>
+    </div>
+
+    <div class="prompt-block">
+      <strong>Prompt 3: 任务泛化 (generalize_task)</strong>
+      <pre><code># 步骤1: 重述任务
+user: We have been given a task description. Our job is not to complete the task,
+      but merely rephrase the task in simpler, more general terms, if possible.
+      Please explain your understanding of the task in detail,
+      as a single, flat list of all the important points.
+      # Task description
+      {task_description}
+
+# 步骤2: 识别无关点
+user: Do you see any parts of this list that are irrelevant to actually solving the task?
+
+# 步骤3: 精简列表
+user: Revise your original list to include only the most general terms,
+      those that are critical to solving the task.</code></pre>
+    </div>
+
+    <div class="prompt-block">
+      <strong>Prompt 4: 提取索引主题 (find_index_topics)</strong>
+      <pre><code>user: - My job is to create a thorough index for a book called Task Completion.
+      - Your job is to read the text below and extract the task-completion topics.
+      - Each topic should be a meaningful phrase composed of a few words.
+      - List each topic on a separate line, without any extra text.
+      # Text to be indexed
+      {input_string}</code></pre>
+    </div>
+
+    <h3>3.2 读取机制</h3>
+    <div class="block">
+      <strong>读取是自动的！</strong><br>
+      在 AssistantAgent 的 STEP 2，每次推理前都会自动调用 <code>memory.update_context(model_context)</code>，将相关记忆注入上下文。
+    </div>
+
+    <h4>不同实现的读取策略</h4>
+    <table>
+      <tr><th>实现</th><th>查询方式</th><th>注入方式</th></tr>
+      <tr><td><code>ListMemory</code></td><td>全量返回（按时间顺序）</td><td>格式化为 SystemMessage 注入</td></tr>
+      <tr><td><code>ChromaDB/Redis/Mem0</code></td><td>用最后一条消息做语义相似度查询</td><td>按分数和阈值过滤后注入</td></tr>
+      <tr><td><code>Task-Centric Memory</code></td><td>泛化任务 → 提取主题 → 检索 → LLM 验证</td><td>验证通过的记忆注入</td></tr>
+    </table>
+
+    <h4>读取流程图</h4>
+    <div class="diagram"><div class="mermaid">
+flowchart TD
+  Input[用户消息进入] --> Step1[STEP 1: 添加消息到模型上下文]
+  Step1 --> Step2[STEP 2: 遍历所有 memory 实例]
+  Step2 --> UpdateCtx[调用 memory.update_context]
+  UpdateCtx --> ExtractQuery[提取最后一条消息作为查询]
+  ExtractQuery --> VectorSearch[执行语义相似度查询]
+  VectorSearch --> Format[格式化结果为 SystemMessage]
+  Format --> Inject[注入到模型上下文]
+  Inject --> Step3[STEP 3-5: 执行推理和处理]
+    </div></div>
+
+    <h4>读取 vs 写入对比</h4>
+    <table>
+      <tr><th>维度</th><th>读取（Read）</th><th>写入（Write）</th></tr>
+      <tr><td>时机</td><td>每次推理前自动执行</td><td>需要显式调用或特定条件触发</td></tr>
+      <tr><td>触发方</td><td>AssistantAgent 框架自动调用</td><td>外部代码或 Task-Centric Memory 学习机制</td></tr>
+      <tr><td>内容来源</td><td>基于当前上下文（最后一条消息）查询</td><td>从对话/任务结果中提取</td></tr>
+      <tr><td>处理方式</td><td>注入为 SystemMessage</td><td>存储到向量数据库或内存列表</td></tr>
+      <tr><td>Prompt 使用</td><td>查询时使用泛化和主题提取</td><td>学习时使用失败分析和洞察提炼</td></tr>
+    </table>
+  </div></section>
+
+  <!-- ============ 工具调用详情 ============ -->
+  <section id="tool-detail"><div class="card">
+    <h2>4. 工具调用机制详情</h2>
+
+    <h3>4.1 Tool Schema 格式</h3>
+    <pre><code>class ToolSchema(TypedDict):
+    name: str                                    # 工具名称
+    description: NotRequired[str]                # 工具描述
+    parameters: NotRequired[ParametersSchema]    # 参数定义
+    strict: NotRequired[bool]                    # 严格模式
+
+class ParametersSchema(TypedDict):
+    type: str                                    # 固定为 "object"
+    properties: Dict[str, Any]                   # 参数属性定义
+    required: NotRequired[Sequence[str]]         # 必填参数列表
+    additionalProperties: NotRequired[bool]      # 是否允许额外参数</code></pre>
+
+    <h4>实际 Schema JSON 示例</h4>
+    <pre><code>// Python 函数
+async def get_stock_price(ticker: str, date: Annotated[str, "Date in YYYY/MM/DD"]) -> float:
+    return random.uniform(10, 200)
+
+// 生成的 ToolSchema
+{
+    "name": "get_stock_price",
+    "description": "Fetch the stock price for a given ticker.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ticker": { "type": "string", "description": "ticker" },
+            "date": { "type": "string", "description": "Date in YYYY/MM/DD" }
+        },
+        "required": ["ticker", "date"],
+        "additionalProperties": false
+    },
+    "strict": false
+}</code></pre>
+
+    <h3>4.2 从函数到 Schema 的转换流程</h3>
+    <div class="diagram"><div class="mermaid">
+graph LR
+  Func[Python 函数 + 类型注解] --> Sig[get_typed_signature]
+  Sig --> Model[args_base_model_from_signature]
+  Model --> Pydantic[Pydantic model_json_schema]
+  Pydantic --> ToolSchema[ToolSchema]
+  ToolSchema --> ModelClient[传给 LLM tools 参数]
+    </div></div>
+
+    <h3>4.3 工具错误处理机制（三层）</h3>
+    <table>
+      <tr><th>层次</th><th>错误类型</th><th>处理方式</th><th>结果</th></tr>
+      <tr><td>Workbench 层</td><td>工具不存在</td><td>遍历所有工具未命中</td><td><code>ToolResult(is_error=True, "Tool {name} not found.")</code></td></tr>
+      <tr><td>Workbench 层</td><td>执行异常</td><td>try-except 捕获</td><td><code>ToolResult(is_error=True, "{exception_message}")</code></td></tr>
+      <tr><td>AssistantAgent 层</td><td>JSON 解析失败</td><td>json.loads 捕获</td><td><code>FunctionExecutionResult(is_error=True, "Error: {e}")</code></td></tr>
+      <tr><td>AssistantAgent 层</td><td>工具不在任何 workbench</td><td>遍历所有 workbench</td><td><code>FunctionExecutionResult(is_error=True, "Error: tool 'x' not found")</code></td></tr>
+      <tr><td>LLM 反馈层</td><td>所有错误</td><td>写入 model_context</td><td>LLM 下一轮推理可见错误信息，自主决定重试或调整</td></tr>
+    </table>
+
+    <h4>工具调用数据流</h4>
+    <pre><code>用户消息
+  -> AssistantAgent.on_messages_stream()
+  -> _call_llm() 传递 tools=[tool.schema for tool in workbench]
+  -> LLM 返回 FunctionCall(id, name, arguments)
+  -> _execute_tool_call()
+     -> json.loads(arguments) 解析参数
+     -> workbench.call_tool(name, arguments)
+        -> tool.run_json(args, cancellation_token)
+           -> args_type.model_validate(args) Pydantic 验证
+           -> self.run(args, cancellation_token) 执行
+        -> ToolResult(name, result, is_error)
+     -> FunctionExecutionResult(content, call_id, is_error, name)
+  -> model_context.add_message(FunctionExecutionResultMessage)
+  -> 下一轮 LLM 推理或总结</code></pre>
+  </div></section>
+
+  <!-- ============ Agent 通信详情 ============ -->
+  <section id="comm-detail"><div class="card">
+    <h2>5. Agent 间通信机制详情</h2>
+
+    <h3>5.1 Manager → Worker 消息格式</h3>
+    <div class="note">
+      <strong>关键发现：Manager 不直接"发送"任务内容给 Worker！</strong><br>
+      Manager 仅发送 <code>GroupChatRequestPublish</code>（空消息）作为触发信号。Worker 通过自主缓存的 <code>_message_buffer</code> 获取完整上下文。
+    </div>
+
+    <h4>核心消息类型</h4>
+    <pre><code>class GroupChatStart(BaseModel):
+    """启动群聊的请求"""
+    messages: List[BaseChatMessage] | None = None  # 初始任务消息
+    output_task_messages: bool = True
+
+class GroupChatRequestPublish(BaseModel):
+    """请求发布消息到群聊"""
+    ...  # 空模型，仅作为触发信号
+
+class GroupChatAgentResponse(BaseModel):
+    """Agent 的响应"""
+    response: Response  # 包含 chat_message 和 inner_messages
+    name: str           # 产生响应的 Agent 名称</code></pre>
+
+    <h4>通信流程</h4>
+    <div class="diagram"><div class="mermaid">
+sequenceDiagram
+  participant M as Manager
+  participant RT as Runtime
+  participant W as Worker Container
+  participant A as Agent
+
+  Note over M,W: 所有消息通过 group_topic 广播
+  M->>RT: publish(GroupChatRequestPublish)
+  RT->>W: handle_request
+  W->>W: 从 _message_buffer 获取上下文
+  W->>A: on_messages_stream(buffer)
+  A-->>W: Response
+  W->>RT: publish(GroupChatAgentResponse)
+  RT->>M: handle_agent_response
+    </div></div>
+
+    <h3>5.2 Selector Prompt 结构</h3>
+    <div class="prompt-block">
+      <strong>默认 Selector Prompt</strong>
+      <pre><code>You are in a role play game. The following roles are available:
+{roles}.
+Read the following conversation. Then select the next role from {participants} to play.
+Only return the role.
+
+{history}
+
+Read the above conversation. Then select the next role from {participants} to play.
+Only return the role.</code></pre>
+    </div>
+
+    <div class="prompt-block">
+      <strong>实际填充示例</strong>
+      <pre><code>You are in a role play game. The following roles are available:
+Travel_Advisor: Helps with travel planning.
+Hotel_Agent: Helps with hotel booking.
+Flight_Agent: Helps with flight booking.
+
+Read the following conversation. Then select the next role from
+["Travel_Advisor", "Hotel_Agent", "Flight_Agent"] to play. Only return the role.
+
+user: Book a 3-day trip to new york.
+
+Travel_Advisor: I'd be happy to help you plan a 3-day trip to New York!
+
+Read the above conversation. Then select the next role from
+["Travel_Advisor", "Hotel_Agent", "Flight_Agent"] to play. Only return the role.</code></pre>
+    </div>
+
+    <h3>5.3 SubAgent 的 Context 组成</h3>
+    <div class="block">
+      <strong>Context 组装顺序</strong>
+      <ol>
+        <li><strong>SystemMessage</strong>：agent 初始化时的 system_message 参数</li>
+        <li><strong>Model Context 历史消息</strong>：通过 <code>model_context.get_messages()</code> 获取</li>
+        <li><strong>新传入消息</strong>：来自 GroupChat 的其他 Agent 的消息，通过 <code>to_model_message()</code> 转换</li>
+        <li><strong>Memory 内容</strong>：通过 <code>memory.update_context()</code> 注入</li>
+      </ol>
+    </div>
+
+    <div class="prompt-block">
+      <strong>示例：Hotel_Agent 的 Context 组成</strong>
+      <pre><code>[最终发送给 LLM 的消息列表]
+
+1. SystemMessage:
+   content="You are a helpful AI assistant. Solve tasks using your tools.
+            Reply with TERMINATE when the task has been completed."
+
+2. UserMessage (历史消息):
+   source="user"
+   content="Book a 3-day trip to new york."
+
+3. UserMessage (来自 Travel_Advisor):
+   source="Travel_Advisor"
+   content="I'd be happy to help you plan a 3-day trip to New York!
+            Let me check hotel availability."
+
+4. AssistantMessage (Hotel_Agent 上一轮):
+   source="Hotel_Agent"
+   content=[FunctionCall(name="lookup_hotel", arguments='{"location": "new york"}')]
+
+5. FunctionExecutionResultMessage (工具结果):
+   content=[FunctionExecutionResult(content="Hotels in new york: hotel1, hotel2, hotel3")]
+
+[可用工具]
+tools=[FunctionTool(name="lookup_hotel", description="Lookup hotels in a location")]</code></pre>
+    </div>
+  </div></section>
+
+  <!-- ============ 发言模式与 Buffer 机制 ============ -->
+  <section id="speaker-buffer"><div class="card">
+    <h2>6. 四种发言模式与 Buffer 机制</h2>
+
+    <h3>6.1 四种发言模式</h3>
+    <p>Manager 始终是"点名"的人，但"点名规则"由 Team 类型决定。</p>
+
+    <table>
+      <tr><th>Team 类型</th><th>顺序决定方式</th><th>确定性</th><th>类比</th></tr>
+      <tr><td><code>RoundRobinGroupChat</code></td><td>按参与者列表顺序轮流</td><td>高（固定顺序）</td><td>圆桌会议，按座位顺序发言</td></tr>
+      <tr><td><code>SelectorGroupChat</code></td><td>LLM 或自定义函数选择</td><td>中（依赖 LLM）</td><td>有主持人的研讨会，根据讨论内容决定</td></tr>
+      <tr><td><code>Swarm</code></td><td>通过 HandoffMessage 决定</td><td>中（依赖 Agent 决策）</td><td>接力赛，当前跑者决定交给谁</td></tr>
+      <tr><td><code>MagenticOneGroupChat</code></td><td>Orchestrator 规划</td><td>中（依赖规划能力）</td><td>项目经理，规划任务分配</td></tr>
+    </table>
+
+    <h4>RoundRobinGroupChat：固定轮转</h4>
+    <pre><code>class RoundRobinGroupChatManager(BaseGroupChatManager):
+    def __init__(self, ...):
+        self._current_index = 0
+
+    async def select_speaker(self, thread):
+        speaker = self._participant_names[self._current_index]
+        self._current_index = (self._current_index + 1) % len(self._participant_names)
+        return [speaker]
+
+# 创建时指定顺序
+team = RoundRobinGroupChat(
+    participants=[agent_a, agent_b, agent_c],  # A → B → C → A → B → C ...
+    ...
+)</code></pre>
+
+    <h4>SelectorGroupChat：LLM 选择</h4>
+    <pre><code>async def select_speaker(self, thread):
+    # 方式1: 自定义函数优先
+    if self._selector_func is not None:
+        speaker = self._selector_func(thread)
+        if speaker is not None:
+            return [speaker]
+
+    # 方式2: 候选过滤 + LLM 选择
+    participants = [p for p in self._participant_names if p != self._previous_speaker]
+    agent_name = await self._select_speaker(roles, participants, max_attempts)
+    return [agent_name]</code></pre>
+
+    <div class="prompt-block">
+      <strong>默认 Selector Prompt</strong>
+      <pre><code>You are in a role play game. The following roles are available:
+{roles}.
+Read the following conversation. Then select the next role from {participants} to play.
+Only return the role.
+
+{history}
+
+Read the above conversation. Then select the next role from {participants} to play.
+Only return the role.</code></pre>
+    </div>
+
+    <h4>Swarm：Handoff 决定</h4>
+    <pre><code>class HandoffMessage(BaseTextChatMessage):
+    target: str  # 目标 Agent 名称
+
+# Agent 通过 HandoffMessage 主动移交控制权
+# 顺序由当前发言的 Agent 决定移交给谁</code></pre>
+
+    <h4>MagenticOneGroupChat：Orchestrator 规划</h4>
+    <p>由专门的 Orchestrator Agent 进行任务规划和调度，适合复杂任务需要全局规划和协调。</p>
+
+    <h3>6.2 公共 Buffer 机制</h3>
+    <div class="note">
+      <strong>核心概念：独立但同步的 Buffer</strong><br>
+      每个 <code>ChatAgentContainer</code> 维护自己的 <code>_message_buffer</code>，但因为所有消息都通过 <code>group_topic</code> 广播，所有 Worker 的 buffer 内容是同步的。
+    </div>
+
+    <h4>Buffer 架构图</h4>
+    <div class="diagram"><div class="mermaid">
+graph TD
+  GT["group_topic (广播频道)"] --> CA["Container A<br>buffer: [msg1, msg2, msg3]"]
+  GT --> CB["Container B<br>buffer: [msg1, msg2, msg3]"]
+  GT --> CC["Container C<br>buffer: [msg1, msg2, msg3]"]
+
+  style GT fill:#1d4f73,color:#fff
+  style CA fill:#2d6a4f,color:#fff
+  style CB fill:#2d6a4f,color:#fff
+  style CC fill:#2d6a4f,color:#fff
+    </div></div>
+
+    <h4>Buffer 更新机制</h4>
+    <pre><code>class ChatAgentContainer:
+    def __init__(self, ...):
+        self._message_buffer: List[BaseAgentEvent | BaseChatMessage] = []
+
+    @event  # 订阅 group_topic
+    async def handle_start(self, message: GroupChatStart, ctx: MessageContext):
+        """收到 GroupChatStart，存入 buffer"""
+        if message.messages:
+            self._message_buffer.extend(message.messages)
+
+    @event  # 订阅 group_topic
+    async def handle_agent_response(self, message: GroupChatAgentResponse, ctx: MessageContext):
+        """收到其他 Agent 的响应，也存入 buffer"""
+        self._message_buffer.append(message.response.chat_message)</code></pre>
+
+    <h4>Buffer 内容：群聊聊天记录</h4>
+    <div class="block">
+      <strong>Buffer 只记录最终发言，不包含中间过程</strong><br>
+      Agent 的中间工具调用和思考过程<strong>不会写入 buffer</strong>，只有最终结果发布到 group_topic。
+    </div>
+    <pre><code># Buffer 内容示例
+message_buffer = [
+    TextMessage(content="订一个3天的纽约旅行", source="user"),              # 用户消息
+    TextMessage(content="我来帮你规划，先查一下酒店...", source="Travel_Advisor"),  # TA 发言
+    TextMessage(content="我查到这些酒店...", source="Hotel_Agent"),           # HA 发言
+    TextMessage(content="我查到这些航班...", source="Flight_Agent"),          # FA 发言
+]</code></pre>
+
+    <h4>Manager 触发机制：空信号</h4>
+    <div class="note">
+      Manager 发送的触发信号是<strong>空消息</strong>，Worker 从自己的 buffer 找上下文。<br>
+      类比：主持人说"请你发言"，被点名的人翻开笔记本看看之前说了什么，然后发言。
+    </div>
+    <pre><code># Manager 发送的触发信号
+GroupChatRequestPublish()  # 空消息！没有任何内容！
+
+# Worker 从 buffer 取上下文
+async def handle_request(self, message: GroupChatRequestPublish, ctx: MessageContext):
+    async for msg in self._agent.on_messages_stream(
+        self._message_buffer,  # 传递整个 buffer
+        ctx.cancellation_token
+    ):
+        ...</code></pre>
+
+    <h4>为什么 Buffer 要独立？</h4>
+    <table>
+      <tr><th>原因</th><th>说明</th></tr>
+      <tr><td>组件化设计</td><td>每个 Container 是独立的组件，可以单独测试、替换</td></tr>
+      <tr><td>状态隔离</td><td>每个 Container 有自己的状态（buffer、Agent 实例）</td></tr>
+      <tr><td>并发安全</td><td>多个 Container 可以并发处理消息，互不干扰</td></tr>
+      <tr><td>可扩展性</td><td>可以动态添加/移除 Container</td></tr>
+    </table>
+
+    <h4>完整流程示例</h4>
+    <div class="diagram"><div class="mermaid">
+sequenceDiagram
+  participant U as 用户
+  participant M as Manager
+  participant GT as group_topic
+  participant TA as Travel_Advisor
+  participant HA as Hotel_Agent
+
+  U->>M: "订一个3天的纽约旅行"
+  M->>GT: publish(GroupChatStart)
+  Note over GT: 所有 Container buffer: [用户消息]
+
+  M->>M: select_speaker() → Travel_Advisor
+  M->>TA: publish(GroupChatRequestPublish)
+  Note over TA: 从 buffer 取 [用户消息]
+  TA->>TA: Agent 处理
+  TA->>GT: publish(GroupChatAgentResponse)
+  Note over GT: 所有 Container buffer: [用户消息, TA 发言]
+
+  M->>M: select_speaker() → Hotel_Agent
+  M->>HA: publish(GroupChatRequestPublish)
+  Note over HA: 从 buffer 取 [用户消息, TA 发言]
+  HA->>HA: Agent 处理（知道用户要订旅行，TA 说要查酒店）
+  HA->>GT: publish(GroupChatAgentResponse)
+    </div></div>
+
+    <h4>与其他框架的对比</h4>
+    <table>
+      <tr><th>框架</th><th>上下文传递方式</th><th>Worker 能看到什么</th></tr>
+      <tr><td><strong>AutoGen</strong></td><td>公共 buffer（自动同步）</td><td>所有人的发言</td></tr>
+      <tr><td>DeerFlow</td><td>Manager 工具调用传递</td><td>只有 Manager 传递的内容</td></tr>
+      <tr><td>CrewAI</td><td>Manager delegation tool 传递</td><td>只有 Manager 的 task 描述</td></tr>
+      <tr><td>MetaGPT</td><td>私有队列传递</td><td>只有订阅的 Action 消息</td></tr>
+    </table>
+
+    <h4>设计哲学</h4>
+    <div class="block">
+      <strong>AutoGen 的核心假设</strong>：多 Agent 协作应该像<strong>人类团队开会</strong>，而不是<strong>经理打电话派活</strong>。<br><br>
+      <strong>AutoGen</strong>：像一个<strong>开放办公室</strong>，所有人坐在一起，谁说话所有人都能听到。<br>
+      <strong>DeerFlow/CrewAI</strong>：像一个<strong>经理办公室</strong>，经理一个个叫人进来谈话，每个人只知道经理告诉他的内容。
+    </div>
+  </div></section>
+
+  <!-- ============ 消息机制详情 ============ -->
+  <section id="msg-detail"><div class="card">
+    <h2>7. 消息机制详情</h2>
+
+    <h3>7.1 外部指令到内部消息的转换</h3>
+    <pre><code># Step 1: task 参数标准化
+if isinstance(task, str):
+    messages = [TextMessage(content=task, source="user")]
+
+# Step 2: 发送 GroupChatStart 到 GroupChatManager
+await self._runtime.send_message(
+    GroupChatStart(messages=messages),
+    recipient=AgentId(type=self._group_chat_manager_topic_type, key=self._team_id),
+)</code></pre>
+
+    <div class="diagram"><div class="mermaid">
+flowchart LR
+  A["team.run_stream(task='Hello')"] --> B["TextMessage(content='Hello', source='user')"]
+  B --> C["GroupChatStart(messages=[TextMessage])"]
+  C --> D["SendMessageEnvelope"]
+  D --> E["asyncio.Queue"]
+  E --> F["_process_send()"]
+  F --> G["GroupChatManager.handle_start()"]
+    </div></div>
+
+    <h3>7.2 内部消息机制：asyncio.Queue + 发布订阅</h3>
+    <div class="note">
+      AutoGen 的消息机制<strong>不是</strong>传统的消息中间件，而是<strong>单线程 asyncio 事件循环 + 统一消息队列</strong>的架构。
+    </div>
+
+    <h4>三种消息信封</h4>
+    <table>
+      <tr><th>类型</th><th>用途</th><th>关键字段</th></tr>
+      <tr><td><code>SendMessageEnvelope</code></td><td>点对点 RPC</td><td><code>message</code>, <code>recipient: AgentId</code>, <code>future</code></td></tr>
+      <tr><td><code>PublishMessageEnvelope</code></td><td>广播到 topic</td><td><code>message</code>, <code>topic_id: TopicId</code></td></tr>
+      <tr><td><code>ResponseMessageEnvelope</code></td><td>RPC 响应</td><td><code>message</code>, <code>future</code>, <code>sender</code></td></tr>
+    </table>
+
+    <h4>Topic 和 Subscription 机制</h4>
+    <pre><code>@dataclass(eq=True, frozen=True)
+class TopicId:
+    type: str     # 事件类型
+    source: str   # 事件来源上下文
+
+class TypeSubscription(Subscription):
+    def is_match(self, topic_id: TopicId) -> bool:
+        return topic_id.type == self._topic_type   # 按 type 匹配
+
+    def map_to_agent(self, topic_id: TopicId) -> AgentId:
+        return AgentId(type=self._agent_type, key=topic_id.source)</code></pre>
+
+    <h4>Group Chat Topic 注册</h4>
+    <table>
+      <tr><th>Topic Type</th><th>订阅者</th><th>用途</th></tr>
+      <tr><td><code>group_topic_{team_id}</code></td><td>所有 participant + manager</td><td>广播通信</td></tr>
+      <tr><td><code>{participant_name}_{team_id}</code></td><td>对应的 participant</td><td>点对点通信</td></tr>
+      <tr><td><code>{manager_name}_{team_id}</code></td><td>manager</td><td>点对点通信</td></tr>
+      <tr><td><code>output_topic_{team_id}</code></td><td>manager</td><td>输出消息中转</td></tr>
+    </table>
+
+    <h3>6.3 消息流转完整链路</h3>
+    <div class="diagram"><div class="mermaid">
+flowchart TD
+  A["用户: team.run_stream(task='Hello')"] --> B["TextMessage(content='Hello', source='user')"]
+  B --> C["GroupChatStart -> SendMessageEnvelope -> Queue"]
+  C --> D["_process_send() -> manager.on_message()"]
+  D --> E["handle_start(): publish to group_topic"]
+  E --> F["ChatAgentContainer: 存入 buffer"]
+  E --> G["Manager: 存入 thread"]
+  G --> H["select_speaker() 选择发言者"]
+  H --> I["publish(GroupChatRequestPublish) to speaker_topic"]
+  I --> J["Container.handle_request(): agent.on_messages_stream(buffer)"]
+  J --> K["Agent 处理完成"]
+  K --> L["publish(GroupChatAgentResponse) to group_topic"]
+  L --> M["其他 Container: 更新 buffer"]
+  L --> N["Manager: handle_agent_response()"]
+  N --> O{"检查终止条件"}
+  O -- 未终止 --> H
+  O -- 终止 --> P["GroupChatTermination -> output_queue"]
+  P --> Q["run_stream() yield TaskResult"]
+    </div></div>
+  </div></section>
+
+  <!-- ============ 动态流程 ============ -->
+  <section id="workflow"><div class="card">
+    <h2>8. 功能开发场景动态过程</h2>
+    <p>功能开发可建模为 planner、developer、tester、reviewer 的 team。每个 agent 有不同 system message、工具和记忆；manager 负责选择发言者并判断终止。</p>
+    <div class="diagram"><div class="mermaid">
+flowchart TD
+  Start[用户提交功能开发任务] --> Init[构建 agents / tools / memory / team]
+  Init --> Run[team.run_stream]
+  Run --> Broadcast[Manager 广播任务]
+  Broadcast --> Select[选择 speaker]
+  Select --> AgentRun[Agent 处理消息]
+  AgentRun --> Memory[注入短期上下文 + 长期记忆]
+  Memory --> LLM[调用 LLM]
+  LLM --> HasTool{是否请求工具?}
+  HasTool -- 是 --> Tool[执行文件/代码/测试/MCP工具]
+  Tool --> ToolResult[结果写回上下文]
+  ToolResult --> More{继续工具轮?}
+  More -- 是 --> LLM
+  More -- 否 --> Finalize[反思或汇总]
+  HasTool -- 否 --> Finalize
+  Finalize --> Publish[发布 agent response]
+  Publish --> Term{满足终止条件?}
+  Term -- 否 --> Select
+  Term -- 是 --> Result[输出 TaskResult]
+  Result --> Persist[可选保存长期记忆]
+    </div></div>
+    <p>推荐用明确终止条件防止循环，例如 reviewer 输出后结束、文本提及 <code>TERMINATE</code>、最大消息数或最大轮数。</p>
+  </div></section>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' } });
+</script>
+</body>
+</html>
