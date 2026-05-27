@@ -143,7 +143,7 @@ class GroupChatSession:
 
     def add_message(self, agent_result: AgentResult):
         self.messages.append({
-            "agent_name" : agent_result.agent_name,"content":agent_result.text,"timestamp":agent_result.timestamp,"platform":agent_result.platform
+            "agent_name" : agent_result.agent_name,"content":agent_result.text,"timestamp":agent_result.timestamp,"platform":agent_result.platform.value
         })
     def get_uncompact_messages(self):
         return self.messages[self.last_compacted_loc:]
