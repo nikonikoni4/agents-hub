@@ -23,7 +23,10 @@ teams / <team_name> / <project_path> / <group_chat_id> / memory / # （暂定，
 <group_chat_id>.jsonl 
 
 {
-    _type : "meta_data", last_compact_loc : ,create_at:,updata_at
+    _type : "meta_data", last_compact_loc : ,create_at:,updata_at:
+}
+{
+    agent_name : , content : ,timestamp:
 }
 
 agent_session_id.json:
@@ -117,18 +120,29 @@ class GroupChat:
             ,*[
             start_conversation(work) for _,work in self.works.items()
         ])
+
+@dataclass
+class AgentSessionInfo:
+    """Agent 的会话信息"""
+    main_session: str = ""  # 主会话 ID
+    btw_session: list[str] = field(default_factory=list)  # by the way session 列表
+
 @dataclass
 class GroupChatSession:
+    """用户管理群聊，对于每个agent的单聊和具体的内容由各自的平台管理"""
     group_chat_id : str = field(default_factory=lambda: str(uuid4()))
     name : str = field(default_factory=lambda: f"session_{datetime.now().strftime('%Y%m%d%H%M')}")
     messages : list[dict[str]] = field(default_factory=list)
     created_at : datetime = field(default_factory=datetime.now)
     updated_at : datetime = field(default_factory=datetime.now)
-    last_compacted_loc : int = 0 # 上一次compact的位置 
+    last_compacted_loc : int = 0 # 上一次compact的位置
 
     def add_message(self, agent_result: AgentResult):
-        pass
-
+        self.messages.append({
+            "agent_name" : agent_result.agent_name,"content":agent_result.text,"timestamp":agent_result.timestamp,"platform":agent_result.platform
+        })
+    def get_uncompact_messages(self):
+        return self.messages[self.last_compacted_loc:]
 
 class GroupChatContext:
     """
@@ -138,22 +152,21 @@ class GroupChatContext:
     """
     def __init__(self,group_chat_id : str,project_path:str):
         self.group_chat_id = group_chat_id
-        self.agent_session_id = {} # agent_name : <session_id>
+        self.agent_session_id: dict[str, AgentSessionInfo] = {}  # agent_name -> AgentSessionInfo
         # 获取当前的聊天历史路径
         sanitized_path = self.sanitize_project_path(project_path)
         self.group_chat_session_path = f"{LOCAL_DATA_PATH}/teams/{sanitized_path}/{group_chat_id}"
         self.messages_file = f"{self.group_chat_session_path}/{group_chat_id}.jsonl"
-        self.session_file = f"{self.group_chat_session_path}/agent_session_id.json"
+        self.session_file = f"{self.group_chat_session_path}/agent_session_id.json" # agent_name : {main_session: , btw_session}
         self.agent_session_id = self.get_agent_session_id()
-        self.messages = self.get_group_chat_messages()
-        self.last_compact_loc = 0
+        self.group_chat_session = self.load_group_chat_session()
 
-    def get_group_chat_messages(self)->list[dict]:
+    def load_group_chat_session(self)->GroupChatSession:
         """
-        获取群聊消息列表
+        从文件加载群聊会话
 
         Returns:
-            消息列表，每条消息是一个 dict
+            GroupChatSession: 加载的会话对象
         """
         import json
         import os
@@ -161,25 +174,72 @@ class GroupChatContext:
         # 确保目录存在
         os.makedirs(self.group_chat_session_path, exist_ok=True)
 
-        # 如果文件不存在，返回空列表
+        # 如果文件不存在，返回新的会话
         if not os.path.exists(self.messages_file):
-            return []
+            return GroupChatSession(group_chat_id=self.group_chat_id)
 
         # 读取 jsonl 文件
         messages = []
+        meta_data = None
+
         with open(self.messages_file, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line:
-                    messages.append(json.loads(line))
-        return messages
+                    data = json.loads(line)
+                    if data.get('_type') == 'meta_data':
+                        meta_data = data
+                    else:
+                        messages.append(data)
 
-    def get_agent_session_id(self)->dict:
+        # 构建 GroupChatSession
+        session = GroupChatSession(group_chat_id=self.group_chat_id)
+        session.messages = messages
+
+        if meta_data:
+            session.last_compacted_loc = meta_data.get('last_compact_loc', 0)
+            if 'created_at' in meta_data:
+                session.created_at = datetime.fromisoformat(meta_data['created_at'])
+            if 'updated_at' in meta_data:
+                session.updated_at = datetime.fromisoformat(meta_data['updated_at'])
+            if 'name' in meta_data:
+                session.name = meta_data['name']
+
+        return session
+
+    def save_group_chat_session(self):
+        """将 GroupChatSession 保存到 <group_chat_id>.jsonl"""
+        import json
+        import os
+
+        # 确保目录存在
+        os.makedirs(self.group_chat_session_path, exist_ok=True)
+
+        # 更新时间戳
+        self.group_chat_session.updated_at = datetime.now()
+
+        # 写入 jsonl 文件
+        with open(self.messages_file, 'w', encoding='utf-8') as f:
+            # 写入 meta_data
+            meta_data = {
+                '_type': 'meta_data',
+                'last_compact_loc': self.group_chat_session.last_compacted_loc,
+                'created_at': self.group_chat_session.created_at.isoformat(),
+                'updated_at': self.group_chat_session.updated_at.isoformat(),
+                'name': self.group_chat_session.name
+            }
+            f.write(json.dumps(meta_data, ensure_ascii=False) + '\n')
+
+            # 写入消息
+            for msg in self.group_chat_session.messages:
+                f.write(json.dumps(msg, ensure_ascii=False) + '\n')
+
+    def get_agent_session_id(self) -> dict[str, AgentSessionInfo]:
         """
         获取 agent session id 映射
 
         Returns:
-            dict: {agent_name: {main_session: str, btw_session: [str]}}
+            dict: {agent_name: AgentSessionInfo}
         """
         import json
         import os
@@ -193,7 +253,40 @@ class GroupChatContext:
 
         # 读取 session 文件
         with open(self.session_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+
+        # 转换为 AgentSessionInfo 对象
+        result = {}
+        for agent_name, session_data in data.items():
+            result[agent_name] = AgentSessionInfo(
+                main_session=session_data.get('main_session', ''),
+                btw_session=session_data.get('btw_session', [])
+            )
+        return result
+
+    def save_agent_session_id(self):
+        """
+        保存 agent session id 映射到文件
+
+        将 self.agent_session_id 保存到 agent_session_id.json
+        """
+        import json
+        import os
+
+        # 确保目录存在
+        os.makedirs(self.group_chat_session_path, exist_ok=True)
+
+        # 转换为可序列化的字典
+        data = {}
+        for agent_name, session_info in self.agent_session_id.items():
+            data[agent_name] = {
+                'main_session': session_info.main_session,
+                'btw_session': session_info.btw_session
+            }
+
+        # 写入文件
+        with open(self.session_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
     @staticmethod
     def sanitize_project_path(project_path: str) -> str:
@@ -216,8 +309,6 @@ class GroupChatContext:
         sanitized = re.sub(r'-+', '-', sanitized)
         return sanitized
 
-    def add_message(self, agent_result: AgentResult):
-        self.messages.append()
 
 agent_platform_client = AgentBridge()
 class Agent:
