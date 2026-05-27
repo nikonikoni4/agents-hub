@@ -21,6 +21,6 @@
 2. A2A方式：manager通过工具调用与subagent进行通信
 
 # autoGen
-
+1. 有一个共享buffer，存放所有的agent的回复和boss的记录。这里可能的问题是上下文干扰
 
 # 我需要的多agent功能
