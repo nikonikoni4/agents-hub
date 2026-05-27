@@ -3,7 +3,8 @@
 import os
 import pytest
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
-from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform, CODEX_COMMAND
+from agents_hub.agent_bridge.models import AgentPlatform, CODEX_COMMAND
+from agents_hub.roles.models import RoleConfig
 
 
 class TestCodexExecutor:
@@ -16,7 +17,7 @@ class TestCodexExecutor:
         """测试构建基本命令"""
         config = RoleConfig(
             platform=AgentPlatform.CODEX,
-            codex_home="/path/to/codex-home"
+            work_root="/path/to/codex-home"
         )
         cmd = self.executor._build_command("审查代码", config, None)
 
@@ -29,7 +30,7 @@ class TestCodexExecutor:
         """测试构建恢复会话的命令（使用 resume 子命令）"""
         config = RoleConfig(
             platform=AgentPlatform.CODEX,
-            codex_home="/path/to/codex-home"
+            work_root="/path/to/codex-home"
         )
         cmd = self.executor._build_command("测试", config, "session-123")
 
@@ -41,15 +42,15 @@ class TestCodexExecutor:
         """测试构建环境变量"""
         config = RoleConfig(
             platform=AgentPlatform.CODEX,
-            codex_home="/path/to/codex-home"
+            work_root="/path/to/codex-home"
         )
         env = self.executor._build_env(config)
 
         assert "CODEX_HOME" in env
         assert env["CODEX_HOME"] == "/path/to/codex-home"
 
-    def test_build_env_no_codex_home(self):
-        """测试没有 codex_home 时环境变量"""
+    def test_build_env_no_work_root(self):
+        """测试没有 work_root 时环境变量"""
         config = RoleConfig(
             platform=AgentPlatform.CODEX,
         )

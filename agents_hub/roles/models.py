@@ -4,7 +4,20 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, List
 
-from agents_hub.agent_bridge.config import AgentPlatform
+from agents_hub.agent_bridge.models import AgentPlatform
+
+
+@dataclass
+class RoleConfig:
+    """角色配置
+
+    system_prompt 和 skills 由 CLI 从目录自动加载，不在此配置。
+    - Claude: 从 CLAUDE.md 自动加载 system_prompt
+    - Codex: 从 AGENTS.md 自动加载 system_prompt
+    """
+    name: str                  # 角色名称
+    platform: AgentPlatform    # 平台类型
+    work_root: Optional[str] = None  # 角色工作目录路径（注入 CODEX_HOME / CLAUDE_CONFIG_DIR）
 
 
 class RoleType(Enum):

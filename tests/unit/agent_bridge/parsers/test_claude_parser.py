@@ -3,7 +3,7 @@
 import json
 import pytest
 from agents_hub.agent_bridge.parsers.claude import ClaudeParser
-from agents_hub.agent_bridge.parsers.base import AgentEventType
+from agents_hub.agent_bridge.models import AgentEventType
 
 
 class TestClaudeParser:

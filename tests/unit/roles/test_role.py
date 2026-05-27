@@ -6,7 +6,7 @@ from pathlib import Path
 from agents_hub.roles.role import Role
 from agents_hub.roles.models import RoleInfo, SkillInfo, RoleType
 from agents_hub.roles.exceptions import SkillNotFoundError, SkillAlreadyExistsError
-from agents_hub.agent_bridge.config import AgentPlatform
+from agents_hub.agent_bridge.models import AgentPlatform
 
 
 @pytest.fixture
@@ -147,8 +147,7 @@ def test_get_role_config(claude_role):
     """测试构造 RoleConfig"""
     config = claude_role.get_role_config()
     assert config.platform == AgentPlatform.CLAUDE
-    assert config.claude_config_dir == str(claude_role.role_dir / "work_root")
-    assert config.codex_home is None
+    assert config.work_root == str(claude_role.role_dir / "work_root")
 
 
 def test_get_permissions_config(claude_role):

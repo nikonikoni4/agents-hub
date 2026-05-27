@@ -1,8 +1,8 @@
 """Executor 和 Parser 协议定义"""
 
 from typing import Protocol, AsyncIterator, Optional
-from agents_hub.agent_bridge.config import RoleConfig
-from agents_hub.agent_bridge.parsers.base import AgentEvent
+from agents_hub.agent_bridge.models import AgentEvent
+from agents_hub.roles.models import RoleConfig
 
 
 class Executor(Protocol):

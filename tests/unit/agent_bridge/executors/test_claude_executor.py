@@ -3,7 +3,8 @@
 import os
 import pytest
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
-from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform, CLAUDE_COMMAND
+from agents_hub.agent_bridge.models import AgentPlatform, CLAUDE_COMMAND
+from agents_hub.roles.models import RoleConfig
 
 
 class TestClaudeExecutor:
@@ -119,15 +120,15 @@ class TestClaudeExecutor:
         """测试构建环境变量"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
-            claude_config_dir="/path/to/claude-config"
+            work_root="/path/to/claude-config"
         )
         env = self.executor._build_env(config)
 
         assert "CLAUDE_CONFIG_DIR" in env
         assert env["CLAUDE_CONFIG_DIR"] == "/path/to/claude-config"
 
-    def test_build_env_no_claude_config_dir(self):
-        """测试没有 claude_config_dir 时环境变量"""
+    def test_build_env_no_work_root(self):
+        """测试没有 work_root 时环境变量"""
         config = RoleConfig(
             platform=AgentPlatform.CLAUDE,
         )

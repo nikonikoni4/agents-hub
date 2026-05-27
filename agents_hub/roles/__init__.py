@@ -2,7 +2,7 @@
 
 from agents_hub.roles.role import Role
 from agents_hub.roles.role_manager import RoleManager
-from agents_hub.roles.models import RoleInfo, SkillInfo, RoleType
+from agents_hub.roles.models import RoleConfig, RoleInfo, SkillInfo, RoleType
 from agents_hub.roles.exceptions import (
     RoleNotFoundError,
     RoleAlreadyExistsError,
@@ -12,6 +12,7 @@ from agents_hub.roles.exceptions import (
 __all__ = [
     "Role",
     "RoleManager",
+    "RoleConfig",
     "RoleInfo",
     "SkillInfo",
     "RoleType",

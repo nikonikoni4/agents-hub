@@ -9,7 +9,7 @@ from unittest.mock import patch
 from agents_hub.roles.role_manager import RoleManager
 from agents_hub.roles.models import RoleInfo, RoleType
 from agents_hub.roles.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
-from agents_hub.agent_bridge.config import AgentPlatform
+from agents_hub.agent_bridge.models import AgentPlatform
 
 
 @pytest.fixture

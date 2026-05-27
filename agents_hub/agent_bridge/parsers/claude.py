@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 from typing import Optional
-from agents_hub.agent_bridge.parsers.base import AgentEvent, AgentEventType
+from agents_hub.agent_bridge.models import AgentEvent, AgentEventType
 
 
 class ClaudeParser:

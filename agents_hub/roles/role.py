@@ -5,8 +5,8 @@ import shutil
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from agents_hub.agent_bridge.config import AgentPlatform, RoleConfig
-from agents_hub.roles.models import RoleInfo, SkillInfo, RoleType
+from agents_hub.agent_bridge.models import AgentPlatform
+from agents_hub.roles.models import RoleConfig, RoleInfo, SkillInfo, RoleType
 from agents_hub.roles.exceptions import SkillNotFoundError, SkillAlreadyExistsError
 
 class Role:
@@ -261,12 +261,13 @@ class Role:
         根据角色的平台类型，设置对应的配置目录路径。
 
         Returns:
-            RoleConfig 实例，包含平台类型和配置目录路径。
+            RoleConfig 实例，包含角色名称、平台类型和配置目录路径。
         """
         data = self._read_role_json()
         platform = AgentPlatform(data["platform"])
 
         return RoleConfig(
+            name=data["name"],
             platform=platform,
             work_root=str(self._work_root),
         )

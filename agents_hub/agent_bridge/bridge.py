@@ -2,8 +2,8 @@
 
 from datetime import datetime
 from typing import AsyncIterator, Optional
-from agents_hub.agent_bridge.config import RoleConfig, AgentPlatform
-from agents_hub.agent_bridge.parsers.base import AgentEvent, AgentEventType
+from agents_hub.agent_bridge.models import AgentPlatform, AgentEvent, AgentEventType
+from agents_hub.roles.models import RoleConfig
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
 from agents_hub.agent_bridge.parsers.claude import ClaudeParser
@@ -50,6 +50,7 @@ class AgentBridge:
                 parsed_event = parser.parse_event(raw_line)
                 if parsed_event is not None:
                     parsed_event["agent_name"] = config.name
+                    parsed_event["platform"] = config.platform
                     yield parsed_event
 
     async def execute(
@@ -89,5 +90,6 @@ class AgentBridge:
             content={"text": "".join(full_text), "usage": usage},
             session_id=result_session_id,
             timestamp=datetime.now().isoformat(),
-            agent_name=config.name
+            agent_name=config.name,
+            platform=config.platform,
         )

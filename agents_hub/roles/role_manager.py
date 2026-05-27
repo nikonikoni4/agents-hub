@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from agents_hub.agent_bridge.config import AgentPlatform
+from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.roles.models import RoleInfo, RoleType
 from agents_hub.roles.role import Role
 from agents_hub.roles.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
@@ -35,8 +35,10 @@ class RoleManager:
 
         规则：
         - 名称不能为空
-        - 名称不能以 '-' 开头
-        - 名称只能包含字母、数字、下划线和连字符
+        - 名称不能以点号开头（隐藏目录）
+        - 名称不能以空格结尾
+        - 名称不能包含 Windows 禁止字符: \\ / : * ? " < > |
+        - 名称不能是 Windows 保留名: CON, PRN, AUX, NUL, COM1-9, LPT1-9
 
         Args:
             name: 要验证的角色名称。
@@ -46,12 +48,18 @@ class RoleManager:
         """
         if not name:
             raise ValueError("Role name cannot be empty")
-        if name.startswith('-'):
-            raise ValueError("Role name cannot start with '-'")
-        if not re.match(r'^[a-zA-Z0-9_-]+$', name):
+        if name.startswith('.'):
+            raise ValueError("Role name cannot start with '.'")
+        if name.endswith(' '):
+            raise ValueError("Role name cannot end with space")
+        if re.search(r'[\\/:*?"<>|]', name):
             raise ValueError(
-                f"Invalid role name: '{name}'. Only alphanumeric, underscore and hyphen allowed."
+                f"Invalid role name: '{name}'. Cannot contain: \\ / : * ? \" < > |"
             )
+        # Windows 保留名
+        reserved = {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'}
+        if name.upper() in reserved:
+            raise ValueError(f"Invalid role name: '{name}' is a Windows reserved name")
 
     def list_roles(self) -> List[RoleInfo]:
         """列出所有角色。
@@ -172,6 +180,7 @@ class RoleManager:
 
         role_dir = self.agents_dir / name
         if role_dir.exists():
+            return 
             raise RoleAlreadyExistsError(f"Role '{name}' already exists")
 
         role_dir.mkdir(parents=True)
@@ -193,7 +202,7 @@ class RoleManager:
             "platform": platform.value,
             "avatar": avatar,
             "abilities": abilities or [],
-            "type": type,
+            "type": type.value if isinstance(type, RoleType) else type,
             "scope": scope,
             "skills": [],
         }
