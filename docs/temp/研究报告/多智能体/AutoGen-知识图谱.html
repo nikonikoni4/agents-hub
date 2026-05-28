@@ -843,6 +843,50 @@ class TypeSubscription(Subscription):
       <tr><td><code>output_topic_{team_id}</code></td><td>manager</td><td>输出消息中转</td></tr>
     </table>
 
+    <h4>寓言：广播电台的故事</h4>
+    <div class="prompt-block">
+      在一个城市里，有一座<strong>广播电台</strong>（Runtime），电台有很多<strong>频道</strong>（TopicId）：音乐频道、新闻频道、交通频道。电台里有几位<strong>主播</strong>（Agent）：音乐主播小音、新闻主播小新、交通主播小路，还有总监（Manager）。
+    </div>
+
+    <p>每位主播面前都有一台<strong>麦克风</strong>（<code>publish_message</code>）—— 对着它说话，声音就会传到电台的发射塔。还有一台<strong>收音机</strong>（<code>@event</code> 装饰器）—— 被动接收，调到哪个频道就听哪个频道的内容。电台的<strong>调度室</strong>里有一张巨大的<strong>订阅表</strong>（SubscriptionManager），记录着每位主播订阅了哪些频道。</p>
+
+    <p><strong>第一幕：寄信（publish_message）</strong></p>
+    <p>小音完成了一段播报，对着麦克风说："音乐频道的听众们，接下来播放一首轻音乐。"这句话并没有直接传到任何人耳朵里。它变成了一封<strong>装好的信</strong>（PublishMessageEnvelope），被投递到电台的<strong>传送带</strong>（asyncio.Queue）上。</p>
+
+    <p><strong>第二幕：调度室分拣（_process_next）</strong></p>
+    <p>电台的调度室里，有一位分拣员。他不是轮询，而是一直盯着传送带。传送带空的时候，分拣员就静静等着（<code>await self._message_queue.get()</code>）—— 他不会反复问"有新信吗？"，而是等信来了传送带自动叫他。这就是 asyncio 的阻塞等待，不是轮询。</p>
+
+    <p><strong>第三幕：查订阅表（get_subscribed_recipients）</strong></p>
+    <p>分拣员拿到信封，看到"音乐频道"。他翻开订阅表，查到音乐频道的订阅者是 [小音、小新、小路、总监]。</p>
+
+    <p><strong>第四幕：推送到收音机（on_message）</strong></p>
+    <p>分拣员不需要问他们要不要听，而是直接把信的内容推送到每位订阅者的收音机。每位主播的收音机自动响起（<code>@event</code> 装饰器的方法被调用）。他们不需要主动去问"有没有新消息"，收音机会自己响。</p>
+
+    <p><strong>第五幕：收音机如何知道调到哪个频道？（@event 装饰器）</strong></p>
+    <p>小新的收音机上贴着一张标签，写着"调频范围：新闻频道、音乐频道"。当分拣员推送到"音乐频道"时，收音机检查：我订阅了音乐频道吗？订阅了 → 响起 → 调用对应的处理方法。这就是 <code>@event</code> 装饰器的作用：声明这个方法能接收什么类型的消息（调到哪个频道），被动等待运行时推送（收音机不主动，只等电台推送），自动路由：收到消息后，根据类型调用对应的方法。</p>
+
+    <p><strong>第六幕：传送带上的信封格式（三种 Envelope）</strong></p>
+    <p>传送带上不只一种信，有三种：广播信（PublishMessageEnvelope）寄给某个频道的所有人；私信（SendMessageEnvelope）寄给某个特定的人；回执（ResponseMessageEnvelope）私信的回复。分拣员根据信封类型做不同的事：广播信 → 查订阅表 → 推送给所有订阅者；私信 → 直接推送给收件人；回执 → 把回复送给发私信的人。</p>
+
+    <h4>寓言与技术的对应关系</h4>
+    <table>
+      <tr><th>寓言元素</th><th>技术概念</th><th>说明</th></tr>
+      <tr><td>广播电台</td><td>SingleThreadedAgentRuntime</td><td>消息分发中心，管理所有消息流转</td></tr>
+      <tr><td>传送带</td><td>asyncio.Queue</td><td>统一消息队列，先进先出</td></tr>
+      <tr><td>分拣员</td><td>_process_next() 事件循环</td><td>从队列取消息，分发给订阅者</td></tr>
+      <tr><td>信封</td><td>PublishMessageEnvelope 等</td><td>包装消息 + 元信息（发送者、频道）</td></tr>
+      <tr><td>订阅表</td><td>SubscriptionManager</td><td>记录每个频道的订阅者列表</td></tr>
+      <tr><td>频道</td><td>TopicId</td><td>消息的分类标签</td></tr>
+      <tr><td>麦克风</td><td>publish_message()</td><td>Agent 发送消息的入口</td></tr>
+      <tr><td>收音机</td><td>@event 装饰器</td><td>被动接收消息的方法</td></tr>
+      <tr><td>调频标签</td><td>target_types</td><td>声明这个方法能接收什么类型的消息</td></tr>
+      <tr><td>推送</td><td>agent.on_message()</td><td>运行时主动调用 Agent 的处理方法</td></tr>
+    </table>
+
+    <div class="block">
+      <strong>关键洞察</strong>：分拣员不是轮询，而是用 <code>await</code> 等待传送带（阻塞等待，不占 CPU）。收音机不是主动调频，而是被动等电台推送（push）。Agent 不主动取消息（不是 pull），而是收音机被动等电台推送。
+    </div>
+
     <h3>6.3 消息流转完整链路</h3>
     <div class="diagram"><div class="mermaid">
 flowchart TD
