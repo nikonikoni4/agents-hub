@@ -552,6 +552,154 @@ async def _plan_and_act(self) -> Message:
 
 ## 7. 消息处理机制（经典 SOP vs MGX）
 
+### 消息传递的双向引用机制
+
+#### 1. 双向引用关系
+
+Environment 和 Role 之间建立了双向引用：
+
+```python
+class Environment:
+    roles: dict[str, BaseRole] = Field(default_factory=dict)  # name → role 对象
+    member_addrs: Dict[BaseRole, Set] = Field(default_factory=dict)  # role → 地址集合
+    
+class Role:
+    rc: RoleContext
+    
+class RoleContext:
+    env: BaseEnvironment = Field(default=None)  # 反向引用 Environment
+    msg_buffer: MessageQueue = Field(default_factory=MessageQueue)  # 私有消息队列
+```
+
+**建立双向引用的时机：**
+```python
+# base_env.py - Environment.add_role()
+def add_role(self, role: BaseRole):
+    self.roles[role.name] = role  # Environment → Role
+    role.set_env(self)             # Role → Environment (双向)
+    role.context = self.context
+
+# role.py - Role.set_env()
+def set_env(self, env: BaseEnvironment):
+    self.rc.env = env
+    if env:
+        self.addresses = {self.name, self.profile, self.role_id}
+        env.set_addresses(self, self.addresses)
+```
+
+#### 2. 消息传递的完整路径
+
+**没有公共队列，只有私有队列 + 路由器：**
+
+```
+A Agent → Environment (路由器) → B Agent 的私有队列
+```
+
+**关键：** 每个 Role 有一个私有 MessageQueue，Environment 不是队列而是路由器。
+
+#### 3. 核心数据结构
+
+**MessageQueue（私有队列）：**
+```python
+class MessageQueue(BaseModel):
+    _queue: Queue = PrivateAttr(default_factory=Queue)  # asyncio.Queue
+    
+    def push(self, msg: Message):
+        """将消息推入队列"""
+        self._queue.put_nowait(msg)
+    
+    def pop_all(self) -> List[Message]:
+        """取出所有消息"""
+        ret = []
+        while True:
+            msg = self.pop()
+            if not msg:
+                break
+            ret.append(msg)
+        return ret
+```
+
+**队列数量统计：**
+- N 个私有队列（N = Role 数量）
+- 0 个公共队列
+- Environment 不持有队列，只持有 Role 引用
+
+#### 4. 关键函数调用链
+
+**A Agent 发送消息给 B Agent 的完整流程：**
+
+```python
+# 步骤 1：A Agent 发布消息
+class Role:
+    def publish_message(self, msg):
+        """发布消息到环境"""
+        if not msg.sent_from:
+            msg.sent_from = any_to_str(self)
+        if not self.rc.env:
+            return
+        # 关键：通过 env 引用调用路由方法
+        self.rc.env.publish_message(msg)
+
+# 步骤 2：Environment 路由消息
+class Environment:
+    def publish_message(self, message: Message, peekable: bool = True) -> bool:
+        """路由消息到匹配的角色"""
+        for role, addrs in self.member_addrs.items():
+            if is_send_to(message, addrs):  # 地址匹配
+                # 关键：通过 role 引用调用推送方法
+                role.put_message(message)
+        self.history.add(message)
+        return True
+
+# 步骤 3：消息进入 B Agent 的私有队列
+class Role:
+    def put_message(self, message):
+        """将消息推入私有队列"""
+        if not message:
+            return
+        self.rc.msg_buffer.push(message)
+
+# 步骤 4：B Agent 观察并消费消息
+class Role:
+    async def _observe(self) -> int:
+        """从私有队列取出并过滤消息"""
+        news = self.rc.msg_buffer.pop_all()  # 从私有队列取出
+        old_messages = self.rc.memory.get()
+        
+        # 兴趣过滤
+        self.rc.news = [
+            n for n in news
+            if (n.cause_by in self.rc.watch or self.name in n.send_to)
+            and n not in old_messages
+        ]
+        self.rc.memory.add_batch(self.rc.news)
+        return len(self.rc.news)
+```
+
+#### 5. 设计要点
+
+**为什么不直接访问？**
+
+```python
+# 直接访问（耦合，MetaGPT 不采用）
+A.rc.env.roles["Bob"].put_message(msg)  # A 必须知道 Bob
+
+# 通过路由（解耦，MetaGPT 实际采用）
+A.publish_message(msg)  # A 不知道谁会接收
+    ↓
+A.rc.env.publish_message(msg)  # 交给 Environment 路由
+    ↓
+env.roles["Bob"].put_message(msg)  # Environment 内部访问 Bob
+```
+
+**优势：**
+1. **解耦**：A 不需要知道 B 的存在
+2. **灵活路由**：支持广播、精确指定、基于事件订阅等多种模式
+3. **动态扩展**：运行时添加新角色无需修改现有代码
+4. **并行安全**：每个 Role 独立队列，无竞争
+
+---
+
 ### 经典 SOP 模式：广播 + 事件驱动
 
 > **核心特征：** 没有 TeamLeader。消息默认广播给所有人，靠 cause_by in watch 自动触发下一个角色。整个流程是事件驱动的链式触发。

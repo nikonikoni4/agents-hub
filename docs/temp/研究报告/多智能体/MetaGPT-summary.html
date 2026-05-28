@@ -960,6 +960,184 @@ next_state = <span class="kw">await</span> self.llm.aask(prompt)
 <div class="section" id="s7">
   <div class="section-title"><span class="num">7</span> 消息处理机制（经典 SOP vs MGX）</div>
 
+  <h3 style="color:#f0f6fc; margin:16px 0 10px;">消息传递的双向引用机制</h3>
+
+  <h4 style="color:#e1e4e8; margin:12px 0 8px;">1. 双向引用关系</h4>
+  <p style="color:#8b949e; margin-bottom:12px;">Environment 和 Role 之间建立了双向引用：</p>
+  <div class="code-block"><span class="kw">class</span> Environment:
+    roles: dict[str, BaseRole] = Field(default_factory=dict)  <span class="cm"># name → role 对象</span>
+    member_addrs: Dict[BaseRole, Set] = Field(default_factory=dict)  <span class="cm"># role → 地址集合</span>
+
+<span class="kw">class</span> Role:
+    rc: RoleContext
+
+<span class="kw">class</span> RoleContext:
+    env: BaseEnvironment = Field(default=None)  <span class="cm"># 反向引用 Environment</span>
+    msg_buffer: MessageQueue = Field(default_factory=MessageQueue)  <span class="cm"># 私有消息队列</span></div>
+
+  <p style="color:#8b949e; margin:12px 0 8px;"><strong>建立双向引用的时机：</strong></p>
+  <div class="code-block"><span class="cm"># base_env.py - Environment.add_role()</span>
+<span class="kw">def</span> <span class="fn">add_role</span>(self, role: BaseRole):
+    self.roles[role.name] = role  <span class="cm"># Environment → Role</span>
+    role.set_env(self)             <span class="cm"># Role → Environment (双向)</span>
+    role.context = self.context
+
+<span class="cm"># role.py - Role.set_env()</span>
+<span class="kw">def</span> <span class="fn">set_env</span>(self, env: BaseEnvironment):
+    self.rc.env = env
+    <span class="kw">if</span> env:
+        self.addresses = {self.name, self.profile, self.role_id}
+        env.set_addresses(self, self.addresses)</div>
+
+  <h4 style="color:#e1e4e8; margin:16px 0 8px;">2. 消息传递的完整路径</h4>
+  <p style="color:#8b949e; margin-bottom:8px;"><strong>没有公共队列，只有私有队列 + 路由器：</strong></p>
+  <div class="flow-diagram" style="text-align:center;">
+    <div style="display:inline-block; padding:8px 20px; background:#1f6feb; border-radius:6px; color:#fff; font-weight:600;">A Agent</div>
+    <div style="color:#30363d; margin:6px;">→</div>
+    <div style="display:inline-block; padding:8px 20px; background:#f0883e; border-radius:6px; color:#fff; font-weight:600;">Environment (路由器)</div>
+    <div style="color:#30363d; margin:6px;">→</div>
+    <div style="display:inline-block; padding:8px 20px; background:#3fb950; border-radius:6px; color:#fff; font-weight:600;">B Agent 的私有队列</div>
+  </div>
+  <p style="color:#8b949e; margin:12px 0;"><strong>关键：</strong>每个 Role 有一个私有 MessageQueue，Environment 不是队列而是路由器。</p>
+
+  <h4 style="color:#e1e4e8; margin:16px 0 8px;">3. 核心数据结构</h4>
+  <p style="color:#8b949e; margin-bottom:8px;"><strong>MessageQueue（私有队列）：</strong></p>
+  <div class="code-block"><span class="kw">class</span> MessageQueue(BaseModel):
+    _queue: Queue = PrivateAttr(default_factory=Queue)  <span class="cm"># asyncio.Queue</span>
+
+    <span class="kw">def</span> <span class="fn">push</span>(self, msg: Message):
+        <span class="str">"""将消息推入队列"""</span>
+        self._queue.put_nowait(msg)
+
+    <span class="kw">def</span> <span class="fn">pop_all</span>(self) -> List[Message]:
+        <span class="str">"""取出所有消息"""</span>
+        ret = []
+        <span class="kw">while True</span>:
+            msg = self.pop()
+            <span class="kw">if not</span> msg:
+                <span class="kw">break</span>
+            ret.append(msg)
+        <span class="kw">return</span> ret</div>
+
+  <p style="color:#8b949e; margin:12px 0 8px;"><strong>队列数量统计：</strong></p>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-body">
+        <p><strong style="color:#3fb950;">N 个私有队列</strong></p>
+        <p style="font-size:13px;">N = Role 数量</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <p><strong style="color:#f85149;">0 个公共队列</strong></p>
+        <p style="font-size:13px;">Environment 不持有队列</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <p><strong style="color:#f0883e;">Environment 角色</strong></p>
+        <p style="font-size:13px;">只持有 Role 引用，作为路由器</p>
+      </div>
+    </div>
+  </div>
+
+  <h4 style="color:#e1e4e8; margin:20px 0 8px;">4. 关键函数调用链</h4>
+  <p style="color:#8b949e; margin-bottom:12px;"><strong>A Agent 发送消息给 B Agent 的完整流程：</strong></p>
+  <div class="flow-diagram">
+    <div class="flow-step"><span class="num-tag">1</span><strong>A Agent 发布消息</strong>
+      <div class="code-block" style="margin-top:8px;"><span class="kw">class</span> Role:
+    <span class="kw">def</span> <span class="fn">publish_message</span>(self, msg):
+        <span class="str">"""发布消息到环境"""</span>
+        <span class="kw">if not</span> msg.sent_from:
+            msg.sent_from = any_to_str(self)
+        <span class="kw">if not</span> self.rc.env:
+            <span class="kw">return</span>
+        <span class="cm"># 关键：通过 env 引用调用路由方法</span>
+        self.rc.env.publish_message(msg)</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">2</span><strong>Environment 路由消息</strong>
+      <div class="code-block" style="margin-top:8px;"><span class="kw">class</span> Environment:
+    <span class="kw">def</span> <span class="fn">publish_message</span>(self, message: Message, peekable: bool = True) -> bool:
+        <span class="str">"""路由消息到匹配的角色"""</span>
+        <span class="kw">for</span> role, addrs <span class="kw">in</span> self.member_addrs.items():
+            <span class="kw">if</span> is_send_to(message, addrs):  <span class="cm"># 地址匹配</span>
+                <span class="cm"># 关键：通过 role 引用调用推送方法</span>
+                role.put_message(message)
+        self.history.add(message)
+        <span class="kw">return True</span></div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">3</span><strong>消息进入 B Agent 的私有队列</strong>
+      <div class="code-block" style="margin-top:8px;"><span class="kw">class</span> Role:
+    <span class="kw">def</span> <span class="fn">put_message</span>(self, message):
+        <span class="str">"""将消息推入私有队列"""</span>
+        <span class="kw">if not</span> message:
+            <span class="kw">return</span>
+        self.rc.msg_buffer.push(message)</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><span class="num-tag">4</span><strong>B Agent 观察并消费消息</strong>
+      <div class="code-block" style="margin-top:8px;"><span class="kw">class</span> Role:
+    <span class="kw">async def</span> <span class="fn">_observe</span>(self) -> int:
+        <span class="str">"""从私有队列取出并过滤消息"""</span>
+        news = self.rc.msg_buffer.pop_all()  <span class="cm"># 从私有队列取出</span>
+        old_messages = self.rc.memory.get()
+
+        <span class="cm"># 兴趣过滤</span>
+        self.rc.news = [
+            n <span class="kw">for</span> n <span class="kw">in</span> news
+            <span class="kw">if</span> (n.cause_by <span class="kw">in</span> self.rc.watch <span class="kw">or</span> self.name <span class="kw">in</span> n.send_to)
+            <span class="kw">and</span> n <span class="kw">not in</span> old_messages
+        ]
+        self.rc.memory.add_batch(self.rc.news)
+        <span class="kw">return</span> len(self.rc.news)</div>
+    </div>
+  </div>
+
+  <h4 style="color:#e1e4e8; margin:20px 0 8px;">5. 设计要点</h4>
+  <p style="color:#8b949e; margin-bottom:8px;"><strong>为什么不直接访问？</strong></p>
+  <div class="cards-grid">
+    <div class="card" style="border-color:#f85149;">
+      <div class="card-title" style="color:#f85149;">直接访问（耦合，MetaGPT 不采用）</div>
+      <div class="card-body">
+        <div class="code-block">A.rc.env.roles[<span class="str">"Bob"</span>].put_message(msg)  <span class="cm"># A 必须知道 Bob</span></div>
+      </div>
+    </div>
+    <div class="card" style="border-color:#3fb950;">
+      <div class="card-title" style="color:#3fb950;">通过路由（解耦，MetaGPT 实际采用）</div>
+      <div class="card-body">
+        <div class="code-block">A.publish_message(msg)  <span class="cm"># A 不知道谁会接收</span>
+    ↓
+A.rc.env.publish_message(msg)  <span class="cm"># 交给 Environment 路由</span>
+    ↓
+env.roles[<span class="str">"Bob"</span>].put_message(msg)  <span class="cm"># Environment 内部访问 Bob</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p style="color:#8b949e; margin:16px 0 8px;"><strong>优势：</strong></p>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-title">解耦</div>
+      <div class="card-body">A 不需要知道 B 的存在</div>
+    </div>
+    <div class="card">
+      <div class="card-title">灵活路由</div>
+      <div class="card-body">支持广播、精确指定、基于事件订阅等多种模式</div>
+    </div>
+    <div class="card">
+      <div class="card-title">动态扩展</div>
+      <div class="card-body">运行时添加新角色无需修改现有代码</div>
+    </div>
+    <div class="card">
+      <div class="card-title">并行安全</div>
+      <div class="card-body">每个 Role 独立队列，无竞争</div>
+    </div>
+  </div>
+
+  <hr style="border:none; border-top:1px solid #21262d; margin:32px 0;">
+
   <h3 style="color:#f0f6fc; margin:16px 0 10px;">经典 SOP 模式：广播 + 事件驱动</h3>
   <div class="note-box">
     <strong>核心特征：</strong>没有 TeamLeader。消息默认广播给所有人，靠 cause_by in watch 自动触发下一个角色。整个流程是事件驱动的链式触发。

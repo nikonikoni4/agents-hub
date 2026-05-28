@@ -1373,6 +1373,449 @@ class TypeSubscription(Subscription):
 
 ---
 
+## 关键数据结构参考
+
+AutoGen 的数据结构分为两层：`autogen-core` 定义底层运行时抽象（Agent、消息、工具、模型客户端），`autogen-agentchat` 定义面向应用的高层结构（聊天消息、Team、GroupChat）。以下按功能域整理所有关键数据结构。
+
+### 1. Core 层 LLM 消息类型
+
+**文件**: `autogen-core/src/autogen_core/models/_types.py`
+
+LLM 交互使用四种消息类型，通过 `type` 字段区分：
+
+```python
+class SystemMessage(BaseModel):
+    content: str
+    type: Literal["SystemMessage"] = "SystemMessage"
+
+class UserMessage(BaseModel):
+    content: Union[str, List[Union[str, Image]]]  # 支持文本或多模态
+    source: str
+    type: Literal["UserMessage"] = "UserMessage"
+
+class AssistantMessage(BaseModel):
+    content: Union[str, List[FunctionCall]]  # 文本回复或工具调用
+    thought: str | None = None               # 推理思考内容
+    source: str
+    type: Literal["AssistantMessage"] = "AssistantMessage"
+
+class FunctionExecutionResultMessage(BaseModel):
+    content: List[FunctionExecutionResult]
+    type: Literal["FunctionExecutionResultMessage"] = "FunctionExecutionResultMessage"
+```
+
+联合类型：`LLMMessage = Union[SystemMessage, UserMessage, AssistantMessage, FunctionExecutionResultMessage]`
+
+### 2. AgentChat 层消息类型
+
+**文件**: `autogen-agentchat/src/autogen_agentchat/messages.py`
+
+Agent 间通信使用的消息类型继承自两个抽象基类：
+
+```python
+class BaseChatMessage(BaseModel, ABC):
+    """Agent 间通信的聊天消息基类"""
+    id: str                          # 消息唯一 ID
+    source: str                      # 消息来源 Agent 名称
+    models_usage: RequestUsage | None  # Token 使用统计
+    metadata: Dict[str, str]         # 扩展元数据
+    created_at: datetime             # 创建时间
+
+class BaseAgentEvent(BaseModel, ABC):
+    """Agent 事件信号，用于通知，不用于 Agent 间通信"""
+    id: str
+    source: str
+    models_usage: RequestUsage | None
+    metadata: Dict[str, str]
+```
+
+具体消息类型：
+
+| 类型 | 基类 | 用途 | 关键字段 |
+| --- | --- | --- | --- |
+| `TextMessage` | BaseChatMessage | 纯文本消息 | `content: str` |
+| `MultiModalMessage` | BaseChatMessage | 多模态消息 | `content: List[str \| Image]` |
+| `StopMessage` | BaseChatMessage | 请求停止对话 | `content: str` |
+| `HandoffMessage` | BaseChatMessage | 移交给其他 Agent | `target: str`, `context: List[LLMMessage]` |
+| `ToolCallSummaryMessage` | BaseChatMessage | 工具调用结果摘要 | `tool_calls`, `results` |
+| `StructuredMessage[T]` | BaseChatMessage | 结构化消息（泛型） | `content: T`, `format_string` |
+| `ToolCallRequestEvent` | BaseAgentEvent | 请求使用工具 | `content: List[FunctionCall]` |
+| `ToolCallExecutionEvent` | BaseAgentEvent | 工具执行结果事件 | `content: List[FunctionExecutionResult]` |
+| `ModelClientStreamingChunkEvent` | BaseAgentEvent | 流式输出文本块 | `content: str`, `full_message_id` |
+| `ThoughtEvent` | BaseAgentEvent | 模型思考过程 | `content: str` |
+| `MemoryQueryEvent` | BaseAgentEvent | 记忆检索结果 | `content: List[MemoryContent]` |
+
+### 3. GroupChat 事件类型
+
+**文件**: `autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_events.py`
+
+GroupChat 内部通信使用以下事件类型：
+
+```python
+class GroupChatStart(BaseModel):
+    """启动群聊"""
+    messages: List[BaseChatMessage] | None = None
+    output_task_messages: bool = True
+
+class GroupChatRequestPublish(BaseModel):
+    """Manager 触发 Worker 发言的空信号"""
+    pass  # 空消息，Worker 从 buffer 获取上下文
+
+class GroupChatAgentResponse(BaseModel):
+    """Agent 发布到群聊的响应"""
+    response: Response   # 包含 chat_message 和 inner_messages
+    name: str            # Agent 名称
+
+class GroupChatTeamResponse(BaseModel):
+    """Team 子团队发布到群聊的响应"""
+    result: TaskResult
+    name: str
+
+class GroupChatMessage(BaseModel):
+    """群聊中的消息包装"""
+    message: BaseAgentEvent | BaseChatMessage
+
+class GroupChatTermination(BaseModel):
+    """群聊终止信号"""
+    message: StopMessage
+    error: SerializableException | None = None
+
+class GroupChatError(BaseModel):
+    """群聊错误"""
+    error: SerializableException
+
+class SerializableException(BaseModel):
+    """可序列化的异常"""
+    error_type: str
+    error_message: str
+    traceback: str | None = None
+```
+
+### 4. 工具调用数据结构
+
+**文件**: `autogen-core/src/autogen_core/_types.py`, `tools/_base.py`, `tools/_workbench.py`
+
+```python
+@dataclass
+class FunctionCall:
+    """LLM 返回的函数调用请求"""
+    id: str           # 调用唯一 ID
+    arguments: str    # JSON 格式的参数
+    name: str         # 工具名称
+
+@dataclass
+class FunctionExecutionResult:
+    """工具执行结果，回传给 LLM"""
+    content: str           # 执行输出或错误信息
+    name: str              # 工具名称
+    call_id: str           # 对应 FunctionCall 的 ID
+    is_error: bool | None  # 是否为错误
+
+class ToolSchema(TypedDict):
+    """工具的 JSON Schema 定义"""
+    name: str
+    description: str
+    parameters: ParametersSchema
+    strict: bool
+
+class ParametersSchema(TypedDict):
+    """工具参数的 Schema"""
+    type: str                              # 固定 "object"
+    properties: Dict[str, Any]             # 参数属性定义
+    required: Sequence[str]                # 必填参数
+    additionalProperties: bool             # 是否允许额外参数
+
+class ToolResult(BaseModel):
+    """工具执行结果（Workbench 层）"""
+    name: str
+    result: List[ResultContent]    # TextResultContent 或 ImageResultContent
+    is_error: bool
+```
+
+工具类型层次：
+
+| 类型 | 位置 | 用途 |
+| --- | --- | --- |
+| `Tool` (Protocol) | `tools/_base.py` | 工具协议，定义 `run_json()` 接口 |
+| `BaseTool` (ABC) | `tools/_base.py` | 工具抽象基类，持有 args/return 类型 |
+| `FunctionTool` | `tools/_function_tool.py` | 将 Python 函数包装为工具 |
+| `BaseStreamTool` | `tools/_base.py` | 支持流式输出的工具 |
+| `BaseToolWithState` | `tools/_base.py` | 带状态的工具 |
+| `Workbench` (ABC) | `tools/_workbench.py` | 工具集合管理接口 |
+| `StaticWorkbench` | `tools/_workbench.py` | 包装普通工具列表 |
+| `McpWorkbench` | `autogen-ext` | 连接 MCP server |
+
+### 5. Agent 与 Runtime 标识结构
+
+**文件**: `autogen-core/src/autogen_core/_agent_id.py`, `_topic.py`, `_subscription.py`
+
+```python
+@dataclass(frozen=True)
+class AgentId:
+    """Agent 实例的唯一标识"""
+    type: str   # Agent 类型（如 "ChatAgentContainer"）
+    key: str    # 实例标识（如 team UUID）
+
+@dataclass(frozen=True)
+class TopicId:
+    """主题标识，定义广播消息的范围"""
+    type: str    # 事件类型（如 "group_topic_{team_id}"）
+    source: str  # 来源上下文
+
+class AgentMetadata(TypedDict):
+    """Agent 元数据"""
+    type: str
+    key: str
+    description: str
+```
+
+Subscription 机制：
+
+```python
+class Subscription(Protocol):
+    """订阅协议"""
+    def is_match(self, topic_id: TopicId) -> bool: ...
+    def map_to_agent(self, topic_id: TopicId) -> AgentId: ...
+
+class TypeSubscription:
+    """基于类型的订阅：topic_type → agent_type"""
+    _topic_type: str
+    _agent_type: str
+```
+
+### 6. 消息上下文与运行时信封
+
+**文件**: `autogen-core/src/autogen_core/_message_context.py`, `_single_threaded_agent_runtime.py`
+
+```python
+@dataclass
+class MessageContext:
+    """消息处理上下文，传给 Agent 的 on_message 方法"""
+    sender: AgentId | None
+    topic_id: TopicId | None
+    is_rpc: bool                    # 是否为点对点 RPC
+    cancellation_token: CancellationToken
+    message_id: str
+
+class SendMessageEnvelope:
+    """点对点消息信封"""
+    message: Any
+    recipient: AgentId
+    future: asyncio.Future
+
+class PublishMessageEnvelope:
+    """广播消息信封"""
+    message: Any
+    topic_id: TopicId
+
+class ResponseMessageEnvelope:
+    """RPC 响应信封"""
+    message: Any
+    future: asyncio.Future
+    sender: AgentId
+    recipient: AgentId
+```
+
+### 7. 模型客户端数据结构
+
+**文件**: `autogen-core/src/autogen_core/models/_model_client.py`, `_types.py`
+
+```python
+class CreateResult(BaseModel):
+    """模型补全结果"""
+    finish_reason: FinishReasons           # "stop", "length", "function_call" 等
+    content: Union[str, List[FunctionCall]] # 文本或工具调用
+    usage: RequestUsage                    # Token 使用统计
+    cached: bool = False                   # 是否来自缓存
+    thought: str | None = None             # 推理思考内容
+
+@dataclass
+class RequestUsage:
+    """Token 使用统计"""
+    prompt_tokens: int
+    completion_tokens: int
+
+class ModelInfo(TypedDict):
+    """模型能力信息"""
+    vision: bool
+    function_calling: bool
+    json_output: bool
+    family: str
+    structured_output: bool
+```
+
+### 8. 任务与状态管理结构
+
+**文件**: `autogen-agentchat/src/autogen_agentchat/base/_task.py`, `state/_states.py`
+
+```python
+class TaskResult(BaseModel):
+    """任务执行结果"""
+    messages: Sequence[BaseAgentEvent | BaseChatMessage]
+    stop_reason: str | None
+
+class Response(dataclass):
+    """Agent 响应封装"""
+    chat_message: BaseChatMessage
+    inner_messages: Sequence[BaseAgentEvent | BaseChatMessage] | None = None
+
+class BaseState(BaseModel):
+    """状态基类"""
+    type: str
+    version: str
+```
+
+各 Manager 的状态类：
+
+| 状态类 | 管理器 | 关键字段 |
+| --- | --- | --- |
+| `BaseGroupChatManagerState` | 所有 Manager | `message_thread`, `current_turn` |
+| `RoundRobinManagerState` | RoundRobinGroupChat | `next_speaker_index: int` |
+| `SelectorManagerState` | SelectorGroupChat | `previous_speaker: str \| None` |
+| `SwarmManagerState` | Swarm | `current_speaker: str` |
+| `MagenticOneOrchestratorState` | MagenticOne | `task`, `facts`, `plan`, `n_rounds`, `n_stalls` |
+| `AssistantAgentState` | AssistantAgent | `llm_context: Mapping[str, Any]` |
+| `ChatAgentContainerState` | ChatAgentContainer | `agent_state`, `message_buffer` |
+| `TeamState` | Team | `agent_states: Mapping[str, Any]` |
+
+### 9. 记忆数据结构
+
+**文件**: `autogen-core/src/autogen_core/memory/_base_memory.py`
+
+```python
+class MemoryContent(BaseModel):
+    """记忆内容项"""
+    content: ContentType            # str, bytes, dict 或 Image
+    mime_type: MemoryMimeType | str # MIME 类型
+    metadata: Dict[str, Any]        # 分类、分数、来源等
+
+class MemoryQueryResult(BaseModel):
+    """记忆查询结果"""
+    results: List[MemoryContent]
+
+class UpdateContextResult(BaseModel):
+    """更新上下文的结果"""
+    memories: MemoryQueryResult
+```
+
+### 10. 终止条件
+
+**文件**: `autogen-agentchat/src/autogen_agentchat/base/_termination.py`
+
+```python
+class TerminationCondition(ABC):
+    """终止条件基类，支持 & 和 | 组合"""
+    @property
+    def terminated(self) -> bool: ...
+    def __call__(self, messages: Sequence[BaseAgentEvent | BaseChatMessage]) -> StopMessage | None: ...
+    def reset(self) -> None: ...
+```
+
+内置终止条件：`TextMentionTermination`、`StopMessageTermination`、`MaxMessageTermination`、`SourceMatchTermination`、`TokenUsageTermination`、`HandoffTermination`、`TimeoutTermination`。
+
+### 11. 图结构 GroupChat（GraphFlow）
+
+**文件**: `autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_graph/digraph_group_chat.py`
+
+```python
+class DiGraphEdge(BaseModel):
+    target: str
+    condition: Union[str, Callable, None] = None
+    activation_group: str = ""
+    activation_condition: Literal["all", "any"] = "all"
+
+class DiGraphNode(BaseModel):
+    name: str
+    edges: List[DiGraphEdge]
+    activation: Literal["all", "any"] = "all"
+
+class DiGraph(BaseModel):
+    nodes: Dict[str, DiGraphNode]
+    default_start_node: str | None = None
+```
+
+### 12. 数据结构层次总览
+
+```mermaid
+graph LR
+  subgraph Core["autogen-core 底层运行时"]
+    direction TB
+    subgraph Ident["标识"]
+      direction LR
+      AgentId
+      TopicId
+    end
+    subgraph LLM["LLM 消息"]
+      direction LR
+      SystemMessage
+      UserMessage
+      AssistantMessage
+      FunctionExecutionResultMessage
+    end
+    subgraph Tool["工具"]
+      direction LR
+      FunctionCall
+      FunctionExecutionResult
+      ToolSchema
+      ToolResult
+    end
+    subgraph RT["运行时"]
+      direction LR
+      MessageContext
+      SendMessageEnvelope
+      PublishMessageEnvelope
+    end
+    subgraph Model["模型"]
+      direction LR
+      CreateResult
+      RequestUsage
+    end
+    MemoryContent
+  end
+
+  subgraph Chat["autogen-agentchat 高层 API"]
+    direction TB
+    subgraph Msg["聊天消息"]
+      direction LR
+      BaseChatMessage
+      BaseAgentEvent
+      TextMessage
+      HandoffMessage
+      StopMessage
+    end
+    subgraph GC["GroupChat 事件"]
+      direction LR
+      GroupChatStart
+      GroupChatRequestPublish
+      GroupChatAgentResponse
+      GroupChatTermination
+    end
+    subgraph Task["任务/状态"]
+      direction LR
+      TaskResult
+      Response
+      TerminationCondition
+    end
+    subgraph GraphSt["图结构"]
+      direction LR
+      DiGraph
+      DiGraphNode
+      DiGraphEdge
+    end
+  end
+
+  BaseChatMessage -->|继承| TextMessage
+  BaseChatMessage -->|继承| HandoffMessage
+  BaseChatMessage -->|继承| StopMessage
+  BaseAgentEvent -->|继承| ToolCallRequestEvent
+  FunctionCall -->|组成| AssistantMessage
+  FunctionExecutionResult -->|组成| FunctionExecutionResultMessage
+  AgentId -->|组成| SendMessageEnvelope
+  TopicId -->|组成| PublishMessageEnvelope
+```
+
+---
+
 ## 思考层（补充）
 
 ### 设计视角
@@ -1450,6 +1893,105 @@ Task-Centric Memory 是 AutoGen 中最智能的记忆系统，其核心设计：
 4. **验证机制**：存储前验证洞察的相关性，避免噪音
 
 ---
+# 消息传递机制寓言
+AutoGen 消息传递机制寓言
+寓言故事
+在一个繁忙的图书馆里,有一位馆长(Manager)和几位专业图书管理员(Workers)。这个图书馆有一个特别的规矩:所有的对话都要写在公共留言板(group_topic)上,每个人都能看到。
+
+有一天,一位读者走进图书馆,在留言板上写下:"我想找一本关于纽约旅行的书。"馆长看到后,立即在留言板上贴出这条消息,所有管理员都拿出自己的笔记本(message_buffer),把这条消息抄了下来。
+
+馆长环顾四周,决定让旅行书籍专员(Travel_Advisor)来处理。但馆长并没有把任务内容再说一遍,而是走到旅行专员面前,轻轻拍了拍他的肩膀(GroupChatRequestPublish空信号)。旅行专员心领神会,翻开自己的笔记本,看到了读者的需求,然后开始工作。
+
+旅行专员查阅资料后,在公共留言板上写道:"我建议先查一下纽约的酒店。"所有管理员又在自己的笔记本上记下了这条消息。
+
+馆长再次环顾,这次选择了酒店专员(Hotel_Agent)。同样,只是拍了拍肩膀。酒店专员翻开笔记本,看到了读者的原始需求和旅行专员的建议,然后开始查找酒店信息。
+
+这个过程一直持续,直到读者的需求被完全满足。每个人的笔记本上都记录着完整的对话历史,但他们只在被馆长"点名"时才发言。
+
+有趣的是,馆长选择下一个发言者的方式有四种:
+
+轮流制(RoundRobinGroupChat):按座位顺序,A→B→C→A循环
+智能推荐(SelectorGroupChat):馆长根据对话内容,用智慧(LLM)判断该找谁
+接力棒(Swarm):当前发言者说完后,主动指定下一个人
+项目经理模式(MagenticOneGroupChat):馆长制定完整计划,统筹安排谁先谁后
+寓言与技术的对应关系
+寓言元素	技术概念	说明
+图书馆馆长	GroupChatManager	负责选择发言者、维护对话流程、检查终止条件
+图书管理员	ChatAgentContainer + Agent	实际处理任务的工作单元
+公共留言板	group_topic	所有消息广播的频道,所有参与者都能看到
+个人笔记本	_message_buffer	每个 Container 独立维护的消息缓存
+拍肩膀	GroupChatRequestPublish	Manager 发送的空触发信号
+在留言板写消息	publish_message	广播消息到 group_topic
+读者的请求	GroupChatStart	用户的初始任务消息
+管理员的回复	GroupChatAgentResponse	Agent 处理后的响应消息
+抄写到笔记本	handle_start/handle_agent_response	Container 接收广播消息并存入 buffer
+翻开笔记本查看	on_messages_stream(buffer)	Agent 从 buffer 获取完整上下文
+关键流程对照
+场景1:读者提出需求,旅行专员响应
+寓言场景:
+
+读者在留言板写:"我想找纽约旅行的书"
+馆长把消息贴到留言板上
+所有管理员在笔记本上记录
+馆长拍旅行专员的肩膀
+旅行专员翻开笔记本,看到需求,开始工作
+旅行专员在留言板写下回复
+所有管理员更新笔记本
+对应技术流程:
+
+team.run_stream(task="我想找纽约旅行的书")
+runtime.send_message(GroupChatStart(messages=[TextMessage]), recipient=ManagerAgentId)
+manager.publish_message(GroupChatStart, topic_id=group_topic)
+所有 ChatAgentContainer.handle_start() 将消息存入 _message_buffer
+manager.select_speaker() 返回 "Travel_Advisor"
+manager.publish_message(GroupChatRequestPublish(), topic_id=Travel_Advisor_topic)
+Travel_Advisor Container.handle_request() 调用 agent.on_messages_stream(buffer)
+Agent 处理完成,publish_message(GroupChatAgentResponse, topic_id=group_topic)
+所有 Container 的 handle_agent_response() 更新 buffer
+场景2:馆长选择下一个发言者(智能推荐模式)
+寓言场景:
+
+馆长翻看留言板上的对话历史
+馆长思考:"现在讨论到酒店了,该找谁呢?"
+馆长查看每个管理员的专长说明
+馆长用智慧判断:应该找酒店专员
+馆长走向酒店专员,拍肩膀
+对应技术流程:
+
+SelectorGroupChat.select_speaker(thread) 被调用
+构建 selector prompt,包含:
+{roles}: 所有 Agent 的名称和描述
+{participants}: 候选 Agent 列表(排除上一个发言者)
+{history}: 对话历史
+调用 LLM 进行选择:await self._select_speaker(roles, participants, max_attempts)
+LLM 返回选中的 Agent 名称
+publish_message(GroupChatRequestPublish(), topic_id=selected_agent_topic)
+场景3:管理员查看笔记本获取完整上下文
+寓言场景:
+
+酒店专员被拍肩膀后,翻开笔记本
+笔记本上记录着:
+第1页:读者说"我想找纽约旅行的书"
+第2页:旅行专员说"我建议先查酒店"
+酒店专员看完所有记录,理解了完整背景
+酒店专员开始查找酒店信息
+对应技术流程:
+
+ChatAgentContainer.handle_request() 接收到 GroupChatRequestPublish
+调用 agent.on_messages_stream(self._message_buffer, ...)
+Agent 内部组装 context:
+SystemMessage(系统提示)
+历史消息(从 model_context)
+新消息(从 buffer)
+Memory 内容(可选)
+调用 LLM:model_client.create(..., messages=context, tools=tools)
+返回响应
+寓言的启示
+这个寓言揭示了 AutoGen 消息机制的三个核心设计理念:
+
+1. 公共透明的信息共享:所有消息都通过公共留言板(group_topic)广播,确保每个参与者都能看到完整的对话历史。这种设计避免了信息孤岛,让每个 Agent 都能基于完整上下文做出决策。
+
+2. 轻量级的触发机制:Manager 不需要重复传递任务内容,只需发送一个空信号(拍肩膀)来触发 Worker。Worker 自己从 buffer 中获取上下文,这种设计减少了消息传递的开销,同时保持了组件的独立性和可测试性。每个 Container 维护独立的 buffer,虽然内容同步,但状态隔离,支持并发处理和动态扩展。
 
 ## 源码索引
 

@@ -18,7 +18,8 @@ agents/ <role_name> / <work_rook>
 teams/ <team_name> / team.json # 存放小组成员
 teams / <team_name> / <project_path> / <group_chat_id> / <group_chat_id>.jsonl # 存放group_chat的上下文
 teams / <team_name> / <project_path> / <group_chat_id> / agent_session_id.json # 存放group_chat的上下文
-teams / <team_name> / <project_path> / <group_chat_id> / memory / # （暂定，先不实现）存放会话短期压缩记忆和记录
+teams / <team_name> / <project_path> / <group_chat_id> / memory / user_memory.md (暂不实现)
+teams / <team_name> / <project_path> / <group_chat_id> / memory / compact_history.jsonl  
 
 <group_chat_id>.jsonl 
 
@@ -40,6 +41,14 @@ agent_session_id.json:
 <project_path> 解析规则，传入的project_path str 将/ : \\ 转化为 -
 
 """
+"""
+compact_history.jsonl  
+{create_at:,content : {summary : 对这段内容的一个简短内容说明 , <agentA> : 针对于agentA应该关注的信息的提取},<agentB>:针对于agentB应该关注的信息的提取...}
+当前群聊历史的compact机制说明：1. summary是对于每个agent共有的 2. <agentA>是针对于于每个在compact存在的时候的专门压缩 3. 每次压缩只压缩从last_compact_loc 到最新的内容，不包括之前的内容
+"""
+
+
+
 
 """
 teams.json
@@ -51,11 +60,102 @@ teams.json
 ]
 
 """
+import tiktoken,json
+from typing import Any
+# 暂时的辅助函数
+def estimate_prompt_tokens(
+    messages: list[dict[str, Any]],
+    tools: list[dict[str, Any]] | None = None,
+) -> int:
+    """Estimate prompt tokens with tiktoken.
 
+    Counts all fields that providers send to the LLM: content, tool_calls,
+    reasoning_content, tool_call_id, name, plus per-message framing overhead.
+    """
+    try:
+        enc = tiktoken.get_encoding("cl100k_base")
+        parts: list[str] = []
+        for msg in messages:
+            content = msg.get("content")
+            if isinstance(content, str):
+                parts.append(content)
+            elif isinstance(content, list):
+                for part in content:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        txt = part.get("text", "")
+                        if txt:
+                            parts.append(txt)
 
-# Team
-# Team类存在的意义是什么？目前能想到的就算一个team成员的检验器，可以从json文档中加载
+            tc = msg.get("tool_calls")
+            if tc:
+                parts.append(json.dumps(tc, ensure_ascii=False))
 
+            rc = msg.get("reasoning_content")
+            if isinstance(rc, str) and rc:
+                parts.append(rc)
+
+            for key in ("name", "tool_call_id"):
+                value = msg.get(key)
+                if isinstance(value, str) and value:
+                    parts.append(value)
+
+        if tools:
+            parts.append(json.dumps(tools, ensure_ascii=False))
+
+        per_message_overhead = len(messages) * 4
+        return len(enc.encode("\n".join(parts))) + per_message_overhead
+    except Exception:
+        return 0
+
+# ============================= 常量 ========================================
+MAX_TOKEN = 1000
+
+# ============================= LLM / Agent调用 ==============================
+agent_platform_client = AgentBridge()
+def create_defaute_role():
+    role_manager = RoleManager()
+    role_manager.create_role(
+            "Leader",
+            AgentPlatform.CLAUDE,
+            type=RoleType.LEADER,
+            description="团队领导，负责任务分配、进度跟踪和技术决策"
+        )
+    role_manager.create_role(
+            "llm_call",
+            AgentPlatform.CLAUDE,
+            type=RoleType.LEADER
+        )
+    role_manager.create_role(
+            "llm_call_codex",
+            AgentPlatform.CODEX,
+            type=RoleType.LEADER
+        )
+create_defaute_role()
+class Agent:
+    def __init__(self,role:Role):
+        self.role_config = role.get_role_config()
+        self.name = self.role_config.name # 这里很奇怪，这些信息应该都直接作为类成员比较好啊，先不优化，role和agentbriged之后在优化
+        self.role_type = role.get_info().type
+        pass
+    async def execute(self, prompt, session: str | None = None):
+        return await agent_platform_client.execute(prompt, self.role_config)
+class Manager(Agent):
+    def __init__(self):
+        super().__init__(RoleManager().get_role("Leader"))
+        pass
+    pass
+class Worker(Agent):
+    pass
+
+class LLMCall(Agent):
+    def __init__(self):
+        # 暂时这么写临时的非角色的llm调用，llm_call不进入groupchat,可临时用于需要llm调用的场景
+        super().__init__(RoleManager().get_role("llm_call"))
+        pass
+llm_call = LLMCall()
+llm_call_codex = Agent(RoleManager().get_role("llm_call_codex"))
+
+# ===========================团队设置（暂时），后续应该增加团队管理类=============
 class Team(BaseModel):
     team_members_name : list[str]
     team_name : str = "default_team"  # 设置默认值
@@ -72,6 +172,10 @@ class Team(BaseModel):
             if role not in role_info_list:
                 raise ValueError(f"错误的role_name {role}")
         return team_members_name
+
+
+# ===========================针对于某个团队的群聊===============================
+
 class GroupChatType(Enum):
     SEQUENCE_EXECUTE = "sequence_excute" # 流水线顺序执行
     MANAGER_ORCHESTRATE = "manager_orchestrate" # 由Team manager动态决定安排
@@ -172,6 +276,41 @@ class GroupChat:
 
         # 3. 初始化新成员（第一次会话的成员）
         await self._initialize_new_members()
+
+    async def compact_history(self):
+        """
+        压缩群聊历史消息
+
+        将未压缩的消息进行压缩，生成摘要和针对每个 agent 的专门信息
+        """
+        # 构建 agent 信息字典 {agent_name: work_scope}
+        agent_info = {}
+
+        # 添加 manager 信息
+        if self.manager:
+            manager_role = RoleManager().get_role(self.manager.name)
+            agent_info[self.manager.name] = manager_role.get_role_config().description or "团队领导"
+
+        # 添加 workers 信息
+        role_manager = RoleManager()
+        for name in self.works.keys():
+            worker_role = role_manager.get_role(name)
+            agent_info[name] = worker_role.get_role_config().description or "团队成员"
+
+        await self.group_chat_context.compact_messages(agent_info)
+
+    def get_agent_context(self, agent_name: str) -> str:
+        """
+        获取特定 agent 的上下文
+
+        Args:
+            agent_name: agent 名称
+
+        Returns:
+            格式化的上下文字符串，包括压缩历史和最新消息
+        """
+        return self.group_chat_context.get_agent_context(agent_name)
+
 @dataclass
 class AgentSessionInfo:
     """Agent 的会话信息"""
@@ -209,6 +348,7 @@ class GroupChatContext:
         self.group_chat_session_path = f"{LOCAL_DATA_PATH}/teams/{sanitized_path}/{group_chat_id}"
         self.messages_file = f"{self.group_chat_session_path}/{group_chat_id}.jsonl"
         self.session_file = f"{self.group_chat_session_path}/agent_session_id.json" # agent_name : {main_session: , btw_session}
+        self.compact_history_file = f"{self.group_chat_session_path}/memory/compact_history.jsonl"
         self.agent_session_id = self.get_agent_session_id()
         self.group_chat_session = self.load_group_chat_session()
 
@@ -368,6 +508,175 @@ class GroupChatContext:
             elif session_id != session_info.main_session and session_id not in session_info.btw_session:
                 session_info.btw_session.append(session_id)
 
+    async def compact_messages(self, agent_info: dict[str, str]):
+        """
+        压缩群聊消息历史
+
+        从 last_compacted_loc 到最新的消息进行压缩，生成：
+        1. summary: 所有 agent 共享的简短内容说明
+        2. 为每个 agent 生成专门的压缩信息
+
+        Args:
+            agent_info: agent 信息字典，格式为 {agent_name: agent_work_scope}
+        """
+        import json
+        import os
+
+        # 获取未压缩的消息
+        uncompacted_messages = self.group_chat_session.get_uncompact_messages()
+
+        # 如果没有未压缩的消息，直接返回
+        if not uncompacted_messages:
+            return
+
+        # 估算 token 数量
+        token_count = estimate_prompt_tokens(uncompacted_messages)
+
+        # 如果 token 数量小于 1000，不进行压缩
+        if token_count < MAX_TOKEN:
+            print(f"未压缩消息 token 数量为 {token_count}，小于阈值 {MAX_TOKEN}，跳过压缩")
+            return
+
+        print(f"未压缩消息 token 数量为 {token_count}，开始压缩...")
+
+        # 构建消息历史文本
+        messages_text = "\n".join([
+            f"[{msg['agent_name']}]: {msg['content']}"
+            for msg in uncompacted_messages
+        ])
+
+        # 构建 agent 信息描述
+        agent_descriptions = "\n".join([
+            f"- {name}: {scope}"
+            for name, scope in agent_info.items()
+        ])
+
+        # 一次性生成 summary 和所有 agent 的专门信息
+        compact_prompt = f"""请总结下面的对话记录，请严格按照要求输出 JSON。
+
+对话记录：
+<message_list>
+{messages_text}
+</message_list>
+参与者职责：
+{agent_descriptions}
+
+任务：将上述对话总结为 JSON 格式，包含：
+1. summary: 整体对话的1-2句话总结
+2. agent_specific: 为每个参与者提取与其职责相关的2-3句话关键信息
+
+输出格式（只输出这个 JSON，不要有任何其他内容）：
+{{
+    "summary": "...",
+    "agent_specific": {{
+        "{list(agent_info.keys())[0] if agent_info else 'agent_name'}": "...",
+        ...
+    }}
+}}"""
+
+        # 调用 llm_call 进行压缩
+        print(f"input prompt : {compact_prompt}")
+        compact_result = await llm_call.execute(compact_prompt)
+        compact_result_codex = await llm_call_codex.execute(compact_prompt)
+        print(f"claude llm call : {compact_result}")
+        print(f"codex llm call : {compact_result_codex}")
+        # 解析 JSON 结果
+        try:
+            # 尝试提取 JSON（可能包含在 markdown 代码块中）
+            result_text = compact_result.text.strip()
+            if "```json" in result_text:
+                result_text = result_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in result_text:
+                result_text = result_text.split("```")[1].split("```")[0].strip()
+
+            compact_data = json.loads(result_text)
+            summary = compact_data.get("summary", "")
+            agent_specific = compact_data.get("agent_specific", {})
+        except json.JSONDecodeError as e:
+            print(f"解析压缩结果失败: {e}")
+            print(f"原始结果: {compact_result.text}")
+            return
+
+        # 构建压缩记录
+        compact_record = {
+            "create_at": datetime.now().isoformat(),
+            "content": {
+                "summary": summary,
+                **agent_specific
+            }
+        }
+
+        # 保存到 compact_history.jsonl
+        os.makedirs(os.path.dirname(self.compact_history_file), exist_ok=True)
+
+        with open(self.compact_history_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(compact_record, ensure_ascii=False) + '\n')
+
+        # 更新 last_compacted_loc
+        self.group_chat_session.last_compacted_loc = len(self.group_chat_session.messages)
+        self.save_group_chat_session()
+
+        print(f"压缩完成，已压缩 {len(uncompacted_messages)} 条消息")
+
+    def load_compact_history(self) -> list[dict]:
+        """
+        加载压缩历史记录
+
+        Returns:
+            压缩历史记录列表
+        """
+        import json
+        import os
+
+        if not os.path.exists(self.compact_history_file):
+            return []
+
+        compact_history = []
+        with open(self.compact_history_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    compact_history.append(json.loads(line))
+
+        return compact_history
+
+    def get_agent_context(self, agent_name: str) -> str:
+        """
+        获取特定 agent 的上下文
+
+        包括：
+        1. 所有压缩历史的 summary
+        2. 该 agent 的专门压缩信息
+        3. 未压缩的最新消息
+
+        Args:
+            agent_name: agent 名称
+
+        Returns:
+            格式化的上下文字符串
+        """
+        context_parts = []
+
+        # 1. 加载压缩历史
+        compact_history = self.load_compact_history()
+
+        if compact_history:
+            context_parts.append("=== 历史消息摘要 ===")
+            for record in compact_history:
+                content = record['content']
+                context_parts.append(f"\n[总体]: {content['summary']}")
+                if agent_name in content:
+                    context_parts.append(f"[针对你]: {content[agent_name]}")
+
+        # 2. 添加未压缩的最新消息
+        uncompacted_messages = self.group_chat_session.get_uncompact_messages()
+        if uncompacted_messages:
+            context_parts.append("\n=== 最新消息 ===")
+            for msg in uncompacted_messages:
+                context_parts.append(f"[{msg['agent_name']}]: {msg['content']}")
+
+        return "\n".join(context_parts)
+
     @staticmethod
     def sanitize_project_path(project_path: str) -> str:
         """
@@ -390,30 +699,16 @@ class GroupChatContext:
         return sanitized
 
 
-agent_platform_client = AgentBridge()
-class Agent:
-    def __init__(self,role:Role):
-        self.role_config = role.get_role_config()
-        self.name = self.role_config.name # 这里很奇怪，这些信息应该都直接作为类成员比较好啊，先不优化，role和agentbriged之后在优化
-        self.role_type = role.get_info().type
-        pass
-    async def execute(self, prompt, session: str | None = None):
-        return await agent_platform_client.execute(prompt, self.role_config)
-class Manager(Agent):
-    def __init__(self):
-        super().__init__(RoleManager().get_role("Leader"))
-        pass
-        
-    pass
 
-class Worker(Agent):
-    pass
+
+
 
 async def main():
     role_manager = RoleManager()
     role_manager.create_role("小李",AgentPlatform.CLAUDE,type = RoleType.TEAM_MEMBER)
     role_manager.create_role("小赵",AgentPlatform.CODEX,type = RoleType.TEAM_MEMBER)
     role_manager.create_role("Leader",AgentPlatform.CLAUDE,type = RoleType.LEADER)
+    role_manager.create_role("llm_call",AgentPlatform.CODEX,type = RoleType.LEADER)
     team_member_list = ["小李","小赵"]
     team = Team(team_name= "测试",team_members_name=team_member_list)
     group_chat = GroupChat(team,GroupChatType.MANAGER_ORCHESTRATE,project_path='D:/desktop/软件开发/agents-hub')

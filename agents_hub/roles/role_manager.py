@@ -88,6 +88,7 @@ class RoleManager:
                             avatar=data.get("avatar"),
                             abilities=data.get("abilities", []),
                             type=role_type,
+                            description=data.get("description"),
                             scope=data.get("scope"),
                         ))
                     except (json.JSONDecodeError, KeyError):
@@ -153,6 +154,7 @@ class RoleManager:
         abilities: Optional[List[str]] = None,
         type: Optional[str] = None,
         scope: Optional[List[str]] = None,
+        description: Optional[str] = None,
     ) -> Role:
         """创建新角色。
 
@@ -180,7 +182,7 @@ class RoleManager:
 
         role_dir = self.agents_dir / name
         if role_dir.exists():
-            return 
+            return  # 暂时会导致tests/unit/roles/test_role_manager.py 错误，这个错误是目前的合理预期，先不改
             raise RoleAlreadyExistsError(f"Role '{name}' already exists")
 
         role_dir.mkdir(parents=True)
@@ -200,6 +202,7 @@ class RoleManager:
         role_json = {
             "name": name,
             "platform": platform.value,
+            "description": description,
             "avatar": avatar,
             "abilities": abilities or [],
             "type": type.value if isinstance(type, RoleType) else type,

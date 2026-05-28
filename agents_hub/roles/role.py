@@ -86,6 +86,7 @@ class Role:
             avatar=data.get("avatar"),
             abilities=data.get("abilities", []),
             type=role_type,
+            description=data.get("description"),
             scope=data.get("scope"),
         )
 
@@ -105,6 +106,16 @@ class Role:
         new_dir = self.role_dir.parent / new_name
         self.role_dir.rename(new_dir)
         self.role_dir = new_dir
+
+    def update_description(self, description: str) -> None:
+        """更新角色职责描述。
+
+        Args:
+            description: 新的角色职责描述。
+        """
+        data = self._read_role_json()
+        data["description"] = description
+        self._write_role_json(data)
 
     def update_avatar(self, avatar_filename: str) -> None:
         """更新角色头像文件名引用。
@@ -269,5 +280,6 @@ class Role:
         return RoleConfig(
             name=data["name"],
             platform=platform,
+            description=data.get("description"),
             work_root=str(self._work_root),
         )

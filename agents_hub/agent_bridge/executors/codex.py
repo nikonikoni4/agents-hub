@@ -30,6 +30,10 @@ class CodexExecutor:
         Returns:
             AsyncIterator[str]: 原始 JSON 字符串流
         """
+        # 移除换行符，避免 Codex CLI 命令行解析错误
+        # 参考: docs/history-bugs/2026-05-28-cli-system-prompt-blocks-simple-requests.md
+        prompt = prompt.replace('\n', ' ').replace('\r', ' ')
+
         cmd = self._build_command(prompt, config, session_id)
         env = self._build_env(config)
 

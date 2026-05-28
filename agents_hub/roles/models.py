@@ -16,6 +16,7 @@ class RoleConfig:
     """
     name: str                  # 角色名称
     platform: AgentPlatform    # 平台类型
+    description: Optional[str] = None  # 角色职责描述
     work_root: Optional[str] = None  # 角色工作目录路径（注入 CODEX_HOME / CLAUDE_CONFIG_DIR）
     role_type: RoleType = RoleType.TEAM_MEMBER  # 角色类型，默认为团队成员
 
@@ -30,6 +31,7 @@ class RoleInfo:
     Attributes:
         name: 角色名称，与目录名一致。
         platform: 目标平台类型（claude 或 codex）。
+        description: 角色职责描述，可为空。
         avatar: 头像文件的相对路径，可为空。
         abilities: 能力标签列表，用于展示和调度。
         type: 角色类型，可选值为 leader 或 team_member。
@@ -40,6 +42,7 @@ class RoleInfo:
     avatar: Optional[str]
     abilities: List[str]
     type: Optional[RoleType] = RoleType.TEAM_MEMBER
+    description: Optional[str] = None
     scope: Optional[List[str]] = None
 
 

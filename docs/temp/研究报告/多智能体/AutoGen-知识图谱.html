@@ -155,7 +155,7 @@
   <header class="hero">
     <div class="badge">Knowledge Graph · 2026-05-26 · 深度调研版</div>
     <h1>AutoGen 多智能体知识图谱</h1>
-    <p class="subtitle">基于 <code>other/autogen</code> 源码的深度调研，涵盖框架结构、Memory 机制（写入/读取/prompt）、工具调用（schema/错误处理）、Agent 间通信（消息格式/context 组成）和消息机制（发布订阅/流转链路）。</p>
+    <p class="subtitle">基于 <code>other/autogen</code> 源码的深度调研，涵盖框架结构、Memory 机制（写入/读取/prompt）、工具调用（schema/错误处理）、Agent 间通信（消息格式/context 组成）、消息机制（发布订阅/流转链路）和关键数据结构（消息类型/工具/状态/标识）。</p>
   </header>
 
   <nav>
@@ -166,6 +166,7 @@
     <a href="#comm-detail">Agent 通信详情</a>
     <a href="#speaker-buffer">发言模式与 Buffer</a>
     <a href="#msg-detail">消息机制详情</a>
+    <a href="#data-struct">数据结构</a>
     <a href="#workflow">动态流程</a>
   </nav>
 
@@ -735,6 +736,51 @@ sequenceDiagram
       <strong>AutoGen</strong>：像一个<strong>开放办公室</strong>，所有人坐在一起，谁说话所有人都能听到。<br>
       <strong>DeerFlow/CrewAI</strong>：像一个<strong>经理办公室</strong>，经理一个个叫人进来谈话，每个人只知道经理告诉他的内容。
     </div>
+
+    <h4>寓言：图书馆的故事</h4>
+    <div class="prompt-block">
+      <strong>AutoGen 消息传递机制寓言</strong><br>
+      在一个繁忙的图书馆里，有一位馆长（Manager）和几位专业图书管理员（Workers）。这个图书馆有一个特别的规矩：所有的对话都要写在公共留言板（group_topic）上，每个人都能看到。
+    </div>
+
+    <p>有一天，一位读者走进图书馆，在留言板上写下："我想找一本关于纽约旅行的书。"馆长看到后，立即在留言板上贴出这条消息，所有管理员都拿出自己的笔记本（message_buffer），把这条消息抄了下来。</p>
+
+    <p>馆长环顾四周，决定让旅行书籍专员（Travel_Advisor）来处理。但馆长并没有把任务内容再说一遍，而是走到旅行专员面前，轻轻拍了拍他的肩膀（GroupChatRequestPublish 空信号）。旅行专员心领神会，翻开自己的笔记本，看到了读者的需求，然后开始工作。</p>
+
+    <p>旅行专员查阅资料后，在公共留言板上写道："我建议先查一下纽约的酒店。"所有管理员又在自己的笔记本上记下了这条消息。</p>
+
+    <p>馆长再次环顾，这次选择了酒店专员（Hotel_Agent）。同样，只是拍了拍肩膀。酒店专员翻开笔记本，看到了读者的原始需求和旅行专员的建议，然后开始查找酒店信息。</p>
+
+    <p>这个过程一直持续，直到读者的需求被完全满足。每个人的笔记本上都记录着完整的对话历史，但他们只在被馆长"点名"时才发言。</p>
+
+    <p>有趣的是，馆长选择下一个发言者的方式有四种：</p>
+    <ul>
+      <li><strong>轮流制（RoundRobinGroupChat）</strong>：按座位顺序，A→B→C→A 循环</li>
+      <li><strong>智能推荐（SelectorGroupChat）</strong>：馆长根据对话内容，用智慧（LLM）判断该找谁</li>
+      <li><strong>接力棒（Swarm）</strong>：当前发言者说完后，主动指定下一个人</li>
+      <li><strong>项目经理模式（MagenticOneGroupChat）</strong>：馆长制定完整计划，统筹安排谁先谁后</li>
+    </ul>
+
+    <h4>寓言与技术的对应关系</h4>
+    <table>
+      <tr><th>寓言元素</th><th>技术概念</th><th>说明</th></tr>
+      <tr><td>图书馆馆长</td><td>GroupChatManager</td><td>负责选择发言者、维护对话流程、检查终止条件</td></tr>
+      <tr><td>图书管理员</td><td>ChatAgentContainer + Agent</td><td>实际处理任务的工作单元</td></tr>
+      <tr><td>公共留言板</td><td>group_topic</td><td>所有消息广播的频道，所有参与者都能看到</td></tr>
+      <tr><td>个人笔记本</td><td>_message_buffer</td><td>每个 Container 独立维护的消息缓存</td></tr>
+      <tr><td>拍肩膀</td><td>GroupChatRequestPublish</td><td>Manager 发送的空触发信号</td></tr>
+      <tr><td>在留言板写消息</td><td>publish_message</td><td>广播消息到 group_topic</td></tr>
+      <tr><td>读者的请求</td><td>GroupChatStart</td><td>用户的初始任务消息</td></tr>
+      <tr><td>管理员的回复</td><td>GroupChatAgentResponse</td><td>Agent 处理后的响应消息</td></tr>
+      <tr><td>抄写到笔记本</td><td>handle_start / handle_agent_response</td><td>Container 接收广播消息并存入 buffer</td></tr>
+      <tr><td>翻开笔记本查看</td><td>on_messages_stream(buffer)</td><td>Agent 从 buffer 获取完整上下文</td></tr>
+    </table>
+
+    <h4>寓言的启示</h4>
+    <div class="block">
+      <strong>1. 公共透明的信息共享</strong>：所有消息都通过公共留言板（group_topic）广播，确保每个参与者都能看到完整的对话历史。这种设计避免了信息孤岛，让每个 Agent 都能基于完整上下文做出决策。<br><br>
+      <strong>2. 轻量级的触发机制</strong>：Manager 不需要重复传递任务内容，只需发送一个空信号（拍肩膀）来触发 Worker。Worker 自己从 buffer 中获取上下文，这种设计减少了消息传递的开销，同时保持了组件的独立性和可测试性。每个 Container 维护独立的 buffer，虽然内容同步，但状态隔离，支持并发处理和动态扩展。
+    </div>
   </div></section>
 
   <!-- ============ 消息机制详情 ============ -->
@@ -820,9 +866,274 @@ flowchart TD
     </div></div>
   </div></section>
 
+  <!-- ============ 关键数据结构 ============ -->
+  <section id="data-struct"><div class="card">
+    <h2>8. 关键数据结构参考</h2>
+    <p>AutoGen 数据结构分为两层：<code>autogen-core</code> 定义底层运行时抽象（Agent、消息、工具、模型客户端），<code>autogen-agentchat</code> 定义面向应用的高层结构（聊天消息、Team、GroupChat）。</p>
+
+    <h3>8.1 Core 层 LLM 消息类型</h3>
+    <p>文件: <code>autogen-core/models/_types.py</code>，通过 <code>type</code> 字段区分四种消息：</p>
+    <table>
+      <tr><th>类型</th><th>关键字段</th><th>用途</th></tr>
+      <tr><td><code>SystemMessage</code></td><td><code>content: str</code></td><td>系统指令，来自开发者</td></tr>
+      <tr><td><code>UserMessage</code></td><td><code>content: str | List[str | Image]</code>, <code>source</code></td><td>用户输入或数据，支持多模态</td></tr>
+      <tr><td><code>AssistantMessage</code></td><td><code>content: str | List[FunctionCall]</code>, <code>thought</code>, <code>source</code></td><td>模型回复，文本或工具调用</td></tr>
+      <tr><td><code>FunctionExecutionResultMessage</code></td><td><code>content: List[FunctionExecutionResult]</code></td><td>工具执行结果集合</td></tr>
+    </table>
+    <div class="note">联合类型: <code>LLMMessage = Union[SystemMessage, UserMessage, AssistantMessage, FunctionExecutionResultMessage]</code></div>
+
+    <h3>8.2 AgentChat 层消息类型</h3>
+    <p>文件: <code>autogen-agentchat/messages.py</code>，继承自两个抽象基类：</p>
+    <div class="grid">
+      <div class="block"><strong>BaseChatMessage</strong><br>Agent 间通信的聊天消息基类。字段: <code>id</code>, <code>source</code>, <code>models_usage</code>, <code>metadata</code>, <code>created_at</code></div>
+      <div class="block"><strong>BaseAgentEvent</strong><br>Agent 事件信号，用于通知，不用于 Agent 间通信。字段: <code>id</code>, <code>source</code>, <code>models_usage</code>, <code>metadata</code></div>
+    </div>
+    <table>
+      <tr><th>类型</th><th>基类</th><th>用途</th><th>关键字段</th></tr>
+      <tr><td><code>TextMessage</code></td><td>ChatMessage</td><td>纯文本消息</td><td><code>content: str</code></td></tr>
+      <tr><td><code>MultiModalMessage</code></td><td>ChatMessage</td><td>多模态消息</td><td><code>content: List[str | Image]</code></td></tr>
+      <tr><td><code>StopMessage</code></td><td>ChatMessage</td><td>请求停止对话</td><td><code>content: str</code></td></tr>
+      <tr><td><code>HandoffMessage</code></td><td>ChatMessage</td><td>移交给其他 Agent</td><td><code>target</code>, <code>context: List[LLMMessage]</code></td></tr>
+      <tr><td><code>ToolCallSummaryMessage</code></td><td>ChatMessage</td><td>工具调用结果摘要</td><td><code>tool_calls</code>, <code>results</code></td></tr>
+      <tr><td><code>StructuredMessage[T]</code></td><td>ChatMessage</td><td>结构化消息（泛型）</td><td><code>content: T</code>, <code>format_string</code></td></tr>
+      <tr><td><code>ToolCallRequestEvent</code></td><td>AgentEvent</td><td>请求使用工具</td><td><code>content: List[FunctionCall]</code></td></tr>
+      <tr><td><code>ToolCallExecutionEvent</code></td><td>AgentEvent</td><td>工具执行结果事件</td><td><code>content: List[FunctionExecutionResult]</code></td></tr>
+      <tr><td><code>ModelClientStreamingChunkEvent</code></td><td>AgentEvent</td><td>流式输出文本块</td><td><code>content: str</code></td></tr>
+      <tr><td><code>ThoughtEvent</code></td><td>AgentEvent</td><td>模型思考过程</td><td><code>content: str</code></td></tr>
+    </table>
+
+    <h3>8.3 GroupChat 事件类型</h3>
+    <p>文件: <code>autogen-agentchat/teams/_group_chat/_events.py</code></p>
+    <table>
+      <tr><th>类型</th><th>用途</th><th>关键字段</th></tr>
+      <tr><td><code>GroupChatStart</code></td><td>启动群聊</td><td><code>messages: List[BaseChatMessage] | None</code>, <code>output_task_messages</code></td></tr>
+      <tr><td><code>GroupChatRequestPublish</code></td><td>Manager 触发 Worker 发言</td><td><em>空消息，Worker 从 buffer 获取上下文</em></td></tr>
+      <tr><td><code>GroupChatAgentResponse</code></td><td>Agent 的群聊响应</td><td><code>response: Response</code>, <code>name: str</code></td></tr>
+      <tr><td><code>GroupChatTeamResponse</code></td><td>子 Team 的群聊响应</td><td><code>result: TaskResult</code>, <code>name: str</code></td></tr>
+      <tr><td><code>GroupChatMessage</code></td><td>群聊消息包装</td><td><code>message: BaseAgentEvent | BaseChatMessage</code></td></tr>
+      <tr><td><code>GroupChatTermination</code></td><td>群聊终止信号</td><td><code>message: StopMessage</code>, <code>error: SerializableException | None</code></td></tr>
+      <tr><td><code>GroupChatError</code></td><td>群聊错误</td><td><code>error: SerializableException</code></td></tr>
+    </table>
+
+    <h3>8.4 工具调用数据结构</h3>
+    <p>文件: <code>autogen-core/_types.py</code>, <code>tools/_base.py</code>, <code>tools/_workbench.py</code></p>
+    <pre><code>@dataclass
+class FunctionCall:
+    """LLM 返回的函数调用请求"""
+    id: str           # 调用唯一 ID
+    arguments: str    # JSON 格式的参数
+    name: str         # 工具名称
+
+@dataclass
+class FunctionExecutionResult:
+    """工具执行结果，回传给 LLM"""
+    content: str           # 执行输出或错误信息
+    name: str              # 工具名称
+    call_id: str           # 对应 FunctionCall 的 ID
+    is_error: bool | None  # 是否为错误
+
+class ToolSchema(TypedDict):
+    name: str
+    description: str
+    parameters: ParametersSchema
+    strict: bool
+
+class ToolResult(BaseModel):
+    name: str
+    result: List[ResultContent]  # TextResultContent 或 ImageResultContent
+    is_error: bool</code></pre>
+
+    <h4>工具类型层次</h4>
+    <table>
+      <tr><th>类型</th><th>位置</th><th>用途</th></tr>
+      <tr><td><code>Tool</code> (Protocol)</td><td><code>tools/_base.py</code></td><td>工具协议，定义 <code>run_json()</code> 接口</td></tr>
+      <tr><td><code>BaseTool</code> (ABC)</td><td><code>tools/_base.py</code></td><td>工具抽象基类，持有 args/return 类型</td></tr>
+      <tr><td><code>FunctionTool</code></td><td><code>tools/_function_tool.py</code></td><td>将 Python 函数包装为工具</td></tr>
+      <tr><td><code>Workbench</code> (ABC)</td><td><code>tools/_workbench.py</code></td><td>工具集合管理接口</td></tr>
+      <tr><td><code>StaticWorkbench</code></td><td><code>tools/_workbench.py</code></td><td>包装普通工具列表</td></tr>
+      <tr><td><code>McpWorkbench</code></td><td><code>autogen-ext</code></td><td>连接 MCP server</td></tr>
+    </table>
+
+    <h3>8.5 Agent 与 Runtime 标识结构</h3>
+    <p>文件: <code>autogen-core/_agent_id.py</code>, <code>_topic.py</code>, <code>_subscription.py</code></p>
+    <pre><code>@dataclass(frozen=True)
+class AgentId:
+    """Agent 实例的唯一标识"""
+    type: str   # Agent 类型
+    key: str    # 实例标识
+
+@dataclass(frozen=True)
+class TopicId:
+    """主题标识，定义广播消息的范围"""
+    type: str    # 事件类型
+    source: str  # 来源上下文
+
+class TypeSubscription:
+    """基于类型的订阅：topic_type → agent_type"""
+    _topic_type: str
+    _agent_type: str</code></pre>
+
+    <h3>8.6 消息上下文与运行时信封</h3>
+    <pre><code>@dataclass
+class MessageContext:
+    """消息处理上下文"""
+    sender: AgentId | None
+    topic_id: TopicId | None
+    is_rpc: bool
+    cancellation_token: CancellationToken
+    message_id: str
+
+class SendMessageEnvelope:    # 点对点: message + recipient + future
+class PublishMessageEnvelope: # 广播: message + topic_id
+class ResponseMessageEnvelope: # RPC 响应: message + future + sender + recipient</code></pre>
+
+    <h3>8.7 模型客户端数据结构</h3>
+    <pre><code>class CreateResult(BaseModel):
+    finish_reason: FinishReasons
+    content: Union[str, List[FunctionCall]]
+    usage: RequestUsage
+    cached: bool = False
+    thought: str | None = None
+
+@dataclass
+class RequestUsage:
+    prompt_tokens: int
+    completion_tokens: int
+
+class ModelInfo(TypedDict):
+    vision: bool
+    function_calling: bool
+    json_output: bool
+    family: str
+    structured_output: bool</code></pre>
+
+    <h3>8.8 任务与状态管理结构</h3>
+    <pre><code>class TaskResult(BaseModel):
+    messages: Sequence[BaseAgentEvent | BaseChatMessage]
+    stop_reason: str | None
+
+class Response(dataclass):
+    chat_message: BaseChatMessage
+    inner_messages: Sequence[...] | None = None</code></pre>
+    <table>
+      <tr><th>状态类</th><th>管理器</th><th>关键字段</th></tr>
+      <tr><td><code>BaseGroupChatManagerState</code></td><td>所有 Manager</td><td><code>message_thread</code>, <code>current_turn</code></td></tr>
+      <tr><td><code>RoundRobinManagerState</code></td><td>RoundRobinGroupChat</td><td><code>next_speaker_index: int</code></td></tr>
+      <tr><td><code>SelectorManagerState</code></td><td>SelectorGroupChat</td><td><code>previous_speaker: str | None</code></td></tr>
+      <tr><td><code>SwarmManagerState</code></td><td>Swarm</td><td><code>current_speaker: str</code></td></tr>
+      <tr><td><code>MagenticOneOrchestratorState</code></td><td>MagenticOne</td><td><code>task</code>, <code>facts</code>, <code>plan</code>, <code>n_rounds</code>, <code>n_stalls</code></td></tr>
+      <tr><td><code>AssistantAgentState</code></td><td>AssistantAgent</td><td><code>llm_context</code></td></tr>
+      <tr><td><code>TeamState</code></td><td>Team</td><td><code>agent_states</code></td></tr>
+    </table>
+
+    <h3>8.9 记忆数据结构</h3>
+    <pre><code>class MemoryContent(BaseModel):
+    content: ContentType            # str, bytes, dict 或 Image
+    mime_type: MemoryMimeType | str
+    metadata: Dict[str, Any]
+
+class MemoryQueryResult(BaseModel):
+    results: List[MemoryContent]</code></pre>
+
+    <h3>8.10 图结构 GroupChat（GraphFlow）</h3>
+    <pre><code>class DiGraphEdge(BaseModel):
+    target: str
+    condition: Union[str, Callable, None] = None
+    activation_group: str = ""
+    activation_condition: Literal["all", "any"] = "all"
+
+class DiGraphNode(BaseModel):
+    name: str
+    edges: List[DiGraphEdge]
+    activation: Literal["all", "any"] = "all"
+
+class DiGraph(BaseModel):
+    nodes: Dict[str, DiGraphNode]
+    default_start_node: str | None = None</code></pre>
+
+    <h3>8.11 数据结构层次总览</h3>
+    <div class="diagram"><div class="mermaid">
+graph LR
+  subgraph Core["autogen-core 底层运行时"]
+    direction TB
+    subgraph Ident["标识"]
+      direction LR
+      AgentId
+      TopicId
+    end
+    subgraph LLM["LLM 消息"]
+      direction LR
+      SystemMessage
+      UserMessage
+      AssistantMessage
+      FunctionExecutionResultMessage
+    end
+    subgraph Tool["工具"]
+      direction LR
+      FunctionCall
+      FunctionExecutionResult
+      ToolSchema
+      ToolResult
+    end
+    subgraph RT["运行时"]
+      direction LR
+      MessageContext
+      SendMessageEnvelope
+      PublishMessageEnvelope
+    end
+    subgraph Model["模型"]
+      direction LR
+      CreateResult
+      RequestUsage
+    end
+    MemoryContent
+  end
+
+  subgraph Chat["autogen-agentchat 高层 API"]
+    direction TB
+    subgraph Msg["聊天消息"]
+      direction LR
+      BaseChatMessage
+      BaseAgentEvent
+      TextMessage
+      HandoffMessage
+      StopMessage
+    end
+    subgraph GC["GroupChat 事件"]
+      direction LR
+      GroupChatStart
+      GroupChatRequestPublish
+      GroupChatAgentResponse
+      GroupChatTermination
+    end
+    subgraph Task["任务/状态"]
+      direction LR
+      TaskResult
+      Response
+      TerminationCondition
+    end
+    subgraph Graph["图结构"]
+      direction LR
+      DiGraph
+      DiGraphNode
+      DiGraphEdge
+    end
+  end
+
+  BaseChatMessage -->|继承| TextMessage
+  BaseChatMessage -->|继承| HandoffMessage
+  BaseChatMessage -->|继承| StopMessage
+  BaseAgentEvent -->|继承| ToolCallRequestEvent
+  FunctionCall -->|组成| AssistantMessage
+  FunctionExecutionResult -->|组成| FunctionExecutionResultMessage
+  AgentId -->|组成| SendMessageEnvelope
+  TopicId -->|组成| PublishMessageEnvelope
+    </div></div>
+  </div></section>
+
   <!-- ============ 动态流程 ============ -->
   <section id="workflow"><div class="card">
-    <h2>8. 功能开发场景动态过程</h2>
+    <h2>9. 功能开发场景动态过程</h2>
     <p>功能开发可建模为 planner、developer、tester、reviewer 的 team。每个 agent 有不同 system message、工具和记忆；manager 负责选择发言者并判断终止。</p>
     <div class="diagram"><div class="mermaid">
 flowchart TD
