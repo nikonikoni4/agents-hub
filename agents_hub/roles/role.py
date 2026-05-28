@@ -276,10 +276,12 @@ class Role:
         """
         data = self._read_role_json()
         platform = AgentPlatform(data["platform"])
-
+        type_str = data.get("type")
+        role_type = RoleType(type_str) if type_str else None
         return RoleConfig(
             name=data["name"],
             platform=platform,
             description=data.get("description"),
             work_root=str(self._work_root),
+            role_type=role_type
         )
