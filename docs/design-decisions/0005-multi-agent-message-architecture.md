@@ -3,7 +3,7 @@ version: 1.0
 created_at: 2026-05-28
 updated_at: 2026-05-28
 last_updated: 2026-05-28
-abstract: 多 Agent 消息传递架构设计，拒绝 MetaGPT 双向引用和 AutoGen 公共 Buffer 方案，选择 MessageBus + 私有队列的点对点路由方案
+abstract: 多 Agent 消息传递架构设计，拒绝 MetaGPT 双向引用和 AutoGen 公共 Buffer 方案，选择 MessageRouter + 私有队列的点对点路由方案
 status: decided
 ---
 
@@ -144,35 +144,50 @@ for msg in group_chat.message_buffer:
 - **不符合设计原则 2**："按需提供上下文"
 - **不符合设计原则 3**："点对点优于广播"
 
-### 方案 C：MessageBus + 私有队列（本方案）
+### 方案 C：MessageRouter + 私有队列（本方案）
 
 **方案内容：**
 
 ```python
-# MessageBus 持有所有 Agent 的私有队列引用
-class MessageBus:
-    _agent_buffers: dict[str, asyncio.Queue]  # 私有变量
+# MessageRouter 持有所有 Agent 的私有队列引用
+class MessageRouter:
+    def __init__(self, context: GroupChatContext):
+        self._agent_buffers: dict[str, asyncio.Queue] = {}  # 实例变量：Agent 名称 → 私有队列
+        self._context = context                              # 实例变量：群聊上下文引用
     
-    def register(agent_name, buffer):
+    def register(self, agent_name: str, buffer: asyncio.Queue):
         """注册 Agent 的私有队列"""
+        self._agent_buffers[agent_name] = buffer
     
-    def publish_message(msg):
+    def publish_message(self, msg: Message):
         """点对点路由"""
+        # 1. 记录到 GroupChatSession
+        self._context.group_chat_session.add_message(
+            sender=msg.sent_from,
+            content=msg.content,
+            send_to=msg.send_to
+        )
+        # 2. 路由到目标 Agent 的私有队列
         target_buffer = self._agent_buffers.get(msg.send_to)
         if target_buffer:
             target_buffer.put_nowait(msg)
 
-# Agent 持有 MessageBus 引用
+# Agent 持有 MessageRouter 引用
 class Agent:
-    _bus: MessageBus
-    message_buffer: asyncio.Queue
-    context: GroupChatContext
+    def __init__(self, name: str, message_router: MessageRouter, context: GroupChatContext):
+        self.name = name                        # 实例变量：每个 Agent 独立
+        self.message_buffer = asyncio.Queue()   # 实例变量：每个 Agent 独立的私有队列
+        self.context = context                  # 实例变量：持有 GroupChatContext 引用
+        self._bus = message_router              # 实例变量：持有 MessageRouter 引用（共享同一实例）
+        
+        # 注册自己的队列到 MessageRouter
+        self._bus.register(self.name, self.message_buffer)
     
-    def send_message(content, send_to):
+    def send_message(self, content: str, send_to: str):
         msg = Message(content, send_to, sent_from=self.name)
         self._bus.publish_message(msg)
     
-    async def run():
+    async def run(self):
         while True:
             msg = await self.message_buffer.get()
             await self._process_message(msg)
@@ -189,12 +204,12 @@ class Agent:
 
 **劣势**
 
-- 需要实现 MessageBus 类（新增代码）
-- Agent 需要持有 MessageBus 和 GroupChatContext 两个引用（但这是依赖注入，不是耦合）
+- 需要实现 MessageRouter 类（新增代码）
+- Agent 需要持有 MessageRouter 和 GroupChatContext 两个引用（但这是依赖注入，不是耦合）
 
 ## 最终决策
 
-选择**方案 C：MessageBus + 私有队列**。
+选择**方案 C：MessageRouter + 私有队列**。
 
 ## 决策原因
 
@@ -266,7 +281,7 @@ for msg in group_chat.message_buffer:
 - 不适合"Manager → Agent A"这种明确的一对一场景
 
 **方案 C 的优势：**
-- MessageBus 根据 `msg.send_to` 精确路由
+- MessageRouter 根据 `msg.send_to` 精确路由
 - 目标 Agent 的队列中只有发给自己的消息
 - 符合消息队列的最佳实践
 
@@ -306,7 +321,7 @@ Agent 只读取 `GroupChatContext`，不修改其他 Agent 的状态，这不是
 
 ### 原因 5：方案 C 的"劣势"实际上不是问题
 
-**劣势 1："需要实现 MessageBus 类"**
+**劣势 1："需要实现 MessageRouter 类"**
 - 实现成本低（约 20 行代码）
 - 职责清晰，易于测试
 - 符合单一职责原则（SRP）
@@ -314,7 +329,7 @@ Agent 只读取 `GroupChatContext`，不修改其他 Agent 的状态，这不是
 **劣势 2："Agent 需要持有两个引用"**
 - 这是依赖注入的标准做法
 - 两个依赖的职责不同：
-  - `MessageBus`：发送消息
+  - `MessageRouter`：发送消息
   - `GroupChatContext`：读取上下文
 - 符合接口隔离原则（ISP）
 
@@ -337,7 +352,7 @@ Agent 只读取 `GroupChatContext`，不修改其他 Agent 的状态，这不是
 **场景 3：User 直接 @Agent**
 - User 绕过 Manager，直接与 Agent 对话
 - 消息仍然记录到 GroupChatSession
-- ✅ 方案 C 支持（通过 MessageBus 路由 + GroupChatSession 记录）
+- ✅ 方案 C 支持（通过 MessageRouter 路由 + GroupChatSession 记录）
 
 方案 A 和方案 B 也能支持这些场景，但方案 C 在安全性和清晰度上更优。
 
@@ -345,13 +360,24 @@ Agent 只读取 `GroupChatContext`，不修改其他 Agent 的状态，这不是
 
 ### 对代码结构的影响
 
-1. **需要新增 MessageBus 类**：
+1. **需要新增 MessageRouter 类**：
    - 位置：`agents_hub/messaging/message_bus.py`
    - 职责：管理 Agent 队列引用，实现点对点路由
 
 2. **需要新增 Message 数据类**：
    - 位置：`agents_hub/messaging/models.py`
-   - 字段：`content`, `send_to`, `sent_from`, `timestamp`
+   - 代码示例：
+     ```python
+     from dataclasses import dataclass, field
+     from datetime import datetime
+     
+     @dataclass
+     class Message:
+         content: str                                    # 消息内容
+         send_to: str                                    # 接收者（路由目标）
+         sent_from: str                                  # 发送者
+         timestamp: datetime = field(default_factory=datetime.now)  # 消息时间戳
+     ```
 
 3. **需要修改 Agent 类**：
    - 添加 `send_message()` 方法
@@ -364,7 +390,7 @@ Agent 只读取 `GroupChatContext`，不修改其他 Agent 的状态，这不是
 
 ### 对测试的影响
 
-1. **MessageBus 单元测试**：
+1. **MessageRouter 单元测试**：
    - 测试注册机制
    - 测试路由逻辑
    - 测试错误处理（目标 Agent 不存在）
@@ -377,7 +403,7 @@ Agent 只读取 `GroupChatContext`，不修改其他 Agent 的状态，这不是
 ### 对文档的影响
 
 1. **需要更新架构文档**：
-   - 说明 MessageBus 的职责
+   - 说明 MessageRouter 的职责
    - 说明消息流转链路
 
 2. **需要编写使用指南**：
@@ -388,7 +414,7 @@ Agent 只读取 `GroupChatContext`，不修改其他 Agent 的状态，这不是
 ### 需要后续验证的事项
 
 1. **性能验证**：
-   - 在 10+ Agent 并发场景下，MessageBus 的性能是否满足要求
+   - 在 10+ Agent 并发场景下，MessageRouter 的性能是否满足要求
    - 私有队列的内存占用是否可接受
 
 2. **错误处理验证**：

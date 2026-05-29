@@ -110,50 +110,7 @@ def estimate_prompt_tokens(
 # ============================= 常量 ========================================
 MAX_TOKEN = 1000
 
-# ============================= LLM / Agent调用 ==============================
-agent_platform_client = AgentBridge()
-def create_defaute_role():
-    role_manager = RoleManager()
-    role_manager.create_role(
-            "Leader",
-            AgentPlatform.CLAUDE,
-            type=RoleType.LEADER,
-            description="团队领导，负责任务分配、进度跟踪和技术决策"
-        )
-    role_manager.create_role(
-            "llm_call",
-            AgentPlatform.CLAUDE,
-            type=RoleType.LEADER
-        )
-    role_manager.create_role(
-            "llm_call_codex",
-            AgentPlatform.CODEX,
-            type=RoleType.LEADER
-        )
-create_defaute_role()
-class Agent:
-    def __init__(self,role:Role):
-        self.role_config = role.get_role_config()
-        self.name = self.role_config.name # 这里很奇怪，这些信息应该都直接作为类成员比较好啊，先不优化，role和agentbriged之后在优化
-        self.role_type = role.get_info().type
-        pass
-    async def execute(self, prompt, session: str | None = None):
-        return await agent_platform_client.execute(prompt, self.role_config)
-class Manager(Agent):
-    def __init__(self):
-        super().__init__(RoleManager().get_role("Leader"))
-        pass
-    pass
-class Worker(Agent):
-    pass
 
-class LLMCall(Agent):
-    def __init__(self):
-        # 暂时这么写临时的非角色的llm调用，llm_call不进入groupchat,可临时用于需要llm调用的场景
-        super().__init__(RoleManager().get_role("llm_call"))
-        pass
-llm_call = LLMCall()
-llm_call_codex = Agent(RoleManager().get_role("llm_call_codex"))
 
 # ===========================团队设置（暂时），后续应该增加团队管理类=============
 class Team(BaseModel):
@@ -173,7 +130,47 @@ class Team(BaseModel):
                 raise ValueError(f"错误的role_name {role}")
         return team_members_name
 
+# ========================== 消息传递 ========================================
+# 采用方法每个agent一个私有消息队列，设置一个environment类记录每个agent的私有队列地址
+class SessionType(Enum) :
+    MAIN = "main"
+    BTW = "btw"
 
+@dataclass
+class AgentsMessage:
+    content : str
+    send_from : str
+    send_to : str
+    session_type : SessionType = SessionType.MAIN
+    timestamp : datetime = field(default_factory=datetime.now)
+
+class MessageRouter:
+    """用于agent之间，系统(user)与agent之间发送消息"""
+    def __init__(self):
+        self._agents_queue: dict[str, asyncio.Queue] = {}
+
+    def register(self, name: str, queue: asyncio.Queue):
+        self._agents_queue[name] = queue
+
+    def unregister(self, name: str):
+        self._agents_queue.pop(name, None)
+
+    def send_message(self, send_from: str, send_to: str, content: str):
+        message = AgentsMessage(
+            content = content,
+            send_from = send_from,
+            send_to = send_to
+        )
+        self._validate_message(message)
+        self._agents_queue[send_to].put_nowait(message)
+
+    def _validate_message(self, message: AgentsMessage):
+        if not message.content or not message.content.strip():
+            raise ValueError("消息内容不能为空")
+        if message.send_from not in self._agents_queue:
+            raise ValueError(f"发送者 '{message.send_from}' 不在已注册的agent列表中")
+        if message.send_to not in self._agents_queue:
+            raise ValueError(f"接收者 '{message.send_to}' 不在已注册的agent列表中")
 # ===========================针对于某个团队的群聊===============================
 
 class GroupChatType(Enum):
@@ -197,7 +194,7 @@ class GroupChat:
         self.manager = None
         self.project_path = None
         self.group_chat_context = GroupChatContext(group_chat_id,project_path)
-
+        self.message_router = MessageRouter()
     async def _initialize_new_members(self):
         """
         初始化新成员（第一次进入群聊的成员）
@@ -238,7 +235,7 @@ class GroupChat:
                 return await agent.execute(
                     f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己"
                 )
-
+        
         # 并发执行所有新成员的初始化
         results: list[AgentResult] = await asyncio.gather(
             *[start_conversation(member) for member in new_members]
@@ -273,6 +270,13 @@ class GroupChat:
         role_manager = RoleManager()
         for role in self.team_members_name:
             self.works[role] = Worker(role_manager.get_role(role))
+
+        # 3. 注册所有agent到message_router
+        self.manager.message_router = self.message_router
+        self.message_router.register(self.manager.name, self.manager.message_queue)
+        for worker in self.works.values():
+            worker.message_router = self.message_router
+            self.message_router.register(worker.name, worker.message_queue)
 
         # 3. 初始化新成员（第一次会话的成员）
         await self._initialize_new_members()
@@ -552,27 +556,7 @@ class GroupChatContext:
         ])
 
         # 一次性生成 summary 和所有 agent 的专门信息
-        compact_prompt = f"""请总结下面的对话记录，请严格按照要求输出 JSON。
-
-对话记录：
-<message_list>
-{messages_text}
-</message_list>
-参与者职责：
-{agent_descriptions}
-
-任务：将上述对话总结为 JSON 格式，包含：
-1. summary: 整体对话的1-2句话总结
-2. agent_specific: 为每个参与者提取与其职责相关的2-3句话关键信息
-
-输出格式（只输出这个 JSON，不要有任何其他内容）：
-{{
-    "summary": "...",
-    "agent_specific": {{
-        "{list(agent_info.keys())[0] if agent_info else 'agent_name'}": "...",
-        ...
-    }}
-}}"""
+        compact_prompt = f"""请总结下面的对话记录，请严格按照要求输出 JSON。 对话记录： <message_list> {messages_text} </message_list> 参与者职责： {agent_descriptions} 任务：将上述对话总结为 JSON 格式，包含：1. summary: 整体对话的1-2句话总结 2. agent_specific: 为每个参与者提取与其职责相关的2-3句话关键信息 输出格式（只输出这个 JSON，不要有任何其他内容）： {{"summary": "...", "agent_specific": {{"{list(agent_info.keys())[0] if agent_info else 'agent_name'}": "...", ...}}}}"""
 
         # 调用 llm_call 进行压缩
         print(f"input prompt : {compact_prompt}")
@@ -698,9 +682,166 @@ class GroupChatContext:
         sanitized = re.sub(r'-+', '-', sanitized)
         return sanitized
 
+# ============================= AgentContext 先不实现==================================
+class AgentContext:
+    """
+    为Agent每次调用提供上下文
+    主要实现对于groupchatsession有选择的作为agentcontext
+    """
+    def __init__(self,agent_name:str,group_chat_context:GroupChatContext):
+        pass
+
+# ============================= LLM / Agent调用 ==============================
+agent_platform_client = AgentBridge()
+def create_defaute_role():
+    role_manager = RoleManager()
+    role_manager.create_role(
+            "Leader",
+            AgentPlatform.CLAUDE,
+            type=RoleType.LEADER,
+            description="团队领导，负责任务分配、进度跟踪和技术决策"
+        )
+    role_manager.create_role(
+            "llm_call",
+            AgentPlatform.CLAUDE,
+            type=RoleType.LEADER
+        )
+    role_manager.create_role(
+            "llm_call_codex",
+            AgentPlatform.CODEX,
+            type=RoleType.LEADER
+        )
+
+create_defaute_role()
 
 
+# ============================= LLM / Agent调用 ==============================
 
+class Agent:
+    def __init__(self,role:Role,group_chat_context:GroupChatContext | None = None):
+        """"""
+        self.role_config = role.get_role_config()
+        self.name = self.role_config.name # 这里很奇怪，这些信息应该都直接作为类成员比较好啊，先不优化，role和agentbriged之后在优化
+        self.role_type = self.role_config.role_type
+        self.message_queue = asyncio.Queue() # 私有队列, 用户存放消息
+        self.group_chat_context = group_chat_context
+        self.agent_context = AgentContext(self.name , group_chat_context) # 暂时没有实现
+        self.message_router: MessageRouter | None = None
+        self._run = True
+    def set_run(self,run:bool):
+        """设置该agent是否工作，"""
+        # 这个可能与后续性能优化有关，先不管
+        self._run = run
+
+    def send_message(self,send_to:str,content:str):
+        self.message_router.send_message(self.name,send_to,content)    
+
+    async def execute(self, prompt)->AgentResult: 
+        """执行主会话（群聊）
+        args : 
+            prompt 发送给claude / codex 的信息
+        """
+        return await agent_platform_client.execute(prompt, self.role_config,self.main_session_id)
+    
+    async def btw_execute(self, prompt, session: str | None = None)->AgentResult:
+        """执行单聊（by the way）"""
+        print(f"Info : {self.name} 执行单聊 content:{prompt[:20]}")
+        return await agent_platform_client.execute(prompt, self.role_config,session)
+    
+    @property
+    def main_session_id(self):
+        if self.group_chat_context.agent_session_id.get(self.name):
+            if self.group_chat_context.agent_session_id[self.name].main_session:
+                return self.group_chat_context.agent_session_id[self.name].main_session
+            else:
+                print(f"warning : {self.name}在当前群聊中无历史记录") # 这里的print 需要替换为具体的logger
+        else :
+            print(f"warning : 当前群聊无{self.name}的main session记录 [ 如果是初始化会话 忽略改警告]")
+        return None
+    async def _process_message(self,msg:AgentsMessage)->AgentResult:
+        """
+        处理消息
+        args:
+            msg : AgentsMessage 
+        """
+        if msg.session_type == SessionType.MAIN:
+            return await self.execute(msg.content)
+        else:
+            return await self.btw_execute(msg.content)
+    async def run(self):
+      """持续监听私有队列，处理收到的消息"""
+      while self._run:
+        msg = await self.message_queue.get()
+        result = await self._process_message(msg)
+        # 处理 result，比如发回群聊或触发下一步是
+       
+
+class Manager(Agent):
+    def __init__(self):
+        super().__init__(RoleManager().get_role("Leader"))
+        pass
+    pass
+class Worker(Agent):
+    pass
+
+class LLMCall(Agent):
+    def __init__(self):
+        # 暂时这么写临时的非角色的llm调用，llm_call不进入groupchat,可临时用于需要llm调用的场景
+        super().__init__(RoleManager().get_role("llm_call"))
+        pass
+llm_call = LLMCall()
+llm_call_codex = Agent(RoleManager().get_role("llm_call_codex"))
+
+
+# =============================== TooL ==========================
+# 【架构说明】agents之间如何交流（call_agent 是跨 agent 通信的核心入口）
+#
+# 完整调用链路：
+#   Agent A 的 LLM（claude/codex）
+#     → tool_use: call_agent(send_from="A", send_to="B", content="...")
+#       → agentshub MCP Server 接收 tool call
+#         → call_agent()
+#           → MessageRouter.send_message()
+#             → 投递到目标 Agent B 的私有 message_queue
+#               → Agent B 的 run loop 取出消息并处理
+#
+# 【设计要点】
+# 1. call_agent 是 LLM 可调用的工具（MCP tool），不是代码层面的 API
+#    - Agent 的 LLM 决定何时调用、发给谁、发什么内容
+#    - 类似 CrewAI 的 DelegateWorkTool、AutoGen 的 handoff、deer-flow 的 task_tool
+#
+# 2. MessageRouter 负责路由，不关心消息内容
+#    - 验证 send_from/send_to 是否已注册
+#    - 投递到目标队列
+#    - 未来可扩展：topic 广播、消息过滤、优先级等
+#
+# 3. group_chat 参数的传递方式（当前是探索版本，正式版本需要调整）
+#    - 当前：作为参数显式传入
+#    - 正式版本建议：通过全局注册表（如 GroupChatRegistry）按 group_chat_id 获取
+#      因为 MCP tool 调用时无法直接传入对象实例，需要通过 ID 查找
+#
+# 【正式版本 TODO】
+# - group_chat 参数改为 group_chat_id，从全局注册表查找
+# - call_agent 需要注册为 MCP tool（在 agents_hub MCP server 中声明 tool schema）
+# - 返回值需要适配 MCP tool 的响应格式（当前返回 str 是简化版本）
+
+def call_agent(send_from: str, send_to: str, content: str, group_chat: GroupChat) -> str:
+    """
+    call_agent将会作为agentshub MCP工具的一个部分，用于codex/claude code可以通过agentshub与别的agent对话
+
+    args：
+        send_from : 填写发送者的名称
+        send_to : 你要发送给谁
+        content : 发送的内容，可以是询问的问题，也可以是委派的任务
+        group_chat : 当前群聊实例（正式版本改为 group_chat_id，从注册表获取）
+    """
+    router = group_chat.message_router
+    try:
+        router.send_message(send_from, send_to, content)
+        return f"消息已发送: {send_from} -> {send_to}"
+    except ValueError as e:
+        return f"发送失败: {e}"
+    
 
 
 async def main():

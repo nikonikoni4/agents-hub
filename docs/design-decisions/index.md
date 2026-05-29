@@ -26,7 +26,7 @@
 - updated_at: 2026-05-28
 - path: `docs/design-decisions/0005-multi-agent-message-architecture.md`
 - 触发规则：当设计或修改多 Agent 消息传递机制、消息路由方式、Agent 权限控制时阅读
-- 内容摘要：拒绝 MetaGPT 双向引用（越权风险）和 AutoGen 公共 Buffer（不符合按需上下文原则）方案，选择 MessageBus + 私有队列的点对点路由方案。核心原则：避免越权访问、按需提供上下文、点对点优于广播
+- 内容摘要：拒绝 MetaGPT 双向引用（越权风险）和 AutoGen 公共 Buffer（不符合按需上下文原则）方案，选择 MessageRouter + 私有队列的点对点路由方案。核心原则：避免越权访问、按需提供上下文、点对点优于广播
 
 ## user-design-summary
 - updated_at: 2026-05-28
