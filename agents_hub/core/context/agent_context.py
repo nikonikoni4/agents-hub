@@ -21,7 +21,7 @@ class AgentContext:
         self.agent_name = agent_name
         self.group_chat_context = group_chat_context
 
-    def get_context(self) -> str:
+    async def get_context(self) -> str:
         """
         获取 Agent 的增量上下文
 
@@ -43,7 +43,7 @@ class AgentContext:
             last_loaded_compact_index = agent_session_info.context_state.last_loaded_compact_index
 
         # 2. 加载未加载的压缩历史
-        compact_history = self.group_chat_context.load_compact_history()
+        compact_history = await self.group_chat_context.load_compact_history()
         new_compact_history = compact_history[last_loaded_compact_index:]
 
         if new_compact_history:
@@ -62,14 +62,14 @@ class AgentContext:
                 context_parts.append(f"[{msg['agent_name']}]: {msg['content']}")
 
         # 4. 更新 agent 的加载状态
-        self._update_agent_context_state(
+        await self._update_agent_context_state(
             last_loaded_compact_index=len(compact_history),
             last_loaded_message_index=len(self.group_chat_context.group_chat_session.messages)
         )
 
         return "\n".join(context_parts)
 
-    def _update_agent_context_state(self, last_loaded_compact_index: int, last_loaded_message_index: int):
+    async def _update_agent_context_state(self, last_loaded_compact_index: int, last_loaded_message_index: int):
         """
         更新 agent 的上下文加载状态
 
@@ -95,5 +95,7 @@ class AgentContext:
             agent_session_info.context_state.last_loaded_message_index = last_loaded_message_index
 
         # 保存到文件
-        self.group_chat_context.save_agent_session_id()
+        await self.group_chat_context.repository.save_agent_session_state(
+            self.group_chat_context.agent_session_id
+        )
 

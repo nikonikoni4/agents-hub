@@ -5,6 +5,7 @@ Context layer - 上下文层
 """
 
 from .group_chat_session import GroupChatSession, AgentSessionInfo, AgentContextState
+from .group_chat_repository import GroupChatRepository
 from .group_chat_context import GroupChatContext
 from .agent_context import AgentContext
 
@@ -12,6 +13,7 @@ __all__ = [
     "GroupChatSession",
     "AgentSessionInfo",
     "AgentContextState",
+    "GroupChatRepository",
     "GroupChatContext",
     "AgentContext",
 ]
