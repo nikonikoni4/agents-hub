@@ -129,13 +129,18 @@ class Agent:
             )
 
             # 4. 出口 B：如果是 TASK 且发起者不是 user，投递回复
+            
             if msg.message_type == MessageType.TASK and msg.send_from != "user":
+                # TODO ： 考虑这里是否真的需要发送全部信息？因为之前的对话记录中已经包含了result.text
+                send_message_content = result.text
+                # 暂时先不返回完整的内容，因为群聊中会有记录
+                send_message_content = f"提示 : 消息回复见上文聊天记录中speaker为[{self.name}] @[{msg.send_from}]的最新一条"
                 response_call = self.agent_call_manager.create_call(
                     send_from=self.name,
                     send_to=msg.send_from,
-                    content=result.text,
+                    content=send_message_content,
                     message_type=MessageType.NOTIFICATION,
                 )
                 self.send_message_to_agent(
-                    response_call.call_id, msg.send_from, result.text
+                    response_call.call_id, msg.send_from, send_message_content
                 )
