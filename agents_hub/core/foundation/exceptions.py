@@ -62,9 +62,9 @@ class MessageDeliveryError(AgentsHubError):
 class AgentExecutionError(AgentsHubError):
     """Agent 执行失败"""
 
-    def __init__(self, agent_name: str, reason: str):
+    def __init__(self, agent_name: str, reason: str,session_id :str,platform:str):
         super().__init__(
-            message=f"Agent '{agent_name}' 执行失败: {reason}",
+            message=f"Agent '{agent_name}' 执行失败: {reason} session_id:{session_id},platform:{platform}",
             error_code="AGENT_EXECUTION_FAILED",
             details={"agent_name": agent_name, "reason": reason}
         )

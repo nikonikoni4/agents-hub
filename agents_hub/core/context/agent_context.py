@@ -53,7 +53,7 @@ class AgentContext:
         new_compact_history = compact_history[last_loaded_compact_index:]
 
         if new_compact_history:
-            context_parts.append("=== 历史消息摘要 ===")
+            context_parts.append("=== 群聊历史消息摘要 ===")
             for record in new_compact_history:
                 content = record['content']
                 context_parts.append(f"\n[总体]: {content['summary']}")
@@ -63,7 +63,7 @@ class AgentContext:
         # 3. 加载未加载的消息
         new_messages = self.group_chat_context.group_chat_session.messages[last_loaded_message_index:]
         if new_messages:
-            context_parts.append("\n=== 最新消息 ===")
+            context_parts.append("\n=== 群聊最新消息 ===")
             for msg in new_messages:
                 context_parts.append(f"[{msg['agent_name']}]: {msg['content']}")
 

@@ -20,6 +20,7 @@ from .exceptions import (
     CompactionError,
 )
 from .constants import MAX_TOKEN, LOCAL_DATA_PATH
+from .renderer import render_for_llm, render_for_chat, parse_chat_input
 
 __all__ = [
     # models
@@ -46,5 +47,8 @@ __all__ = [
     # constants
     "MAX_TOKEN",
     "LOCAL_DATA_PATH",
-    
+    # renderer
+    "render_for_llm",
+    "render_for_chat",
+    "parse_chat_input",
 ]
