@@ -5,6 +5,7 @@ Foundation layer - 基础层（零依赖）
 """
 
 from agents_hub.agent_bridge import AgentResult, RoleType
+from agents_hub.exceptions import StateError
 from agents_hub.roles import Role, RoleConfig
 
 from .constants import LOCAL_DATA_PATH, MAX_TOKEN
@@ -45,6 +46,7 @@ __all__ = [
     "InvalidMessageError",
     "FileSystemError",
     "CompactionError",
+    "StateError",
     # constants
     "MAX_TOKEN",
     "LOCAL_DATA_PATH",

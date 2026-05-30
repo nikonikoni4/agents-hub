@@ -275,7 +275,7 @@ class Role:
         data = self._read_role_json()
         platform = AgentPlatform(data["platform"])
         type_str = data.get("type")
-        role_type = RoleType(type_str) if type_str else None
+        role_type = RoleType(type_str) if type_str else RoleType.TEAM_MEMBER
         return RoleConfig(
             name=data["name"],
             platform=platform,

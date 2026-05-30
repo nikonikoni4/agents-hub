@@ -44,6 +44,7 @@ class CodexExecutor:
             logger.error(f"Codex CLI not found: {CODEX_COMMAND}")
             raise CLINotFoundError(platform="Codex", command=CODEX_COMMAND) from e
 
+        assert process.stdout is not None
         async for line in process.stdout:
             decoded = line.decode("utf-8").strip()
             if decoded:
@@ -52,11 +53,12 @@ class CodexExecutor:
         # 等待进程结束并检查返回码
         await process.wait()
         if process.returncode != 0:
+            assert process.stderr is not None
             stderr = await process.stderr.read()
             stderr_text = stderr.decode("utf-8")
             logger.error(f"Codex CLI exited with code {process.returncode}: {stderr_text}")
             raise CLIExecutionError(
-                platform="Codex", exit_code=process.returncode, stderr=stderr_text
+                platform="Codex", exit_code=process.returncode or 1, stderr=stderr_text
             )
 
     def _build_command(self, prompt: str, config: RoleConfig, session_id: str | None) -> list:

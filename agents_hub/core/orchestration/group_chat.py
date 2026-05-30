@@ -11,7 +11,7 @@ import asyncio
 from uuid import uuid4
 
 from agents_hub.config.types import RoleType
-from agents_hub.core.agent import Manager, Worker
+from agents_hub.core.agent import Agent, Manager, Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import GroupChatContext
 from agents_hub.core.foundation import GroupChatType
@@ -97,7 +97,7 @@ class GroupChat:
 
         检查哪些成员没有 session_id，对这些成员执行初始化流程（打招呼）。
         """
-        new_members = []
+        new_members: list[Agent] = []
 
         # 检查 manager 是否需要初始化
         if self.manager and self.manager.name not in self.group_chat_context.agent_session_id:
@@ -111,7 +111,7 @@ class GroupChat:
         if not new_members:
             return
 
-        async def start_conversation(agent):
+        async def start_conversation(agent: Agent):
             if agent.role_type == RoleType.LEADER:
                 return await agent.execute(
                     f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己"
@@ -119,7 +119,7 @@ class GroupChat:
             else:
                 other_members = [name for name in self.team_members_name if name != agent.name]
                 return await agent.execute(
-                    f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己"
+                    f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己"  # type: ignore[union-attr]
                 )
 
         # 并发执行所有新成员的初始化

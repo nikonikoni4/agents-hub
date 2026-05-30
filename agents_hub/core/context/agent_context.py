@@ -5,7 +5,7 @@ Agent 上下文
 实现增量加载：只加载未加载的压缩历史和未压缩消息。
 """
 
-from agents_hub.core.foundation import Tag, wrap_xml
+from agents_hub.core.foundation import StateError, Tag, wrap_xml
 
 from .group_chat_context import GroupChatContext
 
@@ -81,6 +81,8 @@ class AgentContext:
             parts.append(wrap_xml(Tag.GROUP_HISTORY, "\n".join(history_blocks)))
 
         # 3. 未压缩的最新消息 → <recent_messages>
+        if self.group_chat_context.group_chat_session is None:
+            raise StateError("GroupChatSession 未加载，请先调用 load()")
         new_messages = self.group_chat_context.group_chat_session.messages[
             last_loaded_message_index:
         ]

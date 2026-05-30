@@ -94,7 +94,7 @@ class RoleManager:
         Returns:
             RoleInfo 列表，如果没有角色则返回空列表。
         """
-        roles = []
+        roles: list[RoleInfo] = []
         if not self.agents_dir.exists():
             return roles
 
@@ -181,7 +181,7 @@ class RoleManager:
         platform: AgentPlatform,
         avatar: str | None = None,
         abilities: list[str] | None = None,
-        type: str | None = None,
+        type: str | RoleType | None = None,
         scope: list[str] | None = None,
         description: str | None = None,
     ) -> Role:

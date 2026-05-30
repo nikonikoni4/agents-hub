@@ -10,7 +10,7 @@ import os
 import re
 from datetime import datetime
 
-import aiofiles
+import aiofiles  # type: ignore[import-untyped]  # type: ignore[import-untyped]
 
 from agents_hub.core.foundation import LOCAL_DATA_PATH, FileSystemError
 

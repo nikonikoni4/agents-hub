@@ -36,7 +36,7 @@ class GroupChatSession:
 
     group_chat_id: str = field(default_factory=lambda: str(uuid4()))
     name: str = field(default_factory=lambda: f"session_{datetime.now().strftime('%Y%m%d%H%M')}")
-    messages: list[dict[str]] = field(default_factory=list)
+    messages: list[dict[str, str]] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
     last_compacted_loc: int = 0  # 上一次 compact 的位置

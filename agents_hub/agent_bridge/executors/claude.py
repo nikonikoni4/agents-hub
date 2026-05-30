@@ -40,6 +40,7 @@ class ClaudeExecutor:
             logger.error(f"Claude CLI not found: {CLAUDE_COMMAND}")
             raise CLINotFoundError(platform="Claude", command=CLAUDE_COMMAND) from e
 
+        assert process.stdout is not None
         async for line in process.stdout:
             decoded = line.decode("utf-8").strip()
             if decoded:
@@ -48,11 +49,12 @@ class ClaudeExecutor:
         # 等待进程结束并检查返回码
         await process.wait()
         if process.returncode != 0:
+            assert process.stderr is not None
             stderr = await process.stderr.read()
             stderr_text = stderr.decode("utf-8")
             logger.error(f"Claude CLI exited with code {process.returncode}: {stderr_text}")
             raise CLIExecutionError(
-                platform="Claude", exit_code=process.returncode, stderr=stderr_text
+                platform="Claude", exit_code=process.returncode or 1, stderr=stderr_text
             )
 
     def _build_command(self, prompt: str, config: RoleConfig, session_id: str | None) -> list:

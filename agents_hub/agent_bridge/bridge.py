@@ -29,11 +29,14 @@ class AgentBridge:
 
     def __init__(self):
         # 创建执行器和解析器实例（可复用）
-        self._executors = {
+        self._executors: dict[AgentPlatform, ClaudeExecutor | CodexExecutor] = {
             AgentPlatform.CLAUDE: ClaudeExecutor(),
             AgentPlatform.CODEX: CodexExecutor(),
         }
-        self._parsers = {AgentPlatform.CLAUDE: ClaudeParser(), AgentPlatform.CODEX: CodexParser()}
+        self._parsers: dict[AgentPlatform, ClaudeParser | CodexParser] = {
+            AgentPlatform.CLAUDE: ClaudeParser(),
+            AgentPlatform.CODEX: CodexParser(),
+        }
         self._role_manager = RoleManager()
         self._bare_config = self._init_bare_config()
 

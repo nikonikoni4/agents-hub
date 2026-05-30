@@ -7,7 +7,7 @@
 from datetime import datetime
 
 from agents_hub.agent_bridge import agent_platform_client
-from agents_hub.core.foundation import MAX_TOKEN
+from agents_hub.core.foundation import MAX_TOKEN, StateError
 
 from .group_chat_repository import GroupChatRepository
 from .group_chat_session import AgentSessionInfo, GroupChatSession
@@ -45,6 +45,8 @@ class GroupChatContext:
             agent_result: Agent 执行结果（AgentResult）
                 需要包含: agent_name, text, timestamp, platform
         """
+        if self.group_chat_session is None:
+            raise StateError("GroupChatSession 未加载，请先调用 load()")
         self.group_chat_session.add_message(agent_result)
         # TODO 调用websocket,让前端更新显示
         await self.repository.save_group_chat_session(self.group_chat_session)
@@ -116,6 +118,8 @@ class GroupChatContext:
         from agents_hub.core.foundation import CompactionError
 
         # 获取未压缩的消息
+        if self.group_chat_session is None:
+            raise StateError("GroupChatSession 未加载，请先调用 load()")
         uncompacted_messages = self.group_chat_session.get_uncompact_messages()
 
         # 如果没有未压缩的消息，直接返回
