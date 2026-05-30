@@ -26,13 +26,12 @@ class AgentContext:
         获取 Agent 的增量上下文
 
         逻辑：
-        1. 如果 last_loaded_message_index < last_compact_loc：
-           说明 agent 很久没被调用，期间发生了压缩
-           加载：未加载的压缩历史 + 未压缩的最新消息
+        1. 加载未加载的压缩历史（从 last_loaded_compact_index 到最新）
+        2. 加载未加载的消息（从 last_loaded_message_index 到最新）
 
-        2. 如果 last_loaded_message_index >= last_compact_loc：
-           说明 agent 最近被调用过，只需要加载新消息
-           加载：从 last_loaded_message_index 到最新的消息
+        标志位自动判断是否需要加载：
+        - 如果没有新的压缩历史，compact_history[last_loaded_compact_index:] 返回空列表
+        - 如果没有新的消息，messages[last_loaded_message_index:] 返回空列表
 
         Returns:
             格式化的上下文字符串
@@ -49,45 +48,29 @@ class AgentContext:
             last_loaded_compact_index = agent_session_info.context_state.last_loaded_compact_index
             last_loaded_message_index = agent_session_info.context_state.last_loaded_message_index
 
-        # 2. 获取当前状态
-        last_compact_loc = self.group_chat_context.group_chat_session.last_compacted_loc
-        total_messages = len(self.group_chat_context.group_chat_session.messages)
+        # 2. 加载未加载的压缩历史
+        compact_history = await self.group_chat_context.load_compact_history()
+        new_compact_history = compact_history[last_loaded_compact_index:]
 
-        # 3. 判断加载策略
-        if last_loaded_message_index < last_compact_loc:
-            # 场景 1：agent 很久没被调用，期间发生了压缩
-            # 加载未加载的压缩历史
-            compact_history = await self.group_chat_context.load_compact_history()
-            new_compact_history = compact_history[last_loaded_compact_index:]
+        if new_compact_history:
+            context_parts.append("=== 历史消息摘要 ===")
+            for record in new_compact_history:
+                content = record['content']
+                context_parts.append(f"\n[总体]: {content['summary']}")
+                if self.agent_name in content:
+                    context_parts.append(f"[针对你]: {content[self.agent_name]}")
 
-            if new_compact_history:
-                context_parts.append("=== 历史消息摘要 ===")
-                for record in new_compact_history:
-                    content = record['content']
-                    context_parts.append(f"\n[总体]: {content['summary']}")
-                    if self.agent_name in content:
-                        context_parts.append(f"[针对你]: {content[self.agent_name]}")
-
-            # 加载未压缩的最新消息（从 last_compact_loc 到最新）
-            uncompacted_messages = self.group_chat_context.group_chat_session.get_uncompact_messages()
-            if uncompacted_messages:
-                context_parts.append("\n=== 最新消息 ===")
-                for msg in uncompacted_messages:
-                    context_parts.append(f"[{msg['agent_name']}]: {msg['content']}")
-        else:
-            # 场景 2：agent 最近被调用过，只加载新消息
-            # 从 last_loaded_message_index 到最新
-            new_messages = self.group_chat_context.group_chat_session.messages[last_loaded_message_index:]
-            if new_messages:
-                context_parts.append("=== 最新消息 ===")
-                for msg in new_messages:
-                    context_parts.append(f"[{msg['agent_name']}]: {msg['content']}")
+        # 3. 加载未加载的消息
+        new_messages = self.group_chat_context.group_chat_session.messages[last_loaded_message_index:]
+        if new_messages:
+            context_parts.append("\n=== 最新消息 ===")
+            for msg in new_messages:
+                context_parts.append(f"[{msg['agent_name']}]: {msg['content']}")
 
         # 4. 更新 agent 的加载状态
-        compact_history = await self.group_chat_context.load_compact_history()
         await self._update_agent_context_state(
             last_loaded_compact_index=len(compact_history),
-            last_loaded_message_index=total_messages
+            last_loaded_message_index=len(self.group_chat_context.group_chat_session.messages)
         )
 
         return "\n".join(context_parts)
