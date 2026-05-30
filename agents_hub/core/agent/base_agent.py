@@ -46,18 +46,6 @@ class Agent:
         # TODO 后续使用，暂时占位
         self._run = run
 
-    @asynccontextmanager
-    async def agent_execution_context(self, call_id: str):
-        """Agent 执行上下文，自动管理状态和清理"""
-        self.agent_call_manager.update_status(call_id, CallStatus.RUNNING)
-        try:
-            yield
-            self.agent_call_manager.update_status(call_id, CallStatus.COMPLETED)
-        except Exception as e:
-            self.agent_call_manager.update_status(call_id, CallStatus.FAILED)
-            self.agent_call_manager.set_error(call_id, str(e))
-            raise
-
     def send_message_to_agent(self, call_id: str, send_to: str, content: str):
         """投递消息给指定 agent。
 
