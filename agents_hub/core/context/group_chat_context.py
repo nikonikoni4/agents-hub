@@ -3,12 +3,12 @@
 
 负责群聊业务逻辑：消息管理、session 管理、上下文压缩。
 """
-import asyncio
+from datetime import datetime
 
 from agents_hub.core.foundation import MAX_TOKEN
 from .group_chat_session import GroupChatSession, AgentSessionInfo
 from .group_chat_repository import GroupChatRepository
-
+from agents_hub.agent_bridge import agent_platform_client
 
 class GroupChatContext:
     """
@@ -107,6 +107,7 @@ class GroupChatContext:
             CompactionError: 压缩失败
         """
         from agents_hub.core.foundation import CompactionError
+        import json as _json
 
         # 获取未压缩的消息
         uncompacted_messages = self.group_chat_session.get_uncompact_messages()
@@ -115,13 +116,10 @@ class GroupChatContext:
         if not uncompacted_messages:
             return
 
-        # 估算 token 数量
-        # TODO: 需要实现 estimate_prompt_tokens 函数
-        # 暂时使用简单的字符数估算
+        # 估算 token 数量（粗略：4 个字符 ≈ 1 token）
         total_chars = sum(len(msg.get('content', '')) for msg in uncompacted_messages)
-        estimated_tokens = total_chars // 4  # 粗略估算：4 个字符 ≈ 1 token
+        estimated_tokens = total_chars // 4
 
-        # 如果 token 数量小于阈值，不进行压缩
         if estimated_tokens < MAX_TOKEN:
             print(f"未压缩消息估算 token 数量为 {estimated_tokens}，小于阈值 {MAX_TOKEN}，跳过压缩")
             return
@@ -141,6 +139,7 @@ class GroupChatContext:
         ])
 
         # 一次性生成 summary 和所有 agent 的专门信息
+        first_agent = list(agent_info.keys())[0] if agent_info else 'agent_name'
         compact_prompt = f"""请总结下面的对话记录，请严格按照要求输出 JSON。
 
 对话记录：
@@ -156,15 +155,47 @@ class GroupChatContext:
 2. agent_specific: 为每个参与者提取与其职责相关的2-3句话关键信息
 
 输出格式（只输出这个 JSON，不要有任何其他内容）：
-{{"summary": "...", "agent_specific": {{"{list(agent_info.keys())[0] if agent_info else 'agent_name'}": "...", ...}}}}"""
+{{"summary": "...", "agent_specific": {{"{first_agent}": "...", ...}}}}"""
 
-        # TODO: 调用 LLM 进行压缩
-        # 这里需要依赖 agent 层的 LLMCall，但会造成循环依赖
-        # 解决方案：将 compact_messages 的 LLM 调用部分移到 orchestration 层
-        # 或者通过依赖注入的方式传入 LLM 调用函数
-        raise CompactionError(
-            reason="compact_messages 需要 LLM 调用，但会造成循环依赖。"
-                   "需要将此方法移到 orchestration 层或使用依赖注入。"
-        )
+        # 调用 bare_claude_call 进行压缩
+        try:
+            result = await agent_platform_client.bare_claude_call(compact_prompt)
+        except Exception as e:
+            raise CompactionError(reason=f"LLM 调用失败: {e}")
+
+        # 解析 JSON 响应
+        try:
+            # 提取 JSON（LLM 可能会在 JSON 前后添加其他文本）
+            text = result.text.strip()
+            # 尝试直接解析
+            compact_data = _json.loads(text)
+        except _json.JSONDecodeError:
+            # 尝试从文本中提取 JSON
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', text)
+            if json_match:
+                try:
+                    compact_data = _json.loads(json_match.group())
+                except _json.JSONDecodeError as e:
+                    raise CompactionError(reason=f"LLM 返回的 JSON 解析失败: {e}")
+            else:
+                raise CompactionError(reason=f"LLM 返回中未找到 JSON: {text[:200]}")
+
+        # 构建压缩记录（对齐 compact_history.jsonl 格式）
+        content = {"summary": compact_data.get("summary", "")}
+        content.update(compact_data.get("agent_specific", {}))
+        compact_record = {
+            "create_at": datetime.now().isoformat(),
+            "content": content,
+        }
+
+        # 加载已有压缩历史，追加新记录，保存
+        compact_history = await self.repository.load_compact_history()
+        compact_history.append(compact_record)
+        await self.repository.save_compact_history(compact_history)
+
+        # 更新 last_compacted_loc
+        self.group_chat_session.last_compacted_loc = len(self.group_chat_session.messages)
+        await self.repository.save_group_chat_session(self.group_chat_session)
 
 
