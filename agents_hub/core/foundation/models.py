@@ -5,7 +5,6 @@
 """
 from enum import Enum
 
-
 class SessionType(Enum):
     """会话类型"""
     MAIN = "main"  # 主会话（群聊）
@@ -31,3 +30,4 @@ class GroupChatType(Enum):
     """群聊类型"""
     SEQUENCE_EXECUTE = "sequence_execute"      # 流水线顺序执行
     MANAGER_ORCHESTRATE = "manager_orchestrate"  # 由 Team manager 动态决定安排
+

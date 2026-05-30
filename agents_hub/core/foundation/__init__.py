@@ -6,6 +6,8 @@ Foundation layer - 基础层（零依赖）
 
 from .models import SessionType, MessageType, CallStatus, GroupChatType
 from .message import AgentMessage
+from agents_hub.agent_bridge import AgentResult,RoleType
+from agents_hub.roles import Role,RoleConfig
 from .exceptions import (
     AgentsHubError,
     AgentNotFoundError,
@@ -25,6 +27,10 @@ __all__ = [
     "MessageType",
     "CallStatus",
     "GroupChatType",
+    "AgentResult", # 从agent_bridge中导入
+    "RoleType",
+    "Role",
+    "RoleConfig",
     # message
     "AgentMessage",
     # exceptions
@@ -40,4 +46,5 @@ __all__ = [
     # constants
     "MAX_TOKEN",
     "LOCAL_DATA_PATH",
+    
 ]
