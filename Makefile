@@ -12,9 +12,15 @@ help:
 	@echo "  make format  - ruff format + ruff --fix (auto-fix)"
 	@echo "  make type    - mypy type check"
 	@echo "  make test    - pytest"
+	@echo "  make cov     - pytest with coverage report"
 	@echo "  make clean   - remove caches"
 
-check: lint type test
+check:
+	$(CONDA) bash -c "set -e; \
+	  echo '>>> ruff check'        && ruff check $(PKG) && \
+	  echo '>>> ruff format check' && ruff format --check $(PKG) && \
+	  echo '>>> mypy'              && mypy && \
+	  echo '>>> pytest'            && pytest"
 
 lint:
 	$(CONDA) ruff check $(PKG)
@@ -29,6 +35,9 @@ type:
 
 test:
 	$(CONDA) pytest
+
+cov:
+	$(CONDA) pytest --cov=$(PKG) --cov-report=term-missing
 
 clean:
 	rm -rf .mypy_cache .pytest_cache .ruff_cache .coverage
