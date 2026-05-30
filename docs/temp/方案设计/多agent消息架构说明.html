@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多 Agent 消息架构设计说明</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --ink-light: #555;
+      --ink-muted: #888;
+      --bg: #f8f6f1;
+      --bg-card: #ffffff;
+      --accent-1: #c04a1a;
+      --accent-2: #2d6a4f;
+      --accent-3: #1d3557;
+      --accent-4: #7b2d8b;
+      --accent-5: #b5651d;
+      --border: #e0dcd4;
+      --shadow: 0 2px 20px rgba(0,0,0,0.06);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 80px 20px 50px;
+      background: linear-gradient(135deg, var(--accent-3) 0%, #264653 100%);
+      color: #fff;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 13px;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 2.4em;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .hero p {
+      font-size: 1.1em;
+      opacity: 0.85;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Navigation */
+    .section-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-nav a {
+      display: inline-block;
+      padding: 6px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--ink-light);
+      text-decoration: none;
+      font-size: 13px;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .section-nav a:hover {
+      background: var(--accent-3);
+      color: #fff;
+      border-color: var(--accent-3);
+    }
+
+    /* Content */
+    .content-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .section-title-block h2 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 1.35em;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .section-title-block .subtitle {
+      font-size: 0.85em;
+      color: var(--ink-muted);
+      margin-top: 2px;
+    }
+
+    .section-body {
+      padding: 24px;
+    }
+
+    .section-body h3 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 1.15em;
+      color: var(--accent-3);
+      margin: 24px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .section-body h3:first-child { margin-top: 0; }
+
+    .section-body p {
+      margin-bottom: 12px;
+      color: var(--ink-light);
+    }
+
+    /* Info blocks */
+    .info-block {
+      padding: 16px 20px;
+      border-left: 4px solid var(--accent-3);
+      background: #f0f4f8;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+    }
+    .info-block.green { border-color: var(--accent-2); background: #eef5f0; }
+    .info-block.orange { border-color: var(--accent-1); background: #fdf2ec; }
+    .info-block.purple { border-color: var(--accent-4); background: #f3eef5; }
+    .info-block.brown { border-color: var(--accent-5); background: #f8f0e6; }
+
+    .info-block p { margin-bottom: 6px; }
+    .info-block strong { color: var(--ink); }
+
+    /* Diagram */
+    .diagram-section {
+      margin: 18px 0;
+      padding: 20px;
+      background: #fdfcfa;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+
+    .diagram-section .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    /* Table */
+    .styled-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 0.9em;
+    }
+
+    .styled-table th {
+      background: var(--accent-3);
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .styled-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .styled-table tr:nth-child(even) td { background: #fafaf7; }
+    .styled-table tr:hover td { background: #f0ede6; }
+
+    /* Code */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: #f0ede6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.88em;
+      color: var(--accent-1);
+    }
+
+    /* Grid for principles */
+    .principle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .principle-card {
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-card);
+    }
+
+    .principle-card .icon { font-size: 2em; margin-bottom: 8px; }
+    .principle-card h4 {
+      font-family: 'Noto Serif SC', serif;
+      color: var(--accent-3);
+      margin-bottom: 6px;
+    }
+    .principle-card p { font-size: 0.9em; color: var(--ink-light); margin: 0; }
+
+    /* Comparison */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 14px 0;
+    }
+
+    .comparison-card {
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .comparison-card.bad { background: #fef2f2; border-color: #e5a0a0; }
+    .comparison-card.good { background: #f0fdf4; border-color: #86c89a; }
+
+    .comparison-card h4 {
+      font-size: 0.95em;
+      margin-bottom: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .comparison-card.bad h4 { color: #b91c1c; }
+    .comparison-card.good h4 { color: #15803d; }
+    .comparison-card p { font-size: 0.88em; color: var(--ink-light); margin: 0; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--ink-muted);
+      font-size: 0.85em;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+
+    /* Flow step list */
+    .flow-steps {
+      list-style: none;
+      padding: 0;
+      margin: 14px 0;
+    }
+    .flow-steps li {
+      padding: 8px 0 8px 32px;
+      position: relative;
+      border-left: 2px solid var(--border);
+      margin-left: 12px;
+    }
+    .flow-steps li:last-child { border-left: 2px solid transparent; }
+    .flow-steps li::before {
+      content: '';
+      position: absolute;
+      left: -7px;
+      top: 14px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-3);
+      border: 2px solid var(--bg-card);
+    }
+    .flow-steps li .step-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82em;
+      color: var(--accent-1);
+      font-weight: 500;
+    }
+    .flow-steps li .step-desc {
+      font-size: 0.92em;
+      color: var(--ink-light);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 1.6em; }
+      .comparison-grid { grid-template-columns: 1fr; }
+      .principle-grid { grid-template-columns: 1fr; }
+      .section-nav { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">Architecture Design Doc</div>
+  <h1>多 Agent 消息架构设计说明</h1>
+  <p>基于点对点路由、按需上下文、避免越权三大原则构建的异步消息传递架构</p>
+</div>
+
+<!-- Navigation -->
+<nav class="section-nav">
+  <a href="#principles">设计原则</a>
+  <a href="#overview">架构总览</a>
+  <a href="#components">核心组件</a>
+  <a href="#call-lifecycle">调用生命周期</a>
+  <a href="#message-flow">消息流转</a>
+  <a href="#scenarios">使用场景</a>
+  <a href="#decisions">设计决策</a>
+  <a href="#two-layer">两层架构</a>
+</nav>
+
+<div class="content-section">
+
+<!-- ========== Section 1: 设计原则 ========== -->
+<div class="section-card" id="principles">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-1);">1</div>
+    <div class="section-title-block">
+      <h2>设计原则</h2>
+      <div class="subtitle">Three Core Principles</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p>本架构围绕三个核心原则设计，确保多 Agent 系统的消息传递既安全又高效。</p>
+    <div class="principle-grid">
+      <div class="principle-card">
+        <div class="icon">&#x1f6e1;</div>
+        <h4>避免越权访问</h4>
+        <p>Agent 不能直接访问其他 Agent 的方法和状态。每个 Agent 只持有 MessageRouter 引用，无法窥探其他 Agent 的内部。</p>
+      </div>
+      <div class="principle-card">
+        <div class="icon">&#x1f4cb;</div>
+        <h4>按需提供上下文</h4>
+        <p>每个 Agent 只获取与其职责相关的上下文信息，通过 GroupChatContext 过滤无关消息，减少 token 消耗。</p>
+      </div>
+      <div class="principle-card">
+        <div class="icon">&#x1f3af;</div>
+        <h4>点对点优于广播</h4>
+        <p>消息精确路由到目标 Agent 的私有队列，而非广播后过滤。真正的点对点通信，无信息泄露。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Section 2: 架构总览 ========== -->
+<div class="section-card" id="overview">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-3);">2</div>
+    <div class="section-title-block">
+      <h2>架构总览</h2>
+      <div class="subtitle">Architecture Overview</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <h3>组件关系全景图</h3>
+    <p>下图展示了系统中五大核心组件之间的关系。GroupChatContext 作为中心协调者，管理消息历史、调用状态和上下文分发；MessageRouter 负责精确路由消息到各 Agent 的私有队列。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Component Relationship</div>
+      <div class="mermaid">
+graph TB
+    subgraph 外部
+        User["User<br/>外部用户"]
+    end
+
+    subgraph GroupChatContext["GroupChatContext 群聊上下文中心"]
+        GCS["GroupChatSession<br/>消息历史"]
+        ACM["AgentCallManager<br/>调用状态管理"]
+        CH["compact_history<br/>压缩历史"]
+    end
+
+    subgraph 消息层
+        MR["MessageRouter<br/>消息路由总线"]
+    end
+
+    subgraph Agent层
+        A1["Agent A<br/>私有队列 Q_A"]
+        A2["Agent B<br/>私有队列 Q_B"]
+        A3["Agent C<br/>私有队列 Q_C"]
+    end
+
+    User -->|"@Agent A 消息"| MR
+    MR -->|"精确路由"| A1
+    MR -->|"精确路由"| A2
+    MR -->|"精确路由"| A3
+
+    A1 -->|"发送消息"| MR
+    A2 -->|"发送消息"| MR
+    A3 -->|"发送消息"| MR
+
+    A1 -->|"读取上下文"| GroupChatContext
+    A2 -->|"读取上下文"| GroupChatContext
+    A3 -->|"读取上下文"| GroupChatContext
+
+    MR -->|"记录消息"| GCS
+    ACM -->|"状态查询"| A1
+    ACM -->|"状态查询"| A2
+      </div>
+    </div>
+
+    <h3>数据流向图</h3>
+    <p>消息从发送者出发，经过 MessageRouter 路由，同时记录到 GroupChatSession 和投递到目标 Agent 的私有队列。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Data Flow</div>
+      <div class="mermaid">
+flowchart LR
+    Sender["发送者<br/>Agent/Manager"] -->|"1. 创建 Message"| MR["MessageRouter"]
+    MR -->|"2a. 记录历史"| GCS["GroupChatSession"]
+    MR -->|"2b. 精确投递"| Queue["目标 Agent<br/>私有队列"]
+    Queue -->|"3. 阻塞等待"| Receiver["接收者 Agent"]
+    Receiver -->|"4. 获取上下文"| GCC["GroupChatContext"]
+    GCC -->|"5. 返回定制上下文"| Receiver
+    Receiver -->|"6. LLM 执行"| LLM["LLM API"]
+    LLM -->|"7. 返回结果"| Receiver
+    Receiver -->|"8. 写入历史"| GCS
+    Receiver -->|"9. 更新状态"| ACM["AgentCallManager"]
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Section 3: 核心组件 ========== -->
+<div class="section-card" id="components">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-2);">3</div>
+    <div class="section-title-block">
+      <h2>核心组件详解</h2>
+      <div class="subtitle">Core Components</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <!-- 3.1 Message -->
+    <h3>3.1 Message（消息）</h3>
+    <p>消息是架构的基本通信单元，承载内容和路由信息。每个消息都有明确的发送者、接收者和可选的调用 ID。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Message Class</div>
+      <div class="mermaid">
+classDiagram
+    class Message {
+        +str content
+        +str send_to
+        +str sent_from
+        +str call_id
+        +datetime timestamp
+    }
+      </div>
+    </div>
+
+    <div class="info-block orange">
+      <p><strong>@ 符号的双重语义</strong></p>
+      <p><strong>User 的 @</strong>：有路由作用。系统解析 <code>@Agent A</code> 后直接路由到 Agent A，绕过 Manager。</p>
+      <p><strong>Agent 的 @</strong>：无路由作用，仅用于上下文澄清。让其他 Agent 看到消息时知道任务对象是谁，避免误解。</p>
+    </div>
+
+    <!-- 3.2 AgentCallManager -->
+    <h3>3.2 AgentCallManager（调用管理器）</h3>
+    <p>统一管理所有跨 Agent 的异步调用，提供状态追踪、生命周期管理和自动清理能力。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">AgentCallManager Class</div>
+      <div class="mermaid">
+classDiagram
+    class AgentCallManager {
+        -dict _calls
+        -Lock _lock
+        -Logger _logger
+        +create_call(send_from, send_to, content) str
+        +get_call(call_id) AgentCall
+        +update_status(call_id, status)
+        +set_result(call_id, result)
+        +set_error(call_id, error)
+        +get_stats() dict
+        -_cleanup_loop()
+        -_cleanup_expired_calls()
+        -_check_timeouts()
+        -_log_call(call)
+        -_search_call_in_log(call_id)
+    }
+
+    class AgentCall {
+        +str call_id
+        +str send_from
+        +str send_to
+        +str content
+        +MessageType message_type
+        +CallStatus status
+        +datetime created_at
+        +datetime started_at
+        +datetime completed_at
+        +AgentResult result
+        +str error
+        +str business_task_id
+        +int timeout_seconds
+        +is_timeout() bool
+        +can_be_deleted() bool
+    }
+
+    class CallStatus {
+        <<enumeration>>
+        PENDING
+        RUNNING
+        COMPLETED
+        FAILED
+        TIMEOUT
+    }
+
+    class MessageType {
+        <<enumeration>>
+        TASK
+        NOTIFICATION
+        QUERY
+    }
+
+    AgentCallManager --> AgentCall
+    AgentCall --> CallStatus
+    AgentCall --> MessageType
+      </div>
+    </div>
+
+    <h3>call_id 生成策略</h3>
+    <div class="info-block">
+      <p>使用 UUID4 截断前 8 位（十六进制），在 100 个缓存下冲突概率约 <strong>0.00012%</strong>。使用 <code>while</code> 循环处理极小概率的连续冲突。短小精悍，易读易用。</p>
+    </div>
+
+    <!-- 3.3 MessageRouter -->
+    <h3>3.3 MessageRouter（消息路由总线）</h3>
+    <p>管理所有 Agent 的私有队列引用，负责点对点消息路由和历史记录。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">MessageRouter Class</div>
+      <div class="mermaid">
+classDiagram
+    class MessageRouter {
+        -dict _agent_buffers
+        -GroupChatContext _context
+        +register(agent_name, buffer)
+        +publish_message(msg)
+    }
+
+    class Agent {
+        +str name
+        +Queue message_buffer
+        +GroupChatContext context
+        -MessageRouter _bus
+        +send_message(content, send_to)
+        +run()
+        -_process_message(msg)
+    }
+
+    Agent --> MessageRouter : 持有引用
+    MessageRouter --> Agent : 注册队列
+      </div>
+    </div>
+
+    <div class="comparison-grid">
+      <div class="comparison-card bad">
+        <h4>MetaGPT 方式（双向引用）</h4>
+        <p><code>Agent.rc.env.roles[name]</code> 可以直接访问其他 Agent 的任何方法，存在越权风险。</p>
+      </div>
+      <div class="comparison-card good">
+        <h4>本架构方式（单向引用）</h4>
+        <p>Agent 只能调用 <code>_bus.publish_message()</code>，无法访问 <code>_agent_buffers</code>（私有变量），完全避免越权。</p>
+      </div>
+    </div>
+
+    <!-- 3.4 Agent -->
+    <h3>3.4 Agent（智能体）</h3>
+    <p>每个 Agent 持有私有消息队列，从队列接收消息并处理，通过 MessageRouter 发送消息，通过 GroupChatContext 读取上下文。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Agent Message Processing</div>
+      <div class="mermaid">
+flowchart TD
+    A["消息到达<br/>queue.get"] --> B["标记 RUNNING"]
+    B --> C["获取上下文"]
+    C --> D["组装 Prompt"]
+    D --> E["执行 LLM"]
+    E --> F["写入群聊历史"]
+    F --> G["更新 session_id"]
+    G --> H["标记 COMPLETED"]
+    H --> I{"需要回复?"}
+    I -->|"TASK 类型"| J["发送回复消息"]
+    I -->|"NOTIFICATION"| K["结束，不回复"]
+      </div>
+    </div>
+
+    <!-- 3.5 GroupChatContext -->
+    <h3>3.5 GroupChatContext（群聊上下文）</h3>
+    <p>管理群聊历史、压缩历史和 Agent 调用状态，为每个 Agent 提供定制化上下文。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">GroupChatContext Structure</div>
+      <div class="mermaid">
+graph TB
+    GCC["GroupChatContext"] --> GCS["GroupChatSession<br/>原始消息历史"]
+    GCC --> CH["compact_history<br/>压缩历史文件"]
+    GCC --> ACM["AgentCallManager<br/>调用状态管理"]
+
+    GCC -->|"get_agent_context"| Filter["上下文过滤"]
+    Filter --> F1["压缩历史 summary<br/>全局"]
+    Filter --> F2["压缩历史中针对<br/>该 Agent 的部分"]
+    Filter --> F3["最新未压缩消息<br/>过滤后"]
+
+    F1 --> Result["定制化上下文<br/>返回给 Agent"]
+    F2 --> Result
+    F3 --> Result
+      </div>
+    </div>
+
+    <div class="info-block green">
+      <p><strong>上下文过滤规则：</strong>Agent 只看到与自己相关的消息，避免被无关信息干扰，减少 token 消耗。这不是"耦合"，而是"依赖注入"。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Section 4: 调用生命周期 ========== -->
+<div class="section-card" id="call-lifecycle">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-4);">4</div>
+    <div class="section-title-block">
+      <h2>调用生命周期</h2>
+      <div class="subtitle">Call Lifecycle Management</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <h3>状态流转图</h3>
+    <p>每个 AgentCall 从创建到清理，经历明确的状态流转。超时由后台线程定期检查，自动标记为 TIMEOUT。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Call Status State Machine</div>
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> PENDING : create_call()
+    PENDING --> RUNNING : Agent 开始处理
+    PENDING --> TIMEOUT : 超时检查
+    RUNNING --> COMPLETED : 执行成功
+    RUNNING --> FAILED : 执行失败
+    RUNNING --> TIMEOUT : 超时检查
+    COMPLETED --> [*] : 清理
+    FAILED --> [*] : 清理
+    TIMEOUT --> [*] : 清理
+      </div>
+    </div>
+
+    <h3>生命周期清理规则</h3>
+    <p>基于状态和时间的智能清理策略，而非简单的 LRU 缓存。后台线程每 30 秒检查一次。</p>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>状态</th>
+          <th>MessageType</th>
+          <th>删除条件</th>
+          <th>保留时间</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>PENDING</code></td>
+          <td>任意</td>
+          <td>不删除</td>
+          <td>-</td>
+          <td>等待执行，不能删除</td>
+        </tr>
+        <tr>
+          <td><code>RUNNING</code></td>
+          <td>任意</td>
+          <td>不删除</td>
+          <td>-</td>
+          <td>正在执行，不能删除</td>
+        </tr>
+        <tr>
+          <td><code>COMPLETED</code></td>
+          <td>TASK</td>
+          <td>完成后 60 秒</td>
+          <td>60 秒</td>
+          <td>给发起者查询的时间</td>
+        </tr>
+        <tr>
+          <td><code>COMPLETED</code></td>
+          <td>NOTIFICATION</td>
+          <td>立即删除</td>
+          <td>0 秒</td>
+          <td>不需要回复，立即清理</td>
+        </tr>
+        <tr>
+          <td><code>FAILED</code></td>
+          <td>任意</td>
+          <td>失败后 300 秒</td>
+          <td>5 分钟</td>
+          <td>便于调试</td>
+        </tr>
+        <tr>
+          <td><code>TIMEOUT</code></td>
+          <td>任意</td>
+          <td>超时后 300 秒</td>
+          <td>5 分钟</td>
+          <td>便于调试</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>后台清理流程</h3>
+    <div class="diagram-section">
+      <div class="diagram-title">Cleanup Thread Flow</div>
+      <div class="mermaid">
+flowchart TD
+    Start["后台线程启动"] --> Sleep["等待 30 秒"]
+    Sleep --> Cleanup["扫描 _calls 字典"]
+    Cleanup --> CheckDel{"可删除?"}
+    CheckDel -->|"是"| Delete["从内存删除"]
+    CheckDel -->|"否"| Keep["保留"]
+    Delete --> LogDel["记录日志: 清理 N 个调用"]
+    LogDel --> Timeout["检查超时调用"]
+    Keep --> Timeout
+    Timeout --> CheckTimeout{"超时且<br/>PENDING/RUNNING?"}
+    CheckTimeout -->|"是"| MarkTimeout["标记 TIMEOUT"]
+    CheckTimeout -->|"否"| Sleep
+    MarkTimeout --> LogTimeout["记录超时日志"]
+    LogTimeout --> Sleep
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Section 5: 消息流转 ========== -->
+<div class="section-card" id="message-flow">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-5);">5</div>
+    <div class="section-title-block">
+      <h2>消息流转完整链路</h2>
+      <div class="subtitle">Complete Message Flow</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <h3>完整调用链路（带调用管理）</h3>
+    <p>从 Agent A 发起调用到 Agent B 执行完成的完整序列，包含异步解耦和状态追踪。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Sequence Diagram — Full Call Chain</div>
+      <div class="mermaid">
+sequenceDiagram
+    participant A as Agent A (发送者)
+    participant ACM as AgentCallManager
+    participant MR as MessageRouter
+    participant GCS as GroupChatSession
+    participant Q_B as Agent B 私有队列
+    participant B as Agent B (接收者)
+    participant GCC as GroupChatContext
+
+    A->>ACM: create_call(B, "分析需求")
+    ACM-->>A: 返回 call_id
+
+    A->>MR: publish_message(msg with call_id)
+    MR->>GCS: 记录消息历史
+    MR->>Q_B: 精确投递到 B 的队列
+
+    Note over A: A 立即返回，不阻塞
+
+    B->>Q_B: await queue.get() 阻塞等待
+    Q_B-->>B: 取出消息
+
+    B->>ACM: update_status(call_id, RUNNING)
+    B->>GCC: get_agent_context("Agent B")
+    GCC-->>B: 返回定制上下文
+
+    Note over B: 组装 prompt，执行 LLM
+
+    B->>GCS: add_message(LLM 结果)
+    B->>GCC: update_agent_session_id()
+    B->>ACM: set_result(call_id, result)
+
+    Note over A: 稍后查询
+    A->>ACM: get_call(call_id)
+    ACM-->>A: 返回调用详情和结果
+      </div>
+    </div>
+
+    <h3>消息路由流程图</h3>
+    <p>展示消息从创建到投递的完整流程，包含记录历史和路由到目标队列两个并行操作。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Message Routing Flow</div>
+      <div class="mermaid">
+flowchart TD
+    Start["发送者调用<br/>send_message"] --> Create["创建 Message 对象"]
+    Create --> Publish["MessageRouter<br/>publish_message"]
+    Publish --> Record["记录到 GroupChatSession"]
+    Publish --> Route["查找目标队列"]
+    Record --> Done["消息已记录"]
+    Route --> Found{"目标队列存在?"}
+    Found -->|"是"| Put["投递到目标队列"]
+    Found -->|"否"| Error["日志警告:<br/>目标 Agent 不存在"]
+    Put --> Delivered["消息已投递"]
+      </div>
+    </div>
+
+    <h3>关键设计要点</h3>
+    <div class="info-block purple">
+      <p><strong>FIFO 保证：</strong><code>asyncio.Queue</code> 保证消息按顺序处理。Manager 连续发送 3 个调用，Agent 按顺序执行。</p>
+    </div>
+    <div class="info-block green">
+      <p><strong>异步解耦：</strong>发送者调用 <code>call_agent()</code> 立即返回 call_id，不等待执行完成。接收者从队列阻塞等待。发送者可以继续做其他事情。</p>
+    </div>
+    <div class="info-block">
+      <p><strong>消息记录：</strong>所有消息都记录到 GroupChatSession，包括 User 消息、Manager 调用、Agent 结果。写入时机：LLM 返回后、发送下一条消息前。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Section 6: 使用场景 ========== -->
+<div class="section-card" id="scenarios">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-1);">6</div>
+    <div class="section-title-block">
+      <h2>三种使用场景</h2>
+      <div class="subtitle">Usage Scenarios</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <!-- 场景 1 -->
+    <h3>场景 1：Workflow（顺序执行）</h3>
+    <p>执行顺序确定，Manager 维护 workflow 状态机，按顺序调度 Agent。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Workflow Scenario</div>
+      <div class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant M as Manager
+    participant A as Agent A
+    participant B as Agent B
+    participant C as Agent C
+
+    U->>M: "请按 A-B-C 顺序开发登录功能"
+    Note over M: 解析 workflow = [A, B, C]
+
+    M->>A: "@Agent A 请分析需求"
+    A-->>M: "@Manager 需求分析完成"
+    Note over M: current_step += 1
+
+    M->>B: "@Agent B 请设计架构"
+    B-->>M: "@Manager 设计完成"
+    Note over M: current_step += 1
+
+    M->>C: "@Agent C 请开始编码"
+    C-->>M: "@Manager 编码完成"
+      </div>
+    </div>
+
+    <!-- 场景 2 -->
+    <h3>场景 2：Manager-SubAgent（动态协调）</h3>
+    <p>执行顺序不确定，Manager 通过 LLM 动态决策下一步，灵活应对复杂任务。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">Manager-SubAgent Scenario</div>
+      <div class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant M as Manager
+    participant A as Agent A
+    participant B as Agent B
+
+    U->>M: "帮我开发登录功能"
+    Note over M: LLM 决策：先分析需求
+
+    M->>A: "@Agent A 请分析需求"
+    A-->>M: "@Manager 需求分析完成"
+
+    Note over M: LLM 决策：需要设计架构
+    M->>B: "@Agent B 请设计架构"
+    B-->>M: "@Manager 设计完成"
+
+    Note over M: LLM 决策：需要编码...
+      </div>
+    </div>
+
+    <!-- 场景 3 -->
+    <h3>场景 3：User 直接 @Agent</h3>
+    <p>User 绕过 Manager，直接与 Agent 对话。Manager 通过 GroupChatSession 仍能看到对话。</p>
+    <div class="diagram-section">
+      <div class="diagram-title">User Direct @Agent Scenario</div>
+      <div class="mermaid">
+flowchart TD
+    User["User: @Agent A 请分析需求"] --> Parse["系统解析 @Agent A"]
+    Parse --> Match{"名称匹配成功?"}
+    Match -->|"是"| Route["直接路由到 Agent A"]
+    Match -->|"否"| Fallback["降级到 Manager"]
+    Route --> Process["Agent A 处理"]
+    Process --> Reply["Agent A 回复 User"]
+    Reply --> Record["消息记录到 GroupChatSession"]
+    Record --> ManagerSee["Manager 下次触发时<br/>能看到这段对话"]
+      </div>
+    </div>
+
+    <h3>场景对比</h3>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>Workflow</th>
+          <th>Manager-SubAgent</th>
+          <th>User 直接 @Agent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>执行顺序</td>
+          <td>用户明确指定</td>
+          <td>LLM 动态决策</td>
+          <td>无顺序</td>
+        </tr>
+        <tr>
+          <td>Manager 角色</td>
+          <td>状态机维护者</td>
+          <td>动态协调者</td>
+          <td>旁观者（通过历史可见）</td>
+        </tr>
+        <tr>
+          <td>适用场景</td>
+          <td>流程明确的任务</td>
+          <td>复杂、不确定的任务</td>
+          <td>用户直接指定 Agent</td>
+        </tr>
+        <tr>
+          <td>灵活性</td>
+          <td>低</td>
+          <td>高</td>
+          <td>最高</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========== Section 7: 设计决策 ========== -->
+<div class="section-card" id="decisions">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-3);">7</div>
+    <div class="section-title-block">
+      <h2>关键设计决策</h2>
+      <div class="subtitle">Key Design Decisions</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <h3>决策 1：为什么不用 MetaGPT 的双向引用？</h3>
+    <div class="comparison-grid">
+      <div class="comparison-card bad">
+        <h4>MetaGPT 方式</h4>
+        <p><code>Agent.rc.env → Environment</code><br/><code>Environment.roles[name] → Agent</code><br/>Agent 能通过 <code>self.rc.env.roles[name]</code> 访问其他 Agent 的任何方法，存在越权风险。</p>
+      </div>
+      <div class="comparison-card good">
+        <h4>本架构方式</h4>
+        <p><code>Agent._bus → MessageRouter</code><br/><code>MessageRouter._agent_buffers[name] → Queue</code><br/>Agent 只能调用 <code>_bus.publish_message()</code>，无法访问私有变量，完全避免越权。</p>
+      </div>
+    </div>
+
+    <h3>决策 2：为什么不用 AutoGen 的公共 Buffer？</h3>
+    <div class="comparison-grid">
+      <div class="comparison-card bad">
+        <h4>AutoGen 方式</h4>
+        <p><code>GroupChat.message_buffer = []</code><br/>所有 Agent 都能看到所有消息，依赖 Agent "自觉"不偷看，不符合"按需提供上下文"原则。</p>
+      </div>
+      <div class="comparison-card good">
+        <h4>本架构方式</h4>
+        <p>每个 Agent 有私有队列，MessageRouter 精确路由到目标队列。Agent 的队列里只有发给自己的消息，不需要过滤。</p>
+      </div>
+    </div>
+
+    <h3>决策 3：为什么不用中心化暂存队列？</h3>
+    <div class="comparison-grid">
+      <div class="comparison-card bad">
+        <h4>中心化队列方式</h4>
+        <p>多了一层中转，增加延迟，需要后台任务维护，增加复杂度，无实际价值。</p>
+      </div>
+      <div class="comparison-card good">
+        <h4>本架构方式</h4>
+        <p><code>publish_message()</code> 直接路由到私有队列，简单直接，无额外延迟，不需要后台任务。</p>
+      </div>
+    </div>
+
+    <h3>决策 4：call_agent 立即返回 vs 等待结果</h3>
+    <div class="info-block orange">
+      <p><strong>决策：</strong>采用异步设计，立即返回 call_id，不等待执行完成。</p>
+      <p><strong>理由：</strong>真正的异步，调用者不阻塞，支持并发调用，符合现实场景。通过 <code>query_call_status</code> 工具查询结果。</p>
+    </div>
+
+    <h3>决策 5：完成通知机制</h3>
+    <div class="info-block purple">
+      <p><strong>决策：</strong>默认不自动通知，A 需要主动查询。可选支持自动通知。</p>
+      <p><strong>理由：</strong>避免无限循环（A → B → A → B ...）。通过 <code>MessageType</code> 区分 TASK 和 NOTIFICATION，TASK 需要回复，NOTIFICATION 只记录不回复。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Section 8: 两层架构 ========== -->
+<div class="section-card" id="two-layer">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-2);">8</div>
+    <div class="section-title-block">
+      <h2>两层架构：AgentCall vs Task</h2>
+      <div class="subtitle">Two-Layer Architecture</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p>当前设计区分消息层（AgentCall）和业务层（Task），通过 <code>business_task_id</code> 关联两者。</p>
+
+    <div class="diagram-section">
+      <div class="diagram-title">Two-Layer Relationship</div>
+      <div class="mermaid">
+graph TB
+    subgraph 业务层["业务层 Task（粗粒度，未来实现）"]
+        T1["Task: 开发登录功能<br/>progress: 75%"]
+        T2["Subtask: 需求分析<br/>status: DONE"]
+        T3["Subtask: 设计架构<br/>status: DONE"]
+        T4["Subtask: 编码实现<br/>status: IN_PROGRESS"]
+        T5["Subtask: 编写测试<br/>status: TODO"]
+    end
+
+    subgraph 消息层["消息层 AgentCall（细粒度，已实现）"]
+        C1["Call abc<br/>Manager - A<br/>status: COMPLETED"]
+        C2["Call def<br/>Manager - B<br/>status: COMPLETED"]
+        C3["Call ghi<br/>Manager - C<br/>status: RUNNING"]
+    end
+
+    T1 --> T2
+    T1 --> T3
+    T1 --> T4
+    T1 --> T5
+
+    T2 -->|"business_task_id"| C1
+    T3 -->|"business_task_id"| C2
+    T4 -->|"business_task_id"| C3
+      </div>
+    </div>
+
+    <h3>两层对比</h3>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>AgentCall（消息层）</th>
+          <th>Task（业务层）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>含义</td>
+          <td>一次跨 Agent 的消息调用</td>
+          <td>用户请求的业务功能</td>
+        </tr>
+        <tr>
+          <td>粒度</td>
+          <td>细粒度（一次 LLM 调用）</td>
+          <td>粗粒度（多次 Agent 协作）</td>
+        </tr>
+        <tr>
+          <td>生命周期</td>
+          <td>A 调用 B → B 执行 → 返回结果</td>
+          <td>创建 → 分解子任务 → 多 Agent 协作 → 完成</td>
+        </tr>
+        <tr>
+          <td>用途</td>
+          <td>追踪异步消息的执行状态</td>
+          <td>前端可视化展示任务进度</td>
+        </tr>
+        <tr>
+          <td>示例</td>
+          <td>"Manager 调用 Agent A 分析需求"</td>
+          <td>"开发登录功能"</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>完整执行流程</h3>
+    <div class="diagram-section">
+      <div class="diagram-title">Task + Call Execution Flow</div>
+      <div class="mermaid">
+flowchart TD
+    User["用户请求: 增加登录功能"] --> CreateTask["创建 Task:<br/>增加登录功能"]
+    CreateTask --> Decompose["Manager 分解任务"]
+    Decompose --> ST1["Subtask 1: 需求分析"]
+    Decompose --> ST2["Subtask 2: 设计架构"]
+    Decompose --> ST3["Subtask 3: 编码实现"]
+    Decompose --> ST4["Subtask 4: 编写测试"]
+
+    ST1 --> Call1["call_agent: Agent A"]
+    Call1 --> ACM1["create_call 返回 call_id=abc"]
+    ACM1 --> Exec1["Agent A 执行"]
+    Exec1 --> Done1["CallStatus.COMPLETED"]
+    Done1 --> UpdateST1["需求分析 DONE"]
+    UpdateST1 --> Progress["进度 25%"]
+
+    ST2 --> Call2["call_agent: Agent B"]
+    Call2 --> Exec2["Agent B 执行"]
+    Exec2 --> Done2["COMPLETED"]
+    Done2 --> UpdateST2["设计架构 DONE"]
+    UpdateST2 --> Progress2["进度 50%"]
+
+    Progress2 --> Continue["继续执行 Subtask 3, 4..."]
+    Continue --> AllDone["所有 Subtask 完成"]
+    AllDone --> Final["TaskManager: 任务完成 ✅ 100%"]
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>多 Agent 消息架构设计说明 | 设计日期：2026-05-28 | 基于 agents-hub 项目</p>
+</div>
+
+<script>
+  function loadScript(src) {
+    return new Promise(function(resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function initMermaid() {
+    try {
+      await loadScript('https://unpkg.com/mermaid@10.9.0/dist/mermaid.min.js');
+    } catch(e) {
+      try {
+        await loadScript('https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js');
+      } catch(e2) {
+        document.querySelectorAll('.mermaid').forEach(function(el) {
+          el.style.color = '#b91c1c';
+          el.innerHTML = 'Mermaid CDN load failed. Check network.';
+        });
+        return;
+      }
+    }
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+      sequence: { useMaxWidth: true },
+      classDiagram: { useMaxWidth: true },
+      stateDiagram: { useMaxWidth: true }
+    });
+    await mermaid.run({ querySelector: '.mermaid' });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMermaid);
+  } else {
+    initMermaid();
+  }
+</script>
+</body>
+</html>

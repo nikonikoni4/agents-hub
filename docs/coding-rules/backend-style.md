@@ -65,3 +65,77 @@ class Config(BaseSettings):
 ```
 
 **原则：** 避免循环依赖，基础类型放在 `config/types.py`，让其他模块依赖它。
+
+## 错误处理
+
+### 核心原则
+
+1. **统一继承**：所有异常继承自 `agents_hub/exceptions.py` 的基类
+2. **边界处理**：内部函数只抛出，边界统一捕获转换
+3. **携带上下文**：传递 `error_code`、`details`、原始异常链
+
+### 异常定义规范
+
+```python
+# ✅ 正确：继承顶层基类，携带上下文
+from agents_hub.exceptions import ResourceNotFoundError
+
+class RoleNotFoundError(ResourceNotFoundError):
+    def __init__(self, role_name: str, available_roles: list[str] | None = None):
+        super().__init__(
+            message=f"Role '{role_name}' 不存在",
+            error_code="ROLE_NOT_FOUND",
+            details={
+                "role_name": role_name,
+                "available_roles": available_roles or []
+            }
+        )
+```
+
+### 抛出异常规范
+
+```python
+# ✅ 正确：传递上下文信息
+available_roles = self.list_role_names()
+raise RoleNotFoundError(role_name=name, available_roles=available_roles)
+
+# ❌ 错误：只传递字符串消息
+raise RoleNotFoundError(f"Role '{name}' not found")
+```
+
+### 边界处理规范
+
+```python
+# MCP Server / API Server 边界
+try:
+    result = do_something()
+    return {"success": True, "data": result}
+
+except ValidationError as e:
+    logger.warning(f"验证错误: {e}", extra={"details": e.details})
+    return {"success": False, "error": e.to_dict()}
+
+except ResourceNotFoundError as e:
+    logger.warning(f"资源不存在: {e}", extra={"details": e.details})
+    return {"success": False, "error": e.to_dict()}
+
+except Exception as e:
+    logger.critical(f"未预期错误: {e}", exc_info=True)
+    return {"success": False, "error": {"error_code": "UNKNOWN_ERROR", "message": "系统错误"}}
+```
+
+### 异常分类
+
+| 基类 | 用途 | 处理策略 |
+|------|------|---------|
+| `ValidationError` | 输入验证错误 | 返回详细错误信息 |
+| `ResourceNotFoundError` | 资源不存在 | 返回 404，提示可用资源 |
+| `StateError` | 状态错误 | 返回当前状态和期望状态 |
+| `ExternalServiceError` | 外部服务错误 | 区分可恢复/不可恢复 |
+
+### 禁止事项
+
+- ❌ 使用 `except Exception` 捕获所有错误（边界除外）
+- ❌ 吞掉异常（`except: pass`）
+- ❌ 丢失异常链（不使用 `from e`）
+- ❌ 只传递字符串消息，不携带上下文

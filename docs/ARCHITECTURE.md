@@ -394,7 +394,7 @@ local_data/
 
 技术栈：React + Electron
 
-**目录结构**：
+**目录结构**： [暂定结构，未最终确认]
 ```
 frontend/
 ├── src/

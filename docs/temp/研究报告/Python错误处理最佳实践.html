@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Python 错误处理最佳实践研究报告</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --ink-light: #555;
+      --ink-muted: #888;
+      --bg: #f8f6f1;
+      --bg-card: #ffffff;
+      --accent-1: #c04a1a;
+      --accent-2: #2d6a4f;
+      --accent-3: #1d3557;
+      --accent-4: #7b2d8b;
+      --accent-5: #b5651d;
+      --border: #e0dcd4;
+      --shadow: 0 2px 20px rgba(0,0,0,0.06);
+      --code-bg: #282c34;
+      --code-text: #abb2bf;
+      --success: #2d6a4f;
+      --warning: #b5651d;
+      --danger: #c04a1a;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+
+    /* ========== Hero区域 ========== */
+    .hero {
+      background: linear-gradient(135deg, var(--accent-3) 0%, #2a4a7f 100%);
+      color: white;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 700;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .hero p {
+      font-size: 16px;
+      opacity: 0.85;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .hero-meta {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      font-size: 14px;
+      opacity: 0.75;
+      flex-wrap: wrap;
+    }
+
+    /* ========== 导航区域 ========== */
+    .section-nav {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 24px 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section-nav a {
+      display: inline-block;
+      padding: 8px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--ink-light);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow);
+    }
+
+    .section-nav a:hover {
+      border-color: var(--accent-3);
+      color: var(--accent-3);
+      transform: translateY(-1px);
+    }
+
+    /* ========== 内容区域 ========== */
+    .content-section {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(to right, rgba(29,53,87,0.03), transparent);
+    }
+
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .section-title-block h2 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 2px;
+    }
+
+    .section-title-block .subtitle {
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+
+    .section-body {
+      padding: 24px;
+    }
+
+    /* ========== 文字内容 ========== */
+    h3 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--ink);
+      margin: 24px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h3:first-child {
+      margin-top: 0;
+    }
+
+    h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent-3);
+      margin: 18px 0 10px 0;
+    }
+
+    p {
+      margin-bottom: 14px;
+      color: var(--ink);
+    }
+
+    strong {
+      font-weight: 600;
+    }
+
+    /* ========== 信息块 ========== */
+    .info-block {
+      border-left: 4px solid var(--accent-3);
+      background: rgba(29,53,87,0.04);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+
+    .info-block.green {
+      border-left-color: var(--accent-2);
+      background: rgba(45,106,79,0.04);
+    }
+
+    .info-block.orange {
+      border-left-color: var(--accent-1);
+      background: rgba(192,74,26,0.04);
+    }
+
+    .info-block.purple {
+      border-left-color: var(--accent-4);
+      background: rgba(123,45,139,0.04);
+    }
+
+    .info-block.yellow {
+      border-left-color: var(--accent-5);
+      background: rgba(181,101,29,0.04);
+    }
+
+    .info-block-label {
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      color: var(--ink-light);
+    }
+
+    .info-block p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ========== 代码块 ========== */
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 18px 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+      margin: 14px 0;
+      border: 1px solid #3e4451;
+    }
+
+    pre code {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: rgba(29,53,87,0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent-3);
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    /* 代码高亮 */
+    .kw { color: #c678dd; }
+    .fn { color: #61afef; }
+    .st { color: #98c379; }
+    .cm { color: #5c6370; font-style: italic; }
+    .op { color: #56b6c2; }
+    .nu { color: #d19a66; }
+    .dc { color: #e5c07b; }
+    .cl { color: #e5c07b; }
+
+    /* ========== 表格 ========== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    th {
+      background: rgba(29,53,87,0.06);
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--ink);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tr:hover {
+      background: rgba(29,53,87,0.02);
+    }
+
+    /* ========== 列表 ========== */
+    ul, ol {
+      margin: 10px 0 10px 24px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* ========== 检查清单 ========== */
+    .checklist {
+      list-style: none;
+      margin-left: 0;
+    }
+
+    .checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(224,220,212,0.5);
+    }
+
+    .checklist li:last-child {
+      border-bottom: none;
+    }
+
+    .checklist li::before {
+      content: '☐';
+      margin-right: 8px;
+      color: var(--ink-muted);
+    }
+
+    .checklist li.checked::before {
+      content: '☑';
+      color: var(--accent-2);
+    }
+
+    /* ========== 异常树状图 ========== */
+    .tree {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 20px 24px;
+      border-radius: 8px;
+      line-height: 1.8;
+      overflow-x: auto;
+      margin: 16px 0;
+      border: 1px solid #3e4451;
+    }
+
+    .tree .cls { color: #e5c07b; }
+    .tree .cmt { color: #5c6370; font-style: italic; }
+    .tree .lnk { color: #61afef; }
+
+    /* ========== 图表区域 ========== */
+    .diagram-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 16px 0;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .diagram-section .mermaid {
+      display: inline-block;
+    }
+
+    /* ========== 对比块 ========== */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .compare-box {
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .compare-box.bad {
+      border: 1px solid rgba(192,74,26,0.3);
+      background: rgba(192,74,26,0.03);
+    }
+
+    .compare-box.good {
+      border: 1px solid rgba(45,106,79,0.3);
+      background: rgba(45,106,79,0.03);
+    }
+
+    .compare-label {
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .compare-box.bad .compare-label {
+      background: rgba(192,74,26,0.1);
+      color: var(--danger);
+    }
+
+    .compare-box.good .compare-label {
+      background: rgba(45,106,79,0.1);
+      color: var(--success);
+    }
+
+    .compare-box pre {
+      margin: 0;
+      border-radius: 0;
+      border: none;
+      font-size: 12.5px;
+    }
+
+    /* ========== 步骤列表 ========== */
+    .step-list {
+      counter-reset: step;
+      list-style: none;
+      margin-left: 0;
+    }
+
+    .step-list li {
+      counter-increment: step;
+      padding: 14px 16px 14px 50px;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step-list li:last-child {
+      border-bottom: none;
+    }
+
+    .step-list li::before {
+      content: counter(step);
+      position: absolute;
+      left: 10px;
+      top: 14px;
+      width: 28px;
+      height: 28px;
+      background: var(--accent-3);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* ========== 引用块 ========== */
+    blockquote {
+      border-left: 3px solid var(--accent-4);
+      padding: 12px 18px;
+      margin: 14px 0;
+      background: rgba(123,45,139,0.04);
+      border-radius: 0 6px 6px 0;
+      color: var(--ink-light);
+      font-size: 14px;
+    }
+
+    blockquote p {
+      margin-bottom: 0;
+    }
+
+    /* ========== 分隔线 ========== */
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
+
+    /* ========== 页脚 ========== */
+    .footer {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--ink-muted);
+      font-size: 13px;
+    }
+
+    .footer a {
+      color: var(--accent-3);
+      text-decoration: none;
+    }
+
+    /* ========== 响应式 ========== */
+    @media (max-width: 768px) {
+      .hero {
+        padding: 40px 16px;
+      }
+
+      .hero h1 {
+        font-size: 26px;
+      }
+
+      .section-nav {
+        gap: 8px;
+      }
+
+      .section-nav a {
+        font-size: 13px;
+        padding: 6px 14px;
+      }
+
+      .section-body {
+        padding: 16px;
+      }
+
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-meta {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 14px;
+      }
+
+      .tree {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== Hero区域 ========== -->
+<div class="hero">
+  <div class="hero-badge">RESEARCH REPORT</div>
+  <h1>Python 错误处理最佳实践研究报告</h1>
+  <p>为 agents-hub 项目设计完善的错误处理架构，涵盖异常层次、处理模式、日志记录与反模式</p>
+  <div class="hero-meta">
+    <span>目标读者：agents-hub 项目开发者</span>
+    <span>创建时间：2026-05-30</span>
+  </div>
+</div>
+
+<!-- ========== 导航区域 ========== -->
+<nav class="section-nav">
+  <a href="#principles">核心原则</a>
+  <a href="#hierarchy">异常层次结构</a>
+  <a href="#classification">错误分类策略</a>
+  <a href="#patterns">异常处理模式</a>
+  <a href="#logging">日志记录</a>
+  <a href="#antipatterns">反模式</a>
+  <a href="#agents-hub">项目建议</a>
+  <a href="#examples">实战案例</a>
+</nav>
+
+<div class="content-section">
+
+<!-- ========== 核心原则 ========== -->
+<div class="section-card" id="principles">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-3);">1</div>
+    <div class="section-title-block">
+      <h2>核心原则</h2>
+      <div class="subtitle">错误处理的 5 个基本原则</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <h3>1. 异常是异常，不是返回值</h3>
+    <div class="info-block">
+      <p><strong>原则</strong>：用异常表示"不应该发生的情况"，用返回值表示"正常的分支"</p>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-box bad">
+        <div class="compare-label">❌ 错误示范</div>
+        <pre><code><span class="kw">def</span> <span class="fn">get_user</span>(user_id: <span class="cl">str</span>) -> <span class="cl">dict</span> | <span class="cl">None</span>:
+    <span class="kw">if</span> user_id <span class="kw">not in</span> users:
+        <span class="kw">return</span> <span class="nu">None</span>  <span class="cm"># 用户不存在是异常情况</span>
+    <span class="kw">return</span> users[user_id]</code></pre>
+      </div>
+      <div class="compare-box good">
+        <div class="compare-label">✅ 正确示范</div>
+        <pre><code><span class="kw">def</span> <span class="fn">get_user</span>(user_id: <span class="cl">str</span>) -> <span class="cl">dict</span>:
+    <span class="kw">if</span> user_id <span class="kw">not in</span> users:
+        <span class="kw">raise</span> <span class="cl">UserNotFoundError</span>(user_id)
+    <span class="kw">return</span> users[user_id]</code></pre>
+      </div>
+    </div>
+
+    <div class="info-block green">
+      <div class="info-block-label">为什么？</div>
+      <ul>
+        <li>异常会强制调用者处理错误情况</li>
+        <li>返回值容易被忽略（忘记检查 None）</li>
+        <li>异常可以携带更多上下文信息</li>
+      </ul>
+    </div>
+
+    <h3>2. 在边界处理</h3>
+    <div class="info-block">
+      <p><strong>原则</strong>：内部函数抛出异常，在系统边界统一捕获并转换</p>
+    </div>
+
+    <p><strong>边界在哪里？</strong></p>
+    <ul>
+      <li>MCP Tool 入口（<code>call_agent</code>）</li>
+      <li>REST API 端点（FastAPI 路由）</li>
+      <li>Agent.run() 循环</li>
+      <li>文件操作函数</li>
+    </ul>
+
+    <h3>3. 保留上下文</h3>
+    <div class="info-block">
+      <p><strong>原则</strong>：异常应该携带足够的信息用于调试和日志记录</p>
+    </div>
+
+    <p><strong>上下文包括什么？</strong></p>
+    <ul>
+      <li>错误发生时的参数值</li>
+      <li>相关的业务对象 ID</li>
+      <li>可用的替代选项</li>
+      <li>原始异常（异常链）</li>
+    </ul>
+
+    <h3>4. 分类处理</h3>
+    <div class="info-block">
+      <p><strong>原则</strong>：不同类型的错误用不同的处理策略</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>错误类型</th><th>处理策略</th><th>示例</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>可恢复错误</strong></td><td>自动重试（带退避）</td><td>API 限流、临时网络故障</td></tr>
+        <tr><td><strong>业务错误</strong></td><td>返回给调用者处理</td><td>Agent 不存在、权限不足</td></tr>
+        <tr><td><strong>验证错误</strong></td><td>返回详细提示</td><td>参数格式错误、数据不符合约束</td></tr>
+        <tr><td><strong>系统错误</strong></td><td>记录日志、通知管理员</td><td>数据库连接失败、磁盘满</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5. 对用户友好</h3>
+    <div class="info-block">
+      <p><strong>原则</strong>：错误信息应该清晰、可操作</p>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-box bad">
+        <div class="compare-label">❌ 信息模糊</div>
+        <pre><code>{<span class="st">"error"</span>: <span class="st">"Invalid input"</span>}</code></pre>
+      </div>
+      <div class="compare-box good">
+        <div class="compare-label">✅ 清晰 + 可操作</div>
+        <pre><code>{
+  <span class="st">"error_code"</span>: <span class="st">"AGENT_NOT_FOUND"</span>,
+  <span class="st">"message"</span>: <span class="st">"Agent 'worker1' 不存在"</span>,
+  <span class="st">"details"</span>: {
+    <span class="st">"agent_name"</span>: <span class="st">"worker1"</span>,
+    <span class="st">"available_agents"</span>: [<span class="st">"小李"</span>, <span class="st">"小赵"</span>, <span class="st">"Leader"</span>]
+  },
+  <span class="st">"suggestion"</span>: <span class="st">"请使用 list_agents 查看可用列表"</span>
+}</code></pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 异常层次结构设计 ========== -->
+<div class="section-card" id="hierarchy">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-2);">2</div>
+    <div class="section-title-block">
+      <h2>异常层次结构设计</h2>
+      <div class="subtitle">建立清晰的异常继承树</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <h3>设计原则</h3>
+    <div class="info-block green">
+      <p><strong>核心思想</strong>：建立清晰的异常继承树，让调用者可以选择捕获的粒度</p>
+    </div>
+
+    <div class="tree">
+<span class="cls">AgentsHubError</span> <span class="cmt">(基类)</span>
+├── <span class="cls">ValidationError</span> <span class="cmt">(验证错误)</span>
+├── <span class="cls">ResourceNotFoundError</span> <span class="cmt">(资源不存在)</span>
+├── <span class="cls">StateError</span> <span class="cmt">(状态错误)</span>
+├── <span class="cls">ExternalServiceError</span> <span class="cmt">(外部服务错误)</span>
+└── <span class="cls">SystemError</span> <span class="cmt">(系统错误)</span>
+    </div>
+
+    <div class="info-block purple">
+      <div class="info-block-label">为什么分层？</div>
+      <ul>
+        <li><strong>粗粒度捕获</strong>：<code>except ValidationError</code> 捕获所有验证错误</li>
+        <li><strong>细粒度捕获</strong>：<code>except AgentNotFoundError</code> 捕获特定错误</li>
+        <li><strong>全局捕获</strong>：<code>except AgentsHubError</code> 捕获所有业务异常</li>
+      </ul>
+    </div>
+
+    <h3>基础异常类设计</h3>
+    <pre><code><span class="kw">class</span> <span class="cl">AgentsHubError</span>(<span class="cl">Exception</span>):
+    <span class="st">"""所有 agents-hub 异常的基类"""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(
+        <span class="kw">self</span>,
+        message: <span class="cl">str</span>,
+        error_code: <span class="cl">str</span> | <span class="nu">None</span> = <span class="nu">None</span>,
+        details: <span class="cl">dict</span> | <span class="nu">None</span> = <span class="nu">None</span>,
+        cause: <span class="cl">Exception</span> | <span class="nu">None</span> = <span class="nu">None</span>
+    ):
+        <span class="kw">self</span>.message = message
+        <span class="kw">self</span>.error_code = error_code <span class="kw">or</span> <span class="kw">self</span>.__class__.__name__
+        <span class="kw">self</span>.details = details <span class="kw">or</span> {}
+        <span class="kw">self</span>.cause = cause
+        <span class="kw">super</span>().__init__(message)
+
+    <span class="kw">def</span> <span class="fn">__str__</span>(<span class="kw">self</span>) -> <span class="cl">str</span>:
+        base = <span class="st">f"[{self.error_code}] {self.message}"</span>
+        <span class="kw">if</span> <span class="kw">self</span>.details:
+            base += <span class="st">f" | Details: {self.details}"</span>
+        <span class="kw">if</span> <span class="kw">self</span>.cause:
+            base += <span class="st">f" | Caused by: {type(self.cause).__name__}: {self.cause}"</span>
+        <span class="kw">return</span> base
+
+    <span class="kw">def</span> <span class="fn">to_dict</span>(<span class="kw">self</span>) -> <span class="cl">dict</span>:
+        <span class="kw">return</span> {
+            <span class="st">"error_code"</span>: <span class="kw">self</span>.error_code,
+            <span class="st">"message"</span>: <span class="kw">self</span>.message,
+            <span class="st">"details"</span>: <span class="kw">self</span>.details,
+            <span class="st">"type"</span>: <span class="kw">self</span>.__class__.__name__
+        }</code></pre>
+
+    <div class="info-block">
+      <div class="info-block-label">关键设计点</div>
+      <ul>
+        <li><strong>error_code</strong>：用于 API 响应，客户端可以根据错误码做不同处理</li>
+        <li><strong>details</strong>：携带上下文信息，便于调试</li>
+        <li><strong>cause</strong>：保留原始异常，形成异常链</li>
+        <li><strong>to_dict()</strong>：方便转换为 JSON 响应</li>
+      </ul>
+    </div>
+
+    <h3>具体异常类示例</h3>
+
+    <h4>1. 验证错误</h4>
+    <pre><code><span class="kw">class</span> <span class="cl">ValidationError</span>(<span class="cl">AgentsHubError</span>):
+    <span class="st">"""验证错误（用户输入、参数格式等）"""</span>
+    <span class="kw">pass</span>
+
+<span class="kw">class</span> <span class="cl">InvalidMessageError</span>(<span class="cl">ValidationError</span>):
+    <span class="st">"""消息格式错误"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, reason: <span class="cl">str</span>, message_data: <span class="cl">dict</span> | <span class="nu">None</span> = <span class="nu">None</span>):
+        <span class="kw">super</span>().__init__(
+            message=<span class="st">f"消息格式错误: {reason}"</span>,
+            error_code=<span class="st">"INVALID_MESSAGE"</span>,
+            details={<span class="st">"reason"</span>: reason, <span class="st">"message_data"</span>: message_data}
+        )</code></pre>
+
+    <h4>2. 资源不存在错误</h4>
+    <pre><code><span class="kw">class</span> <span class="cl">AgentNotFoundError</span>(<span class="cl">ResourceNotFoundError</span>):
+    <span class="st">"""Agent 不存在"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, agent_name: <span class="cl">str</span>, available_agents: <span class="cl">list</span>[<span class="cl">str</span>] | <span class="nu">None</span> = <span class="nu">None</span>):
+        <span class="kw">super</span>().__init__(
+            message=<span class="st">f"Agent '{agent_name}' 不存在"</span>,
+            error_code=<span class="st">"AGENT_NOT_FOUND"</span>,
+            details={
+                <span class="st">"agent_name"</span>: agent_name,
+                <span class="st">"available_agents"</span>: available_agents <span class="kw">or</span> []
+            }
+        )</code></pre>
+
+    <h4>3. 外部服务错误</h4>
+    <pre><code><span class="kw">class</span> <span class="cl">RateLimitError</span>(<span class="cl">LLMAPIError</span>):
+    <span class="st">"""API 限流（可恢复）"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, retry_after: <span class="cl">float</span> = <span class="nu">5.0</span>):
+        <span class="kw">super</span>().__init__(
+            message=<span class="st">f"API 限流，请 {retry_after} 秒后重试"</span>,
+            error_code=<span class="st">"RATE_LIMIT"</span>,
+            details={<span class="st">"retry_after"</span>: retry_after}
+        )
+        <span class="kw">self</span>.retry_after = retry_after</code></pre>
+
+  </div>
+</div>
+
+<!-- ========== 错误分类策略 ========== -->
+<div class="section-card" id="classification">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-1);">3</div>
+    <div class="section-title-block">
+      <h2>错误分类策略</h2>
+      <div class="subtitle">按"谁应该处理"分类</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="info-block orange">
+      <p><strong>这是最实用的分类方式</strong>，直接指导错误处理策略。</p>
+    </div>
+
+    <h3>1. 可恢复错误（Recoverable Error）</h3>
+    <p><strong>特征</strong>：系统可以自动重试解决</p>
+    <p><strong>处理策略</strong>：自动重试（带指数退避）</p>
+    <p><strong>示例</strong>：API 限流（429 错误）、临时网络故障、队列临时满</p>
+
+    <h3>2. 业务错误（Business Error）</h3>
+    <p><strong>特征</strong>：业务逻辑错误，需要调用者处理</p>
+    <p><strong>处理策略</strong>：返回结构化错误信息给调用者</p>
+    <p><strong>示例</strong>：Agent 不存在、权限不足、操作超时</p>
+
+    <h3>3. 验证错误（Validation Error）</h3>
+    <p><strong>特征</strong>：输入参数不符合要求</p>
+    <p><strong>处理策略</strong>：返回详细的错误信息，帮助调用者修正</p>
+    <p><strong>示例</strong>：参数缺失或格式错误、数据不符合约束、消息内容为空</p>
+
+    <h3>4. 系统错误（System Error）</h3>
+    <p><strong>特征</strong>：系统级故障，需要人工介入</p>
+    <p><strong>处理策略</strong>：记录日志、通知管理员、返回通用错误信息（不暴露内部细节）</p>
+    <p><strong>示例</strong>：数据库连接失败、磁盘空间不足、配置文件损坏</p>
+
+    <table>
+      <thead>
+        <tr><th>错误类型</th><th>特征</th><th>处理策略</th><th>恢复方式</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>可恢复</strong></td><td>临时性问题</td><td>自动重试</td><td>指数退避</td></tr>
+        <tr><td><strong>业务错误</strong></td><td>逻辑错误</td><td>返回调用者</td><td>人工修正</td></tr>
+        <tr><td><strong>验证错误</strong></td><td>输入问题</td><td>详细提示</td><td>修正输入</td></tr>
+        <tr><td><strong>系统错误</strong></td><td>基础设施</td><td>告警通知</td><td>管理员介入</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+<!-- ========== 异常处理模式 ========== -->
+<div class="section-card" id="patterns">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-4);">4</div>
+    <div class="section-title-block">
+      <h2>异常处理模式</h2>
+      <div class="subtitle">5 种核心异常处理模式</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <h3>模式 1：边界处理（Boundary Handling）</h3>
+    <div class="info-block purple">
+      <p><strong>核心思想</strong>：在系统边界捕获所有异常，转换为统一格式</p>
+      <p><strong>适用场景</strong>：MCP Tool 入口、REST API 端点</p>
+    </div>
+
+    <pre><code><span class="kw">def</span> <span class="fn">call_agent</span>(group_chat_id, send_from, send_to, content) -> <span class="cl">dict</span>:
+    <span class="st">"""MCP Tool 入口，必须返回结构化响应"""</span>
+    <span class="kw">try</span>:
+        result = _do_call_agent(group_chat_id, send_from, send_to, content)
+        <span class="kw">return</span> {<span class="st">"success"</span>: <span class="nu">True</span>, <span class="st">"data"</span>: result}
+
+    <span class="kw">except</span> <span class="cl">ValidationError</span> <span class="kw">as</span> e:
+        logger.warning(<span class="st">f"验证错误: {e}"</span>)
+        <span class="kw">return</span> {<span class="st">"success"</span>: <span class="nu">False</span>, <span class="st">"error"</span>: e.to_dict(),
+                <span class="st">"suggestion"</span>: <span class="st">"请检查输入参数是否正确"</span>}
+
+    <span class="kw">except</span> <span class="cl">ResourceNotFoundError</span> <span class="kw">as</span> e:
+        logger.warning(<span class="st">f"资源不存在: {e}"</span>)
+        <span class="kw">return</span> {<span class="st">"success"</span>: <span class="nu">False</span>, <span class="st">"error"</span>: e.to_dict(),
+                <span class="st">"suggestion"</span>: <span class="st">"请使用 list_agents 查看可用资源"</span>}
+
+    <span class="kw">except</span> <span class="cl">SystemError</span> <span class="kw">as</span> e:
+        logger.critical(<span class="st">f"系统错误: {e}"</span>, exc_info=<span class="nu">True</span>)
+        alert_admin(e)
+        <span class="kw">return</span> {<span class="st">"success"</span>: <span class="nu">False</span>,
+                <span class="st">"error"</span>: {<span class="st">"error_code"</span>: <span class="st">"INTERNAL_ERROR"</span>,
+                         <span class="st">"message"</span>: <span class="st">"系统内部错误，请联系管理员"</span>}}</code></pre>
+
+    <h3>模式 2：异常链（Exception Chaining）</h3>
+    <div class="info-block">
+      <p><strong>核心思想</strong>：保留原始异常信息，方便调试</p>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-box bad">
+        <div class="compare-label">❌ 丢失原始异常</div>
+        <pre><code><span class="kw">except</span> <span class="cl">OSError</span>:
+    <span class="kw">raise</span> <span class="cl">FileSystemError</span>(
+        <span class="st">f"无法写入文件 {path}"</span>
+    )</code></pre>
+      </div>
+      <div class="compare-box good">
+        <div class="compare-label">✅ 保留异常链</div>
+        <pre><code><span class="kw">except</span> <span class="cl">OSError</span> <span class="kw">as</span> e:
+    <span class="kw">raise</span> <span class="cl">FileSystemError</span>(
+        operation=<span class="st">"write"</span>,
+        path=path,
+        reason=<span class="fn">str</span>(e)
+    ) <span class="kw">from</span> e</code></pre>
+      </div>
+    </div>
+
+    <h3>模式 3：重试装饰器（Retry Decorator）</h3>
+    <div class="info-block green">
+      <p><strong>核心思想</strong>：自动重试可恢复错误</p>
+      <p><strong>适用场景</strong>：调用外部服务（LLM API、网络请求）</p>
+    </div>
+
+    <pre><code><span class="kw">def</span> <span class="fn">retry_on_recoverable</span>(
+    max_attempts: <span class="cl">int</span> = <span class="nu">3</span>,
+    backoff_factor: <span class="cl">float</span> = <span class="nu">2.0</span>,
+    max_backoff: <span class="cl">float</span> = <span class="nu">60.0</span>
+):
+    <span class="st">"""重试装饰器，只重试 RecoverableError"""</span>
+    <span class="kw">def</span> <span class="fn">decorator</span>(func):
+        @<span class="fn">wraps</span>(func)
+        <span class="kw">async def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+            attempt = <span class="nu">0</span>
+            <span class="kw">while</span> attempt < max_attempts:
+                <span class="kw">try</span>:
+                    <span class="kw">return await</span> func(*args, **kwargs)
+                <span class="kw">except</span> <span class="cl">RecoverableError</span> <span class="kw">as</span> e:
+                    attempt += <span class="nu">1</span>
+                    <span class="kw">if</span> attempt >= max_attempts:
+                        <span class="kw">raise</span>
+                    delay = <span class="fn">min</span>(
+                        e.retry_after * (backoff_factor ** (attempt - <span class="nu">1</span>)),
+                        max_backoff
+                    )
+                    <span class="kw">await</span> asyncio.sleep(delay)
+                <span class="kw">except</span> <span class="cl">Exception</span>:
+                    <span class="kw">raise</span>
+        <span class="kw">return</span> wrapper
+    <span class="kw">return</span> decorator
+
+<span class="cm"># 使用示例</span>
+@<span class="fn">retry_on_recoverable</span>(max_attempts=<span class="nu">3</span>)
+<span class="kw">async def</span> <span class="fn">call_llm_api</span>(prompt):
+    response = <span class="kw">await</span> llm_client.generate(prompt)
+    <span class="kw">if</span> response.status == <span class="nu">429</span>:
+        <span class="kw">raise</span> <span class="cl">RateLimitError</span>(<span class="st">"API 限流"</span>, retry_after=<span class="nu">5.0</span>)
+    <span class="kw">return</span> response.text</code></pre>
+
+    <h3>模式 4：上下文管理器（Context Manager）</h3>
+    <div class="info-block">
+      <p><strong>核心思想</strong>：自动管理资源和状态，即使发生异常</p>
+    </div>
+
+    <pre><code><span class="kw">from</span> contextlib <span class="kw">import</span> asynccontextmanager
+
+@<span class="fn">asynccontextmanager</span>
+<span class="kw">async def</span> <span class="fn">agent_execution_context</span>(agent_name, call_id):
+    <span class="st">"""Agent 执行上下文，自动管理状态和清理"""</span>
+    <span class="cm"># 1. Setup：进入时执行</span>
+    call_manager.update_status(call_id, CallStatus.RUNNING)
+
+    <span class="kw">try</span>:
+        <span class="kw">yield</span>  <span class="cm"># 2. 暂停，执行业务逻辑</span>
+        <span class="cm"># 3a. Teardown（成功）</span>
+        call_manager.update_status(call_id, CallStatus.COMPLETED)
+    <span class="kw">except</span> <span class="cl">Exception</span> <span class="kw">as</span> e:
+        <span class="cm"># 3b. Teardown（失败）</span>
+        call_manager.update_status(call_id, CallStatus.FAILED)
+        <span class="kw">raise</span>
+    <span class="kw">finally</span>:
+        <span class="cm"># 3c. 总是执行</span>
+        logger.debug(<span class="st">f"清理 Agent {agent_name} 的资源"</span>)
+
+<span class="cm"># 使用示例</span>
+<span class="kw">async def</span> <span class="fn">execute_agent</span>(agent_name, call_id, prompt):
+    <span class="kw">async with</span> <span class="fn">agent_execution_context</span>(agent_name, call_id):
+        result = <span class="kw">await</span> agent.execute(prompt)
+        <span class="kw">return</span> result</code></pre>
+
+    <h3>模式 5：错误恢复策略</h3>
+    <div class="info-block orange">
+      <p><strong>核心思想</strong>：根据错误类型选择不同的恢复策略</p>
+    </div>
+
+    <pre><code><span class="kw">async def</span> <span class="fn">process_message_with_recovery</span>(agent, message):
+    <span class="kw">try</span>:
+        result = <span class="kw">await</span> agent.execute(message.content)
+        <span class="kw">return</span> result
+
+    <span class="kw">except</span> <span class="cl">RecoverableError</span> <span class="kw">as</span> e:
+        <span class="kw">raise</span>  <span class="cm"># 由装饰器处理重试</span>
+
+    <span class="kw">except</span> <span class="cl">ValidationError</span> <span class="kw">as</span> e:
+        <span class="kw">await</span> send_error_to_sender(message.send_from, e)
+        <span class="kw">return</span> <span class="nu">None</span>
+
+    <span class="kw">except</span> <span class="cl">AgentExecutionError</span> <span class="kw">as</span> e:
+        <span class="cm"># 降级方案：使用备用 Agent</span>
+        backup_agent = get_backup_agent(agent.name)
+        result = <span class="kw">await</span> backup_agent.execute(message.content)
+        <span class="kw">return</span> result
+
+    <span class="kw">except</span> <span class="cl">SystemError</span> <span class="kw">as</span> e:
+        logger.critical(<span class="st">f"系统错误: {e}"</span>, exc_info=<span class="nu">True</span>)
+        alert_admin(e)
+        <span class="kw">raise</span></code></pre>
+
+  </div>
+</div>
+
+<!-- ========== 日志记录最佳实践 ========== -->
+<div class="section-card" id="logging">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-5);">5</div>
+    <div class="section-title-block">
+      <h2>日志记录最佳实践</h2>
+      <div class="subtitle">结构化日志与日志级别</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <h3>日志级别使用指南</h3>
+    <table>
+      <thead>
+        <tr><th>级别</th><th>使用场景</th><th>示例</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>DEBUG</strong></td><td>详细的调试信息</td><td>函数参数、中间变量值</td></tr>
+        <tr><td><strong>INFO</strong></td><td>正常的业务流程</td><td>Agent 开始执行、消息发送成功</td></tr>
+        <tr><td><strong>WARNING</strong></td><td>可恢复的异常情况</td><td>验证错误、资源不存在、重试</td></tr>
+        <tr><td><strong>ERROR</strong></td><td>需要关注的错误</td><td>Agent 执行失败、外部服务错误</td></tr>
+        <tr><td><strong>CRITICAL</strong></td><td>系统级严重错误</td><td>数据库连接失败、磁盘满</td></tr>
+      </tbody>
+    </table>
+
+    <h3>结构化日志示例</h3>
+    <pre><code><span class="kw">class</span> <span class="cl">StructuredLogger</span>:
+    <span class="st">"""结构化日志记录器"""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, name: <span class="cl">str</span>):
+        <span class="kw">self</span>.logger = logging.getLogger(name)
+
+    <span class="kw">def</span> <span class="fn">log_error</span>(<span class="kw">self</span>, error, context=<span class="nu">None</span>, include_traceback=<span class="nu">True</span>):
+        <span class="st">"""记录错误，包含上下文信息"""</span>
+        log_data = {
+            <span class="st">"timestamp"</span>: datetime.now().isoformat(),
+            <span class="st">"error_type"</span>: <span class="fn">type</span>(error).__name__,
+            <span class="st">"error_message"</span>: <span class="fn">str</span>(error),
+            <span class="st">"context"</span>: context <span class="kw">or</span> {}
+        }
+        <span class="kw">if</span> <span class="fn">isinstance</span>(error, AgentsHubError):
+            log_data[<span class="st">"error_code"</span>] = error.error_code
+            log_data[<span class="st">"details"</span>] = error.details
+
+        <span class="kw">self</span>.logger.error(
+            json.dumps(log_data, ensure_ascii=<span class="nu">False</span>),
+            exc_info=include_traceback
+        )</code></pre>
+
+  </div>
+</div>
+
+<!-- ========== 错误处理反模式 ========== -->
+<div class="section-card" id="antipatterns">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--danger);">6</div>
+    <div class="section-title-block">
+      <h2>错误处理反模式</h2>
+      <div class="subtitle">需要避免的常见错误</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="compare-grid">
+      <div class="compare-box bad">
+        <div class="compare-label">❌ 吞掉异常</div>
+        <pre><code><span class="kw">try</span>:
+    result = do_something()
+<span class="kw">except</span> <span class="cl">Exception</span>:
+    <span class="kw">pass</span>  <span class="cm"># 完全忽略错误</span></code></pre>
+      </div>
+      <div class="compare-box good">
+        <div class="compare-label">✅ 正确处理</div>
+        <pre><code><span class="kw">try</span>:
+    result = do_something()
+<span class="kw">except</span> <span class="cl">Exception</span> <span class="kw">as</span> e:
+    logger.warning(<span class="st">f"操作失败: {e}"</span>)
+    result = default_value</code></pre>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-box bad">
+        <div class="compare-label">❌ 捕获过于宽泛</div>
+        <pre><code><span class="kw">try</span>:
+    result = do_something()
+<span class="kw">except</span> <span class="cl">Exception</span>:  <span class="cm"># 捕获所有</span>
+    handle_error()</code></pre>
+      </div>
+      <div class="compare-box good">
+        <div class="compare-label">✅ 精确捕获</div>
+        <pre><code><span class="kw">try</span>:
+    result = do_something()
+<span class="kw">except</span> (<span class="cl">ValueError</span>, <span class="cl">TypeError</span>) <span class="kw">as</span> e:
+    handle_error(e)</code></pre>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-box bad">
+        <div class="compare-label">❌ 异常作为控制流</div>
+        <pre><code><span class="kw">try</span>:
+    user = users[user_id]
+<span class="kw">except</span> <span class="cl">KeyError</span>:
+    user = create_user(user_id)</code></pre>
+      </div>
+      <div class="compare-box good">
+        <div class="compare-label">✅ 用返回值判断</div>
+        <pre><code>user = users.get(user_id)
+<span class="kw">if</span> user <span class="kw">is</span> <span class="nu">None</span>:
+    user = create_user(user_id)</code></pre>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-box bad">
+        <div class="compare-label">❌ 丢失异常链</div>
+        <pre><code><span class="kw">except</span> <span class="cl">RequestException</span>:
+    <span class="kw">raise</span> <span class="cl">CustomError</span>(<span class="st">"API 调用失败"</span>)</code></pre>
+      </div>
+      <div class="compare-box good">
+        <div class="compare-label">✅ 保留异常链</div>
+        <pre><code><span class="kw">except</span> <span class="cl">RequestException</span> <span class="kw">as</span> e:
+    <span class="kw">raise</span> <span class="cl">CustomError</span>(<span class="st">"API 调用失败"</span>) <span class="kw">from</span> e</code></pre>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-box bad">
+        <div class="compare-label">❌ 循环中吞掉异常</div>
+        <pre><code><span class="kw">for</span> item <span class="kw">in</span> items:
+    <span class="kw">try</span>:
+        process(item)
+    <span class="kw">except</span> <span class="cl">Exception</span>:
+        <span class="kw">continue</span>  <span class="cm"># 跳过所有错误</span></code></pre>
+      </div>
+      <div class="compare-box good">
+        <div class="compare-label">✅ 精确跳过</div>
+        <pre><code><span class="kw">for</span> item <span class="kw">in</span> items:
+    <span class="kw">try</span>:
+        process(item)
+    <span class="kw">except</span> <span class="cl">ProcessError</span> <span class="kw">as</span> e:
+        logger.warning(<span class="st">f"处理 {item} 失败: {e}"</span>)
+        <span class="kw">continue</span></code></pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 针对 agents-hub 的建议 ========== -->
+<div class="section-card" id="agents-hub">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-3);">7</div>
+    <div class="section-title-block">
+      <h2>针对 agents-hub 的建议</h2>
+      <div class="subtitle">完整的异常层次与分层处理策略</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <h3>建议的异常层次结构</h3>
+    <div class="tree">
+<span class="cls">AgentsHubError</span> <span class="cmt">(基类)</span>
+├── <span class="cls">ValidationError</span> <span class="cmt">(验证错误)</span>
+│   ├── <span class="cls">InvalidMessageError</span>
+│   ├── <span class="cls">InvalidParameterError</span>
+│   └── <span class="cls">EmptyContentError</span>
+│
+├── <span class="cls">ResourceNotFoundError</span> <span class="cmt">(资源不存在)</span>
+│   ├── <span class="cls">AgentNotFoundError</span>
+│   ├── <span class="cls">GroupChatNotFoundError</span>
+│   ├── <span class="cls">RoleNotFoundError</span>
+│   └── <span class="cls">SessionNotFoundError</span>
+│
+├── <span class="cls">StateError</span> <span class="cmt">(状态错误)</span>
+│   ├── <span class="cls">InvalidStateTransitionError</span>
+│   ├── <span class="cls">AgentNotReadyError</span>
+│   └── <span class="cls">CallAlreadyCompletedError</span>
+│
+├── <span class="cls">CommunicationError</span> <span class="cmt">(通信错误)</span>
+│   ├── <span class="cls">MessageDeliveryError</span>
+│   ├── <span class="cls">QueueFullError</span>
+│   └── <span class="cls">TimeoutError</span>
+│
+├── <span class="cls">ExternalServiceError</span> <span class="cmt">(外部服务错误)</span>
+│   ├── <span class="cls">LLMAPIError</span>
+│   │   ├── <span class="cls">RateLimitError</span> <span class="cmt">(可恢复)</span>
+│   │   ├── <span class="cls">LLMTimeoutError</span> <span class="cmt">(可恢复)</span>
+│   │   └── <span class="cls">InvalidResponseError</span>
+│   ├── <span class="cls">FileSystemError</span>
+│   │   ├── <span class="cls">FileNotFoundError</span>
+│   │   ├── <span class="cls">PermissionDeniedError</span>
+│   │   └── <span class="cls">DiskFullError</span>
+│   └── <span class="cls">AgentBridgeError</span>
+│       ├── <span class="cls">PlatformNotSupportedError</span>
+│       └── <span class="cls">CLIExecutionError</span>
+│
+└── <span class="cls">SystemError</span> <span class="cmt">(系统错误)</span>
+    ├── <span class="cls">ConfigurationError</span>
+    ├── <span class="cls">DatabaseError</span>
+    └── <span class="cls">MemoryError</span>
+    </div>
+
+    <h3>在不同层的处理策略</h3>
+    <table>
+      <thead>
+        <tr><th>层级</th><th>策略</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Foundation 层</strong></td><td>定义异常类</td><td>不捕获，只定义</td></tr>
+        <tr><td><strong>Communication 层</strong></td><td>抛出具体异常</td><td>如 <code>MessageDeliveryError</code></td></tr>
+        <tr><td><strong>Context 层</strong></td><td>抛出具体异常</td><td>如 <code>FileSystemError</code></td></tr>
+        <tr><td><strong>Agent 层</strong></td><td>捕获并转换</td><td>转换为 <code>AgentExecutionError</code></td></tr>
+        <tr><td><strong>Orchestration 层</strong></td><td>捕获并记录</td><td>记录日志，继续运行</td></tr>
+        <tr><td><strong>MCP Server</strong></td><td>边界处理</td><td>转换为 MCP 响应格式</td></tr>
+        <tr><td><strong>API Server</strong></td><td>边界处理</td><td>转换为 HTTP 响应格式</td></tr>
+      </tbody>
+    </table>
+
+    <h3>错误处理检查清单</h3>
+    <ul class="checklist">
+      <li><strong>异常类定义</strong>
+        <ul class="checklist" style="margin-left: 20px;">
+          <li>所有异常继承自 <code>AgentsHubError</code></li>
+          <li>每个异常都有 <code>error_code</code></li>
+          <li>每个异常都携带 <code>details</code></li>
+          <li>实现了 <code>to_dict()</code> 方法</li>
+        </ul>
+      </li>
+      <li><strong>异常抛出</strong>
+        <ul class="checklist" style="margin-left: 20px;">
+          <li>使用具体的异常类（不是 <code>Exception</code>）</li>
+          <li>使用 <code>from e</code> 保留异常链</li>
+          <li>携带足够的上下文信息</li>
+        </ul>
+      </li>
+      <li><strong>异常捕获</strong>
+        <ul class="checklist" style="margin-left: 20px;">
+          <li>只在边界捕获</li>
+          <li>按类型分类处理</li>
+          <li>不捕获过于宽泛的异常</li>
+          <li>不吞掉异常</li>
+        </ul>
+      </li>
+      <li><strong>日志记录</strong>
+        <ul class="checklist" style="margin-left: 20px;">
+          <li>使用正确的日志级别</li>
+          <li>记录上下文信息</li>
+          <li>系统错误记录完整堆栈</li>
+          <li>使用结构化日志</li>
+        </ul>
+      </li>
+      <li><strong>用户友好</strong>
+        <ul class="checklist" style="margin-left: 20px;">
+          <li>错误信息清晰</li>
+          <li>提供可操作的建议</li>
+          <li>不暴露内部实现细节</li>
+        </ul>
+      </li>
+    </ul>
+
+  </div>
+</div>
+
+<!-- ========== 实战案例 ========== -->
+<div class="section-card" id="examples">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--accent-2);">8</div>
+    <div class="section-title-block">
+      <h2>实战案例</h2>
+      <div class="subtitle">文件操作、LLM 调用、消息压缩的错误处理</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <h3>案例 1：文件操作错误处理</h3>
+    <pre><code><span class="kw">async def</span> <span class="fn">save_group_chat_session</span>(<span class="kw">self</span>):
+    <span class="st">"""保存群聊会话，完善的错误处理"""</span>
+    <span class="kw">try</span>:
+        os.makedirs(<span class="kw">self</span>.group_chat_session_path, exist_ok=<span class="nu">True</span>)
+        <span class="kw">self</span>.group_chat_session.updated_at = datetime.now()
+
+        <span class="kw">with</span> <span class="fn">open</span>(<span class="kw">self</span>.messages_file, <span class="st">'w'</span>, encoding=<span class="st">'utf-8'</span>) <span class="kw">as</span> f:
+            meta_data = {
+                <span class="st">'_type'</span>: <span class="st">'meta_data'</span>,
+                <span class="st">'updated_at'</span>: <span class="kw">self</span>.group_chat_session.updated_at.isoformat()
+            }
+            f.write(json.dumps(meta_data, ensure_ascii=<span class="nu">False</span>) + <span class="st">'\n'</span>)
+            <span class="kw">for</span> msg <span class="kw">in</span> <span class="kw">self</span>.group_chat_session.messages:
+                f.write(json.dumps(msg, ensure_ascii=<span class="nu">False</span>) + <span class="st">'\n'</span>)
+
+    <span class="kw">except</span> <span class="cl">PermissionError</span> <span class="kw">as</span> e:
+        <span class="kw">raise</span> <span class="cl">FileSystemError</span>(
+            operation=<span class="st">"write"</span>,
+            path=<span class="kw">self</span>.messages_file,
+            reason=<span class="st">"权限不足"</span>
+        ) <span class="kw">from</span> e
+
+    <span class="kw">except</span> <span class="cl">OSError</span> <span class="kw">as</span> e:
+        <span class="kw">if</span> e.errno == <span class="nu">28</span>:  <span class="cm"># No space left on device</span>
+            <span class="kw">raise</span> <span class="cl">FileSystemError</span>(
+                operation=<span class="st">"write"</span>,
+                path=<span class="kw">self</span>.messages_file,
+                reason=<span class="st">"磁盘空间不足"</span>
+            ) <span class="kw">from</span> e
+        <span class="kw">raise</span> <span class="cl">FileSystemError</span>(
+            operation=<span class="st">"write"</span>,
+            path=<span class="kw">self</span>.messages_file,
+            reason=<span class="fn">str</span>(e)
+        ) <span class="kw">from</span> e</code></pre>
+
+    <h3>案例 2：LLM API 调用错误处理</h3>
+    <pre><code>@<span class="fn">retry_on_recoverable</span>(max_attempts=<span class="nu">3</span>)
+<span class="kw">async def</span> <span class="fn">call_llm_with_retry</span>(prompt, role_config) -> AgentResult:
+    <span class="st">"""调用 LLM API，带重试和完善的错误处理"""</span>
+    <span class="kw">try</span>:
+        response = <span class="kw">await</span> agent_platform_client.execute(prompt, role_config)
+        <span class="kw">return</span> response
+
+    <span class="kw">except</span> <span class="cl">RateLimitError</span> <span class="kw">as</span> e:
+        logger.warning(<span class="st">f"LLM API 限流: {e}"</span>)
+        <span class="kw">raise</span>  <span class="cm"># 由装饰器自动重试</span>
+
+    <span class="kw">except</span> <span class="cl">TimeoutError</span> <span class="kw">as</span> e:
+        logger.warning(<span class="st">f"LLM API 超时: {e}"</span>)
+        <span class="kw">raise</span> <span class="cl">LLMTimeoutError</span>(<span class="st">"LLM API 超时"</span>, retry_after=<span class="nu">2.0</span>) <span class="kw">from</span> e
+
+    <span class="kw">except</span> <span class="cl">InvalidResponseError</span> <span class="kw">as</span> e:
+        logger.error(<span class="st">f"LLM 返回无效响应: {e}"</span>)
+        <span class="kw">raise</span>
+
+    <span class="kw">except</span> <span class="cl">Exception</span> <span class="kw">as</span> e:
+        logger.error(<span class="st">f"LLM API 调用失败: {e}"</span>, exc_info=<span class="nu">True</span>)
+        <span class="kw">raise</span> <span class="cl">LLMAPIError</span>(<span class="st">f"LLM API 调用失败: {str(e)}"</span>) <span class="kw">from</span> e</code></pre>
+
+    <h3>案例 3：消息压缩错误处理</h3>
+    <pre><code><span class="kw">async def</span> <span class="fn">compact_messages</span>(<span class="kw">self</span>, agent_info):
+    <span class="st">"""压缩群聊消息历史，带重试和降级"""</span>
+    uncompacted = <span class="kw">self</span>.group_chat_session.get_uncompact_messages()
+    <span class="kw">if not</span> uncompacted:
+        <span class="kw">return</span>
+
+    token_count = estimate_prompt_tokens(uncompacted)
+    <span class="kw">if</span> token_count < MAX_TOKEN:
+        <span class="kw">return</span>
+
+    compact_prompt = build_compact_prompt(uncompacted, agent_info)
+
+    <span class="kw">for</span> attempt <span class="kw">in</span> <span class="fn">range</span>(<span class="nu">3</span>):
+        <span class="kw">try</span>:
+            compact_result = <span class="kw">await</span> llm_call.execute(compact_prompt)
+            compact_data = parse_compact_result(compact_result.text)
+            <span class="kw">await</span> save_compact_record(compact_data)
+            <span class="kw">self</span>.group_chat_session.last_compacted_loc = <span class="fn">len</span>(
+                <span class="kw">self</span>.group_chat_session.messages
+            )
+            <span class="kw">self</span>.save_group_chat_session()
+            <span class="kw">return</span>
+
+        <span class="kw">except</span> json.JSONDecodeError <span class="kw">as</span> e:
+            logger.warning(<span class="st">f"第 {attempt+1} 次压缩失败: {e}"</span>)
+            <span class="kw">if</span> attempt < <span class="nu">2</span>:
+                <span class="kw">await</span> asyncio.sleep(<span class="nu">2</span> ** attempt)
+                <span class="kw">continue</span>
+            <span class="kw">await</span> <span class="kw">self</span>._fallback_compact(uncompacted)
+            <span class="kw">return</span>
+
+        <span class="kw">except</span> <span class="cl">LLMAPIError</span> <span class="kw">as</span> e:
+            <span class="kw">if</span> attempt < <span class="nu">2</span>:
+                <span class="kw">await</span> asyncio.sleep(<span class="nu">2</span> ** attempt)
+                <span class="kw">continue</span>
+            <span class="kw">raise</span> <span class="cl">CompactionError</span>(<span class="st">f"压缩失败: {str(e)}"</span>) <span class="kw">from</span> e</code></pre>
+
+    <h3>实施步骤</h3>
+    <ol class="step-list">
+      <li><strong>第一阶段：定义异常类</strong>（1-2 天）<br>在 <code>core/foundation/exceptions.py</code> 中定义所有异常类，实现基类与子类</li>
+      <li><strong>第二阶段：修改现有代码</strong>（3-5 天）<br>将 <code>raise ValueError</code> 替换为具体异常类，在边界处添加统一异常处理</li>
+      <li><strong>第三阶段：完善日志</strong>（1-2 天）<br>实现结构化日志，在关键位置添加日志记录</li>
+      <li><strong>第四阶段：测试和优化</strong>（2-3 天）<br>编写错误处理单元测试，测试各种异常场景</li>
+    </ol>
+
+  </div>
+</div>
+
+<!-- ========== 参考资源 ========== -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="section-icon" style="background: var(--ink-muted);">R</div>
+    <div class="section-title-block">
+      <h2>参考资源</h2>
+      <div class="subtitle">延伸阅读</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <ul>
+      <li><a href="https://www.python.org/dev/peps/pep-3134/" target="_blank">PEP 3134 - Exception Chaining</a></li>
+      <li><a href="https://docs.python.org/3/howto/logging.html" target="_blank">Python Logging HOWTO</a></li>
+      <li><a href="https://effectivepython.com/" target="_blank">Effective Python: 90 Specific Ways to Write Better Python</a></li>
+      <li><a href="https://realpython.com/python-exceptions/" target="_blank">Python Best Practices for Error Handling</a></li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- end content-section -->
+
+<div class="footer">
+  <p>Python 错误处理最佳实践研究报告 | agents-hub 项目 | 2026-05-30</p>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: {
+      useMaxWidth: true,
+      htmlLabels: true,
+      curve: 'basis'
+    }
+  });
+</script>
+
+</body>
+</html>

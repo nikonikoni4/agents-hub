@@ -34,7 +34,7 @@ class Message:
     content: str                                    # 消息内容
     send_to: str                                    # 接收者（路由目标）
     sent_from: str                                  # 发送者
-    task_id: str | None = None                      # 关联的任务 ID（用于异步任务追踪）
+    call_id: str | None = None                      # 关联的调用 ID（用于异步调用追踪）
     timestamp: datetime = field(default_factory=datetime.now)  # 消息时间戳
 ```
 
@@ -59,84 +59,308 @@ class Message:
 
 ---
 
-### 2. TaskManager（任务管理器）
+### 2. AgentCallManager（Agent 调用管理器）
 
 **职责：**
-- 统一管理所有跨 Agent 的异步任务
-- 提供任务状态追踪和查询能力
-- 维护任务生命周期（创建 → 执行 → 完成/失败）
+- 统一管理所有跨 Agent 的异步调用
+- 提供调用状态追踪和查询能力
+- 维护调用生命周期（创建 → 执行 → 完成/失败/超时）
+- 基于状态和时间自动清理过期调用
+
+**命名说明：**
+- `AgentCall`：表示一次 Agent 之间的消息调用（细粒度）
+- 与业务层的 `Task`（用户级别的任务，如"开发登录功能"）区分开
+- 一个业务 `Task` 可能包含多个 `AgentCall`
 
 **关键设计：**
 ```python
 from enum import Enum
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
 
-class TaskStatus(Enum):
+class CallStatus(Enum):
     PENDING = "pending"      # 已创建，等待执行
     RUNNING = "running"      # 正在执行
     COMPLETED = "completed"  # 执行完成
     FAILED = "failed"        # 执行失败
+    TIMEOUT = "timeout"      # 执行超时
+
+class MessageType(Enum):
+    TASK = "task"           # 需要回复的任务
+    NOTIFICATION = "notification"  # 不需要回复的通知
+    QUERY = "query"         # 查询请求
 
 @dataclass
-class Task:
-    task_id: str = field(default_factory=lambda: str(uuid4()))
-    send_from: str          # 任务发起者
-    send_to: str            # 任务执行者
-    content: str            # 任务内容
-    status: TaskStatus = TaskStatus.PENDING
+class AgentCall:
+    call_id: str = field(default_factory=lambda: str(uuid4())[:8])  # 8 位短 ID
+    send_from: str          # 调用发起者
+    send_to: str            # 调用执行者
+    content: str            # 调用内容
+    message_type: MessageType = MessageType.TASK  # 消息类型
+    status: CallStatus = CallStatus.PENDING
     created_at: datetime = field(default_factory=datetime.now)
     started_at: datetime | None = None
     completed_at: datetime | None = None
     result: AgentResult | None = None  # 执行结果
     error: str | None = None           # 错误信息
+    business_task_id: str | None = None  # 关联的业务任务 ID（可选）
+    timeout_seconds: int = 300  # 超时时间（默认 5 分钟）
+    
+    def is_timeout(self) -> bool:
+        """判断是否超时"""
+        if self.status in (CallStatus.COMPLETED, CallStatus.FAILED, CallStatus.TIMEOUT):
+            return False
+        
+        elapsed = (datetime.now() - self.created_at).total_seconds()
+        return elapsed > self.timeout_seconds
+    
+    def can_be_deleted(self) -> bool:
+        """判断是否可以被删除"""
+        now = datetime.now()
+        
+        # 1. NOTIFICATION 类型：完成后立即可删除
+        if self.message_type == MessageType.NOTIFICATION:
+            return self.status in (CallStatus.COMPLETED, CallStatus.FAILED, CallStatus.TIMEOUT)
+        
+        # 2. TASK 类型：需要保留一段时间供查询
+        if self.status == CallStatus.COMPLETED:
+            # 完成后保留 60 秒（给发起者查询的时间）
+            if self.completed_at:
+                elapsed = (now - self.completed_at).total_seconds()
+                return elapsed > 60
+        
+        if self.status == CallStatus.FAILED:
+            # 失败后保留 300 秒（5 分钟，便于调试）
+            if self.completed_at:
+                elapsed = (now - self.completed_at).total_seconds()
+                return elapsed > 300
+        
+        if self.status == CallStatus.TIMEOUT:
+            # 超时后保留 300 秒（5 分钟，便于调试）
+            if self.completed_at:
+                elapsed = (now - self.completed_at).total_seconds()
+                return elapsed > 300
+        
+        # 3. PENDING/RUNNING 状态：不能删除
+        return False
 
-class TaskManager:
-    """统一管理所有跨 Agent 的异步任务"""
+class AgentCallManager:
+    """统一管理所有跨 Agent 的异步调用"""
     
-    def __init__(self):
-        self._tasks: dict[str, Task] = {}  # task_id -> Task
+    def __init__(self, log_dir: Path = Path("local_data/logs")):
+        self._calls: dict[str, AgentCall] = {}  # call_id -> AgentCall
+        self._lock = threading.Lock()  # 线程安全
+        
+        # 导入 logger
+        from lifeprism.utils.logger import setup_agent_call_logging
+        self._logger = setup_agent_call_logging(log_dir)
+        
+        # 启动后台清理线程
+        self._cleanup_thread = threading.Thread(target=self._cleanup_loop, daemon=True)
+        self._cleanup_thread.start()
     
-    def create_task(self, send_from: str, send_to: str, content: str) -> str:
-        """创建新任务，返回 task_id"""
-        task = Task(send_from=send_from, send_to=send_to, content=content)
-        self._tasks[task.task_id] = task
-        return task.task_id
+    def create_call(
+        self, 
+        send_from: str, 
+        send_to: str, 
+        content: str,
+        message_type: MessageType = MessageType.TASK,
+        business_task_id: str | None = None,
+        timeout_seconds: int = 300
+    ) -> str:
+        """创建新调用，返回 call_id"""
+        call = AgentCall(
+            send_from=send_from, 
+            send_to=send_to, 
+            content=content,
+            message_type=message_type,
+            business_task_id=business_task_id,
+            timeout_seconds=timeout_seconds
+        )
+        
+        with self._lock:
+            # 极小概率冲突检查（8 位 UUID 在 100 个缓存下冲突概率 0.00012%）
+            while call.call_id in self._calls:
+                call.call_id = str(uuid4())[:8]
+            
+            self._calls[call.call_id] = call
+        
+        # 记录创建事件
+        self._log_call(call)
+        
+        return call.call_id
     
-    def get_task(self, task_id: str) -> Task | None:
-        """获取任务详情"""
-        return self._tasks.get(task_id)
+    def get_call(self, call_id: str) -> AgentCall | None:
+        """获取调用详情（先查缓存，再查日志）"""
+        # 1. 先查内存缓存
+        with self._lock:
+            if call := self._calls.get(call_id):
+                return call
+        
+        # 2. 再查日志文件
+        return self._search_call_in_log(call_id)
     
-    def update_status(self, task_id: str, status: TaskStatus):
-        """更新任务状态"""
-        if task := self._tasks.get(task_id):
-            task.status = status
-            if status == TaskStatus.RUNNING:
-                task.started_at = datetime.now()
-            elif status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
-                task.completed_at = datetime.now()
+    def update_status(self, call_id: str, status: CallStatus):
+        """更新调用状态"""
+        with self._lock:
+            if call := self._calls.get(call_id):
+                call.status = status
+                if status == CallStatus.RUNNING:
+                    call.started_at = datetime.now()
+                elif status in (CallStatus.COMPLETED, CallStatus.FAILED, CallStatus.TIMEOUT):
+                    call.completed_at = datetime.now()
+                
+                # 记录状态变更
+                self._log_call(call)
     
-    def set_result(self, task_id: str, result: AgentResult):
-        """设置任务结果"""
-        if task := self._tasks.get(task_id):
-            task.result = result
-            task.status = TaskStatus.COMPLETED
-            task.completed_at = datetime.now()
+    def set_result(self, call_id: str, result: AgentResult):
+        """设置调用结果"""
+        with self._lock:
+            if call := self._calls.get(call_id):
+                call.result = result
+                call.status = CallStatus.COMPLETED
+                call.completed_at = datetime.now()
+                
+                # 记录完成事件
+                self._log_call(call)
     
-    def set_error(self, task_id: str, error: str):
-        """设置任务错误"""
-        if task := self._tasks.get(task_id):
-            task.error = error
-            task.status = TaskStatus.FAILED
-            task.completed_at = datetime.now()
+    def set_error(self, call_id: str, error: str):
+        """设置调用错误"""
+        with self._lock:
+            if call := self._calls.get(call_id):
+                call.error = error
+                call.status = CallStatus.FAILED
+                call.completed_at = datetime.now()
+                
+                # 记录失败事件
+                self._log_call(call)
+    
+    def _cleanup_loop(self):
+        """后台清理线程：定期检查并删除可删除的调用"""
+        while True:
+            try:
+                time.sleep(30)  # 每 30 秒清理一次
+                self._cleanup_expired_calls()
+                self._check_timeouts()
+            except Exception as e:
+                self._logger.error(f"清理线程异常: {e}")
+    
+    def _cleanup_expired_calls(self):
+        """清理可删除的调用"""
+        with self._lock:
+            to_delete = [
+                call_id for call_id, call in self._calls.items()
+                if call.can_be_deleted()
+            ]
+            
+            for call_id in to_delete:
+                del self._calls[call_id]
+            
+            if to_delete:
+                self._logger.info(f"清理了 {len(to_delete)} 个过期调用")
+    
+    def _check_timeouts(self):
+        """检查超时的调用"""
+        with self._lock:
+            for call in self._calls.values():
+                if call.is_timeout() and call.status in (CallStatus.PENDING, CallStatus.RUNNING):
+                    call.status = CallStatus.TIMEOUT
+                    call.completed_at = datetime.now()
+                    
+                    # 记录超时事件
+                    self._log_call(call)
+                    
+                    self._logger.warning(
+                        f"调用超时: {call.call_id} ({call.send_from} -> {call.send_to})"
+                    )
+    
+    def _log_call(self, call: AgentCall):
+        """记录调用到专用日志文件"""
+        log_entry = {
+            "call_id": call.call_id,
+            "send_from": call.send_from,
+            "send_to": call.send_to,
+            "content": call.content,
+            "message_type": call.message_type.value,
+            "status": call.status.value,
+            "created_at": call.created_at.isoformat(),
+            "started_at": call.started_at.isoformat() if call.started_at else None,
+            "completed_at": call.completed_at.isoformat() if call.completed_at else None,
+            "result": call.result.text if call.result else None,
+            "error": call.error,
+            "business_task_id": call.business_task_id,
+            "timeout_seconds": call.timeout_seconds
+        }
+        # 直接输出 JSON 字符串到日志
+        self._logger.info(json.dumps(log_entry, ensure_ascii=False))
+    
+    def _search_call_in_log(self, call_id: str) -> AgentCall | None:
+        """从日志文件中搜索历史调用"""
+        log_file = Path("local_data/logs/agent_calls.jsonl")
+        
+        if not log_file.exists():
+            return None
+        
+        try:
+            # 从后往前读（最新的调用在文件末尾）
+            with open(log_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # 倒序查找
+            for line in reversed(lines):
+                try:
+                    entry = json.loads(line.strip())
+                    if entry.get('call_id') == call_id:
+                        # 重建 AgentCall 对象（只读）
+                        return self._rebuild_call_from_log(entry)
+                except json.JSONDecodeError:
+                    continue
+        except Exception as e:
+            self._logger.error(f"搜索日志失败: {e}")
+        
+        return None
+    
+    def get_stats(self) -> dict:
+        """获取统计信息（用于调试）"""
+        with self._lock:
+            stats = {
+                "total": len(self._calls),
+                "pending": sum(1 for c in self._calls.values() if c.status == CallStatus.PENDING),
+                "running": sum(1 for c in self._calls.values() if c.status == CallStatus.RUNNING),
+                "completed": sum(1 for c in self._calls.values() if c.status == CallStatus.COMPLETED),
+                "failed": sum(1 for c in self._calls.values() if c.status == CallStatus.FAILED),
+                "timeout": sum(1 for c in self._calls.values() if c.status == CallStatus.TIMEOUT),
+            }
+            return stats
 ```
 
 **设计要点：**
-- 所有任务都在 `TaskManager` 中注册，避免任务分散在各个 Agent 的队列中
-- 每个任务都有唯一的 `task_id`，用于追踪和查询
-- 支持查询任务状态、执行时长、结果等信息
-- `_tasks` 字典就是异步任务的 "pending 池"
+- 所有调用都在 `AgentCallManager` 中注册，避免调用分散在各个 Agent 的队列中
+- 每个调用都有唯一的 `call_id`（8 位 UUID 截断），短小精悍
+- 支持查询调用状态、执行时长、结果等信息
+- `_calls` 字典就是异步调用的 "pending 池"
+- 可选的 `business_task_id` 字段用于关联业务层任务
+- **生命周期管理**：基于状态和时间自动清理，而非简单的 LRU
+- **超时机制**：后台线程定期检查，超时调用自动标记为 TIMEOUT
+- **日志持久化**：所有状态变更都记录到 `agent_calls.jsonl`，内存删除后仍可查询
+
+**生命周期规则：**
+
+| 状态 | MessageType | 删除条件 | 保留时间 | 说明 |
+|------|-------------|---------|---------|------|
+| PENDING | 任意 | ❌ 不删除 | - | 等待执行，不能删除 |
+| RUNNING | 任意 | ❌ 不删除 | - | 正在执行，不能删除 |
+| COMPLETED | TASK | ✅ 完成后 60 秒 | 60 秒 | 给发起者查询的时间 |
+| COMPLETED | NOTIFICATION | ✅ 立即删除 | 0 秒 | 不需要回复，立即清理 |
+| FAILED | 任意 | ✅ 失败后 300 秒 | 5 分钟 | 便于调试 |
+| TIMEOUT | 任意 | ✅ 超时后 300 秒 | 5 分钟 | 便于调试 |
+
+**call_id 生成策略：**
+- 使用 UUID4 截断前 8 位（十六进制）
+- 在 100 个缓存下冲突概率约 0.00012%
+- 使用 `while` 循环处理极小概率的连续冲突
+- 短小精悍，易读易用，便于日志查看
 
 ---
 
@@ -186,7 +410,7 @@ class MessageRouter:
 - 持有 MessageRouter 引用（用于发送消息）
 - 持有 GroupChatContext 引用（用于读取上下文）
 - 从队列接收消息并处理
-- 更新任务状态到 TaskManager
+- 更新调用状态到 AgentCallManager
 
 **关键设计：**
 ```python
@@ -212,13 +436,13 @@ class Agent:
             await self._process_message(msg)
     
     async def _process_message(self, msg: Message):
-        """处理消息，并更新任务状态"""
-        task_id = msg.task_id
+        """处理消息，并更新调用状态"""
+        call_id = msg.call_id
         
         try:
-            # 1. 标记任务为 RUNNING
-            if task_id:
-                self.context.task_manager.update_status(task_id, TaskStatus.RUNNING)
+            # 1. 标记调用为 RUNNING
+            if call_id:
+                self.context.agent_call_manager.update_status(call_id, CallStatus.RUNNING)
             
             # 2. 从 GroupChatContext 获取上下文
             agent_context = self.context.get_agent_context(self.name)
@@ -235,17 +459,17 @@ class Agent:
             self.context.update_agent_session_id(result)
             self.context.save_agent_session_id()
             
-            # 6. 标记任务为 COMPLETED
-            if task_id:
-                self.context.task_manager.set_result(task_id, result)
+            # 6. 标记调用为 COMPLETED
+            if call_id:
+                self.context.agent_call_manager.set_result(call_id, result)
             
             # 7. 发送回复消息（可选，根据消息类型决定）
             # self.send_message(result.text, msg.sent_from)
             
         except Exception as e:
-            # 8. 标记任务为 FAILED
-            if task_id:
-                self.context.task_manager.set_error(task_id, str(e))
+            # 8. 标记调用为 FAILED
+            if call_id:
+                self.context.agent_call_manager.set_error(call_id, str(e))
             raise
 ```
 
@@ -267,7 +491,7 @@ class Agent:
 **职责：**
 - 管理群聊历史消息（`GroupChatSession`）
 - 管理压缩历史（`compact_history.jsonl`）
-- 管理任务状态（`TaskManager`）
+- 管理 Agent 调用状态（`AgentCallManager`）
 - 为每个 Agent 提供定制化上下文
 
 **关键设计：**
@@ -275,7 +499,7 @@ class Agent:
 class GroupChatContext:
     group_chat_session: GroupChatSession    # 原始消息历史
     compact_history_file: str               # 压缩历史文件路径
-    task_manager: TaskManager               # 任务管理器
+    agent_call_manager: AgentCallManager    # Agent 调用管理器
     
     def get_agent_context(agent_name) -> str:
         """获取该 Agent 的上下文（已实现）"""
@@ -291,148 +515,157 @@ class GroupChatContext:
 
 ---
 
-## 异步任务管理架构
+## Agent 调用管理架构
 
 ### 设计目标
 
 解决以下问题：
-1. **任务分散问题**：任务不再分散在各个 Agent 的队列中，而是统一在 TaskManager 中管理
-2. **状态追踪问题**：通过 task_id 可以查询任务的执行状态、进度、结果
-3. **异步执行问题**：`call_agent` 立即返回 task_id，不阻塞调用者
+1. **调用分散问题**：调用不再分散在各个 Agent 的队列中，而是统一在 AgentCallManager 中管理
+2. **状态追踪问题**：通过 call_id 可以查询调用的执行状态、进度、结果
+3. **异步执行问题**：`call_agent` 立即返回 call_id，不阻塞调用者
 
 ### 完整调用链路
 
 ```
 A 调用 call_agent(B, "分析需求")
     ↓
-1. TaskManager.create_task() → 返回 task_id
+1. AgentCallManager.create_call() → 返回 call_id
     ↓
-2. MessageRouter.publish_message(msg with task_id)
+2. MessageRouter.publish_message(msg with call_id)
     ↓
 3. 投递到 B.message_buffer
     ↓
-4. 立即返回 "任务已派遣，task_id: xxx"
+4. 立即返回 "调用已派遣，call_id: xxx"
     ↓
 （A 可以继续做其他事情，不阻塞）
     ↓
 5. B.run() 从队列取出消息
     ↓
 6. B._process_message()
-   - 标记任务为 RUNNING
+   - 标记调用为 RUNNING
    - 执行 LLM 调用
    - 写入群聊历史
-   - 标记任务为 COMPLETED
+   - 标记调用为 COMPLETED
     ↓
-7. A 调用 query_task_status(task_id) 查询结果
+7. A 调用 query_call_status(call_id) 查询结果
 ```
 
 ### 工具接口设计
 
-#### 1. call_agent（派遣任务）
+#### 1. call_agent（派遣调用）
 
 ```python
 def call_agent(
     send_from: str, 
     send_to: str, 
     content: str, 
-    group_chat: GroupChat
+    group_chat: GroupChat,
+    business_task_id: str | None = None
 ) -> str:
     """
-    派遣任务给目标 Agent（异步执行）
+    派遣调用给目标 Agent（异步执行）
     
     Args:
         send_from: 发送者名称
         send_to: 接收者名称
-        content: 任务内容
+        content: 调用内容
         group_chat: 群聊实例
+        business_task_id: 可选的业务任务 ID，用于关联业务层任务
     
     Returns:
-        "任务已派遣，task_id: xxx"
+        "调用已派遣，call_id: xxx"
     """
-    # 1. 创建任务记录
-    task_id = group_chat.task_manager.create_task(send_from, send_to, content)
+    # 1. 创建调用记录
+    call_id = group_chat.agent_call_manager.create_call(
+        send_from, send_to, content, business_task_id
+    )
     
     # 2. 发送消息到目标 Agent
     message = AgentsMessage(
         content=content,
         send_from=send_from,
         send_to=send_to,
-        task_id=task_id
+        call_id=call_id
     )
     group_chat.message_router._agents_queue[send_to].put_nowait(message)
     
-    return f"任务已派遣，task_id: {task_id}"
+    return f"调用已派遣，call_id: {call_id}"
 ```
 
 **设计要点：**
-- 立即返回 task_id，不等待执行完成
+- 立即返回 call_id，不等待执行完成
 - 真正的异步，调用者不阻塞
-- 任务状态由 TaskManager 统一管理
+- 调用状态由 AgentCallManager 统一管理
+- 可选的 business_task_id 用于关联业务层任务
 
-#### 2. query_task_status（查询任务状态）
+#### 2. query_call_status（查询调用状态）
 
 ```python
-def query_task_status(task_id: str, group_chat: GroupChat) -> str:
+def query_call_status(call_id: str, group_chat: GroupChat) -> str:
     """
-    查询任务执行状态
+    查询调用执行状态
     
     Args:
-        task_id: 任务 ID
+        call_id: 调用 ID
         group_chat: 群聊实例
     
     Returns:
-        任务状态的 JSON 字符串
+        调用状态的 JSON 字符串
     """
-    task = group_chat.task_manager.get_task(task_id)
+    call = group_chat.agent_call_manager.get_call(call_id)
     
-    if not task:
-        return f"任务不存在: {task_id}"
+    if not call:
+        return f"调用不存在: {call_id}"
     
     # 构建返回信息
     info = {
-        "task_id": task.task_id,
-        "status": task.status.value,
-        "send_from": task.send_from,
-        "send_to": task.send_to,
-        "content": task.content[:50] + "...",
-        "created_at": task.created_at.isoformat(),
+        "call_id": call.call_id,
+        "status": call.status.value,
+        "send_from": call.send_from,
+        "send_to": call.send_to,
+        "content": call.content[:50] + "...",
+        "created_at": call.created_at.isoformat(),
     }
     
-    if task.status == TaskStatus.COMPLETED and task.result:
-        info["result"] = task.result.text[:200] + "..."
-        info["duration"] = (task.completed_at - task.created_at).total_seconds()
+    if call.business_task_id:
+        info["business_task_id"] = call.business_task_id
     
-    if task.status == TaskStatus.FAILED and task.error:
-        info["error"] = task.error
+    if call.status == CallStatus.COMPLETED and call.result:
+        info["result"] = call.result.text[:200] + "..."
+        info["duration"] = (call.completed_at - call.created_at).total_seconds()
+    
+    if call.status == CallStatus.FAILED and call.error:
+        info["error"] = call.error
     
     return json.dumps(info, ensure_ascii=False, indent=2)
 ```
 
 **设计要点：**
-- 返回任务的完整状态信息
+- 返回调用的完整状态信息
 - 包括执行时长、结果摘要、错误信息
 - 支持 LLM 解析 JSON 格式
+- 包含关联的业务任务 ID（如果有）
 
 ### 使用示例
 
 ```python
-# 场景：Manager 派遣任务给 Agent A
+# 场景：Manager 派遣调用给 Agent A
 
 # 1. Manager 调用 call_agent
 result = call_agent("Manager", "Agent A", "请分析需求", group_chat)
-# 返回: "任务已派遣，task_id: 123e4567-e89b-12d3-a456-426614174000"
+# 返回: "调用已派遣，call_id: 123e4567-e89b-12d3-a456-426614174000"
 
-# 2. 提取 task_id
-task_id = "123e4567-e89b-12d3-a456-426614174000"
+# 2. 提取 call_id
+call_id = "123e4567-e89b-12d3-a456-426614174000"
 
 # 3. Manager 继续做其他事情（不阻塞）
 # ...
 
-# 4. 稍后查询任务状态
-status = query_task_status(task_id, group_chat)
+# 4. 稍后查询调用状态
+status = query_call_status(call_id, group_chat)
 # 返回:
 # {
-#   "task_id": "123e4567-e89b-12d3-a456-426614174000",
+#   "call_id": "123e4567-e89b-12d3-a456-426614174000",
 #   "status": "running",
 #   "send_from": "Manager",
 #   "send_to": "Agent A",
@@ -440,11 +673,11 @@ status = query_task_status(task_id, group_chat)
 #   "created_at": "2026-05-29T10:30:00"
 # }
 
-# 5. 任务完成后再次查询
-status = query_task_status(task_id, group_chat)
+# 5. 调用完成后再次查询
+status = query_call_status(call_id, group_chat)
 # 返回:
 # {
-#   "task_id": "123e4567-e89b-12d3-a456-426614174000",
+#   "call_id": "123e4567-e89b-12d3-a456-426614174000",
 #   "status": "completed",
 #   "send_from": "Manager",
 #   "send_to": "Agent A",
@@ -455,9 +688,9 @@ status = query_task_status(task_id, group_chat)
 # }
 ```
 
-### 任务完成后的通知机制
+### 调用完成后的通知机制
 
-**问题：B 完成任务后，是否自动通知 A？**
+**问题：B 完成调用后，是否自动通知 A？**
 
 **方案：引入消息类型，避免无限循环**
 
@@ -472,7 +705,7 @@ class AgentsMessage:
     content: str
     send_from: str
     send_to: str
-    task_id: str | None = None
+    call_id: str | None = None
     message_type: MessageType = MessageType.TASK  # 默认是任务
     session_type: SessionType = SessionType.MAIN
     timestamp: datetime = field(default_factory=datetime.now)
@@ -480,11 +713,11 @@ class AgentsMessage:
 
 **使用场景：**
 
-1. **A 派遣任务给 B**：
+1. **A 派遣调用给 B**：
    ```python
    call_agent(A, B, "请分析需求", message_type=MessageType.TASK)
    # B 执行完成后，发送 NOTIFICATION 给 A
-   send_message(B, A, "任务完成：需求分析结果...", message_type=MessageType.NOTIFICATION)
+   send_message(B, A, "调用完成：需求分析结果...", message_type=MessageType.NOTIFICATION)
    ```
 
 2. **A 收到 NOTIFICATION**：
@@ -503,15 +736,15 @@ class AgentsMessage:
 - A 收到 NOTIFICATION，不回复 ✅
 
 **注意：**
-- 当前设计中，B 完成任务后**不会自动通知 A**
-- A 需要主动调用 `query_task_status` 查询结果
+- 当前设计中，B 完成调用后**不会自动通知 A**
+- A 需要主动调用 `query_call_status` 查询结果
 - 如果需要自动通知，可以在 `_process_message` 中添加逻辑：
   ```python
-  # 任务完成后，发送 NOTIFICATION 给发起者
-  if task_id and msg.message_type == MessageType.TASK:
+  # 调用完成后，发送 NOTIFICATION 给发起者
+  if call_id and msg.message_type == MessageType.TASK:
       self.send_message(
           msg.send_from, 
-          f"任务 {task_id} 已完成：{result.text[:100]}...",
+          f"调用 {call_id} 已完成：{result.text[:100]}...",
           MessageType.NOTIFICATION
       )
   ```
@@ -520,53 +753,53 @@ class AgentsMessage:
 
 ## 消息流转完整链路
 
-### 基本流程（带任务管理）
+### 基本流程（带调用管理）
 
 ```
 发送者调用 call_agent(send_to, content)
     ↓
-1. TaskManager.create_task() → 返回 task_id
+1. AgentCallManager.create_call() → 返回 call_id
     ↓
-2. MessageRouter.publish_message(msg with task_id)
+2. MessageRouter.publish_message(msg with call_id)
     ↓
 3. 记录到 GroupChatSession
 4. 路由到目标 Agent 的 message_buffer
     ↓
-5. 立即返回 "任务已派遣，task_id: xxx"（不阻塞）
+5. 立即返回 "调用已派遣，call_id: xxx"（不阻塞）
     ↓
 目标 Agent.message_buffer.get()
     ↓
 目标 Agent._process_message(msg)
     ↓
-1. 标记任务为 RUNNING
+1. 标记调用为 RUNNING
 2. 从 GroupChatContext 获取上下文
 3. 组装 prompt
 4. 执行 LLM 调用
 5. 写入群聊历史
 6. 更新 session_id
-7. 标记任务为 COMPLETED
+7. 标记调用为 COMPLETED
 8. （可选）发送 NOTIFICATION 给发起者
 ```
 
 ### 关键点
 
 1. **异步解耦**：
-   - 发送者调用 `call_agent()` 立即返回 task_id
+   - 发送者调用 `call_agent()` 立即返回 call_id
    - 接收者从队列阻塞等待（`await queue.get()`）
    - 发送者不等待接收者处理，可以继续做其他事情
 
-2. **任务追踪**：
-   - 所有任务都在 `TaskManager` 中注册
-   - 通过 `task_id` 可以查询任务状态、进度、结果
+2. **调用追踪**：
+   - 所有调用都在 `AgentCallManager` 中注册
+   - 通过 `call_id` 可以查询调用状态、进度、结果
    - 支持 PENDING → RUNNING → COMPLETED/FAILED 状态流转
 
 3. **FIFO 保证**：
    - `asyncio.Queue` 保证消息按顺序处理
-   - Manager 连续发送 3 个任务，Agent 按顺序执行
+   - Manager 连续发送 3 个调用，Agent 按顺序执行
 
 4. **消息记录**：
    - 所有消息都记录到 `GroupChatSession`
-   - 包括 User 消息、Manager 任务、Agent 结果
+   - 包括 User 消息、Manager 调用、Agent 结果
    - 便于调试和信息公开
 
 5. **群聊消息写入时机**：
@@ -778,31 +1011,32 @@ MessageRouter.publish_message() 直接路由到私有队列
 
 ### 需要新增的部分
 
-1. **TaskManager 类**：
-   - 实现 `Task` 和 `TaskStatus` 数据结构
-   - 实现 `create_task()`、`get_task()`、`update_status()`、`set_result()`、`set_error()`
+1. **AgentCallManager 类**：
+   - 实现 `AgentCall` 和 `CallStatus` 数据结构
+   - 实现 `create_call()`、`get_call()`、`update_status()`、`set_result()`、`set_error()`
    - 集成到 `GroupChatContext` 中
 
 2. **Message 数据类扩展**：
-   - 添加 `task_id` 字段
+   - 添加 `call_id` 字段
    - 添加 `message_type` 字段（可选，用于避免循环回复）
 
 3. **Agent 消息处理逻辑扩展**：
-   - 修改 `_process_message()`，添加任务状态更新逻辑
+   - 修改 `_process_message()`，添加调用状态更新逻辑
    - 添加群聊消息写入逻辑
    - 添加 session_id 更新逻辑
 
 4. **call_agent 工具扩展**：
-   - 修改为先创建任务，再发送消息
-   - 返回 task_id 而不是简单的成功消息
+   - 修改为先创建调用，再发送消息
+   - 返回 call_id 而不是简单的成功消息
+   - 支持可选的 business_task_id 参数
 
-5. **query_task_status 工具**：
-   - 新增工具，用于查询任务状态
-   - 返回 JSON 格式的任务详情
+5. **query_call_status 工具**：
+   - 新增工具，用于查询调用状态
+   - 返回 JSON 格式的调用详情
 
 6. **GroupChat 类扩展**：
-   - 添加 `task_manager` 成员变量
-   - 在初始化时创建 `TaskManager` 实例
+   - 添加 `agent_call_manager` 成员变量
+   - 在初始化时创建 `AgentCallManager` 实例
 
 ---
 
@@ -810,38 +1044,214 @@ MessageRouter.publish_message() 直接路由到私有队列
 
 ### P0（核心功能）
 
-1. 实现 `TaskManager` 类和相关数据结构
-2. 实现 `Task` 和 `TaskStatus` 枚举
-3. 修改 `AgentsMessage`：添加 `task_id` 字段
-4. 修改 `Agent._process_message()`：
-   - 添加任务状态更新逻辑
+1. 实现 `AgentCallManager` 类和相关数据结构
+2. 实现 `AgentCall` 和 `CallStatus` 枚举（包含 TIMEOUT 状态）
+3. 实现 `MessageType` 枚举（TASK / NOTIFICATION / QUERY）
+4. 修改 `AgentsMessage`：添加 `call_id` 和 `message_type` 字段
+5. 修改 `Agent._process_message()`：
+   - 添加调用状态更新逻辑
    - 添加群聊消息写入逻辑
    - 添加 session_id 更新逻辑
-5. 修改 `call_agent()`：集成任务创建和 task_id 返回
-6. 实现 `query_task_status()` 工具
-7. 修改 `GroupChat.__init__()`：添加 `TaskManager` 初始化
-2. 实现 `Message` 数据类
-3. 修改 `Agent` 类：
-   - 添加 `send_message()` 方法
-   - 添加 `run()` 主循环
-   - 添加 `_process_message()` 方法
-4. 修改 `GroupChatSession.add_message()`：支持通用消息格式
+6. 修改 `call_agent()`：集成调用创建和 call_id 返回，支持 message_type 和 timeout_seconds 参数
+7. 实现 `query_call_status()` 工具
+8. 修改 `GroupChat.__init__()`：添加 `AgentCallManager` 初始化
+9. 在 `logger.py` 中添加 `setup_agent_call_logging()` 函数
+10. 实现后台清理线程和超时检查机制
 
 ### P1（场景支持）
 
-1. 实现 `MessageType` 枚举（TASK / NOTIFICATION / QUERY）
-2. 修改 `Agent._process_message()`：根据 `message_type` 决定是否回复
-3. 实现 `Manager` 类的 workflow 调度逻辑
-4. 实现 User `@Agent` 的解析和路由
-5. 实现任务完成后的自动通知机制（可选）
+1. 修改 `Agent._process_message()`：根据 `message_type` 决定是否回复
+2. 实现 `Manager` 类的 workflow 调度逻辑
+3. 实现 User `@Agent` 的解析和路由
+4. 实现调用完成后的自动通知机制（可选）
 
 ### P2（优化）
 
 1. 添加消息路由日志
 2. 添加错误处理（目标 Agent 不存在）
-3. 添加任务超时机制
-4. 添加任务取消功能
-5. 实现任务持久化（保存到文件）
+3. 添加调用取消功能
+4. 优化日志搜索性能（索引、缓存等）
+5. 添加调用统计和监控（get_stats 扩展）
+
+---
+
+## Logger 集成方案
+
+### 在 logger.py 中添加专用函数
+
+```python
+# 在 lifeprism/utils/logger.py 末尾添加
+
+def setup_agent_call_logging(log_dir: Path) -> logging.Logger:
+    """
+    为 AgentCall 创建独立的 logger，输出到单独的文件
+    
+    Args:
+        log_dir: 日志目录路径（如 local_data/logs）
+    
+    Returns:
+        配置好的 agent_call logger
+    """
+    logger_name = "agent_call"
+    logger = logging.getLogger(logger_name)
+    
+    # 防止重复添加 handler
+    if logger.handlers:
+        return logger
+    
+    # 设置日志级别
+    logger.setLevel(logging.INFO)
+    
+    # 不继承 root logger 的 handlers（这样就不会输出到 lifeprism.log）
+    logger.propagate = False
+    
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / 'agent_calls.jsonl'
+        
+        # 使用追加模式，不清空旧日志
+        file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+        
+        # 使用简单格式，只输出消息内容（因为我们会记录 JSON）
+        file_handler.setFormatter(logging.Formatter('%(message)s'))
+        
+        logger.addHandler(file_handler)
+        
+    except Exception as e:
+        print(f"[WARNING] 无法创建 agent_call 日志文件: {e}")
+    
+    return logger
+```
+
+### 日志文件结构
+
+**local_data/logs/lifeprism.log**（通用日志）：
+```
+2026-05-29 10:30:00 INFO team.py func:start line 252 : 初始化群聊
+2026-05-29 10:30:01 INFO agent.py func:execute line 740 : Manager 执行任务
+```
+
+**local_data/logs/agent_calls.jsonl**（AgentCall 专用日志）：
+```json
+{"call_id": "a3f5b2c1", "send_from": "Manager", "send_to": "Agent A", "content": "分析需求", "message_type": "task", "status": "pending", "created_at": "2026-05-29T10:30:00", ...}
+{"call_id": "a3f5b2c1", "send_from": "Manager", "send_to": "Agent A", "content": "分析需求", "message_type": "task", "status": "completed", "created_at": "2026-05-29T10:30:00", "completed_at": "2026-05-29T10:30:45", "result": "需求分析完成...", ...}
+```
+
+**关键点：**
+- `logger.propagate = False` 确保不会输出到 root logger（lifeprism.log）
+- 使用独立的文件 handler
+- JSONL 格式：每行一个 JSON 对象，便于解析和搜索
+- 支持追加写入，记录完整的调用生命周期
+
+---
+
+## 业务层任务管理（未来扩展）
+
+### 与 AgentCall 的区别
+
+当前的 `AgentCall` 是**消息层面**的调用追踪，粒度较细。未来需要实现**业务层面**的任务管理，用于前端可视化展示。
+
+| 维度 | AgentCall（消息层） | Task（业务层） |
+|------|---------------------|----------------|
+| **含义** | 一次跨 Agent 的消息调用 | 用户请求的业务功能 |
+| **粒度** | 细粒度（一次 LLM 调用） | 粗粒度（多次 Agent 协作） |
+| **生命周期** | A 调用 B → B 执行 → 返回结果 | 创建 → 分解子任务 → 多 Agent 协作 → 完成 |
+| **用途** | 追踪异步消息的执行状态 | 前端可视化展示任务进度 |
+| **示例** | "Manager 调用 Agent A 分析需求" | "开发登录功能"（包含需求分析、设计、编码、测试） |
+
+### 业务层任务架构（待实现）
+
+```python
+class TaskStatus(Enum):
+    TODO = "todo"               # 待开始
+    IN_PROGRESS = "in_progress" # 进行中
+    DONE = "done"               # 已完成
+    BLOCKED = "blocked"         # 被阻塞
+
+@dataclass
+class Task:
+    task_id: str = field(default_factory=lambda: str(uuid4()))
+    title: str                  # 任务标题（如"开发登录功能"）
+    description: str            # 任务描述
+    status: TaskStatus = TaskStatus.TODO
+    subtasks: list[str] = field(default_factory=list)  # 子任务 ID 列表
+    agent_calls: list[str] = field(default_factory=list)  # 关联的 AgentCall ID 列表
+    created_at: datetime = field(default_factory=datetime.now)
+    completed_at: datetime | None = None
+    progress: float = 0.0       # 进度百分比（0-100）
+
+class TaskManager:
+    """管理业务层任务"""
+    
+    def __init__(self):
+        self._tasks: dict[str, Task] = {}
+    
+    def create_task(self, title: str, description: str) -> str:
+        """创建业务任务"""
+        task = Task(title=title, description=description)
+        self._tasks[task.task_id] = task
+        return task.task_id
+    
+    def add_subtask(self, task_id: str, subtask_title: str) -> str:
+        """为任务添加子任务"""
+        subtask_id = self.create_task(subtask_title, "")
+        if task := self._tasks.get(task_id):
+            task.subtasks.append(subtask_id)
+        return subtask_id
+    
+    def link_agent_call(self, task_id: str, call_id: str):
+        """关联 AgentCall 到任务"""
+        if task := self._tasks.get(task_id):
+            task.agent_calls.append(call_id)
+    
+    def update_progress(self, task_id: str):
+        """根据子任务完成情况更新进度"""
+        if task := self._tasks.get(task_id):
+            if not task.subtasks:
+                return
+            completed = sum(
+                1 for subtask_id in task.subtasks
+                if self._tasks.get(subtask_id, Task()).status == TaskStatus.DONE
+            )
+            task.progress = (completed / len(task.subtasks)) * 100
+```
+
+### 两层架构的关系
+
+```
+用户请求："增加登录功能"
+    ↓
+TaskManager.create_task() → Task(id=1, title="增加登录功能")
+    ↓
+Manager 分解任务：
+    - Subtask 1: 需求分析
+    - Subtask 2: 设计架构
+    - Subtask 3: 编码实现
+    - Subtask 4: 编写测试
+    ↓
+执行 Subtask 1：
+    Manager 调用 call_agent(Agent A, "分析需求", business_task_id=1)
+        ↓
+    AgentCallManager.create_call() → AgentCall(call_id=abc, business_task_id=1)
+        ↓
+    Agent A 执行 → 更新 CallStatus.COMPLETED
+        ↓
+    TaskManager.update_subtask(1, "需求分析", DONE)
+    TaskManager.update_progress(1)  # 更新主任务进度
+    ↓
+执行 Subtask 2、3、4...
+    ↓
+所有 Subtask 完成 → TaskManager.update_task(1, DONE)
+    ↓
+前端显示："登录功能开发完成 ✅ (100%)"
+```
+
+**关键点：**
+- `AgentCall` 是底层的消息调用追踪
+- `Task` 是上层的业务任务管理
+- 一个 `Task` 可能包含多个 `AgentCall`
+- `AgentCall` 可以通过 `business_task_id` 关联到 `Task`
+- 前端通过 `TaskManager` 获取任务进度，而不是直接查询 `AgentCall`
 
 ---
 
@@ -864,14 +1274,15 @@ MessageRouter.publish_message() 直接路由到私有队列
    - `asyncio.Queue` 天然支持并发
    - 多个 Agent 可以并发发送消息
    - MessageRouter 的 `publish_message()` 是同步方法，但 `put_nowait()` 是线程安全的
+   - `AgentCallManager` 使用 `threading.Lock` 保护共享状态
 
-5. **任务管理的持久化**：
-   - 当前 `TaskManager._tasks` 是内存字典
-   - 如果需要持久化，可以扩展为定期保存到文件
-   - 或者在任务状态变更时触发保存
+5. **调用管理的持久化**：
+   - `AgentCallManager._calls` 是内存字典
+   - 所有状态变更都记录到 `agent_calls.jsonl` 日志文件
+   - 内存删除后仍可从日志查询历史调用
 
 6. **异步设计的权衡**：
-   - **优点**：真正的异步，调用者不阻塞，支持并发任务
+   - **优点**：真正的异步，调用者不阻塞，支持并发调用
    - **缺点**：LLM 需要主动查询结果，增加复杂度
    - **建议**：初期实现异步 + 查询工具，后期可以添加自动通知机制
 
@@ -879,6 +1290,33 @@ MessageRouter.publish_message() 直接路由到私有队列
    - 通过 `MessageType` 区分 TASK 和 NOTIFICATION
    - TASK 需要执行并回复，NOTIFICATION 只记录不回复
    - 确保消息链路有明确的终止条件
+
+8. **命名约定**：
+   - `AgentCall`：消息层面的调用追踪（细粒度）
+   - `Task`：业务层面的任务管理（粗粒度，未来实现）
+   - 两者通过 `business_task_id` 关联
+
+9. **生命周期管理**：
+   - 不使用简单的 LRU 缓存（可能删除正在执行的调用）
+   - 基于状态和时间的智能清理策略
+   - PENDING/RUNNING 状态永不删除
+   - COMPLETED 状态根据 MessageType 决定保留时间
+   - FAILED/TIMEOUT 状态保留 5 分钟便于调试
+
+10. **超时机制**：
+    - 每个调用有独立的 `timeout_seconds` 配置
+    - 后台线程每 30 秒检查一次
+    - 超时后自动标记为 TIMEOUT 状态
+    - 避免调用永久占用内存
+
+11. **日志分离**：
+    - 通用日志：`lifeprism.log`（所有模块的日志）
+    - AgentCall 日志：`agent_calls.jsonl`（专门记录调用历史）
+    - 使用独立的 logger，互不干扰
+
+---
+   - `Task`：业务层面的任务管理（粗粒度，未来实现）
+   - 两者通过 `business_task_id` 关联
 
 ---
 
@@ -895,19 +1333,19 @@ MessageRouter.publish_message() 直接路由到私有队列
 
 ### 决策 2：call_agent 是否立即返回结果？
 
-**决策**：采用异步设计，立即返回 task_id，不等待执行完成
+**决策**：采用异步设计，立即返回 call_id，不等待执行完成
 
 **理由**：
 - 真正的异步，调用者不阻塞
-- 支持并发任务（A 可以同时派遣多个任务给不同的 Agent）
-- 符合现实场景（派遣任务后继续做其他事）
-- 通过 `query_task_status` 工具查询结果
+- 支持并发调用（A 可以同时派遣多个调用给不同的 Agent）
+- 符合现实场景（派遣调用后继续做其他事）
+- 通过 `query_call_status` 工具查询结果
 
 **权衡**：
 - 增加了 LLM 的使用复杂度（需要主动查询）
 - 但提供了更大的灵活性和并发能力
 
-### 决策 3：B 完成任务后是否自动通知 A？
+### 决策 3：B 完成调用后是否自动通知 A？
 
 **决策**：默认不自动通知，A 需要主动查询；可选支持自动通知
 
@@ -918,18 +1356,33 @@ MessageRouter.publish_message() 直接路由到私有队列
 
 **可选扩展**：
 - 在 `_process_message` 中添加自动通知逻辑
-- 发送 NOTIFICATION 类型消息给任务发起者
+- 发送 NOTIFICATION 类型消息给调用发起者
 - A 收到 NOTIFICATION 后不会自动回复
 
-### 决策 4：任务如何统一管理？
+### 决策 4：调用如何统一管理？
 
-**决策**：引入 `TaskManager`，所有任务在其中注册
+**决策**：引入 `AgentCallManager`，所有调用在其中注册
 
 **理由**：
-- 避免任务分散在各个 Agent 的队列中
-- 提供统一的任务状态追踪和查询能力
-- `_tasks` 字典就是异步任务的 "pending 池"
-- 支持查询任务状态、执行时长、结果等信息
+- 避免调用分散在各个 Agent 的队列中
+- 提供统一的调用状态追踪和查询能力
+- `_calls` 字典就是异步调用的 "pending 池"
+- 支持查询调用状态、执行时长、结果等信息
+
+### 决策 5：如何区分消息层调用和业务层任务？
+
+**决策**：使用不同的命名 —— `AgentCall` vs `Task`
+
+**理由**：
+- `AgentCall`：消息层面，细粒度，追踪一次 Agent 调用
+- `Task`：业务层面，粗粒度，管理用户级别的任务
+- 通过 `business_task_id` 字段关联两者
+- 避免命名冲突，概念清晰
+
+**关系**：
+- 一个业务 `Task` 可能包含多个 `AgentCall`
+- `AgentCall` 可以关联到 `Task`（通过 `business_task_id`）
+- 前端通过 `TaskManager` 获取任务进度，而不是直接查询 `AgentCall`
 
 ---
 
@@ -963,5 +1416,18 @@ MessageRouter.publish_message() 直接路由到私有队列
 - 异步解耦，支持并发
 - 消息有序，FIFO 保证
 - 完整记录，便于调试
+- 调用追踪，状态可查
+
+**命名约定：**
+- `AgentCall`：消息层面的调用追踪（细粒度，一次 LLM 调用）
+- `Task`：业务层面的任务管理（粗粒度，用户级别任务，未来实现）
+- 两者通过 `business_task_id` 关联
+
+**核心解决的问题：**
+1. ✅ 群聊消息在 `Agent._process_message()` 中，LLM 返回后立即写入
+2. ✅ 异步设计，`call_agent` 立即返回 call_id，不阻塞调用者
+3. ✅ 通过 `MessageType` 避免循环回复（TASK vs NOTIFICATION）
+4. ✅ 通过 `AgentCallManager` 统一管理所有调用，提供 pending 池和状态查询
+5. ✅ 命名清晰区分消息层调用（AgentCall）和业务层任务（Task）
 
 下一步：按照实现优先级逐步开发。
