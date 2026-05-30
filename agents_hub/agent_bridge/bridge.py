@@ -16,8 +16,11 @@ from agents_hub.agent_bridge.exceptions import (
     CLINotFoundError,
     CLIExecutionError
 )
+from agents_hub.roles import RoleManager
 
 logger = logging.getLogger(__name__)
+
+_BARE_ROLE_NAME = "bare_claude"
 
 
 class AgentBridge:
@@ -33,6 +36,8 @@ class AgentBridge:
             AgentPlatform.CLAUDE: ClaudeParser(),
             AgentPlatform.CODEX: CodexParser()
         }
+        self._role_manager = RoleManager()
+        self._bare_config = self._init_bare_config()
 
     async def execute_stream(
         self,
@@ -128,3 +133,21 @@ class AgentBridge:
             role_type=config.role_type,
             usage=usage
         )
+
+    async def bare_claude_call(self, prompt: str) -> AgentResult:
+        """用于一次性的快速 LLM 调用，不涉及角色等内容。"""
+        return await self.execute(prompt, self._bare_config)
+
+    def _init_bare_config(self) -> RoleConfig:
+        """初始化 bare 角色配置，不存在则创建。"""
+        try:
+            role = self._role_manager.get_role(_BARE_ROLE_NAME)
+        except Exception:
+            role = self._role_manager.create_role(
+                name=_BARE_ROLE_NAME,
+                platform=AgentPlatform.CLAUDE,
+                description="内部 bare 角色，用于一次性快速 LLM 调用",
+            )
+        config = role.get_role_config()
+        config.bare = True
+        return config
