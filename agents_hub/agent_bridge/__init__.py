@@ -21,9 +21,10 @@ from agents_hub.agent_bridge.exceptions import (
     PlatformNotSupportedError,
     AgentTimeoutError,
 )
-
+agent_platform_client = AgentBridge() # 单一调用实例
 __all__ = [
     "AgentPlatform",
+    "agent_platform_client",
     "RoleType",
     "StreamEvent",
     "AgentResult",

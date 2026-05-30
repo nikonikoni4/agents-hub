@@ -3,148 +3,73 @@ Agent 基类
 
 所有 Agent 的基类，包含消息处理、执行逻辑。
 """
-from abc import ABC, abstractmethod
-from typing import Optional
-
-from agents_hub.core.foundation import AgentMessage, MessageType
+import asyncio
+from agents_hub.core.foundation import AgentMessage, MessageType,AgentResult,Role,RoleConfig,SessionType
 from agents_hub.core.communication import MessageRouter, AgentCallManager, AgentCall
+from agents_hub.core.context import GroupChatContext,AgentContext
+from agents_hub.agent_bridge import agent_platform_client
+class Agent:
+    def __init__(self,role:Role,group_chat_context:GroupChatContext):
+        """"""
+        self.role_config :RoleConfig= role.get_role_config()
+        self.name = self.role_config.name
+        self.role_type = self.role_config.role_type
+        self.message_queue = asyncio.Queue() # 私有队列, 用户存放消息
+        self.group_chat_context = group_chat_context
+        self.agent_context = AgentContext(self.name , group_chat_context) # 暂时没有实现
+        self.message_router: MessageRouter | None = None
+        self._run = True
+    def set_run(self,run:bool):
+        """设置该agent是否工作，"""
+        # TODO 后续使用，暂时占位
+        self._run = run
 
-
-class Agent(ABC):
-    """
-    Agent 基类
-
-    职责：
-    1. 接收和处理消息
-    2. 执行任务
-    3. 发送消息给其他 Agent
-    4. 管理自己的调用状态
-    """
-
-    def __init__(
-        self,
-        name: str,
-        message_router: MessageRouter,
-        agent_call_manager: AgentCallManager
-    ):
-        """
-        初始化 Agent
-
-        Args:
-            name: Agent 名称
-            message_router: 消息路由器
-            agent_call_manager: 调用管理器
-        """
-        self.name = name
-        self.message_router = message_router
-        self.agent_call_manager = agent_call_manager
-
-    async def receive_message(self, message: AgentMessage) -> Optional[str]:
-        """
-        接收消息并处理
-
-        Args:
-            message: 接收到的消息
-
-        Returns:
-            处理结果（如果需要回复）
-        """
-        # 根据消息类型分发处理
-        if message.message_type == MessageType.TASK:
-            return await self.handle_task(message)
-        elif message.message_type == MessageType.NOTIFICATION:
-            await self.handle_notification(message)
-            return None
-        else:
-            return None
-
-    @abstractmethod
-    async def handle_task(self, message: AgentMessage) -> str:
-        """
-        处理任务消息
-
-        Args:
-            message: 任务消息
-
-        Returns:
-            任务执行结果
-        """
-        pass
-
-    async def handle_notification(self, message: AgentMessage):
-        """
-        处理通知消息
-
-        Args:
-            message: 通知消息
-        """
-        # 默认实现：记录日志
-        print(f"[{self.name}] 收到通知: {message.content}")
-
-    async def send_message(
-        self,
-        to_agent: str,
-        content: str,
-        message_type: MessageType = MessageType.TASK
-    ) -> str:
-        """
-        发送消息给其他 Agent
-
-        Args:
-            to_agent: 目标 Agent 名称
-            content: 消息内容
-            message_type: 消息类型
-
-        Returns:
-            消息 ID
-        """
+    def send_message_to_agent(self,send_to:str,content:str):
         message = AgentMessage(
-            from_agent=self.name,
-            to_agent=to_agent,
+            send_from=self.name, 
+            send_to=send_to, 
             content=content,
-            message_type=message_type
-        )
-        return await self.message_router.send_message(message)
+            session_type=SessionType.MAIN,
+            message_type=MessageType.NOTIFICATION
+            )
+        self.message_router.send_message(message)
 
-    async def execute(self, task: str) -> str:
+    async def execute(self, prompt)->AgentResult: 
+        """执行主会话（群聊）
+        args : 
+            prompt 发送给claude / codex 的信息
         """
-        执行任务（调用 Agent 平台）
+        return await agent_platform_client.execute(prompt, self.role_config,self.main_session_id)
+    
+    async def btw_execute(self, prompt, session: str | None = None)->AgentResult:
+        """执行单聊（by the way）"""
+        print(f"Info : {self.name} 执行单聊 content:{prompt[:20]}")
+        return await agent_platform_client.execute(prompt, self.role_config,session)
+    
+    @property
+    def main_session_id(self):
+        if self.group_chat_context.agent_session_id.get(self.name):
+            if self.group_chat_context.agent_session_id[self.name].main_session:
+                return self.group_chat_context.agent_session_id[self.name].main_session
+            else:
+                print(f"warning : {self.name}在当前群聊中无历史记录") # 这里的print 需要替换为具体的logger
+        else :
+            print(f"warning : 当前群聊无{self.name}的main session记录 [ 如果是初始化会话 忽略改警告]")
+        return None
 
-        Args:
-            task: 任务描述
-
-        Returns:
-            执行结果
+    async def _process_message(self,msg:AgentMessage)->AgentResult:
         """
-        # 创建调用记录
-        call = await self.agent_call_manager.create_call(
-            agent_name=self.name,
-            task=task
-        )
-
-        try:
-            # 调用 Agent 平台执行任务
-            result = await self._execute_on_platform(task, call.call_id)
-
-            # 更新调用状态为完成
-            await self.agent_call_manager.complete_call(call.call_id, result)
-
-            return result
-        except Exception as e:
-            # 更新调用状态为失败
-            await self.agent_call_manager.fail_call(call.call_id, str(e))
-            raise
-
-    @abstractmethod
-    async def _execute_on_platform(self, task: str, call_id: str) -> str:
+        处理消息
+        args:
+            msg : AgentMessage 
         """
-        在 Agent 平台上执行任务（子类实现）
-
-        Args:
-            task: 任务描述
-            call_id: 调用 ID
-
-        Returns:
-            执行结果
-        """
-        pass
+        if msg.session_type == SessionType.MAIN:
+            return await self.execute(msg.content)
+        else:
+            return await self.btw_execute(msg.content)
+    async def run(self):
+      """持续监听私有队列，处理收到的消息"""
+      while self._run:
+        msg = await self.message_queue.get()
+        result = await self._process_message(msg)
+        self.group_chat_context.add_message(result)
