@@ -4,8 +4,10 @@ Agent 上下文
 为 Agent 每次调用提供上下文。
 实现增量加载：只加载未加载的压缩历史和未压缩消息。
 """
+
+from agents_hub.core.foundation import Tag, wrap_xml
+
 from .group_chat_context import GroupChatContext
-from agents_hub.core.foundation import wrap_xml, Tag
 
 
 class AgentContext:
@@ -33,7 +35,7 @@ class AgentContext:
         标志位自动判断是否需要加载：
         - 如果没有新的压缩历史，compact_history[last_loaded_compact_index:] 返回空列表
         - 如果没有新的消息，messages[last_loaded_message_index:] 返回空列表
-        
+
         # TODO：
         后续再测试中考虑是否真的需要加载与自己不相干的上下文
 
@@ -79,7 +81,9 @@ class AgentContext:
             parts.append(wrap_xml(Tag.GROUP_HISTORY, "\n".join(history_blocks)))
 
         # 3. 未压缩的最新消息 → <recent_messages>
-        new_messages = self.group_chat_context.group_chat_session.messages[last_loaded_message_index:]
+        new_messages = self.group_chat_context.group_chat_session.messages[
+            last_loaded_message_index:
+        ]
         if new_messages:
             msg_lines = [f"[{m['agent_name']}]: {m['content']}" for m in new_messages]
             parts.append(wrap_xml(Tag.RECENT_MESSAGES, "\n".join(msg_lines)))
@@ -92,7 +96,9 @@ class AgentContext:
 
         return "\n".join(parts)
 
-    async def _update_agent_context_state(self, last_loaded_compact_index: int, last_loaded_message_index: int):
+    async def _update_agent_context_state(
+        self, last_loaded_compact_index: int, last_loaded_message_index: int
+    ):
         """
         更新 agent 的上下文加载状态
 
@@ -102,14 +108,15 @@ class AgentContext:
         """
         # 如果 agent 不存在，创建新的状态
         if self.agent_name not in self.group_chat_context.agent_session_id:
-            from .group_chat_session import AgentSessionInfo, AgentContextState
+            from .group_chat_session import AgentContextState, AgentSessionInfo
+
             self.group_chat_context.agent_session_id[self.agent_name] = AgentSessionInfo(
                 main_session="",
                 btw_session=[],
                 context_state=AgentContextState(
                     last_loaded_compact_index=last_loaded_compact_index,
-                    last_loaded_message_index=last_loaded_message_index
-                )
+                    last_loaded_message_index=last_loaded_message_index,
+                ),
             )
         else:
             # 更新现有状态
@@ -121,4 +128,3 @@ class AgentContext:
         await self.group_chat_context.repository.save_agent_session_state(
             self.group_chat_context.agent_session_id
         )
-

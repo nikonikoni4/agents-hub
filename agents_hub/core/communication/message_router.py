@@ -3,7 +3,9 @@
 
 负责 Agent 之间的消息投递，管理每个 Agent 的私有消息队列。
 """
+
 import asyncio
+
 from agents_hub.core.foundation import (
     AgentMessage,
     AgentNotFoundError,
@@ -56,15 +58,13 @@ class MessageRouter:
             raise MessageDeliveryError(
                 reason="目标 Agent 的消息队列已满",
                 send_from=message.send_from,
-                send_to=message.send_to
+                send_to=message.send_to,
             )
         except (AgentNotFoundError, InvalidMessageError):
             raise  # 直接向上传递
         except Exception as e:
             raise MessageDeliveryError(
-                reason=f"未知错误: {str(e)}",
-                send_from=message.send_from,
-                send_to=message.send_to
+                reason=f"未知错误: {str(e)}", send_from=message.send_from, send_to=message.send_to
             )
 
     def _validate_message(self, message: AgentMessage):

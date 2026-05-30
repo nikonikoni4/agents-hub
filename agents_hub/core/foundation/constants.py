@@ -8,7 +8,7 @@
 MAX_TOKEN = 1000
 
 # 本地数据存储路径
-LOCAL_DATA_PATH = 'local_data'
+LOCAL_DATA_PATH = "local_data"
 
 """
 本地数据存储结构：

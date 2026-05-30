@@ -13,6 +13,7 @@ CLAUDE_COMMAND = str(Path.home() / ".local" / "bin" / "claude")
 
 class AgentPlatform(Enum):
     """Agent 平台枚举"""
+
     CLAUDE = "claude"
     CODEX = "codex"
 
@@ -24,5 +25,6 @@ class RoleType(Enum):
         LEADER: 领导者角色，负责任务分派和协调
         TEAM_MEMBER: 团队成员角色，执行具体任务
     """
+
     LEADER = "leader"
     TEAM_MEMBER = "team_member"

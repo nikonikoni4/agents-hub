@@ -3,12 +3,15 @@
 
 负责群聊业务逻辑：消息管理、session 管理、上下文压缩。
 """
+
 from datetime import datetime
 
-from agents_hub.core.foundation import MAX_TOKEN
-from .group_chat_session import GroupChatSession, AgentSessionInfo
-from .group_chat_repository import GroupChatRepository
 from agents_hub.agent_bridge import agent_platform_client
+from agents_hub.core.foundation import MAX_TOKEN
+
+from .group_chat_repository import GroupChatRepository
+from .group_chat_session import AgentSessionInfo, GroupChatSession
+
 
 class GroupChatContext:
     """
@@ -65,8 +68,7 @@ class GroupChatContext:
         # 如果 agent 不存在，创建新的
         if agent_name not in self.agent_session_id:
             self.agent_session_id[agent_name] = AgentSessionInfo(
-                main_session=session_id,
-                btw_session=[]
+                main_session=session_id, btw_session=[]
             )
         else:
             session_info = self.agent_session_id[agent_name]
@@ -75,7 +77,10 @@ class GroupChatContext:
             if not session_info.main_session:
                 session_info.main_session = session_id
             # 如果 session_id 不同于 main_session，且不在 btw_session 中
-            elif session_id != session_info.main_session and session_id not in session_info.btw_session:
+            elif (
+                session_id != session_info.main_session
+                and session_id not in session_info.btw_session
+            ):
                 session_info.btw_session.append(session_id)
 
         # 保存到文件
@@ -106,8 +111,9 @@ class GroupChatContext:
         Raises:
             CompactionError: 压缩失败
         """
-        from agents_hub.core.foundation import CompactionError
         import json as _json
+
+        from agents_hub.core.foundation import CompactionError
 
         # 获取未压缩的消息
         uncompacted_messages = self.group_chat_session.get_uncompact_messages()
@@ -117,7 +123,7 @@ class GroupChatContext:
             return
 
         # 估算 token 数量（粗略：4 个字符 ≈ 1 token）
-        total_chars = sum(len(msg.get('content', '')) for msg in uncompacted_messages)
+        total_chars = sum(len(msg.get("content", "")) for msg in uncompacted_messages)
         estimated_tokens = total_chars // 4
 
         if estimated_tokens < MAX_TOKEN:
@@ -127,19 +133,15 @@ class GroupChatContext:
         print(f"未压缩消息估算 token 数量为 {estimated_tokens}，开始压缩...")
 
         # 构建消息历史文本
-        messages_text = "\n".join([
-            f"[{msg['agent_name']}]: {msg['content']}"
-            for msg in uncompacted_messages
-        ])
+        messages_text = "\n".join(
+            [f"[{msg['agent_name']}]: {msg['content']}" for msg in uncompacted_messages]
+        )
 
         # 构建 agent 信息描述
-        agent_descriptions = "\n".join([
-            f"- {name}: {scope}"
-            for name, scope in agent_info.items()
-        ])
+        agent_descriptions = "\n".join([f"- {name}: {scope}" for name, scope in agent_info.items()])
 
         # 一次性生成 summary 和所有 agent 的专门信息
-        first_agent = list(agent_info.keys())[0] if agent_info else 'agent_name'
+        first_agent = list(agent_info.keys())[0] if agent_info else "agent_name"
         compact_prompt = f"""请总结下面的对话记录，请严格按照要求输出 JSON。
 
 对话记录：
@@ -172,7 +174,8 @@ class GroupChatContext:
         except _json.JSONDecodeError:
             # 尝试从文本中提取 JSON
             import re
-            json_match = re.search(r'\{[\s\S]*\}', text)
+
+            json_match = re.search(r"\{[\s\S]*\}", text)
             if json_match:
                 try:
                     compact_data = _json.loads(json_match.group())
@@ -197,5 +200,3 @@ class GroupChatContext:
         # 更新 last_compacted_loc
         self.group_chat_session.last_compacted_loc = len(self.group_chat_session.messages)
         await self.repository.save_group_chat_session(self.group_chat_session)
-
-

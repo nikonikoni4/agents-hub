@@ -21,10 +21,7 @@ class RoleNotFoundError(ResourceNotFoundError):
         super().__init__(
             message=f"Role '{role_name}' 不存在",
             error_code="ROLE_NOT_FOUND",
-            details={
-                "role_name": role_name,
-                "available_roles": available_roles or []
-            }
+            details={"role_name": role_name, "available_roles": available_roles or []},
         )
 
 
@@ -42,7 +39,7 @@ class RoleAlreadyExistsError(ValidationError):
         super().__init__(
             message=f"Role '{role_name}' 已存在",
             error_code="ROLE_ALREADY_EXISTS",
-            details={"role_name": role_name}
+            details={"role_name": role_name},
         )
 
 
@@ -61,10 +58,7 @@ class PlatformConfigNotFoundError(ResourceNotFoundError):
         super().__init__(
             message=f"{platform} 配置目录不存在: {config_path}",
             error_code="PLATFORM_CONFIG_NOT_FOUND",
-            details={
-                "platform": platform,
-                "config_path": config_path
-            }
+            details={"platform": platform, "config_path": config_path},
         )
 
 
@@ -83,10 +77,7 @@ class SkillNotFoundError(ResourceNotFoundError):
         super().__init__(
             message=f"Skill '{skill_id}' 不存在",
             error_code="SKILL_NOT_FOUND",
-            details={
-                "skill_id": skill_id,
-                "available_skills": available_skills or []
-            }
+            details={"skill_id": skill_id, "available_skills": available_skills or []},
         )
 
 
@@ -104,8 +95,5 @@ class SkillAlreadyExistsError(ValidationError):
         super().__init__(
             message=f"Skill '{skill_id}' 已存在于角色 '{role_name}' 中",
             error_code="SKILL_ALREADY_EXISTS",
-            details={
-                "skill_id": skill_id,
-                "role_name": role_name
-            }
+            details={"skill_id": skill_id, "role_name": role_name},
         )

@@ -3,12 +3,13 @@ GroupChatManager 群聊管理器
 
 全局管理所有 GroupChat 实例，提供 call_agent MCP 工具入口。
 """
+
+from agents_hub.core.communication import AgentCall
 from agents_hub.core.foundation import (
     AgentMessage,
-    MessageType,
     GroupChatNotFoundError,
+    MessageType,
 )
-from agents_hub.core.communication import AgentCall
 
 from .group_chat import GroupChat
 
@@ -24,7 +25,7 @@ class GroupChatManager:
         if not group_chat_id or not isinstance(group_chat_id, str):
             raise ValueError(f"无效的 group_chat_id: {group_chat_id}")
         if not isinstance(group_chat, GroupChat):
-            raise ValueError(f"无效的 group_chat 类型")
+            raise ValueError("无效的 group_chat 类型")
         self._group_chats[group_chat_id] = group_chat
 
     def get_group_chat(self, group_chat_id: str) -> GroupChat:
@@ -96,6 +97,6 @@ def call_agent(
     except Exception as e:
         # TODO: 需要适配 MCP tool 的错误响应格式
         # 当前返回错误信息字符串，正式版本应使用 to_mcp_response()
-        if hasattr(e, 'to_mcp_response'):
+        if hasattr(e, "to_mcp_response"):
             return str(e.to_mcp_response())
         return str(e)

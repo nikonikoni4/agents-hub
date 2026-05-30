@@ -28,7 +28,7 @@ class AgentsHubError(Exception):
         message: str,
         error_code: str | None = None,
         details: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         """
         Args:
@@ -58,11 +58,12 @@ class AgentsHubError(Exception):
             "error_code": self.error_code,
             "message": self.message,
             "details": self.details,
-            "type": self.__class__.__name__
+            "type": self.__class__.__name__,
         }
 
 
 # ==================== 通用异常分类（按"谁应该处理"分类） ====================
+
 
 class ValidationError(AgentsHubError):
     """验证错误
@@ -75,6 +76,7 @@ class ValidationError(AgentsHubError):
     - 数据不符合约束
     - 消息内容为空
     """
+
     pass
 
 
@@ -89,6 +91,7 @@ class ResourceNotFoundError(AgentsHubError):
     - GroupChat 不存在
     - Role 不存在
     """
+
     pass
 
 
@@ -103,6 +106,7 @@ class StateError(AgentsHubError):
     - Agent 未就绪时调用
     - 重复操作（已完成的任务再次执行）
     """
+
     pass
 
 
@@ -117,10 +121,12 @@ class ExternalServiceError(AgentsHubError):
     - 文件系统错误（权限不足、磁盘满）
     - Agent Bridge 错误（平台不支持、CLI 执行失败）
     """
+
     pass
 
 
 # ==================== 可恢复错误标记 ====================
+
 
 class RecoverableError(AgentsHubError):
     """可恢复错误（用于重试逻辑）

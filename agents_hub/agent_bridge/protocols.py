@@ -1,6 +1,8 @@
 """Executor 和 Parser 协议定义"""
 
-from typing import Protocol, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from typing import Protocol
+
 from agents_hub.agent_bridge.models import StreamEvent
 from agents_hub.roles.models import RoleConfig
 
@@ -9,10 +11,7 @@ class Executor(Protocol):
     """执行器协议：负责启动 CLI 并返回原始输出流"""
 
     async def execute(
-        self,
-        prompt: str,
-        config: RoleConfig,
-        session_id: Optional[str] = None
+        self, prompt: str, config: RoleConfig, session_id: str | None = None
     ) -> AsyncIterator[str]:
         """
         启动 CLI 并返回原始输出流
@@ -31,7 +30,7 @@ class Executor(Protocol):
 class Parser(Protocol):
     """解析器协议：负责解析原始输出为统一格式"""
 
-    def parse_event(self, raw_line: str) -> Optional[StreamEvent]:
+    def parse_event(self, raw_line: str) -> StreamEvent | None:
         """
         解析单行 JSON 事件
 

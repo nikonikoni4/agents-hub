@@ -3,6 +3,7 @@
 
 管理群聊的消息历史和元数据。
 """
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import uuid4
@@ -11,6 +12,7 @@ from uuid import uuid4
 @dataclass
 class AgentContextState:
     """Agent 的上下文加载状态"""
+
     last_loaded_compact_index: int = 0  # 已加载到第几条压缩历史
     last_loaded_message_index: int = 0  # 已加载到第几条原始消息
 
@@ -18,6 +20,7 @@ class AgentContextState:
 @dataclass
 class AgentSessionInfo:
     """Agent 的会话信息"""
+
     main_session: str = ""  # 主会话 ID
     btw_session: list[str] = field(default_factory=list)  # by the way session 列表
     context_state: AgentContextState = field(default_factory=AgentContextState)  # 上下文加载状态
@@ -30,6 +33,7 @@ class GroupChatSession:
 
     用于管理群聊的消息历史，对于每个 agent 的单聊和具体内容由各自的平台管理。
     """
+
     group_chat_id: str = field(default_factory=lambda: str(uuid4()))
     name: str = field(default_factory=lambda: f"session_{datetime.now().strftime('%Y%m%d%H%M')}")
     messages: list[dict[str]] = field(default_factory=list)
@@ -45,12 +49,14 @@ class GroupChatSession:
             agent_result: Agent 执行结果（AgentResult）
                 需要包含: agent_name, text, timestamp, platform
         """
-        self.messages.append({
-            "agent_name": agent_result.agent_name,
-            "content": agent_result.text,
-            "timestamp": agent_result.timestamp,
-            "platform": agent_result.platform.value
-        })
+        self.messages.append(
+            {
+                "agent_name": agent_result.agent_name,
+                "content": agent_result.text,
+                "timestamp": agent_result.timestamp,
+                "platform": agent_result.platform.value,
+            }
+        )
 
     def get_uncompact_messages(self) -> list[dict]:
         """
@@ -59,4 +65,4 @@ class GroupChatSession:
         Returns:
             list[dict]: 从 last_compacted_loc 到最新的消息列表
         """
-        return self.messages[self.last_compacted_loc:]
+        return self.messages[self.last_compacted_loc :]

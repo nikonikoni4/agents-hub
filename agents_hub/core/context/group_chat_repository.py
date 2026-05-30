@@ -3,6 +3,7 @@
 
 负责群聊数据的文件读写和并发控制。
 """
+
 import asyncio
 import json
 import os
@@ -12,7 +13,8 @@ from datetime import datetime
 import aiofiles
 
 from agents_hub.core.foundation import LOCAL_DATA_PATH, FileSystemError
-from .group_chat_session import GroupChatSession, AgentSessionInfo, AgentContextState
+
+from .group_chat_session import AgentContextState, AgentSessionInfo, GroupChatSession
 
 
 class GroupChatRepository:
@@ -54,11 +56,11 @@ class GroupChatRepository:
             转换后的安全路径名称
         """
         # 将 / : \\ 替换为 -
-        sanitized = re.sub(r'[/:\\]', '-', project_path)
+        sanitized = re.sub(r"[/:\\]", "-", project_path)
         # 移除开头和结尾的 -
-        sanitized = sanitized.strip('-')
+        sanitized = sanitized.strip("-")
         # 将连续的 - 合并为单个 -
-        sanitized = re.sub(r'-+', '-', sanitized)
+        sanitized = re.sub(r"-+", "-", sanitized)
         return sanitized
 
     # ==================== GroupChatSession 持久化 ====================
@@ -82,34 +84,30 @@ class GroupChatRepository:
         meta_data = None
 
         try:
-            async with aiofiles.open(self.messages_file, 'r', encoding='utf-8') as f:
+            async with aiofiles.open(self.messages_file, encoding="utf-8") as f:
                 async for line in f:
                     line = line.strip()
                     if line:
                         data = json.loads(line)
-                        if data.get('_type') == 'meta_data':
+                        if data.get("_type") == "meta_data":
                             meta_data = data
                         else:
                             messages.append(data)
         except OSError as e:
-            raise FileSystemError(
-                operation="read",
-                path=self.messages_file,
-                reason=str(e)
-            )
+            raise FileSystemError(operation="read", path=self.messages_file, reason=str(e))
 
         # 构建 GroupChatSession
         session = GroupChatSession(group_chat_id=self.group_chat_id)
         session.messages = messages
 
         if meta_data:
-            session.last_compacted_loc = meta_data.get('last_compact_loc', 0)
-            if 'created_at' in meta_data:
-                session.created_at = datetime.fromisoformat(meta_data['created_at'])
-            if 'updated_at' in meta_data:
-                session.updated_at = datetime.fromisoformat(meta_data['updated_at'])
-            if 'name' in meta_data:
-                session.name = meta_data['name']
+            session.last_compacted_loc = meta_data.get("last_compact_loc", 0)
+            if "created_at" in meta_data:
+                session.created_at = datetime.fromisoformat(meta_data["created_at"])
+            if "updated_at" in meta_data:
+                session.updated_at = datetime.fromisoformat(meta_data["updated_at"])
+            if "name" in meta_data:
+                session.name = meta_data["name"]
 
         return session
 
@@ -129,26 +127,22 @@ class GroupChatRepository:
 
             # 写入 jsonl 文件
             try:
-                async with aiofiles.open(self.messages_file, 'w', encoding='utf-8') as f:
+                async with aiofiles.open(self.messages_file, "w", encoding="utf-8") as f:
                     # 写入 meta_data
                     meta_data = {
-                        '_type': 'meta_data',
-                        'last_compact_loc': session.last_compacted_loc,
-                        'created_at': session.created_at.isoformat(),
-                        'updated_at': session.updated_at.isoformat(),
-                        'name': session.name
+                        "_type": "meta_data",
+                        "last_compact_loc": session.last_compacted_loc,
+                        "created_at": session.created_at.isoformat(),
+                        "updated_at": session.updated_at.isoformat(),
+                        "name": session.name,
                     }
-                    await f.write(json.dumps(meta_data, ensure_ascii=False) + '\n')
+                    await f.write(json.dumps(meta_data, ensure_ascii=False) + "\n")
 
                     # 写入消息
                     for msg in session.messages:
-                        await f.write(json.dumps(msg, ensure_ascii=False) + '\n')
+                        await f.write(json.dumps(msg, ensure_ascii=False) + "\n")
             except OSError as e:
-                raise FileSystemError(
-                    operation="write",
-                    path=self.messages_file,
-                    reason=str(e)
-                )
+                raise FileSystemError(operation="write", path=self.messages_file, reason=str(e))
 
     # ==================== Agent Session State 持久化 ====================
 
@@ -168,27 +162,27 @@ class GroupChatRepository:
 
         # 读取 session 文件
         try:
-            async with aiofiles.open(self.session_file, 'r', encoding='utf-8') as f:
+            async with aiofiles.open(self.session_file, encoding="utf-8") as f:
                 content = await f.read()
                 data = json.loads(content)
         except OSError as e:
-            raise FileSystemError(
-                operation="read",
-                path=self.session_file,
-                reason=str(e)
-            )
+            raise FileSystemError(operation="read", path=self.session_file, reason=str(e))
 
         # 转换为 AgentSessionInfo 对象
         result = {}
         for agent_name, session_data in data.items():
-            context_state_data = session_data.get('context_state', {})
+            context_state_data = session_data.get("context_state", {})
             result[agent_name] = AgentSessionInfo(
-                main_session=session_data.get('main_session', ''),
-                btw_session=session_data.get('btw_session', []),
+                main_session=session_data.get("main_session", ""),
+                btw_session=session_data.get("btw_session", []),
                 context_state=AgentContextState(
-                    last_loaded_compact_index=context_state_data.get('last_loaded_compact_index', 0),
-                    last_loaded_message_index=context_state_data.get('last_loaded_message_index', 0)
-                )
+                    last_loaded_compact_index=context_state_data.get(
+                        "last_loaded_compact_index", 0
+                    ),
+                    last_loaded_message_index=context_state_data.get(
+                        "last_loaded_message_index", 0
+                    ),
+                ),
             )
         return result
 
@@ -207,24 +201,20 @@ class GroupChatRepository:
             data = {}
             for agent_name, session_info in state.items():
                 data[agent_name] = {
-                    'main_session': session_info.main_session,
-                    'btw_session': session_info.btw_session,
-                    'context_state': {
-                        'last_loaded_compact_index': session_info.context_state.last_loaded_compact_index,
-                        'last_loaded_message_index': session_info.context_state.last_loaded_message_index
-                    }
+                    "main_session": session_info.main_session,
+                    "btw_session": session_info.btw_session,
+                    "context_state": {
+                        "last_loaded_compact_index": session_info.context_state.last_loaded_compact_index,
+                        "last_loaded_message_index": session_info.context_state.last_loaded_message_index,
+                    },
                 }
 
             # 写入文件
             try:
-                async with aiofiles.open(self.session_file, 'w', encoding='utf-8') as f:
+                async with aiofiles.open(self.session_file, "w", encoding="utf-8") as f:
                     await f.write(json.dumps(data, ensure_ascii=False, indent=2))
             except OSError as e:
-                raise FileSystemError(
-                    operation="write",
-                    path=self.session_file,
-                    reason=str(e)
-                )
+                raise FileSystemError(operation="write", path=self.session_file, reason=str(e))
 
     # ==================== Compact History 持久化 ====================
 
@@ -240,17 +230,13 @@ class GroupChatRepository:
 
         compact_history = []
         try:
-            async with aiofiles.open(self.compact_history_file, 'r', encoding='utf-8') as f:
+            async with aiofiles.open(self.compact_history_file, encoding="utf-8") as f:
                 async for line in f:
                     line = line.strip()
                     if line:
                         compact_history.append(json.loads(line))
         except OSError as e:
-            raise FileSystemError(
-                operation="read",
-                path=self.compact_history_file,
-                reason=str(e)
-            )
+            raise FileSystemError(operation="read", path=self.compact_history_file, reason=str(e))
 
         return compact_history
 
@@ -267,12 +253,10 @@ class GroupChatRepository:
 
             # 写入 jsonl 文件
             try:
-                async with aiofiles.open(self.compact_history_file, 'w', encoding='utf-8') as f:
+                async with aiofiles.open(self.compact_history_file, "w", encoding="utf-8") as f:
                     for record in history:
-                        await f.write(json.dumps(record, ensure_ascii=False) + '\n')
+                        await f.write(json.dumps(record, ensure_ascii=False) + "\n")
             except OSError as e:
                 raise FileSystemError(
-                    operation="write",
-                    path=self.compact_history_file,
-                    reason=str(e)
+                    operation="write", path=self.compact_history_file, reason=str(e)
                 )

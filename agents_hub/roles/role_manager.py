@@ -4,12 +4,15 @@ import json
 import re
 import shutil
 from pathlib import Path
-from typing import List, Optional
 
 from agents_hub.config.types import AgentPlatform
+from agents_hub.roles.exceptions import (
+    PlatformConfigNotFoundError,
+    RoleAlreadyExistsError,
+    RoleNotFoundError,
+)
 from agents_hub.roles.models import RoleInfo, RoleType
 from agents_hub.roles.role import Role
-from agents_hub.roles.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
 
 
 class RoleManager:
@@ -28,7 +31,7 @@ class RoleManager:
         Args:
             agents_dir: agents 目录路径 (local_data/agents)。
         """
-        self.agents_dir = agents_dir or Path('local_data/agents')
+        self.agents_dir = agents_dir or Path("local_data/agents")
 
     def _validate_role_name(self, name: str) -> None:
         """验证角色名称是否为合法的目录名。
@@ -48,20 +51,41 @@ class RoleManager:
         """
         if not name:
             raise ValueError("Role name cannot be empty")
-        if name.startswith('.'):
+        if name.startswith("."):
             raise ValueError("Role name cannot start with '.'")
-        if name.endswith(' '):
+        if name.endswith(" "):
             raise ValueError("Role name cannot end with space")
         if re.search(r'[\\/:*?"<>|]', name):
-            raise ValueError(
-                f"Invalid role name: '{name}'. Cannot contain: \\ / : * ? \" < > |"
-            )
+            raise ValueError(f"Invalid role name: '{name}'. Cannot contain: \\ / : * ? \" < > |")
         # Windows 保留名
-        reserved = {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'}
+        reserved = {
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9",
+        }
         if name.upper() in reserved:
             raise ValueError(f"Invalid role name: '{name}' is a Windows reserved name")
 
-    def list_roles(self) -> List[RoleInfo]:
+    def list_roles(self) -> list[RoleInfo]:
         """列出所有角色。
 
         扫描 agents 目录下的所有子目录，读取 role.json 文件。
@@ -82,20 +106,22 @@ class RoleManager:
                         data = json.loads(role_json.read_text(encoding="utf-8"))
                         type_str = data.get("type")
                         role_type = RoleType(type_str) if type_str else None
-                        roles.append(RoleInfo(
-                            name=data["name"],
-                            platform=AgentPlatform(data["platform"]),
-                            avatar=data.get("avatar"),
-                            abilities=data.get("abilities", []),
-                            type=role_type,
-                            description=data.get("description"),
-                            scope=data.get("scope"),
-                        ))
+                        roles.append(
+                            RoleInfo(
+                                name=data["name"],
+                                platform=AgentPlatform(data["platform"]),
+                                avatar=data.get("avatar"),
+                                abilities=data.get("abilities", []),
+                                type=role_type,
+                                description=data.get("description"),
+                                scope=data.get("scope"),
+                            )
+                        )
                     except (json.JSONDecodeError, KeyError):
                         continue
         return roles
 
-    def list_role_names(self) -> List[str]:
+    def list_role_names(self) -> list[str]:
         """列出所有角色的名称。
 
         Returns:
@@ -103,7 +129,7 @@ class RoleManager:
         """
         return [role.name for role in self.list_roles()]
 
-    def list_avatars(self) -> List[str]:
+    def list_avatars(self) -> list[str]:
         """列出 assets/ 目录下所有可用头像文件名。
 
         扫描 agents/assets/ 目录，返回所有图片文件的文件名列表。
@@ -117,7 +143,8 @@ class RoleManager:
 
         image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
         return [
-            f.name for f in assets_dir.iterdir()
+            f.name
+            for f in assets_dir.iterdir()
             if f.is_file() and f.suffix.lower() in image_extensions
         ]
 
@@ -152,11 +179,11 @@ class RoleManager:
         self,
         name: str,
         platform: AgentPlatform,
-        avatar: Optional[str] = None,
-        abilities: Optional[List[str]] = None,
-        type: Optional[str] = None,
-        scope: Optional[List[str]] = None,
-        description: Optional[str] = None,
+        avatar: str | None = None,
+        abilities: list[str] | None = None,
+        type: str | None = None,
+        scope: list[str] | None = None,
+        description: str | None = None,
     ) -> Role:
         """创建新角色。
 
@@ -185,7 +212,6 @@ class RoleManager:
         role_dir = self.agents_dir / name
         if role_dir.exists():
             raise RoleAlreadyExistsError(role_name=name)
-            
 
         role_dir.mkdir(parents=True)
         work_root = role_dir / "work_root"
@@ -212,8 +238,7 @@ class RoleManager:
             "skills": [],
         }
         (role_dir / "role.json").write_text(
-            json.dumps(role_json, ensure_ascii=False, indent=2),
-            encoding="utf-8"
+            json.dumps(role_json, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         return Role(role_dir)
@@ -250,10 +275,7 @@ class RoleManager:
         """
         home_claude = Path.home() / ".claude"
         if not home_claude.exists():
-            raise PlatformConfigNotFoundError(
-                platform="Claude",
-                config_path=str(home_claude)
-            )
+            raise PlatformConfigNotFoundError(platform="Claude", config_path=str(home_claude))
 
         settings_src = home_claude / "settings.json"
         if settings_src.exists():
@@ -275,10 +297,7 @@ class RoleManager:
         """
         home_codex = Path.home() / ".codex"
         if not home_codex.exists():
-            raise PlatformConfigNotFoundError(
-                platform="Codex",
-                config_path=str(home_codex)
-            )
+            raise PlatformConfigNotFoundError(platform="Codex", config_path=str(home_codex))
 
         for file_name in ["auth.json", "config.toml"]:
             src = home_codex / file_name

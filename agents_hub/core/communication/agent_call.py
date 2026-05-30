@@ -3,6 +3,7 @@ Agent 调用记录
 
 记录一次 Agent 调用的完整信息，包括状态、结果、错误等。
 """
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import uuid4
@@ -30,6 +31,7 @@ class AgentCall:
        - 为减小内存占用，需要删除无用的调用信息
        - 删除逻辑依赖于 message_type（待实现）
     """
+
     send_from: str
     send_to: str
     content: str

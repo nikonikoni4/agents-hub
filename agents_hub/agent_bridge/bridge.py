@@ -1,22 +1,23 @@
 """AgentBridge 统一接口"""
 
 import logging
+from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import AsyncIterator, Optional
-from agents_hub.config.types import AgentPlatform
-from agents_hub.agent_bridge.models import StreamEvent, AgentResult, AgentEventType
-from agents_hub.roles.models import RoleConfig
+
+from agents_hub.agent_bridge.exceptions import (
+    CLIExecutionError,
+    CLINotFoundError,
+    ParseError,
+    PlatformNotSupportedError,
+)
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
+from agents_hub.agent_bridge.models import AgentEventType, AgentResult, StreamEvent
 from agents_hub.agent_bridge.parsers.claude import ClaudeParser
 from agents_hub.agent_bridge.parsers.codex import CodexParser
-from agents_hub.agent_bridge.exceptions import (
-    PlatformNotSupportedError,
-    ParseError,
-    CLINotFoundError,
-    CLIExecutionError
-)
+from agents_hub.config.types import AgentPlatform
 from agents_hub.roles import RoleManager
+from agents_hub.roles.models import RoleConfig
 
 logger = logging.getLogger(__name__)
 
@@ -30,20 +31,14 @@ class AgentBridge:
         # 创建执行器和解析器实例（可复用）
         self._executors = {
             AgentPlatform.CLAUDE: ClaudeExecutor(),
-            AgentPlatform.CODEX: CodexExecutor()
+            AgentPlatform.CODEX: CodexExecutor(),
         }
-        self._parsers = {
-            AgentPlatform.CLAUDE: ClaudeParser(),
-            AgentPlatform.CODEX: CodexParser()
-        }
+        self._parsers = {AgentPlatform.CLAUDE: ClaudeParser(), AgentPlatform.CODEX: CodexParser()}
         self._role_manager = RoleManager()
         self._bare_config = self._init_bare_config()
 
     async def execute_stream(
-        self,
-        prompt: str,
-        config: RoleConfig,
-        session_id: Optional[str] = None
+        self, prompt: str, config: RoleConfig, session_id: str | None = None
     ) -> AsyncIterator[StreamEvent]:
         """
         流式执行 Agent 调用
@@ -66,8 +61,7 @@ class AgentBridge:
         if config.platform not in self._executors:
             supported = [p.value for p in self._executors.keys()]
             raise PlatformNotSupportedError(
-                platform=config.platform.value,
-                supported_platforms=supported
+                platform=config.platform.value, supported_platforms=supported
             )
 
         executor = self._executors[config.platform]
@@ -93,10 +87,7 @@ class AgentBridge:
             raise
 
     async def execute(
-        self,
-        prompt: str,
-        config: RoleConfig,
-        session_id: Optional[str] = None
+        self, prompt: str, config: RoleConfig, session_id: str | None = None
     ) -> AgentResult:
         """
         非流式执行，返回完整结果
@@ -131,7 +122,7 @@ class AgentBridge:
             agent_name=config.name,
             platform=config.platform,
             role_type=config.role_type,
-            usage=usage
+            usage=usage,
         )
 
     async def bare_claude_call(self, prompt: str) -> AgentResult:

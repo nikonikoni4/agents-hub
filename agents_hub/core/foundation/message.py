@@ -3,16 +3,18 @@
 
 定义 Agent 之间传递的消息结构。
 """
+
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .models import SessionType, MessageType
+from .models import MessageType, SessionType
 
 
 @dataclass
 class AgentMessage:
     """Agent 之间传递的消息"""
-    call_id:str
+
+    call_id: str
     content: str
     send_from: str
     send_to: str

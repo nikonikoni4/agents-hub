@@ -3,10 +3,11 @@
 import asyncio
 import logging
 import os
-from typing import AsyncIterator, Optional
+from collections.abc import AsyncIterator
+
+from agents_hub.agent_bridge.exceptions import CLIExecutionError, CLINotFoundError
 from agents_hub.config.types import CODEX_COMMAND
 from agents_hub.roles.models import RoleConfig
-from agents_hub.agent_bridge.exceptions import CLINotFoundError, CLIExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +16,7 @@ class CodexExecutor:
     """执行 Codex CLI 命令"""
 
     async def execute(
-        self,
-        prompt: str,
-        config: RoleConfig,
-        session_id: Optional[str] = None
+        self, prompt: str, config: RoleConfig, session_id: str | None = None
     ) -> AsyncIterator[str]:
         """
         启动 Codex CLI 并返回原始输出流
@@ -33,24 +31,18 @@ class CodexExecutor:
         """
         # 移除换行符，避免 Codex CLI 命令行解析错误
         # 参考: docs/history-bugs/2026-05-28-cli-system-prompt-blocks-simple-requests.md
-        prompt = prompt.replace('\n', ' ').replace('\r', ' ')
+        prompt = prompt.replace("\n", " ").replace("\r", " ")
 
         cmd = self._build_command(prompt, config, session_id)
         env = self._build_env(config)
 
         try:
             process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env
             )
         except FileNotFoundError as e:
             logger.error(f"Codex CLI not found: {CODEX_COMMAND}")
-            raise CLINotFoundError(
-                platform="Codex",
-                command=CODEX_COMMAND
-            ) from e
+            raise CLINotFoundError(platform="Codex", command=CODEX_COMMAND) from e
 
         async for line in process.stdout:
             decoded = line.decode("utf-8").strip()
@@ -61,20 +53,13 @@ class CodexExecutor:
         await process.wait()
         if process.returncode != 0:
             stderr = await process.stderr.read()
-            stderr_text = stderr.decode('utf-8')
+            stderr_text = stderr.decode("utf-8")
             logger.error(f"Codex CLI exited with code {process.returncode}: {stderr_text}")
             raise CLIExecutionError(
-                platform="Codex",
-                exit_code=process.returncode,
-                stderr=stderr_text
+                platform="Codex", exit_code=process.returncode, stderr=stderr_text
             )
 
-    def _build_command(
-        self,
-        prompt: str,
-        config: RoleConfig,
-        session_id: Optional[str]
-    ) -> list:
+    def _build_command(self, prompt: str, config: RoleConfig, session_id: str | None) -> list:
         """构建 Codex CLI 命令"""
         if session_id:
             # 恢复已有会话

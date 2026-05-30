@@ -8,29 +8,30 @@ Agent 基类
 - 出口 A 写群聊：render_for_chat
 - 出口 B 投递回复：传 result.text 原文，不预渲染
 """
-import asyncio
-from contextlib import asynccontextmanager
 
+import asyncio
+
+from agents_hub.agent_bridge import agent_platform_client
+from agents_hub.core.communication import AgentCallManager, MessageRouter
+from agents_hub.core.context import AgentContext, GroupChatContext
 from agents_hub.core.foundation import (
+    AgentExecutionError,
     AgentMessage,
-    MessageType,
     AgentResult,
+    CallStatus,
+    MessageType,
     Role,
     RoleConfig,
     SessionType,
-    CallStatus,
-    AgentExecutionError,
-    render_for_llm,
     render_for_chat,
+    render_for_llm,
 )
-
-from agents_hub.core.communication import MessageRouter, AgentCallManager, AgentCall
-from agents_hub.core.context import GroupChatContext, AgentContext
-from agents_hub.agent_bridge import agent_platform_client
 
 
 class Agent:
-    def __init__(self, role: Role, group_chat_context: GroupChatContext, agent_call_manager: AgentCallManager):
+    def __init__(
+        self, role: Role, group_chat_context: GroupChatContext, agent_call_manager: AgentCallManager
+    ):
         self.role_config: RoleConfig = role.get_role_config()
         self.name = self.role_config.name
         self.role_type = self.role_config.role_type
@@ -83,7 +84,9 @@ class Agent:
             else:
                 print(f"warning : {self.name}在当前群聊中无历史记录")  # TODO 替换为 logger
         else:
-            print(f"warning : 当前群聊无{self.name}的main session记录 [ 如果是初始化会话 忽略该警告]")
+            print(
+                f"warning : 当前群聊无{self.name}的main session记录 [ 如果是初始化会话 忽略该警告]"
+            )
         return None
 
     async def _process_message(self, msg: AgentMessage, prompt: str) -> AgentResult:
@@ -129,7 +132,7 @@ class Agent:
             )
 
             # 4. 出口 B：如果是 TASK 且发起者不是 user，投递回复
-            
+
             if msg.message_type == MessageType.TASK and msg.send_from != "user":
                 # TODO ： 考虑这里是否真的需要发送全部信息？因为之前的对话记录中已经包含了result.text
                 send_message_content = result.text

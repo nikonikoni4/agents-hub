@@ -3,10 +3,10 @@
 import json
 import logging
 from datetime import datetime
-from typing import Optional
-from agents_hub.agent_bridge.models import StreamEvent, AgentEventType
-from agents_hub.config.types import AgentPlatform, RoleType
+
 from agents_hub.agent_bridge.exceptions import ParseError
+from agents_hub.agent_bridge.models import AgentEventType, StreamEvent
+from agents_hub.config.types import AgentPlatform, RoleType
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class CodexParser:
     def __init__(self):
         self._thread_id: str = ""
 
-    def parse_event(self, raw_line: str) -> Optional[StreamEvent]:
+    def parse_event(self, raw_line: str) -> StreamEvent | None:
         """
         解析单行 JSON 事件
 
@@ -32,9 +32,7 @@ class CodexParser:
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse Codex output: {e}")
             raise ParseError(
-                platform="Codex",
-                raw_line=raw_line,
-                reason=f"JSON decode error: {str(e)}"
+                platform="Codex", raw_line=raw_line, reason=f"JSON decode error: {str(e)}"
             ) from e
 
         event_type = event.get("type")
@@ -54,7 +52,7 @@ class CodexParser:
 
         return None
 
-    def _parse_item_completed(self, event: dict) -> Optional[StreamEvent]:
+    def _parse_item_completed(self, event: dict) -> StreamEvent | None:
         """解析项目完成事件"""
         item = event.get("item", {})
         item_type = item.get("type")
@@ -71,7 +69,7 @@ class CodexParser:
                 timestamp=datetime.now().isoformat(),
                 agent_name="",  # 将在 bridge 中填充
                 platform=AgentPlatform.CODEX,
-                role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
+                role_type=RoleType.TEAM_MEMBER,  # 默认值，将在 bridge 中更新
             )
 
         # 命令执行
@@ -88,12 +86,12 @@ class CodexParser:
                 timestamp=datetime.now().isoformat(),
                 agent_name="",  # 将在 bridge 中填充
                 platform=AgentPlatform.CODEX,
-                role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
+                role_type=RoleType.TEAM_MEMBER,  # 默认值，将在 bridge 中更新
             )
 
         return None
 
-    def _parse_turn_completed(self, event: dict) -> Optional[StreamEvent]:
+    def _parse_turn_completed(self, event: dict) -> StreamEvent | None:
         """解析回合完成事件"""
         usage = event.get("usage", {})
         return StreamEvent(
@@ -103,5 +101,5 @@ class CodexParser:
             timestamp=datetime.now().isoformat(),
             agent_name="",  # 将在 bridge 中填充
             platform=AgentPlatform.CODEX,
-            role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
+            role_type=RoleType.TEAM_MEMBER,  # 默认值，将在 bridge 中更新
         )

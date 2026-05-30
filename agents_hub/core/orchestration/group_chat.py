@@ -6,14 +6,15 @@ GroupChat 群聊管理
 2. 初始化各成员状态
 3. 管理消息路由和 Agent 生命周期
 """
+
 import asyncio
 from uuid import uuid4
 
-from agents_hub.core.foundation import GroupChatType, MessageType
 from agents_hub.config.types import RoleType
-from agents_hub.core.communication import MessageRouter, AgentCallManager
-from agents_hub.core.context import GroupChatContext
 from agents_hub.core.agent import Manager, Worker
+from agents_hub.core.communication import AgentCallManager, MessageRouter
+from agents_hub.core.context import GroupChatContext
+from agents_hub.core.foundation import GroupChatType
 from agents_hub.roles import RoleManager
 
 from .team import Team
@@ -29,7 +30,13 @@ class GroupChat:
     3. 管理消息路由和 agent 生命周期
     """
 
-    def __init__(self, team: Team, group_type: GroupChatType, project_path: str, group_chat_id: str = str(uuid4())):
+    def __init__(
+        self,
+        team: Team,
+        group_type: GroupChatType,
+        project_path: str,
+        group_chat_id: str = str(uuid4()),
+    ):
         self.group_chat_id = group_chat_id
         self.team_members_name = team.team_members_name
         self.group_type = group_type
@@ -116,9 +123,7 @@ class GroupChat:
                 )
 
         # 并发执行所有新成员的初始化
-        results = await asyncio.gather(
-            *[start_conversation(member) for member in new_members]
-        )
+        results = await asyncio.gather(*[start_conversation(member) for member in new_members])
 
         # 保存结果
         for result in results:

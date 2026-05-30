@@ -3,7 +3,7 @@
 所有异常继承自顶层 agents_hub.exceptions，遵循统一的错误处理规范。
 """
 
-from agents_hub.exceptions import ExternalServiceError, ValidationError, RecoverableError
+from agents_hub.exceptions import ExternalServiceError, RecoverableError, ValidationError
 
 
 class AgentBridgeError(ExternalServiceError):
@@ -12,6 +12,7 @@ class AgentBridgeError(ExternalServiceError):
     特征：Agent 平台调用失败
     处理策略：区分可恢复和不可恢复错误
     """
+
     pass
 
 
@@ -30,10 +31,7 @@ class CLINotFoundError(AgentBridgeError):
         super().__init__(
             message=f"{platform} CLI 不存在: {command}",
             error_code="CLI_NOT_FOUND",
-            details={
-                "platform": platform,
-                "command": command
-            }
+            details={"platform": platform, "command": command},
         )
 
 
@@ -52,11 +50,7 @@ class CLIExecutionError(AgentBridgeError):
         super().__init__(
             message=f"{platform} CLI 执行失败 (exit code: {exit_code})",
             error_code="CLI_EXECUTION_ERROR",
-            details={
-                "platform": platform,
-                "exit_code": exit_code,
-                "stderr": stderr
-            }
+            details={"platform": platform, "exit_code": exit_code, "stderr": stderr},
         )
 
 
@@ -79,8 +73,8 @@ class ParseError(AgentBridgeError):
             details={
                 "platform": platform,
                 "raw_line": raw_line[:200],  # 只保留前 200 字符
-                "reason": reason
-            }
+                "reason": reason,
+            },
         )
 
 
@@ -98,10 +92,7 @@ class PlatformNotSupportedError(ValidationError):
         super().__init__(
             message=f"平台 '{platform}' 不支持",
             error_code="PLATFORM_NOT_SUPPORTED",
-            details={
-                "platform": platform,
-                "supported_platforms": supported_platforms
-            }
+            details={"platform": platform, "supported_platforms": supported_platforms},
         )
 
 
@@ -121,13 +112,8 @@ class AgentTimeoutError(AgentBridgeError, RecoverableError):
             self,
             message=f"{platform} Agent 执行超时 ({timeout_seconds}秒)",
             error_code="AGENT_TIMEOUT",
-            details={
-                "platform": platform,
-                "timeout_seconds": timeout_seconds
-            }
+            details={"platform": platform, "timeout_seconds": timeout_seconds},
         )
         RecoverableError.__init__(
-            self,
-            message=f"{platform} Agent 执行超时 ({timeout_seconds}秒)",
-            retry_after=5.0
+            self, message=f"{platform} Agent 执行超时 ({timeout_seconds}秒)", retry_after=5.0
         )

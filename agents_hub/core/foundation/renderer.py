@@ -8,24 +8,26 @@
     2. LLM 出口（AgentMessage→LLM prompt）：render_for_llm
     3. jsonl/UI 出口（Agent 输出→群聊记录）：render_for_chat
 """
+
 import re
 
-from .message import AgentMessage
 from .exceptions import InvalidMessageError
+from .message import AgentMessage
 
-
-_AT_PATTERN = re.compile(r"^\s*@(\S+)\s*(.*)$", re.DOTALL) # TODO 需要避免前端连续@ 当前不支持@多个agent
+_AT_PATTERN = re.compile(
+    r"^\s*@(\S+)\s*(.*)$", re.DOTALL
+)  # TODO 需要避免前端连续@ 当前不支持@多个agent
 
 
 # ====== 预定义 XML 标签 ======
 # 喂给 LLM 的 prompt 中常用的结构标签。
 # 命名规则：英文标签名（结构标记），保持平铺，避免不必要的层级嵌套。
 class Tag:
-    GROUP_HISTORY = "group_chat_history"          # 历史群聊摘要块
-    RECENT_MESSAGES = "recent_messages"           # 群聊最新消息块
-    INCOMING_MESSAGE = "incoming_message"         # 当前传入的消息（render_for_llm 输出）
-    SUMMARY_OVERALL = "overall_summary"           # 摘要中的整体内容
-    SUMMARY_FOR_YOU = "summary_for_you"           # 摘要中针对当前 agent 的内容
+    GROUP_HISTORY = "group_chat_history"  # 历史群聊摘要块
+    RECENT_MESSAGES = "recent_messages"  # 群聊最新消息块
+    INCOMING_MESSAGE = "incoming_message"  # 当前传入的消息（render_for_llm 输出）
+    SUMMARY_OVERALL = "overall_summary"  # 摘要中的整体内容
+    SUMMARY_FOR_YOU = "summary_for_you"  # 摘要中针对当前 agent 的内容
 
 
 def wrap_xml(tag: str, content: str) -> str:
@@ -67,4 +69,3 @@ def parse_chat_input(raw: str) -> tuple[str, str]:
     if not send_to:
         raise InvalidMessageError(reason="@ 后必须跟 agent 名称")
     return send_to, content
-

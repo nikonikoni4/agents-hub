@@ -3,11 +3,12 @@
 import json
 import shutil
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 from agents_hub.config.types import AgentPlatform
-from agents_hub.roles.models import RoleConfig, RoleInfo, SkillInfo, RoleType
-from agents_hub.roles.exceptions import SkillNotFoundError, SkillAlreadyExistsError
+from agents_hub.roles.exceptions import SkillAlreadyExistsError, SkillNotFoundError
+from agents_hub.roles.models import RoleConfig, RoleInfo, RoleType, SkillInfo
+
 
 class Role:
     """单个角色的配置管理。
@@ -45,7 +46,7 @@ class Role:
         """
         return self.role_dir / "work_root"
 
-    def _read_role_json(self) -> Dict[str, Any]:
+    def _read_role_json(self) -> dict[str, Any]:
         """读取 role.json 文件内容。
 
         Returns:
@@ -57,15 +58,14 @@ class Role:
         """
         return json.loads(self._role_json_path.read_text(encoding="utf-8"))
 
-    def _write_role_json(self, data: Dict[str, Any]) -> None:
+    def _write_role_json(self, data: dict[str, Any]) -> None:
         """写入 role.json 文件。
 
         Args:
             data: 要写入的数据字典。
         """
         self._role_json_path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2),
-            encoding="utf-8"
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
     def get_info(self) -> RoleInfo:
@@ -129,7 +129,7 @@ class Role:
         data["avatar"] = avatar_filename
         self._write_role_json(data)
 
-    def update_abilities(self, abilities: List[str]) -> None:
+    def update_abilities(self, abilities: list[str]) -> None:
         """更新能力标签列表。
 
         Args:
@@ -139,7 +139,7 @@ class Role:
         data["abilities"] = abilities
         self._write_role_json(data)
 
-    def list_skills(self) -> List[SkillInfo]:
+    def list_skills(self) -> list[SkillInfo]:
         """列出角色已启用的 skills。
 
         扫描 work_root/skills/ 目录，读取每个 skill 的 skill.json 文件。
@@ -157,14 +157,12 @@ class Role:
                 skill_json = skill_dir / "skill.json"
                 if skill_json.exists():
                     data = json.loads(skill_json.read_text(encoding="utf-8"))
-                    skills.append(SkillInfo(
-                        id=data["id"],
-                        name=data["name"],
-                        description=data["description"]
-                    ))
+                    skills.append(
+                        SkillInfo(id=data["id"], name=data["name"], description=data["description"])
+                    )
         return skills
 
-    def add_skill(self, skill_id: str, global_skills_dir: Optional[Path] = None) -> None:
+    def add_skill(self, skill_id: str, global_skills_dir: Path | None = None) -> None:
         """添加 skill 到角色。
 
         从全局 skill 库复制 skill 到角色的 work_root/skills/ 目录，
@@ -221,7 +219,7 @@ class Role:
             data["skills"].remove(skill_id)
             self._write_role_json(data)
 
-    def get_permissions_config(self) -> Dict[str, Any]:
+    def get_permissions_config(self) -> dict[str, Any]:
         """获取平台特定的权限配置。
 
         对于 Claude 平台，读取 work_root/settings.json；
@@ -246,7 +244,7 @@ class Role:
         else:
             return {}
 
-    def update_permissions_config(self, config: Dict[str, Any]) -> None:
+    def update_permissions_config(self, config: dict[str, Any]) -> None:
         """更新平台特定的权限配置。
 
         对于 Claude 平台，写入 work_root/settings.json；
@@ -261,8 +259,7 @@ class Role:
         if platform == AgentPlatform.CLAUDE:
             settings_path = self._work_root / "settings.json"
             settings_path.write_text(
-                json.dumps(config, ensure_ascii=False, indent=2),
-                encoding="utf-8"
+                json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
             )
         else:
             pass
@@ -284,5 +281,5 @@ class Role:
             platform=platform,
             description=data.get("description"),
             work_root=str(self._work_root),
-            role_type=role_type
+            role_type=role_type,
         )

@@ -3,10 +3,10 @@
 import json
 import logging
 from datetime import datetime
-from typing import Optional
-from agents_hub.agent_bridge.models import StreamEvent, AgentEventType
-from agents_hub.config.types import AgentPlatform, RoleType
+
 from agents_hub.agent_bridge.exceptions import ParseError
+from agents_hub.agent_bridge.models import AgentEventType, StreamEvent
+from agents_hub.config.types import AgentPlatform, RoleType
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class ClaudeParser:
     """解析 Claude CLI 的流式输出"""
 
-    def parse_event(self, raw_line: str) -> Optional[StreamEvent]:
+    def parse_event(self, raw_line: str) -> StreamEvent | None:
         """
         解析单行 JSON 事件
 
@@ -27,9 +27,7 @@ class ClaudeParser:
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse Claude output: {e}")
             raise ParseError(
-                platform="Claude",
-                raw_line=raw_line,
-                reason=f"JSON decode error: {str(e)}"
+                platform="Claude", raw_line=raw_line, reason=f"JSON decode error: {str(e)}"
             ) from e
 
         event_type = event.get("type")
@@ -45,7 +43,7 @@ class ClaudeParser:
 
         return None
 
-    def _parse_stream_event(self, event: dict, session_id: str) -> Optional[StreamEvent]:
+    def _parse_stream_event(self, event: dict, session_id: str) -> StreamEvent | None:
         """解析流式事件"""
         inner_event = event.get("event", {})
         inner_type = inner_event.get("type")
@@ -61,12 +59,12 @@ class ClaudeParser:
                     timestamp=datetime.now().isoformat(),
                     agent_name="",  # 将在 bridge 中填充
                     platform=AgentPlatform.CLAUDE,
-                    role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
+                    role_type=RoleType.TEAM_MEMBER,  # 默认值，将在 bridge 中更新
                 )
 
         return None
 
-    def _parse_system_event(self, event: dict, session_id: str) -> Optional[StreamEvent]:
+    def _parse_system_event(self, event: dict, session_id: str) -> StreamEvent | None:
         """解析系统事件"""
         subtype = event.get("subtype")
 
@@ -82,7 +80,7 @@ class ClaudeParser:
                 timestamp=datetime.now().isoformat(),
                 agent_name="",  # 将在 bridge 中填充
                 platform=AgentPlatform.CLAUDE,
-                role_type=RoleType.TEAM_MEMBER  # 默认值，将在 bridge 中更新
+                role_type=RoleType.TEAM_MEMBER,  # 默认值，将在 bridge 中更新
             )
 
         return None

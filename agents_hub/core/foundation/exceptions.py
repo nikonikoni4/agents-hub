@@ -20,11 +20,12 @@ class AgentsHubError(Exception):
             "success": False,
             "error_code": self.error_code,
             "message": self.message,
-            "details": self.details
+            "details": self.details,
         }
 
 
 # ==================== 业务错误 ====================
+
 
 class AgentNotFoundError(AgentsHubError):
     """Agent 不存在"""
@@ -33,7 +34,7 @@ class AgentNotFoundError(AgentsHubError):
         super().__init__(
             message=f"Agent '{agent_name}' 不存在，请检查 agent 名称是否正确",
             error_code="AGENT_NOT_FOUND",
-            details={"agent_name": agent_name}
+            details={"agent_name": agent_name},
         )
 
 
@@ -44,7 +45,7 @@ class GroupChatNotFoundError(AgentsHubError):
         super().__init__(
             message=f"GroupChat '{group_chat_id}' 不存在",
             error_code="GROUP_CHAT_NOT_FOUND",
-            details={"group_chat_id": group_chat_id}
+            details={"group_chat_id": group_chat_id},
         )
 
 
@@ -55,18 +56,18 @@ class MessageDeliveryError(AgentsHubError):
         super().__init__(
             message=f"消息投递失败: {reason}",
             error_code="MESSAGE_DELIVERY_FAILED",
-            details={"send_from": send_from, "send_to": send_to, "reason": reason}
+            details={"send_from": send_from, "send_to": send_to, "reason": reason},
         )
 
 
 class AgentExecutionError(AgentsHubError):
     """Agent 执行失败"""
 
-    def __init__(self, agent_name: str, reason: str,session_id :str,platform:str):
+    def __init__(self, agent_name: str, reason: str, session_id: str, platform: str):
         super().__init__(
             message=f"Agent '{agent_name}' 执行失败: {reason} session_id:{session_id},platform:{platform}",
             error_code="AGENT_EXECUTION_FAILED",
-            details={"agent_name": agent_name, "reason": reason}
+            details={"agent_name": agent_name, "reason": reason},
         )
 
 
@@ -77,11 +78,12 @@ class AgentTimeoutError(AgentsHubError):
         super().__init__(
             message=f"Agent '{agent_name}' 执行超时（{timeout_seconds}秒）",
             error_code="AGENT_TIMEOUT",
-            details={"agent_name": agent_name, "timeout_seconds": timeout_seconds}
+            details={"agent_name": agent_name, "timeout_seconds": timeout_seconds},
         )
 
 
 # ==================== 验证错误 ====================
+
 
 class InvalidMessageError(AgentsHubError):
     """消息格式错误"""
@@ -90,11 +92,12 @@ class InvalidMessageError(AgentsHubError):
         super().__init__(
             message=f"消息格式错误: {reason}",
             error_code="INVALID_MESSAGE",
-            details={"reason": reason}
+            details={"reason": reason},
         )
 
 
 # ==================== 系统错误 ====================
+
 
 class FileSystemError(AgentsHubError):
     """文件系统错误"""
@@ -103,7 +106,7 @@ class FileSystemError(AgentsHubError):
         super().__init__(
             message=f"文件系统错误: {operation} '{path}' 失败 - {reason}",
             error_code="FILE_SYSTEM_ERROR",
-            details={"operation": operation, "path": path, "reason": reason}
+            details={"operation": operation, "path": path, "reason": reason},
         )
 
 
@@ -114,5 +117,5 @@ class CompactionError(AgentsHubError):
         super().__init__(
             message=f"消息压缩失败: {reason}",
             error_code="COMPACTION_FAILED",
-            details={"reason": reason}
+            details={"reason": reason},
         )

@@ -3,9 +3,11 @@ Agent 调用管理器
 
 统一管理所有跨 Agent 的异步调用。
 """
+
 from datetime import datetime
 
 from agents_hub.core.foundation import CallStatus, MessageType
+
 from .agent_call import AgentCall
 
 
@@ -28,7 +30,7 @@ class AgentCallManager:
         content: str,
         message_type: MessageType,
         timeout_seconds: int | None = None,
-        business_task_id: str | None = None
+        business_task_id: str | None = None,
     ) -> AgentCall:
         """
         创建新调用
@@ -50,7 +52,7 @@ class AgentCallManager:
             content=content,
             message_type=message_type,
             timeout_seconds=timeout_seconds,
-            business_task_id=business_task_id
+            business_task_id=business_task_id,
         )
         self._calls[call.call_id] = call
         return call

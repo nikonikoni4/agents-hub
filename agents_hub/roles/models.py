@@ -1,7 +1,6 @@
 """角色配置模块的数据结构定义"""
 
 from dataclasses import dataclass
-from typing import Optional, List
 
 from agents_hub.config.types import AgentPlatform, RoleType
 
@@ -14,13 +13,17 @@ class RoleConfig:
     - Claude: 从 CLAUDE.md 自动加载 system_prompt
     - Codex: 从 AGENTS.md 自动加载 system_prompt
     """
-    name: str                  # 角色名称
-    platform: AgentPlatform    # 平台类型
-    description: Optional[str] = None  # 角色职责描述
-    work_root: Optional[str] = None  # 角色工作目录路径（注入 CODEX_HOME / CLAUDE_CONFIG_DIR）
+
+    name: str  # 角色名称
+    platform: AgentPlatform  # 平台类型
+    description: str | None = None  # 角色职责描述
+    work_root: str | None = None  # 角色工作目录路径（注入 CODEX_HOME / CLAUDE_CONFIG_DIR）
     role_type: RoleType = RoleType.TEAM_MEMBER  # 角色类型，默认为团队成员
-    bare: bool = False  # Claude CLI 极简模式：跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现
+    bare: bool = (
+        False  # Claude CLI 极简模式：跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现
+    )
     # 极简模式用于——秘书工作——即简单的llm调用工作 （暂定），后续如果为了追求简单可能会设置单独的llm AIP call，而不是使用CLI
+
 
 @dataclass
 class RoleInfo:
@@ -38,13 +41,14 @@ class RoleInfo:
         type: 角色类型，可选值为 leader 或 team_member。
         scope: 所属群聊列表，MVP 阶段不实现逻辑。
     """
+
     name: str
     platform: AgentPlatform
-    avatar: Optional[str]
-    abilities: List[str]
-    type: Optional[RoleType] = RoleType.TEAM_MEMBER
-    description: Optional[str] = None
-    scope: Optional[List[str]] = None
+    avatar: str | None
+    abilities: list[str]
+    type: RoleType | None = RoleType.TEAM_MEMBER
+    description: str | None = None
+    scope: list[str] | None = None
 
 
 @dataclass
@@ -58,6 +62,7 @@ class SkillInfo:
         name: Skill 的显示名称。
         description: Skill 的功能描述。
     """
+
     id: str
     name: str
     description: str

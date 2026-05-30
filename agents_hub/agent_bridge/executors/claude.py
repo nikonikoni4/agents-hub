@@ -3,10 +3,11 @@
 import asyncio
 import logging
 import os
-from typing import AsyncIterator, Optional
+from collections.abc import AsyncIterator
+
+from agents_hub.agent_bridge.exceptions import CLIExecutionError, CLINotFoundError
 from agents_hub.config.types import CLAUDE_COMMAND
 from agents_hub.roles.models import RoleConfig
-from agents_hub.agent_bridge.exceptions import CLINotFoundError, CLIExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +16,7 @@ class ClaudeExecutor:
     """执行 Claude CLI 命令"""
 
     async def execute(
-        self,
-        prompt: str,
-        config: RoleConfig,
-        session_id: Optional[str] = None
+        self, prompt: str, config: RoleConfig, session_id: str | None = None
     ) -> AsyncIterator[str]:
         """
         启动 Claude CLI 并返回原始输出流
@@ -36,17 +34,11 @@ class ClaudeExecutor:
 
         try:
             process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env
             )
         except FileNotFoundError as e:
             logger.error(f"Claude CLI not found: {CLAUDE_COMMAND}")
-            raise CLINotFoundError(
-                platform="Claude",
-                command=CLAUDE_COMMAND
-            ) from e
+            raise CLINotFoundError(platform="Claude", command=CLAUDE_COMMAND) from e
 
         async for line in process.stdout:
             decoded = line.decode("utf-8").strip()
@@ -57,26 +49,20 @@ class ClaudeExecutor:
         await process.wait()
         if process.returncode != 0:
             stderr = await process.stderr.read()
-            stderr_text = stderr.decode('utf-8')
+            stderr_text = stderr.decode("utf-8")
             logger.error(f"Claude CLI exited with code {process.returncode}: {stderr_text}")
             raise CLIExecutionError(
-                platform="Claude",
-                exit_code=process.returncode,
-                stderr=stderr_text
+                platform="Claude", exit_code=process.returncode, stderr=stderr_text
             )
 
-    def _build_command(
-        self,
-        prompt: str,
-        config: RoleConfig,
-        session_id: Optional[str]
-    ) -> list:
+    def _build_command(self, prompt: str, config: RoleConfig, session_id: str | None) -> list:
         """构建 Claude CLI 命令"""
         cmd = [
             CLAUDE_COMMAND,
             "--print",
             "--verbose",
-            "--output-format", "stream-json",
+            "--output-format",
+            "stream-json",
             "--include-partial-messages",
         ]
 
