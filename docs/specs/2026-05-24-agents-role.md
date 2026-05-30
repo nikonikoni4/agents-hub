@@ -1,8 +1,8 @@
 ---
-version: 1.1
+version: 1.2
 created_at: 2026-05-24
-updated_at: 2026-05-24
-last_updated: 模块路径从 agents 重命名为 roles
+updated_at: 2026-05-30
+last_updated: RoleConfig 字段重构（统一 work_root，新增 description/role_type/bare）
 abstract: roles 角色配置模块的正式规格，定义角色生命周期管理、配置数据结构、头像引用机制和 Skill 管理
 id: spec-roles
 title: Roles 角色配置模块规格
@@ -15,7 +15,7 @@ code_scope:
 contract_refs:
   - agents_hub/roles/models.py
   - agents_hub/roles/exceptions.py
-  - agents_hub/agent_bridge/config.py
+  - agents_hub/config/types.py
 ---
 
 # Roles 角色配置模块规格
@@ -26,6 +26,7 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 从当前代码提炼生成正式 spec 初稿 |
 | 1.1 | 模块路径从 agents 重命名为 roles |
+| 1.2 | RoleConfig 字段重构（统一 work_root，新增 description/role_type/bare）；RoleInfo 默认 role_type；contract_refs 更新 |
 
 ---
 
@@ -117,7 +118,7 @@ Skill 采用**复制模式**：从全局 `local_data/skills/` 复制到角色的
 ### 角色创建初始化
 
 创建角色时的目录初始化顺序：
-1. 验证角色名称合法性（非空、不以 `-` 开头、仅允许字母数字下划线连字符）
+1. 验证角色名称合法性（非空、不以 `.` 开头、不以空格结尾、不包含 Windows 禁止字符 `\/:*?"<>|`、不是 Windows 保留名）
 2. 创建 `role_dir`、`work_root`、`work_root/skills` 目录
 3. 根据 platform 复制平台配置（从 `~/.claude` 或 `~/.codex`）
 4. 写入 `role.json`
@@ -139,7 +140,8 @@ Skill 采用**复制模式**：从全局 `local_data/skills/` 复制到角色的
 | platform | AgentPlatform | 是 | 目标平台（claude / codex） |
 | avatar | Optional[str] | 否 | 头像文件名（位于 assets/ 目录） |
 | abilities | List[str] | 否 | 能力标签列表 |
-| type | Optional[RoleType] | 否 | 角色类型（leader / team_member） |
+| type | Optional[RoleType] | 否 | 角色类型（leader / team_member），默认 team_member |
+| description | Optional[str] | 否 | 角色职责描述 |
 | scope | Optional[List[str]] | 否 | 所属群聊列表 |
 
 #### SkillInfo（Skill 摘要）
@@ -163,9 +165,10 @@ Skill 采用**复制模式**：从全局 `local_data/skills/` 复制到角色的
 |------|------|------|------|
 | name | str | 是 | 角色名称，与目录名一致 |
 | platform | "claude" \| "codex" | 是 | 目标平台 |
+| description | str \| null | 否 | 角色职责描述 |
 | avatar | str \| null | 否 | 头像文件名 |
 | abilities | list[str] | 否 | 能力标签列表 |
-| type | "leader" \| "team_member" \| null | 否 | 角色类型 |
+| type | "leader" \| "team_member" \| null | 否 | 角色类型，默认 team_member |
 | scope | list[str] \| null | 否 | 所属群聊列表 |
 | skills | list[str] | 否 | 已选择的 skill 标识列表 |
 
@@ -184,7 +187,7 @@ Skill 采用**复制模式**：从全局 `local_data/skills/` 复制到角色的
 | 组件 | 职责 |
 |------|------|
 | RoleManager | 角色 CRUD、扫描发现、名称验证、列出可用头像 |
-| Role | 单个角色的配置读写、Skill 管理、权限配置、构造 RoleConfig |
+| Role | 单个角色的配置读写、Skill 管理、权限配置读写、构造 RoleConfig |
 
 ### 调用流程
 

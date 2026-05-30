@@ -1,8 +1,8 @@
 ---
-version: 1.1
+version: 1.2
 created_at: 2026-05-23
-updated_at: 2026-05-24
-last_updated: RoleConfig 增加 claude_config_dir，移除留白字段
+updated_at: 2026-05-30
+last_updated: RoleConfig 统一为 work_root，StreamEvent 增加 agent 元信息，execute() 返回 AgentResult
 abstract: agent_bridge 模块的正式规格定义，描述其作为纯执行层的核心职责、统一事件契约和双接口设计
 id: spec-agent-bridge
 title: Agent Bridge 模块规格
@@ -13,9 +13,10 @@ related_plan: null
 code_scope:
   - agents_hub/agent_bridge/
 contract_refs:
-  - agents_hub/agent_bridge/parsers/base.py
+  - agents_hub/agent_bridge/models.py
   - agents_hub/agent_bridge/protocols.py
-  - agents_hub/agent_bridge/config.py
+  - agents_hub/agent_bridge/exceptions.py
+  - agents_hub/roles/models.py
 ---
 
 # Agent Bridge 模块规格
@@ -26,6 +27,7 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 从设计文档过滤生成正式 spec 初稿 |
 | 1.1 | RoleConfig 增加 claude_config_dir，移除留白字段（permissions、tools） |
+| 1.2 | RoleConfig 统一为 work_root，新增 description/role_type/bare；StreamEvent 增加 agent_name/platform/role_type；execute() 返回 AgentResult |
 
 ---
 
@@ -35,7 +37,7 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 
 模块定位：
 - **负责**：启动 CLI 进程、解析原始输出、提供统一调用接口
-- **不负责**：业务逻辑、会话持久化、错误重试（留白）
+- **不负责**：业务逻辑、会话持久化、自动错误重试（异常已定义，重试机制留白）
 
 ## Scope
 
@@ -44,7 +46,7 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 - 多平台 CLI 调用的统一抽象
 - 流式/非流式双接口
 - 统一事件格式定义与解析
-- 角色配置管理（platform、system_prompt、skills）
+- 角色配置管理（platform、work_root、role_type）
 - 会话 ID 的传递与返回
 
 ### 范围外
@@ -72,7 +74,7 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 用户调用 → Bridge.execute_stream()
   → 根据 platform 选择 Executor + Parser
   → Executor 启动 CLI 子进程，返回原始 JSON 流
-  → Parser 逐行解析为统一 AgentEvent
+  → Parser 逐行解析为统一 StreamEvent
   → yield 给调用方
 ```
 
@@ -82,10 +84,10 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 
 | 接口 | 用途 | 返回方式 |
 |------|------|---------|
-| `execute_stream()` | 人机交互场景（实时显示） | 逐事件 yield |
-| `execute()` | A2A 调用场景（主 Agent 调用子 Agent） | 拼接所有文本后返回单个 RESULT 事件 |
+| `execute_stream()` | 人机交互场景（实时显示） | 逐事件 yield StreamEvent |
+| `execute()` | A2A 调用场景（主 Agent 调用子 Agent） | 返回 AgentResult 数据对象 |
 
-`execute()` 是 `execute_stream()` 的薄包装，内部拼接所有 `text_delta` 事件文本，收集 `usage` 统计，最终返回一个 `RESULT` 类型事件。
+`execute()` 是 `execute_stream()` 的薄包装，内部拼接所有 `text_delta` 事件文本，收集 `usage` 统计，最终返回一个 `AgentResult` 对象。
 
 ### 会话管理
 
@@ -107,49 +109,72 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
+| `name` | str | 是 | 角色名称，用于标识和事件填充 |
 | `platform` | AgentPlatform | 是 | 目标平台类型 |
-| `system_prompt` | str | 是 | 系统提示词内容 |
-| `skills` | list[str] | 是 | skill 标识列表 |
-| `codex_home` | str? | 否 | Codex 专用配置目录路径（注入 `CODEX_HOME` 环境变量） |
-| `claude_config_dir` | str? | 否 | Claude 专用配置目录路径（注入 `CLAUDE_CONFIG_DIR` 环境变量） |
+| `description` | str? | 否 | 角色职责描述 |
+| `work_root` | str? | 否 | 角色工作目录路径，注入 `CLAUDE_CONFIG_DIR` 或 `CODEX_HOME` 环境变量 |
+| `role_type` | RoleType | 是 | 角色类型（leader / team_member），默认 team_member |
+| `bare` | bool | 否 | Claude CLI 极简模式：跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现 |
 
-### 统一事件格式（AgentEvent）
+**注**：`system_prompt` 和 `skills` 不在 RoleConfig 中——由 CLI 从角色目录自动加载（Claude 从 `CLAUDE.md`，Codex 从 `AGENTS.md`；skills 从 `work_root/skills/`）。`work_root` 同时作为环境变量注入源（Claude → `CLAUDE_CONFIG_DIR`，Codex → `CODEX_HOME`）。
+
+### 统一事件格式（StreamEvent）
 
 所有平台的输出统一转换为以下事件结构：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `type` | AgentEventType | 事件类型 |
-| `data` | dict | 事件数据 |
+| `content` | dict | 事件数据（文本、工具调用、usage 等） |
 | `session_id` | str | 会话标识 |
 | `timestamp` | str | 时间戳 |
+| `agent_name` | str | 当前 agent 名称（由 Bridge 从 RoleConfig 填充） |
+| `platform` | AgentPlatform | agent 所属平台（由 Bridge 从 RoleConfig 填充） |
+| `role_type` | RoleType | 角色类型（由 Bridge 从 RoleConfig 填充） |
 
 ### 事件类型（AgentEventType）
 
-| 类型 | 含义 | data 内容 |
+| 类型 | 含义 | content 内容 |
 |------|------|----------|
 | `INIT` | 会话开始元数据 | `model`、`tools` 等平台信息 |
 | `TEXT_DELTA` | 文本增量（流式主要内容） | `text` |
 | `TOOL_USE` | 工具调用 | `command`、`output`、`exit_code`、`status` |
 | `TURN_COMPLETE` | 回合完成 | `usage`（token 统计） |
-| `RESULT` | 完整结果（非流式返回） | `text`（拼接后全文）、`usage` |
+
+**注**：`execute()` 不使用 `RESULT` 事件类型，而是直接返回 `AgentResult` 数据对象。
+
+### 完整结果格式（AgentResult）
+
+`execute()` 的返回值结构：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `text` | str | 拼接后的完整文本 |
+| `session_id` | str | 会话标识 |
+| `timestamp` | str | 时间戳 |
+| `agent_name` | str | agent 名称 |
+| `platform` | AgentPlatform | 平台类型 |
+| `role_type` | RoleType | 角色类型 |
+| `usage` | dict? | token 使用统计 |
 
 ### 协议接口
 
 模块通过 Protocol 定义两个核心接口契约：
 
-- **Executor 协议**：接收 prompt、config、session_id，返回原始 JSON 字符串的异步迭代器
-- **Parser 协议**：接收单行原始 JSON 字符串，返回可选的统一 AgentEvent
+- **Executor 协议**：接收 prompt、config（RoleConfig）、session_id，返回原始 JSON 字符串的异步迭代器
+- **Parser 协议**：接收单行原始 JSON 字符串，返回可选的统一 StreamEvent
 
 ### CLI 命令参数
 
 #### Claude CLI
 
-核心参数：`--print`（非交互）、`--verbose`（详细输出）、`--output-format stream-json`（流式 JSON）、`--include-partial-messages`（逐字输出）、`--append-system-prompt`（追加系统提示词）
+核心参数：`--print`（非交互）、`--verbose`（详细输出）、`--output-format stream-json`（流式 JSON）、`--include-partial-messages`（逐字输出）
+
+极简模式：`--bare`（跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现）
 
 会话恢复：`--resume <session_id>`
 
-环境变量：通过 `CLAUDE_CONFIG_DIR` 指定角色配置目录
+环境变量：通过 `CLAUDE_CONFIG_DIR`（取自 `RoleConfig.work_root`）指定角色配置目录。system_prompt 由 CLI 从 `CLAUDE.md` 自动加载，无需通过参数传递。
 
 #### Codex CLI
 
@@ -157,7 +182,19 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 
 会话恢复：`exec resume --json <session_id>`
 
-环境变量：通过 `CODEX_HOME` 指定角色配置目录
+环境变量：通过 `CODEX_HOME`（取自 `RoleConfig.work_root`）指定角色配置目录。system_prompt 由 CLI 从 `AGENTS.md` 自动加载。
+
+### 异常类型
+
+| 异常 | 触发场景 | 继承关系 |
+|------|----------|----------|
+| CLINotFoundError | CLI 可执行文件不在 PATH 中 | AgentBridgeError |
+| CLIExecutionError | CLI 进程返回非零退出码 | AgentBridgeError |
+| ParseError | 无法解析 CLI 输出的 JSON | AgentBridgeError |
+| PlatformNotSupportedError | 请求的平台类型不在已注册的 Executor 中 | ValidationError |
+| AgentTimeoutError | Agent 执行超时（可恢复，建议重试） | AgentBridgeError, RecoverableError |
+
+所有 `AgentBridgeError` 继承自 `ExternalServiceError`。
 
 ## Acceptance Notes
 
@@ -166,15 +203,16 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 3. 非流式输出能正确拼接完整文本
 4. session_id 能从返回事件中正确提取
 5. 恢复会话时能正确传递 session_id 给 CLI
-6. Parser 能正确忽略无法解析的原始行（返回 None）
+6. Parser 无法解析时抛出 ParseError，由 Bridge 捕获并跳过该行继续处理
 7. Executor 和 Parser 均可独立测试
+8. execute() 返回的 AgentResult 包含拼接文本、session_id 和 usage 统计
 
 ## Out of Spec
 
 以下内容不在本 spec 中长期维护：
 
 1. **CLI 命令的完整参数列表**：仅记录核心参数，具体参数随 CLI 版本变化
-2. **错误处理与重试策略**：当前为留白，后续单独定义
+2. **错误重试策略**：异常类型已定义，但自动重试机制留白
 3. **性能优化方案**：连接池、缓存、并发控制等
 4. **动态配置变更机制**：配置当前固定，作为参数传入
 5. **具体的代码实现**：函数签名、类名、变量名、目录结构等
