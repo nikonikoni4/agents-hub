@@ -70,6 +70,9 @@ class ClaudeExecutor:
             "--include-partial-messages",
         ]
 
+        if config.bare:
+            cmd.append("--bare")
+
         # 添加 session_id（恢复会话）
         if session_id:
             cmd.extend(["--resume", session_id])

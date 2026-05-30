@@ -19,7 +19,8 @@ class RoleConfig:
     description: Optional[str] = None  # 角色职责描述
     work_root: Optional[str] = None  # 角色工作目录路径（注入 CODEX_HOME / CLAUDE_CONFIG_DIR）
     role_type: RoleType = RoleType.TEAM_MEMBER  # 角色类型，默认为团队成员
-
+    bare: bool = False  # Claude CLI 极简模式：跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现
+    # 极简模式用于——秘书工作——即简单的llm调用工作 （暂定），后续如果为了追求简单可能会设置单独的llm AIP call，而不是使用CLI
 
 @dataclass
 class RoleInfo:
