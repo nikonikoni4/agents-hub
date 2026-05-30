@@ -5,7 +5,7 @@ Agent 调用管理器
 """
 from datetime import datetime
 
-from agents_hub.core.foundation import AgentMessage, CallStatus, MessageType
+from agents_hub.core.foundation import CallStatus, MessageType
 from .agent_call import AgentCall
 
 
@@ -44,14 +44,11 @@ class AgentCallManager:
         Returns:
             AgentCall: 创建的调用记录
         """
-        msg = AgentMessage(
+        call = AgentCall(
             send_from=send_from,
             send_to=send_to,
             content=content,
-            message_type=message_type
-        )
-        call = AgentCall(
-            to_agent_message=msg,
+            message_type=message_type,
             timeout_seconds=timeout_seconds,
             business_task_id=business_task_id
         )

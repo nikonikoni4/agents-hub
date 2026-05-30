@@ -12,6 +12,7 @@ from .models import SessionType, MessageType
 @dataclass
 class AgentMessage:
     """Agent 之间传递的消息"""
+    call_id:str
     content: str
     send_from: str
     send_to: str

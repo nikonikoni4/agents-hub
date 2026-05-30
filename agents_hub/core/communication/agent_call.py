@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import uuid4
 
-from agents_hub.core.foundation import AgentMessage, CallStatus
+from agents_hub.core.foundation import CallStatus, MessageType
 
 
 @dataclass
@@ -30,7 +30,10 @@ class AgentCall:
        - 为减小内存占用，需要删除无用的调用信息
        - 删除逻辑依赖于 message_type（待实现）
     """
-    to_agent_message: AgentMessage  # 复用 AgentMessage，避免重复定义
+    send_from: str
+    send_to: str
+    content: str
+    message_type: MessageType
     call_id: str = field(default_factory=lambda: str(uuid4())[:8])
     status: CallStatus = field(default=CallStatus.PENDING)
     created_at: datetime = field(default_factory=datetime.now)

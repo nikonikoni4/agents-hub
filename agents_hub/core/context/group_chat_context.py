@@ -43,6 +43,7 @@ class GroupChatContext:
                 需要包含: agent_name, text, timestamp, platform
         """
         self.group_chat_session.add_message(agent_result)
+        # TODO 调用websocket,让前端更新显示
         await self.repository.save_group_chat_session(self.group_chat_session)
 
     # ==================== Agent Session 管理 ====================
