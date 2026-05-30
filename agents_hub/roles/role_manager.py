@@ -138,11 +138,13 @@ class RoleManager:
 
         role_dir = self.agents_dir / name
         if not role_dir.exists():
-            raise RoleNotFoundError(f"Role '{name}' not found")
+            available_roles = self.list_role_names()
+            raise RoleNotFoundError(role_name=name, available_roles=available_roles)
 
         role_json = role_dir / "role.json"
         if not role_json.exists():
-            raise RoleNotFoundError(f"Role '{name}' not found (missing role.json)")
+            available_roles = self.list_role_names()
+            raise RoleNotFoundError(role_name=name, available_roles=available_roles)
 
         return Role(role_dir)
 
@@ -183,7 +185,7 @@ class RoleManager:
         role_dir = self.agents_dir / name
         if role_dir.exists():
             return  # 暂时会导致tests/unit/roles/test_role_manager.py 错误，这个错误是目前的合理预期，先不改
-            raise RoleAlreadyExistsError(f"Role '{name}' already exists")
+            raise RoleAlreadyExistsError(role_name=name)
 
         role_dir.mkdir(parents=True)
         work_root = role_dir / "work_root"
@@ -230,7 +232,8 @@ class RoleManager:
 
         role_dir = self.agents_dir / name
         if not role_dir.exists():
-            raise RoleNotFoundError(f"Role '{name}' not found")
+            available_roles = self.list_role_names()
+            raise RoleNotFoundError(role_name=name, available_roles=available_roles)
 
         shutil.rmtree(role_dir)
 
@@ -248,7 +251,8 @@ class RoleManager:
         home_claude = Path.home() / ".claude"
         if not home_claude.exists():
             raise PlatformConfigNotFoundError(
-                f"Claude config directory not found: {home_claude}"
+                platform="Claude",
+                config_path=str(home_claude)
             )
 
         settings_src = home_claude / "settings.json"
@@ -272,7 +276,8 @@ class RoleManager:
         home_codex = Path.home() / ".codex"
         if not home_codex.exists():
             raise PlatformConfigNotFoundError(
-                f"Codex config directory not found: {home_codex}"
+                platform="Codex",
+                config_path=str(home_codex)
             )
 
         for file_name in ["auth.json", "config.toml"]:

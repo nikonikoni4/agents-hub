@@ -180,14 +180,15 @@ class Role:
         """
         target_dir = self._work_root / "skills" / skill_id
         if target_dir.exists():
-            raise SkillAlreadyExistsError(f"Skill '{skill_id}' already exists in role")
+            role_name = self._read_role_json()["name"]
+            raise SkillAlreadyExistsError(skill_id=skill_id, role_name=role_name)
 
         if global_skills_dir is None:
             global_skills_dir = self.role_dir.parent.parent / "skills"
 
         global_skill_dir = global_skills_dir / skill_id
         if not global_skill_dir.exists():
-            raise SkillNotFoundError(f"Skill '{skill_id}' not found in global skill library")
+            raise SkillNotFoundError(skill_id=skill_id)
 
         shutil.copytree(global_skill_dir, target_dir)
 
@@ -211,7 +212,7 @@ class Role:
         """
         skill_dir = self._work_root / "skills" / skill_id
         if not skill_dir.exists():
-            raise SkillNotFoundError(f"Skill '{skill_id}' not found in role")
+            raise SkillNotFoundError(skill_id=skill_id)
 
         shutil.rmtree(skill_dir)
 
