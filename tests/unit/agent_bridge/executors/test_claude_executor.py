@@ -3,7 +3,8 @@
 import os
 import pytest
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
-from agents_hub.agent_bridge.models import AgentPlatform, CLAUDE_COMMAND
+from agents_hub.agent_bridge.models import AgentPlatform
+from agents_hub.config.types import CLAUDE_COMMAND
 from agents_hub.roles.models import RoleConfig
 
 
@@ -16,6 +17,7 @@ class TestClaudeExecutor:
     def test_build_command_basic(self):
         """测试构建基本命令"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("审查代码", config, None)
@@ -29,6 +31,7 @@ class TestClaudeExecutor:
     def test_build_command_no_system_prompt_flag(self):
         """测试命令不再包含 --append-system-prompt（由 CLI 从目录自动加载）"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("测试", config, None)
@@ -38,6 +41,7 @@ class TestClaudeExecutor:
     def test_build_command_no_plugin_dir_flag(self):
         """测试命令不再包含 --plugin-dir（由 CLI 从目录自动加载）"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("测试", config, None)
@@ -47,6 +51,7 @@ class TestClaudeExecutor:
     def test_build_command_with_session_id(self):
         """测试构建带 session_id 的命令"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("测试", config, "session-123")
@@ -57,6 +62,7 @@ class TestClaudeExecutor:
     def test_build_command_no_session_id(self):
         """测试不带 session_id 时 --resume 不出现"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("测试", config, None)
@@ -66,6 +72,7 @@ class TestClaudeExecutor:
     def test_build_command_verbose_flag(self):
         """测试命令包含 --verbose"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("测试", config, None)
@@ -75,6 +82,7 @@ class TestClaudeExecutor:
     def test_build_command_include_partial_messages(self):
         """测试命令包含 --include-partial-messages"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("测试", config, None)
@@ -84,6 +92,7 @@ class TestClaudeExecutor:
     def test_build_command_prompt_is_last(self):
         """测试 prompt 是命令的最后一个参数"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("用户输入", config, None)
@@ -93,6 +102,7 @@ class TestClaudeExecutor:
     def test_build_command_full_scenario(self):
         """测试完整场景：带 session_id"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("审查 PR", config, "session-abc")
@@ -119,6 +129,7 @@ class TestClaudeExecutor:
     def test_build_env(self):
         """测试构建环境变量"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
             work_root="/path/to/claude-config"
         )
@@ -130,6 +141,7 @@ class TestClaudeExecutor:
     def test_build_env_no_work_root(self):
         """测试没有 work_root 时环境变量"""
         config = RoleConfig(
+            name="test",
             platform=AgentPlatform.CLAUDE,
         )
         env = self.executor._build_env(config)
