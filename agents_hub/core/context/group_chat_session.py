@@ -1,0 +1,54 @@
+"""
+群聊会话
+
+管理群聊的消息历史和元数据。
+"""
+from dataclasses import dataclass, field
+from datetime import datetime
+from uuid import uuid4
+
+
+@dataclass
+class AgentSessionInfo:
+    """Agent 的会话信息"""
+    main_session: str = ""  # 主会话 ID
+    btw_session: list[str] = field(default_factory=list)  # by the way session 列表
+
+
+@dataclass
+class GroupChatSession:
+    """
+    群聊会话
+
+    用于管理群聊的消息历史，对于每个 agent 的单聊和具体内容由各自的平台管理。
+    """
+    group_chat_id: str = field(default_factory=lambda: str(uuid4()))
+    name: str = field(default_factory=lambda: f"session_{datetime.now().strftime('%Y%m%d%H%M')}")
+    messages: list[dict[str]] = field(default_factory=list)
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+    last_compacted_loc: int = 0  # 上一次 compact 的位置
+
+    def add_message(self, agent_result):
+        """
+        添加消息到历史记录
+
+        Args:
+            agent_result: Agent 执行结果（AgentResult）
+                需要包含: agent_name, text, timestamp, platform
+        """
+        self.messages.append({
+            "agent_name": agent_result.agent_name,
+            "content": agent_result.text,
+            "timestamp": agent_result.timestamp,
+            "platform": agent_result.platform.value
+        })
+
+    def get_uncompact_messages(self) -> list[dict]:
+        """
+        获取未压缩的消息
+
+        Returns:
+            list[dict]: 从 last_compacted_loc 到最新的消息列表
+        """
+        return self.messages[self.last_compacted_loc:]
