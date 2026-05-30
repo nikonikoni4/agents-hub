@@ -1,0 +1,43 @@
+"""
+Foundation layer - 基础层（零依赖）
+
+提供基础数据模型、枚举、异常类和常量定义。
+"""
+
+from .models import SessionType, MessageType, CallStatus, GroupChatType
+from .message import AgentMessage
+from .exceptions import (
+    AgentsHubError,
+    AgentNotFoundError,
+    GroupChatNotFoundError,
+    MessageDeliveryError,
+    AgentExecutionError,
+    AgentTimeoutError,
+    InvalidMessageError,
+    FileSystemError,
+    CompactionError,
+)
+from .constants import MAX_TOKEN, LOCAL_DATA_PATH
+
+__all__ = [
+    # models
+    "SessionType",
+    "MessageType",
+    "CallStatus",
+    "GroupChatType",
+    # message
+    "AgentMessage",
+    # exceptions
+    "AgentsHubError",
+    "AgentNotFoundError",
+    "GroupChatNotFoundError",
+    "MessageDeliveryError",
+    "AgentExecutionError",
+    "AgentTimeoutError",
+    "InvalidMessageError",
+    "FileSystemError",
+    "CompactionError",
+    # constants
+    "MAX_TOKEN",
+    "LOCAL_DATA_PATH",
+]
