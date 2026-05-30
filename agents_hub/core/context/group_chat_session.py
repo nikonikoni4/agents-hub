@@ -9,10 +9,18 @@ from uuid import uuid4
 
 
 @dataclass
+class AgentContextState:
+    """Agent 的上下文加载状态"""
+    last_loaded_compact_index: int = 0  # 已加载到第几条压缩历史
+    last_loaded_message_index: int = 0  # 已加载到第几条原始消息
+
+
+@dataclass
 class AgentSessionInfo:
     """Agent 的会话信息"""
     main_session: str = ""  # 主会话 ID
     btw_session: list[str] = field(default_factory=list)  # by the way session 列表
+    context_state: AgentContextState = field(default_factory=AgentContextState)  # 上下文加载状态
 
 
 @dataclass

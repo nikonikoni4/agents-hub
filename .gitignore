@@ -220,6 +220,10 @@ other
 settings.json
 settings1.json
 settings2.json
+settings copy.json
+auth.json
+claude_home
+tests\explore\test_cli_error\codex_home
 .claude
 local_data
 .pytest_tmp

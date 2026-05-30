@@ -9,7 +9,7 @@ import re
 from datetime import datetime
 
 from agents_hub.core.foundation import LOCAL_DATA_PATH, MAX_TOKEN, FileSystemError
-from .group_chat_session import GroupChatSession, AgentSessionInfo
+from .group_chat_session import GroupChatSession, AgentSessionInfo, AgentContextState
 
 
 class GroupChatContext:
@@ -19,7 +19,8 @@ class GroupChatContext:
     职责：
     1. 群聊对话保存
     2. 上下文压缩和群聊公共记忆提取
-    3. 作为每个 member 运行时上下文加载的内容
+    3. 作为每个 member 运行时提供群聊上下文的内容
+    4. 管理群聊每个member的session_id
     """
 
     def __init__(self, group_chat_id: str, project_path: str):
@@ -30,7 +31,7 @@ class GroupChatContext:
         sanitized_path = self.sanitize_project_path(project_path)
         self.group_chat_session_path = f"{LOCAL_DATA_PATH}/teams/{sanitized_path}/{group_chat_id}"
         self.messages_file = f"{self.group_chat_session_path}/{group_chat_id}.jsonl"
-        self.session_file = f"{self.group_chat_session_path}/agent_session_id.json"
+        self.session_file = f"{self.group_chat_session_path}/agent_session_state.json"
         self.compact_history_file = f"{self.group_chat_session_path}/memory/compact_history.jsonl"
 
         # 加载数据
@@ -172,9 +173,14 @@ class GroupChatContext:
         # 转换为 AgentSessionInfo 对象
         result = {}
         for agent_name, session_data in data.items():
+            context_state_data = session_data.get('context_state', {})
             result[agent_name] = AgentSessionInfo(
                 main_session=session_data.get('main_session', ''),
-                btw_session=session_data.get('btw_session', [])
+                btw_session=session_data.get('btw_session', []),
+                context_state=AgentContextState(
+                    last_loaded_compact_index=context_state_data.get('last_loaded_compact_index', 0),
+                    last_loaded_message_index=context_state_data.get('last_loaded_message_index', 0)
+                )
             )
         return result
 
@@ -182,7 +188,7 @@ class GroupChatContext:
         """
         保存 agent session id 映射到文件
 
-        将 self.agent_session_id 保存到 agent_session_id.json
+        将 self.agent_session_id 保存到 agent_session_state.json
         """
         # 确保目录存在
         os.makedirs(self.group_chat_session_path, exist_ok=True)
@@ -192,7 +198,11 @@ class GroupChatContext:
         for agent_name, session_info in self.agent_session_id.items():
             data[agent_name] = {
                 'main_session': session_info.main_session,
-                'btw_session': session_info.btw_session
+                'btw_session': session_info.btw_session,
+                'context_state': {
+                    'last_loaded_compact_index': session_info.context_state.last_loaded_compact_index,
+                    'last_loaded_message_index': session_info.context_state.last_loaded_message_index
+                }
             }
 
         # 写入文件
@@ -343,6 +353,9 @@ class GroupChatContext:
 
     def get_agent_context(self, agent_name: str) -> str:
         """
+        这部分应该转移至agent_context
+
+
         获取特定 agent 的上下文
 
         包括：

@@ -23,7 +23,7 @@ local_data/
         └── <project_path>/
             └── <group_chat_id>/
                 ├── <group_chat_id>.jsonl          # 群聊消息历史
-                ├── agent_session_id.json          # Agent session 映射
+                ├── agent_session_state.json       # Agent session 和上下文状态
                 └── memory/
                     └── compact_history.jsonl      # 压缩历史
 
@@ -41,11 +41,15 @@ local_data/
     "platform": <str>
 }
 
-agent_session_id.json 格式：
+agent_session_state.json 格式：
 {
     "<agent_name>": {
         "main_session": <session_id>,
-        "btw_session": [<btw_session_id>, ...]
+        "btw_session": [<btw_session_id>, ...],
+        "context_state": {
+            "last_loaded_compact_index": <int>,
+            "last_loaded_message_index": <int>
+        }
     }
 }
 
