@@ -107,9 +107,10 @@ class Agent:
         """
         self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
         try:
-            # TODO 与 agent_context.get_context() 拼接历史上下文
             if msg.session_type == SessionType.MAIN:
-                result = await self.execute(prompt)
+                history = await self.agent_context.get_context()
+                full_prompt = f"{history}\n{prompt}" if history else prompt
+                result = await self.execute(full_prompt)
             else:
                 result = await self.btw_execute(prompt)
             self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)

@@ -5,6 +5,7 @@ Agent 上下文
 实现增量加载：只加载未加载的压缩历史和未压缩消息。
 """
 from .group_chat_context import GroupChatContext
+from agents_hub.core.foundation import wrap_xml, Tag
 
 
 class AgentContext:
@@ -34,46 +35,59 @@ class AgentContext:
         - 如果没有新的消息，messages[last_loaded_message_index:] 返回空列表
 
         Returns:
-            格式化的上下文字符串
+            XML 标签包裹的上下文字符串。无任何新内容时返回空串。
         """
-        context_parts = []
+        parts: list[str] = []
 
         # 1. 获取 agent 的加载状态
         agent_session_info = self.group_chat_context.agent_session_id.get(self.agent_name)
         if not agent_session_info:
-            # 如果 agent 没有状态记录，说明是第一次加载
             last_loaded_compact_index = 0
             last_loaded_message_index = 0
         else:
             last_loaded_compact_index = agent_session_info.context_state.last_loaded_compact_index
             last_loaded_message_index = agent_session_info.context_state.last_loaded_message_index
 
-        # 2. 加载未加载的压缩历史
+        # 2. 压缩历史 → <group_chat_history>，同类合并、各自独立编号
         compact_history = await self.group_chat_context.load_compact_history()
         new_compact_history = compact_history[last_loaded_compact_index:]
-
         if new_compact_history:
-            context_parts.append("=== 群聊历史消息摘要 ===")
+            overall_items: list[str] = []
+            for_you_items: list[str] = []
             for record in new_compact_history:
-                content = record['content']
-                context_parts.append(f"\n[总体]: {content['summary']}")
+                content = record["content"]
+                overall_items.append(content["summary"])
                 if self.agent_name in content:
-                    context_parts.append(f"[针对你]: {content[self.agent_name]}")
+                    for_you_items.append(content[self.agent_name])
 
-        # 3. 加载未加载的消息
+            history_blocks: list[str] = [
+                wrap_xml(
+                    Tag.SUMMARY_OVERALL,
+                    "\n".join(f"{i}. {s}" for i, s in enumerate(overall_items, start=1)),
+                )
+            ]
+            if for_you_items:
+                history_blocks.append(
+                    wrap_xml(
+                        Tag.SUMMARY_FOR_YOU,
+                        "\n".join(f"{i}. {s}" for i, s in enumerate(for_you_items, start=1)),
+                    )
+                )
+            parts.append(wrap_xml(Tag.GROUP_HISTORY, "\n".join(history_blocks)))
+
+        # 3. 未压缩的最新消息 → <recent_messages>
         new_messages = self.group_chat_context.group_chat_session.messages[last_loaded_message_index:]
         if new_messages:
-            context_parts.append("\n=== 群聊最新消息 ===")
-            for msg in new_messages:
-                context_parts.append(f"[{msg['agent_name']}]: {msg['content']}")
+            msg_lines = [f"[{m['agent_name']}]: {m['content']}" for m in new_messages]
+            parts.append(wrap_xml(Tag.RECENT_MESSAGES, "\n".join(msg_lines)))
 
         # 4. 更新 agent 的加载状态
         await self._update_agent_context_state(
             last_loaded_compact_index=len(compact_history),
-            last_loaded_message_index=len(self.group_chat_context.group_chat_session.messages)
+            last_loaded_message_index=len(self.group_chat_context.group_chat_session.messages),
         )
 
-        return "\n".join(context_parts)
+        return "\n".join(parts)
 
     async def _update_agent_context_state(self, last_loaded_compact_index: int, last_loaded_message_index: int):
         """

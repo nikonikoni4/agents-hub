@@ -14,12 +14,34 @@ from .message import AgentMessage
 from .exceptions import InvalidMessageError
 
 
-_AT_PATTERN = re.compile(r"^\s*@(\S+)\s*(.*)$", re.DOTALL)
+_AT_PATTERN = re.compile(r"^\s*@(\S+)\s*(.*)$", re.DOTALL) # TODO 需要避免前端连续@ 当前不支持@多个agent
+
+
+# ====== 预定义 XML 标签 ======
+# 喂给 LLM 的 prompt 中常用的结构标签。
+# 命名规则：英文标签名（结构标记），保持平铺，避免不必要的层级嵌套。
+class Tag:
+    GROUP_HISTORY = "group_chat_history"          # 历史群聊摘要块
+    RECENT_MESSAGES = "recent_messages"           # 群聊最新消息块
+    INCOMING_MESSAGE = "incoming_message"         # 当前传入的消息（render_for_llm 输出）
+    SUMMARY_OVERALL = "overall_summary"           # 摘要中的整体内容
+    SUMMARY_FOR_YOU = "summary_for_you"           # 摘要中针对当前 agent 的内容
+
+
+def wrap_xml(tag: str, content: str) -> str:
+    """用 XML 标签包裹内容（单层，不嵌套）。
+
+    Args:
+        tag: 标签名。建议优先使用 Tag 常量，临时标签直接传字符串。
+        content: 标签内的文本
+    """
+    return f"<{tag}>\n{content}\n</{tag}>"
 
 
 def render_for_llm(msg: AgentMessage) -> str:
-    """AgentMessage → 喂给 LLM 的 prompt 字符串"""
-    return f"[{msg.send_from}] 发送消息给 [{msg.send_to}(你)]: {msg.content}"
+    """AgentMessage → 喂给 LLM 的 prompt 字符串（含 <incoming_message> 包裹）"""
+    body = f"[{msg.send_from}] 发送消息给 [{msg.send_to}(你)]: {msg.content}"
+    return wrap_xml(Tag.INCOMING_MESSAGE, body)
 
 
 def render_for_chat(send_from: str, send_to: str, content: str) -> str:
@@ -45,3 +67,4 @@ def parse_chat_input(raw: str) -> tuple[str, str]:
     if not send_to:
         raise InvalidMessageError(reason="@ 后必须跟 agent 名称")
     return send_to, content
+
