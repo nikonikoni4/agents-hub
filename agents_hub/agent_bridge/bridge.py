@@ -59,7 +59,7 @@ class AgentBridge:
         """
         # 验证平台是否支持
         if config.platform not in self._executors:
-            supported = [p.value for p in self._executors.keys()]
+            supported = [p.value for p in self._executors]
             raise PlatformNotSupportedError(
                 platform=config.platform.value, supported_platforms=supported
             )

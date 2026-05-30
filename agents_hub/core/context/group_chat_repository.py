@@ -94,7 +94,7 @@ class GroupChatRepository:
                         else:
                             messages.append(data)
         except OSError as e:
-            raise FileSystemError(operation="read", path=self.messages_file, reason=str(e))
+            raise FileSystemError(operation="read", path=self.messages_file, reason=str(e)) from e
 
         # 构建 GroupChatSession
         session = GroupChatSession(group_chat_id=self.group_chat_id)
@@ -142,7 +142,9 @@ class GroupChatRepository:
                     for msg in session.messages:
                         await f.write(json.dumps(msg, ensure_ascii=False) + "\n")
             except OSError as e:
-                raise FileSystemError(operation="write", path=self.messages_file, reason=str(e))
+                raise FileSystemError(
+                    operation="write", path=self.messages_file, reason=str(e)
+                ) from e
 
     # ==================== Agent Session State 持久化 ====================
 
@@ -166,7 +168,7 @@ class GroupChatRepository:
                 content = await f.read()
                 data = json.loads(content)
         except OSError as e:
-            raise FileSystemError(operation="read", path=self.session_file, reason=str(e))
+            raise FileSystemError(operation="read", path=self.session_file, reason=str(e)) from e
 
         # 转换为 AgentSessionInfo 对象
         result = {}
@@ -214,7 +216,9 @@ class GroupChatRepository:
                 async with aiofiles.open(self.session_file, "w", encoding="utf-8") as f:
                     await f.write(json.dumps(data, ensure_ascii=False, indent=2))
             except OSError as e:
-                raise FileSystemError(operation="write", path=self.session_file, reason=str(e))
+                raise FileSystemError(
+                    operation="write", path=self.session_file, reason=str(e)
+                ) from e
 
     # ==================== Compact History 持久化 ====================
 
@@ -236,7 +240,9 @@ class GroupChatRepository:
                     if line:
                         compact_history.append(json.loads(line))
         except OSError as e:
-            raise FileSystemError(operation="read", path=self.compact_history_file, reason=str(e))
+            raise FileSystemError(
+                operation="read", path=self.compact_history_file, reason=str(e)
+            ) from e
 
         return compact_history
 
@@ -259,4 +265,4 @@ class GroupChatRepository:
             except OSError as e:
                 raise FileSystemError(
                     operation="write", path=self.compact_history_file, reason=str(e)
-                )
+                ) from e

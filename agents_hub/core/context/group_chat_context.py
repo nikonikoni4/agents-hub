@@ -163,7 +163,7 @@ class GroupChatContext:
         try:
             result = await agent_platform_client.bare_claude_call(compact_prompt)
         except Exception as e:
-            raise CompactionError(reason=f"LLM 调用失败: {e}")
+            raise CompactionError(reason=f"LLM 调用失败: {e}") from e
 
         # 解析 JSON 响应
         try:
@@ -180,9 +180,9 @@ class GroupChatContext:
                 try:
                     compact_data = _json.loads(json_match.group())
                 except _json.JSONDecodeError as e:
-                    raise CompactionError(reason=f"LLM 返回的 JSON 解析失败: {e}")
+                    raise CompactionError(reason=f"LLM 返回的 JSON 解析失败: {e}") from e
             else:
-                raise CompactionError(reason=f"LLM 返回中未找到 JSON: {text[:200]}")
+                raise CompactionError(reason=f"LLM 返回中未找到 JSON: {text[:200]}") from None
 
         # 构建压缩记录（对齐 compact_history.jsonl 格式）
         content = {"summary": compact_data.get("summary", "")}

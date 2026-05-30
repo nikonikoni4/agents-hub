@@ -145,7 +145,7 @@ class GroupChat:
 
         # 添加 workers 信息
         role_manager = RoleManager()
-        for name in self.workers.keys():
+        for name in self.workers:
             worker_role = role_manager.get_role(name)
             agent_info[name] = worker_role.get_role_config().description or "团队成员"
 

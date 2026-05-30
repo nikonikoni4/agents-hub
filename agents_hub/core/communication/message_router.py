@@ -59,13 +59,13 @@ class MessageRouter:
                 reason="目标 Agent 的消息队列已满",
                 send_from=message.send_from,
                 send_to=message.send_to,
-            )
+            ) from None
         except (AgentNotFoundError, InvalidMessageError):
             raise  # 直接向上传递
         except Exception as e:
             raise MessageDeliveryError(
                 reason=f"未知错误: {str(e)}", send_from=message.send_from, send_to=message.send_to
-            )
+            ) from e
 
     def _validate_message(self, message: AgentMessage):
         """

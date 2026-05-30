@@ -114,7 +114,7 @@ class Agent:
                 reason=str(e),
                 session_id=self.main_session_id if msg.session_type == SessionType.MAIN else None,
                 platform=self.role_config.platform,
-            )
+            ) from e
 
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
