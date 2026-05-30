@@ -2,6 +2,8 @@
 
 PKG := agents_hub
 TESTS := tests
+ENV := agentshub_dev_env
+CONDA := conda run -n $(ENV) --no-capture-output
 
 help:
 	@echo "Targets:"
@@ -15,18 +17,18 @@ help:
 check: lint type test
 
 lint:
-	ruff check $(PKG)
-	ruff format --check $(PKG)
+	$(CONDA) ruff check $(PKG)
+	$(CONDA) ruff format --check $(PKG)
 
 format:
-	ruff format $(PKG)
-	ruff check --fix $(PKG)
+	$(CONDA) ruff format $(PKG)
+	$(CONDA) ruff check --fix $(PKG)
 
 type:
-	mypy
+	$(CONDA) mypy
 
 test:
-	pytest
+	$(CONDA) pytest
 
 clean:
 	rm -rf .mypy_cache .pytest_cache .ruff_cache .coverage
