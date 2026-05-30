@@ -200,8 +200,11 @@ class CallStatus(Enum):
 
 @dataclass
 class AgentCall:
+    send_from: str
+    send_to: str
+    content: str
+    message_type: MessageType
     call_id: str = field(default_factory=lambda: str(uuid4())[:8])
-    to_agent_message: AgentMessage   # 复用AgentMessage，避免重复定义 send_from/send_to/content/message_type
     status: CallStatus = CallStatus.PENDING
     created_at: datetime = field(default_factory=datetime.now)
     started_at: datetime | None = None
@@ -236,9 +239,11 @@ class AgentCallManager:
     def create_call(self, send_from: str, send_to: str, content: str, message_type:MessageType,timeout_seconds:int,
                     business_task_id: str | None = None) -> AgentCall:
         """创建新调用，返回 call_id"""
-        msg = AgentMessage(send_from=send_from, send_to=send_to, content=content)
         call = AgentCall(
-            to_agent_message=msg,
+            send_from=send_from,
+            send_to=send_to,
+            content=content,
+            message_type=message_type,
             business_task_id=business_task_id
         )
         self._calls[call.call_id] = call
@@ -973,7 +978,9 @@ def call_agent(group_chat_id : str , send_from: str, send_to: str, content: str,
             timeout_seconds=timeout_seconds
         )
         # 3. 通过MessageRouter发送消息
-        group_chat.message_router.send_message(call.to_agent_message)
+        group_chat.message_router.send_message(
+            AgentMessage(send_from=call.send_from, send_to=call.send_to, content=call.content, message_type=call.message_type)
+        )
     except Exception  as e:
         return e # 注意这里是为了方便简单的写法，真实的写法是需要定义专门的exception 在这里捕获，然后返回具体的错误
 

@@ -33,6 +33,9 @@ class AgentContext:
         标志位自动判断是否需要加载：
         - 如果没有新的压缩历史，compact_history[last_loaded_compact_index:] 返回空列表
         - 如果没有新的消息，messages[last_loaded_message_index:] 返回空列表
+        
+        # TODO：
+        后续再测试中考虑是否真的需要加载与自己不相干的上下文
 
         Returns:
             XML 标签包裹的上下文字符串。无任何新内容时返回空串。

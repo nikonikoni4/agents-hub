@@ -1,8 +1,8 @@
 ---
-version: 1.2
+version: 1.3
 created_at: 2026-05-23
-updated_at: 2026-05-30
-last_updated: RoleConfig 统一为 work_root，StreamEvent 增加 agent 元信息，execute() 返回 AgentResult
+updated_at: 2026-05-31
+last_updated: AgentBridge 初始化时创建 bare 角色并缓存配置，新增 bare_claude_call() 快速调用接口
 abstract: agent_bridge 模块的正式规格定义，描述其作为纯执行层的核心职责、统一事件契约和双接口设计
 id: spec-agent-bridge
 title: Agent Bridge 模块规格
@@ -17,6 +17,7 @@ contract_refs:
   - agents_hub/agent_bridge/protocols.py
   - agents_hub/agent_bridge/exceptions.py
   - agents_hub/roles/models.py
+  - agents_hub/roles/role_manager.py
 ---
 
 # Agent Bridge 模块规格
@@ -28,6 +29,7 @@ contract_refs:
 | 1.0 | 从设计文档过滤生成正式 spec 初稿 |
 | 1.1 | RoleConfig 增加 claude_config_dir，移除留白字段（permissions、tools） |
 | 1.2 | RoleConfig 统一为 work_root，新增 description/role_type/bare；StreamEvent 增加 agent_name/platform/role_type；execute() 返回 AgentResult |
+| 1.3 | AgentBridge 初始化时通过 RoleManager 创建 bare 角色并缓存 RoleConfig；新增 bare_claude_call() 接口 |
 
 ---
 
@@ -44,9 +46,10 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 ### 范围内
 
 - 多平台 CLI 调用的统一抽象
-- 流式/非流式双接口
+- 流式/非流式/bare 三种接口
 - 统一事件格式定义与解析
 - 角色配置管理（platform、work_root、role_type）
+- bare 角色的初始化与配置缓存
 - 会话 ID 的传递与返回
 
 ### 范围外
@@ -78,16 +81,29 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
   → yield 给调用方
 ```
 
-### 双接口设计
+### 初始化
 
-模块提供两种调用接口，底层共享同一套流式解析逻辑：
+`AgentBridge` 在 `__init__` 时完成以下初始化：
+
+1. 创建 Claude/Codex 的 Executor 和 Parser 实例（可复用）
+2. 创建 `RoleManager` 实例
+3. 通过 `_init_bare_config()` 获取或创建 `bare_claude` 角色，读取其 `RoleConfig` 并设置 `bare=True`，缓存到 `self._bare_config`
+
+bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续初始化直接复用已有角色（`RoleManager.get_role()`）。配置缓存在实例中，`bare_claude_call()` 直接使用缓存，无文件 I/O。
+
+### 接口设计
+
+模块提供三种调用接口，底层共享同一套流式解析逻辑：
 
 | 接口 | 用途 | 返回方式 |
 |------|------|---------|
 | `execute_stream()` | 人机交互场景（实时显示） | 逐事件 yield StreamEvent |
 | `execute()` | A2A 调用场景（主 Agent 调用子 Agent） | 返回 AgentResult 数据对象 |
+| `bare_claude_call()` | 内部快速 LLM 调用（不涉及角色业务） | 返回 AgentResult 数据对象 |
 
 `execute()` 是 `execute_stream()` 的薄包装，内部拼接所有 `text_delta` 事件文本，收集 `usage` 统计，最终返回一个 `AgentResult` 对象。
+
+`bare_claude_call()` 是 `execute()` 的薄包装，使用初始化时缓存的 bare 角色配置（`bare=True`），适用于一次性快速 LLM 调用场景。角色在 `__init__` 时通过 `RoleManager` 创建或获取，配置缓存在实例中，避免每次调用的文件 I/O。
 
 ### 会话管理
 
@@ -206,6 +222,8 @@ agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同
 6. Parser 无法解析时抛出 ParseError，由 Bridge 捕获并跳过该行继续处理
 7. Executor 和 Parser 均可独立测试
 8. execute() 返回的 AgentResult 包含拼接文本、session_id 和 usage 统计
+9. AgentBridge 初始化时自动创建或获取 bare_claude 角色，配置缓存在实例中
+10. bare_claude_call() 使用缓存的 bare 配置调用 execute()，无额外文件 I/O
 
 ## Out of Spec
 

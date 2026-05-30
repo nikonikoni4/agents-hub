@@ -15,6 +15,8 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
+    "ruff>=0.6",
+    "mypy>=1.10",
 ]
 
 [tool.setuptools.packages.find]
@@ -24,3 +26,47 @@ include = ["agents_hub*"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+    "tests/explore",
+    "local_data",
+    "other",
+    "frontend",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long — formatter handles
+    "B008",  # function calls in defaults (FastAPI/Typer pattern)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["agents_hub"]
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+no_implicit_optional = true
+check_untyped_defs = true
+ignore_missing_imports = true
+exclude = [
+    "tests/explore",
+    "local_data",
+    "build",
+]

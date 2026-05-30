@@ -184,8 +184,8 @@ class RoleManager:
 
         role_dir = self.agents_dir / name
         if role_dir.exists():
-            return  # 暂时会导致tests/unit/roles/test_role_manager.py 错误，这个错误是目前的合理预期，先不改
             raise RoleAlreadyExistsError(role_name=name)
+            
 
         role_dir.mkdir(parents=True)
         work_root = role_dir / "work_root"
