@@ -66,7 +66,9 @@ class GroupChat:
         # 2. 初始化 manager
         role_manager = RoleManager()
         manager_role = role_manager.get_role("Leader")
-        self.manager = Manager(manager_role, self.group_chat_context, self.agent_call_manager)
+        self.manager = Manager(
+            manager_role, self.group_chat_context, self.agent_call_manager, self.message_router
+        )
 
         # 3. 初始化 workers
         if not self.team_members_name:
@@ -75,13 +77,13 @@ class GroupChat:
 
         for role_name in self.team_members_name:
             role = role_manager.get_role(role_name)
-            self.workers[role_name] = Worker(role, self.group_chat_context, self.agent_call_manager)
+            self.workers[role_name] = Worker(
+                role, self.group_chat_context, self.agent_call_manager, self.message_router
+            )
 
         # 4. 注册所有 agent 到 message_router
-        self.manager.message_router = self.message_router
         self.message_router.register(self.manager.name, self.manager.message_queue)
         for worker in self.workers.values():
-            worker.message_router = self.message_router
             self.message_router.register(worker.name, worker.message_queue)
 
         # 5. 初始化新成员（第一次会话的成员）

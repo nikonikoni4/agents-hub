@@ -23,7 +23,6 @@ from agents_hub.core.foundation import (
     Role,
     RoleConfig,
     SessionType,
-    StateError,
     render_for_chat,
     render_for_llm,
 )
@@ -31,7 +30,11 @@ from agents_hub.core.foundation import (
 
 class Agent:
     def __init__(
-        self, role: Role, group_chat_context: GroupChatContext, agent_call_manager: AgentCallManager
+        self,
+        role: Role,
+        group_chat_context: GroupChatContext,
+        agent_call_manager: AgentCallManager,
+        message_router: MessageRouter,
     ):
         self.role_config: RoleConfig = role.get_role_config()
         self.name = self.role_config.name
@@ -39,7 +42,7 @@ class Agent:
         self.message_queue: asyncio.Queue[AgentMessage] = asyncio.Queue()  # 私有队列
         self.group_chat_context = group_chat_context
         self.agent_context = AgentContext(self.name, group_chat_context)
-        self.message_router: MessageRouter | None = None
+        self.message_router = message_router
         self.agent_call_manager = agent_call_manager
         self._run = True
 
@@ -62,8 +65,6 @@ class Agent:
             session_type=SessionType.MAIN,
             message_type=MessageType.NOTIFICATION,
         )
-        if self.message_router is None:
-            raise StateError(f"{self.name} 的 message_router 未初始化")
         self.message_router.send_message(message)
 
     async def execute(self, prompt) -> AgentResult:
