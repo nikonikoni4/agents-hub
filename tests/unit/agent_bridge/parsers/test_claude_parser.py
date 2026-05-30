@@ -4,6 +4,7 @@ import json
 import pytest
 from agents_hub.agent_bridge.parsers.claude import ClaudeParser
 from agents_hub.agent_bridge.models import AgentEventType
+from agents_hub.agent_bridge.exceptions import ParseError
 
 
 class TestClaudeParser:
@@ -26,9 +27,9 @@ class TestClaudeParser:
         result = self.parser.parse_event(raw_line)
 
         assert result is not None
-        assert result["type"] == AgentEventType.TEXT_DELTA
-        assert result["content"]["text"] == "你好"
-        assert result["session_id"] == "test-session-123"
+        assert result.type == AgentEventType.TEXT_DELTA
+        assert result.content["text"] == "你好"
+        assert result.session_id == "test-session-123"
 
     def test_parse_init(self):
         """测试解析初始化事件"""
@@ -42,9 +43,9 @@ class TestClaudeParser:
         result = self.parser.parse_event(raw_line)
 
         assert result is not None
-        assert result["type"] == AgentEventType.INIT
-        assert result["content"]["model"] == "claude-opus-4-7"
-        assert "Bash" in result["content"]["tools"]
+        assert result.type == AgentEventType.INIT
+        assert result.content["model"] == "claude-opus-4-7"
+        assert "Bash" in result.content["tools"]
 
     def test_parse_unknown_event_returns_none(self):
         """测试解析未知事件返回 None"""
@@ -56,8 +57,7 @@ class TestClaudeParser:
 
         assert result is None
 
-    def test_parse_invalid_json_returns_none(self):
-        """测试解析无效 JSON 返回 None"""
-        result = self.parser.parse_event("invalid json")
-
-        assert result is None
+    def test_parse_invalid_json_raises_parse_error(self):
+        """测试解析无效 JSON 抛出 ParseError"""
+        with pytest.raises(ParseError):
+            self.parser.parse_event("invalid json")
