@@ -9,6 +9,8 @@ import os
 import re
 from datetime import datetime
 
+import aiofiles
+
 from agents_hub.core.foundation import LOCAL_DATA_PATH, FileSystemError
 from .group_chat_session import GroupChatSession, AgentSessionInfo, AgentContextState
 
@@ -80,8 +82,8 @@ class GroupChatRepository:
         meta_data = None
 
         try:
-            with open(self.messages_file, 'r', encoding='utf-8') as f:
-                for line in f:
+            async with aiofiles.open(self.messages_file, 'r', encoding='utf-8') as f:
+                async for line in f:
                     line = line.strip()
                     if line:
                         data = json.loads(line)
@@ -127,7 +129,7 @@ class GroupChatRepository:
 
             # 写入 jsonl 文件
             try:
-                with open(self.messages_file, 'w', encoding='utf-8') as f:
+                async with aiofiles.open(self.messages_file, 'w', encoding='utf-8') as f:
                     # 写入 meta_data
                     meta_data = {
                         '_type': 'meta_data',
@@ -136,11 +138,11 @@ class GroupChatRepository:
                         'updated_at': session.updated_at.isoformat(),
                         'name': session.name
                     }
-                    f.write(json.dumps(meta_data, ensure_ascii=False) + '\n')
+                    await f.write(json.dumps(meta_data, ensure_ascii=False) + '\n')
 
                     # 写入消息
                     for msg in session.messages:
-                        f.write(json.dumps(msg, ensure_ascii=False) + '\n')
+                        await f.write(json.dumps(msg, ensure_ascii=False) + '\n')
             except OSError as e:
                 raise FileSystemError(
                     operation="write",
@@ -166,8 +168,9 @@ class GroupChatRepository:
 
         # 读取 session 文件
         try:
-            with open(self.session_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            async with aiofiles.open(self.session_file, 'r', encoding='utf-8') as f:
+                content = await f.read()
+                data = json.loads(content)
         except OSError as e:
             raise FileSystemError(
                 operation="read",
@@ -214,8 +217,8 @@ class GroupChatRepository:
 
             # 写入文件
             try:
-                with open(self.session_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
+                async with aiofiles.open(self.session_file, 'w', encoding='utf-8') as f:
+                    await f.write(json.dumps(data, ensure_ascii=False, indent=2))
             except OSError as e:
                 raise FileSystemError(
                     operation="write",
@@ -237,8 +240,8 @@ class GroupChatRepository:
 
         compact_history = []
         try:
-            with open(self.compact_history_file, 'r', encoding='utf-8') as f:
-                for line in f:
+            async with aiofiles.open(self.compact_history_file, 'r', encoding='utf-8') as f:
+                async for line in f:
                     line = line.strip()
                     if line:
                         compact_history.append(json.loads(line))
@@ -264,9 +267,9 @@ class GroupChatRepository:
 
             # 写入 jsonl 文件
             try:
-                with open(self.compact_history_file, 'w', encoding='utf-8') as f:
+                async with aiofiles.open(self.compact_history_file, 'w', encoding='utf-8') as f:
                     for record in history:
-                        f.write(json.dumps(record, ensure_ascii=False) + '\n')
+                        await f.write(json.dumps(record, ensure_ascii=False) + '\n')
             except OSError as e:
                 raise FileSystemError(
                     operation="write",

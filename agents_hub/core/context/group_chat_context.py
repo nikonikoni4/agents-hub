@@ -91,8 +91,6 @@ class GroupChatContext:
         """
         return await self.repository.load_compact_history()
 
-        return await self.repository.load_compact_history()
-
     async def compact_messages(self, agent_info: dict[str, str]):
         """
         压缩群聊消息历史
