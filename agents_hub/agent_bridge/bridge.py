@@ -1,5 +1,6 @@
 """AgentBridge 统一接口"""
 
+import logging
 from datetime import datetime
 from typing import AsyncIterator, Optional
 from agents_hub.config.types import AgentPlatform
@@ -9,6 +10,14 @@ from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
 from agents_hub.agent_bridge.parsers.claude import ClaudeParser
 from agents_hub.agent_bridge.parsers.codex import CodexParser
+from agents_hub.agent_bridge.exceptions import (
+    PlatformNotSupportedError,
+    ParseError,
+    CLINotFoundError,
+    CLIExecutionError
+)
+
+logger = logging.getLogger(__name__)
 
 
 class AgentBridge:
@@ -41,19 +50,42 @@ class AgentBridge:
 
         Yields:
             StreamEvent: 统一格式的流式事件
+
+        Raises:
+            PlatformNotSupportedError: 平台不支持
+            CLINotFoundError: CLI 命令不存在
+            CLIExecutionError: CLI 执行失败
+            ParseError: 解析错误
         """
+        # 验证平台是否支持
+        if config.platform not in self._executors:
+            supported = [p.value for p in self._executors.keys()]
+            raise PlatformNotSupportedError(
+                platform=config.platform.value,
+                supported_platforms=supported
+            )
+
         executor = self._executors[config.platform]
         parser = self._parsers[config.platform]
 
-        raw_stream = executor.execute(prompt, config, session_id)
-        async for raw_line in raw_stream:
-            if raw_line.strip():
-                parsed_event = parser.parse_event(raw_line)
-                if parsed_event is not None:
-                    parsed_event.agent_name = config.name
-                    parsed_event.platform = config.platform
-                    parsed_event.role_type = config.role_type
-                    yield parsed_event
+        try:
+            raw_stream = executor.execute(prompt, config, session_id)
+            async for raw_line in raw_stream:
+                if raw_line.strip():
+                    try:
+                        parsed_event = parser.parse_event(raw_line)
+                        if parsed_event is not None:
+                            parsed_event.agent_name = config.name
+                            parsed_event.platform = config.platform
+                            parsed_event.role_type = config.role_type
+                            yield parsed_event
+                    except ParseError:
+                        # 解析错误：记录日志，跳过该行，继续处理
+                        logger.warning(f"Skipping unparseable line from {config.platform.value}")
+                        continue
+        except (CLINotFoundError, CLIExecutionError):
+            # CLI 错误：直接向上传递
+            raise
 
     async def execute(
         self,

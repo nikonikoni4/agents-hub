@@ -1,10 +1,14 @@
 """Codex CLI 输出解析器"""
 
 import json
+import logging
 from datetime import datetime
 from typing import Optional
 from agents_hub.agent_bridge.models import StreamEvent, AgentEventType
 from agents_hub.config.types import AgentPlatform, RoleType
+from agents_hub.agent_bridge.exceptions import ParseError
+
+logger = logging.getLogger(__name__)
 
 
 class CodexParser:
@@ -25,8 +29,13 @@ class CodexParser:
         """
         try:
             event = json.loads(raw_line)
-        except json.JSONDecodeError:
-            return None
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse Codex output: {e}")
+            raise ParseError(
+                platform="Codex",
+                raw_line=raw_line,
+                reason=f"JSON decode error: {str(e)}"
+            ) from e
 
         event_type = event.get("type")
 

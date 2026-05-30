@@ -1,10 +1,14 @@
 """Claude CLI 输出解析器"""
 
 import json
+import logging
 from datetime import datetime
 from typing import Optional
 from agents_hub.agent_bridge.models import StreamEvent, AgentEventType
 from agents_hub.config.types import AgentPlatform, RoleType
+from agents_hub.agent_bridge.exceptions import ParseError
+
+logger = logging.getLogger(__name__)
 
 
 class ClaudeParser:
@@ -20,8 +24,13 @@ class ClaudeParser:
         """
         try:
             event = json.loads(raw_line)
-        except json.JSONDecodeError:
-            return None
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse Claude output: {e}")
+            raise ParseError(
+                platform="Claude",
+                raw_line=raw_line,
+                reason=f"JSON decode error: {str(e)}"
+            ) from e
 
         event_type = event.get("type")
         session_id = event.get("session_id", "")

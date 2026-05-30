@@ -6,6 +6,7 @@ import os
 from typing import AsyncIterator, Optional
 from agents_hub.config.types import CODEX_COMMAND
 from agents_hub.roles.models import RoleConfig
+from agents_hub.agent_bridge.exceptions import CLINotFoundError, CLIExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +45,12 @@ class CodexExecutor:
                 stderr=asyncio.subprocess.PIPE,
                 env=env
             )
-        except FileNotFoundError:
-            logger.error("Codex CLI not found. Please ensure 'codex' is installed and in PATH.")
-            raise
+        except FileNotFoundError as e:
+            logger.error(f"Codex CLI not found: {CODEX_COMMAND}")
+            raise CLINotFoundError(
+                platform="Codex",
+                command=CODEX_COMMAND
+            ) from e
 
         async for line in process.stdout:
             decoded = line.decode("utf-8").strip()
@@ -57,7 +61,13 @@ class CodexExecutor:
         await process.wait()
         if process.returncode != 0:
             stderr = await process.stderr.read()
-            logger.warning(f"Codex CLI exited with code {process.returncode}: {stderr.decode('utf-8')}")
+            stderr_text = stderr.decode('utf-8')
+            logger.error(f"Codex CLI exited with code {process.returncode}: {stderr_text}")
+            raise CLIExecutionError(
+                platform="Codex",
+                exit_code=process.returncode,
+                stderr=stderr_text
+            )
 
     def _build_command(
         self,

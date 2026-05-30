@@ -13,6 +13,14 @@ from agents_hub.agent_bridge.models import (
     AgentEvent,  # 向后兼容别名
 )
 from agents_hub.agent_bridge.bridge import AgentBridge
+from agents_hub.agent_bridge.exceptions import (
+    AgentBridgeError,
+    CLINotFoundError,
+    CLIExecutionError,
+    ParseError,
+    PlatformNotSupportedError,
+    AgentTimeoutError,
+)
 
 __all__ = [
     "AgentPlatform",
@@ -24,4 +32,10 @@ __all__ = [
     "CODEX_COMMAND",
     "CLAUDE_COMMAND",
     "AgentEvent",  # 向后兼容
+    "AgentBridgeError",
+    "CLINotFoundError",
+    "CLIExecutionError",
+    "ParseError",
+    "PlatformNotSupportedError",
+    "AgentTimeoutError",
 ]
