@@ -11,6 +11,7 @@
 ### Manager（管理者）
 - 继承自 Agent，角色类型为 LEADER
 - 职责：协调 Worker，任务分配和调度
+- **不变量**：一个 GroupChat / Team 有且仅有一个 Leader（即一个 Manager）
 - 状态：设计中，尚未完全实现
 
 ### Worker（工作者）
@@ -44,6 +45,24 @@
 - 生命周期：PENDING → RUNNING → COMPLETED/FAILED/TIMEOUT
 - 属性：call_id、send_from、send_to、content、message_type、status、result、error
 - 用途：跟踪跨 Agent 的异步调用状态
+- 与 Task 的关系：一个 Task 在执行过程中可能产生 1 个或多个 AgentCall（重试、追问等），通过 `business_task_id` 关联
+
+### Task（任务）
+- Manager 对 user 输入进行拆分后产生的工作项，比 AgentCall 高一层
+- **不变量**：每个 Task 有且只有一个 owner（一个 Worker），多个 Worker 之间的 Task 必须正交（无重叠职责）
+- **状态机独立性**：Task 状态机与 AgentCall 状态机相互独立，AgentCall.COMPLETED ≠ Task.COMPLETED。
+  例：Worker 回复 "不明确" → AgentCall 完成、Task 未完成
+- **状态控制权**：Task 状态完全由 Manager 显式控制（参照 Claude Code TodoWrite 模式），Worker 没有写 Task 状态的权力，只通过 result.text 反馈
+- 属性：task_id、owner（worker name）、content（任务描述）、状态、所属 group_chat_id、创建者（必须是该 GroupChat 的 Leader）
+- 状态：PENDING → RUNNING → COMPLETED / FAILED
+- 与 AgentCall 的关系：执行时产生 AgentCall，AgentCall.business_task_id 指向 Task.task_id（一对多，重做产生新 AgentCall 但 Task 不变）
+
+### TaskList（任务列表）
+- 每个 GroupChat 持有一份 TaskList，承载该群聊当前规划中的 Task 集合
+- 状态：ACTIVE（活跃）/ ARCHIVED（已归档）
+- 由 Manager 显式调用工具切换状态：完成一轮规划后归档当前 list，新规划自动进入新的 ACTIVE list
+- 归档不删除，历史可查
+- 用途：前端看板展示、Manager 的工作记忆
 
 ### AgentCallManager（调用管理器）
 - 统一管理所有跨 Agent 的异步调用
@@ -54,6 +73,26 @@
 - 负责 Agent 之间的消息投递
 - 管理每个 Agent 的私有消息队列
 - 职责：注册/注销 Agent、验证消息、投递消息
+
+### 系统入站路径（双路径汇入 MessageRouter）
+
+系统接收消息有**两条独立入口**，最终都汇入 `MessageRouter.send_message()`：
+
+1. **MCP 入站（Agent → Agent）**：Agent 平台的 LLM 通过 MCP 工具 `call_agent` 入站
+   - 必须携带 `agent_token`，Server 用 token 解析出 `send_from`（agent_name）和 `group_chat_id`
+   - `send_from` 永远是 agent 的名字，**永远不会是 `"user"`**
+   - 仅服务 LLM tool_use，业务代码不经此路径
+
+2. **业务入站（User → Agent）**：前端通过 FastAPI（REST/WebSocket）让 user 进入系统
+   - 后端业务函数（如 `user_send_message`）构造 `AgentMessage(send_from="user", send_to=<agent>, ...)`
+   - 不携带 token，身份由前端登录态保证
+   - 仅服务 user，不服务 LLM
+
+**`"user"` 是保留发送者标识**：不在 `MessageRouter` 注册队列，不接收回执。Agent 处理 send_from=user 的消息时：
+- 出口 A（写群聊）：照常执行，user 通过前端 WebSocket 看到 Agent 回复
+- 出口 B（自动回执）：跳过（user 没有队列）
+
+**禁止跨路径混用**：MCP `call_agent` 不允许 `send_to="user"`，返回 `INVALID_RECIPIENT` 错误，引导 LLM 通过普通回复（出口 A）让 user 看到信息。
 
 ## 渲染层（Renderer）
 

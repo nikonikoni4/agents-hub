@@ -180,13 +180,16 @@ def call_agent(
 ```python
 def assign_tasks_to_team(
     agent_token: str,
-    tasks: list[dict],  # [{task_id, owner, content, status}]
+    tasks: list[dict],  # JSON 格式：[{task_id, owner, content, status}]
 ) -> dict:
     """
     为团队分配任务列表（覆盖式更新）。
     
     权限：仅 Leader
     返回：{created: int, updated: int, unchanged: int}
+    
+    注：tasks 参数是 JSON 可序列化的 dict 列表，不是 Python Task 对象。
+    MCP 工具内部会将 dict 转换为 Task 数据模型。
     
     永不复述 agent_token。
     """
@@ -514,6 +517,10 @@ def call_agent(agent_token: str, send_to: str, ...):
     # ... 继续处理 ...
 ```
 
+**错误信息演化：**
+- **测试阶段**（当前）：引导 LLM 通过"直接回复"（出口 A 自动写入群聊）
+- **ADR 0006 实施后**：错误信息改为"如果要让 user 看到信息，使用 speak_in_group_chat 工具"
+
 **设计原因：**
 - user 不是 Agent，没有 message_queue
 - user 通过前端 WebSocket 订阅群聊消息
@@ -806,9 +813,12 @@ def archive_task_list(...): ...
 def check_agent_call(...): ...
 
 # 启动 MCP Server（在 FastAPI 启动事件中）
+# 注：FastMCP 的 run() 方法是阻塞的，需要在独立任务中运行
 @app.on_event("startup")
 async def startup_mcp():
     asyncio.create_task(mcp.run(host="localhost", port=8001))
+    
+# 或者使用独立线程（取决于 FastMCP 的实现细节，实施时确认）
 ```
 
 ### 测试阶段不处理的问题
@@ -879,10 +889,11 @@ assign_tasks_to_team 的覆盖式更新语义参照 Claude Code 的 TodoWrite：
 | `<agent_runtime>` 的精确 XML 结构 | 实现 render_runtime 时按现有 Tag 风格扩展 |
 | Task 字段细节 | task_id 生成方式、content 长度限制等 |
 | TaskList 持久化文件名 | 建议 `tasks.jsonl`，与 `agent_calls.jsonl` 同目录 |
-| Token 剥离正则的具体形式 | 建议 `tok_<32 hex>`，正则 `r"tok_[a-f0-9]{32}"` |
-| Token 长度 | 建议 32 字符（16 字节 hex） |
+| Token 剥离正则的具体形式 | 使用 `r"tok_[a-f0-9]{32}"` 精确匹配 32 字符 hex |
+| Token 长度 | 32 字符（16 字节 hex，`secrets.token_hex(16)`） |
 | MCP Server 错误日志 | 是否记录到独立日志文件 |
 | 权限策略配置化 | 未来按群聊类型配置权限的具体实现 |
+| FastMCP 启动方式 | 确认 `run()` 是否需要 `create_task` 或独立线程 |
 
 ---
 
