@@ -1,4 +1,12 @@
-"""TaskManager 测试"""
+"""
+TaskManager 测试
+
+契约驱动测试：
+- get_active_task_list(): 获取当前 ACTIVE 任务列表
+- assign_tasks(): 覆盖式更新（创建/更新/保持不变）
+- archive_task_list(): 归档当前 ACTIVE 列表
+- 持久化到 tasks.jsonl
+"""
 
 import json
 from pathlib import Path
@@ -34,313 +42,327 @@ def task_manager(temp_project_path: Path) -> TaskManager:
     )
 
 
-class TestTaskManagerBasics:
-    """TaskManager 基础功能测试"""
-
-    def test_get_active_task_list_empty(self, task_manager: TaskManager):
-        """测试获取空的 ACTIVE 任务列表"""
-        task_list = task_manager.get_active_task_list("test_gc_123")
-        assert task_list is None
-
-    def test_assign_tasks_create_new(self, task_manager: TaskManager):
-        """测试创建新任务列表"""
-        tasks = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "pending",
-            },
-            {
-                "task_id": "t2",
-                "owner": "Worker2",
-                "content": "编写测试",
-                "status": "pending",
-            },
-        ]
-
-        result = task_manager.assign_tasks(
-            group_chat_id="test_gc_123",
-            tasks=tasks,
-            created_by="Manager",
-        )
-
-        assert result["created"] == 2
-        assert result["updated"] == 0
-        assert result["unchanged"] == 0
-
-        # 验证任务列表已创建
-        task_list = task_manager.get_active_task_list("test_gc_123")
-        assert task_list is not None
-        assert task_list.status == TaskListStatus.ACTIVE
-        assert len(task_list.tasks) == 2
-        assert task_list.tasks[0].task_id == "t1"
-        assert task_list.tasks[0].owner == "Worker1"
-        assert task_list.tasks[0].content == "实现模块A"
-        assert task_list.tasks[0].status == TaskStatus.PENDING
-
-    def test_assign_tasks_update_existing(self, task_manager: TaskManager):
-        """测试更新现有任务"""
-        # 第一次创建
-        tasks_v1 = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "pending",
-            },
-            {
-                "task_id": "t2",
-                "owner": "Worker2",
-                "content": "编写测试",
-                "status": "pending",
-            },
-        ]
-        task_manager.assign_tasks("test_gc_123", tasks_v1, "Manager")
-
-        # 第二次更新（更新 t1 状态，保持 t2 不变）
-        tasks_v2 = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "completed",
-            },
-            {
-                "task_id": "t2",
-                "owner": "Worker2",
-                "content": "编写测试",
-                "status": "pending",
-            },
-        ]
-        result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
-
-        assert result["created"] == 0
-        assert result["updated"] == 1
-        assert result["unchanged"] == 1
-
-        # 验证更新
-        task_list = task_manager.get_active_task_list("test_gc_123")
-        assert task_list is not None
-        assert len(task_list.tasks) == 2
-        t1 = next(t for t in task_list.tasks if t.task_id == "t1")
-        assert t1.status == TaskStatus.COMPLETED
-
-    def test_assign_tasks_mixed_operations(self, task_manager: TaskManager):
-        """测试混合操作：创建 + 更新 + 保持不变"""
-        # 第一次创建
-        tasks_v1 = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "pending",
-            },
-            {
-                "task_id": "t2",
-                "owner": "Worker2",
-                "content": "编写测试",
-                "status": "pending",
-            },
-        ]
-        task_manager.assign_tasks("test_gc_123", tasks_v1, "Manager")
-
-        # 第二次：更新 t1，保持 t2，新增 t3
-        tasks_v2 = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "running",
-            },
-            {
-                "task_id": "t2",
-                "owner": "Worker2",
-                "content": "编写测试",
-                "status": "pending",
-            },
-            {
-                "task_id": "t3",
-                "owner": "Worker3",
-                "content": "代码审查",
-                "status": "pending",
-            },
-        ]
-        result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
-
-        assert result["created"] == 1
-        assert result["updated"] == 1
-        assert result["unchanged"] == 1
-
-        # 验证结果
-        task_list = task_manager.get_active_task_list("test_gc_123")
-        assert task_list is not None
-        assert len(task_list.tasks) == 3
-
-    def test_archive_task_list(self, task_manager: TaskManager):
-        """测试归档任务列表"""
-        # 先创建任务列表
-        tasks = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "completed",
-            },
-        ]
-        task_manager.assign_tasks("test_gc_123", tasks, "Manager")
-
-        # 归档
-        result = task_manager.archive_task_list("test_gc_123")
-
-        assert result["archived_count"] == 1
-        assert "archived_at" in result
-
-        # 验证归档后没有 ACTIVE 列表
-        task_list = task_manager.get_active_task_list("test_gc_123")
-        assert task_list is None
-
-    def test_archive_empty_list(self, task_manager: TaskManager):
-        """测试归档空列表"""
-        result = task_manager.archive_task_list("test_gc_123")
-
-        assert result["archived_count"] == 0
-        assert "archived_at" in result
+# ============================================================================
+# get_active_task_list() 测试
+# ============================================================================
 
 
-class TestTaskManagerPersistence:
-    """TaskManager 持久化测试"""
+def test_get_active_task_list_empty(task_manager: TaskManager) -> None:
+    """
+    契约：get_active_task_list() 初始返回 None
 
-    def test_persistence_create(self, task_manager: TaskManager, temp_project_path: Path):
-        """测试创建任务后持久化"""
-        tasks = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "pending",
-            },
-        ]
-        task_manager.assign_tasks("test_gc_123", tasks, "Manager")
+    验证方式：
+    1. 创建新的 TaskManager
+    2. 调用 get_active_task_list()
+    3. 验证返回 None
 
-        # 验证持久化文件存在
-        persistence_path = temp_project_path / "test_gc_123" / "tasks.jsonl"
-        assert persistence_path.exists()
-
-        # 验证文件内容
-        with open(persistence_path, encoding="utf-8") as f:
-            lines = f.readlines()
-            assert len(lines) == 1
-            data = json.loads(lines[0])
-            assert data["status"] == "active"
-            assert len(data["tasks"]) == 1
-
-    def test_persistence_load(self, temp_project_path: Path):
-        """测试从持久化文件加载"""
-        # 第一个 TaskManager 创建任务
-        tm1 = TaskManager("test_gc_123", str(temp_project_path))
-        tasks = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "pending",
-            },
-        ]
-        tm1.assign_tasks("test_gc_123", tasks, "Manager")
-
-        # 第二个 TaskManager 加载
-        tm2 = TaskManager("test_gc_123", str(temp_project_path))
-        task_list = tm2.get_active_task_list("test_gc_123")
-
-        assert task_list is not None
-        assert len(task_list.tasks) == 1
-        assert task_list.tasks[0].task_id == "t1"
-
-    def test_persistence_archive(self, task_manager: TaskManager, temp_project_path: Path):
-        """测试归档后持久化"""
-        # 创建任务
-        tasks = [
-            {
-                "task_id": "t1",
-                "owner": "Worker1",
-                "content": "实现模块A",
-                "status": "completed",
-            },
-        ]
-        task_manager.assign_tasks("test_gc_123", tasks, "Manager")
-
-        # 归档
-        task_manager.archive_task_list("test_gc_123")
-
-        # 验证持久化文件
-        persistence_path = temp_project_path / "test_gc_123" / "tasks.jsonl"
-        with open(persistence_path, encoding="utf-8") as f:
-            lines = f.readlines()
-            # 应该有两行：第一行 ACTIVE，第二行 ARCHIVED
-            assert len(lines) == 2
-            data1 = json.loads(lines[0])
-            data2 = json.loads(lines[1])
-            assert data1["status"] == "active"
-            assert data2["status"] == "archived"
-            assert data2["archived_at"] is not None
+    如果失败，说明：初始状态处理错误
+    """
+    task_list = task_manager.get_active_task_list("test_gc_123")
+    assert task_list is None, "初始状态应返回 None"
 
 
-class TestTaskManagerCoverageUpdate:
-    """测试覆盖式更新语义"""
+def test_get_active_task_list_wrong_id(task_manager: TaskManager) -> None:
+    """
+    契约：group_chat_id 不匹配时抛出 ValueError
 
-    def test_coverage_update_semantics(self, task_manager: TaskManager):
-        """测试覆盖式更新语义：Manager 传入完整列表，系统自动识别"""
-        # 第一次：创建 t1, t2
-        tasks_v1 = [
-            {"task_id": "t1", "owner": "W1", "content": "Task 1", "status": "pending"},
-            {"task_id": "t2", "owner": "W2", "content": "Task 2", "status": "pending"},
-        ]
-        task_manager.assign_tasks("test_gc_123", tasks_v1, "Manager")
+    验证方式：
+    1. 创建 TaskManager(group_chat_id="test_gc_123")
+    2. 调用 get_active_task_list("wrong_id")
+    3. 验证抛出 ValueError
 
-        # 第二次：传入 t1(更新), t2(不变), t3(新增)
-        tasks_v2 = [
-            {"task_id": "t1", "owner": "W1", "content": "Task 1", "status": "running"},
-            {"task_id": "t2", "owner": "W2", "content": "Task 2", "status": "pending"},
-            {"task_id": "t3", "owner": "W3", "content": "Task 3", "status": "pending"},
-        ]
-        result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
+    如果失败，说明：group_chat_id 校验缺失
+    """
+    with pytest.raises(ValueError, match="group_chat_id 不匹配"):
+        task_manager.get_active_task_list("wrong_id")
 
-        # 验证统计
-        assert result["created"] == 1  # t3
-        assert result["updated"] == 1  # t1
-        assert result["unchanged"] == 1  # t2
 
-        # 验证最终状态
-        task_list = task_manager.get_active_task_list("test_gc_123")
-        assert task_list is not None
-        assert len(task_list.tasks) == 3
+# ============================================================================
+# assign_tasks() 测试
+# ============================================================================
 
-    def test_coverage_update_remove_task(self, task_manager: TaskManager):
-        """测试覆盖式更新：旧列表中不在新列表的任务保持不变（不删除）"""
-        # 第一次：创建 t1, t2, t3
-        tasks_v1 = [
-            {"task_id": "t1", "owner": "W1", "content": "Task 1", "status": "pending"},
-            {"task_id": "t2", "owner": "W2", "content": "Task 2", "status": "pending"},
-            {"task_id": "t3", "owner": "W3", "content": "Task 3", "status": "pending"},
-        ]
-        task_manager.assign_tasks("test_gc_123", tasks_v1, "Manager")
 
-        # 第二次：只传入 t1, t2（不包含 t3）
-        tasks_v2 = [
-            {"task_id": "t1", "owner": "W1", "content": "Task 1", "status": "running"},
-            {"task_id": "t2", "owner": "W2", "content": "Task 2", "status": "pending"},
-        ]
-        result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
+def test_assign_tasks_create_new(task_manager: TaskManager) -> None:
+    """
+    契约：assign_tasks() 创建新任务列表
 
-        # 验证统计：t1 更新，t2 不变，t3 保留（也计入 unchanged）
-        assert result["created"] == 0
-        assert result["updated"] == 1  # t1
-        assert result["unchanged"] == 2  # t2 + t3（保留的任务也计入 unchanged）
+    验证方式：
+    1. 调用 assign_tasks() 传入 2 个任务
+    2. 验证返回 {created: 2, updated: 0, unchanged: 0}
+    3. 验证 get_active_task_list() 返回正确的 TaskList
 
-        # 验证 t3 仍然存在（保持不变）
-        task_list = task_manager.get_active_task_list("test_gc_123")
-        assert task_list is not None
-        assert len(task_list.tasks) == 3
-        t3 = next(t for t in task_list.tasks if t.task_id == "t3")
-        assert t3.status == TaskStatus.PENDING
+    如果失败，说明：创建新列表逻辑错误
+    """
+    tasks = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "pending"},
+        {"task_id": "t2", "owner": "Worker2", "content": "编写测试", "status": "pending"},
+    ]
+    result = task_manager.assign_tasks("test_gc_123", tasks, "Manager")
+    assert result["created"] == 2
+    assert result["updated"] == 0
+    assert result["unchanged"] == 0
+
+    task_list = task_manager.get_active_task_list("test_gc_123")
+    assert task_list is not None
+    assert task_list.status == TaskListStatus.ACTIVE
+    assert len(task_list.tasks) == 2
+    assert task_list.tasks[0].task_id == "t1"
+    assert task_list.tasks[0].owner == "Worker1"
+    assert task_list.tasks[0].status == TaskStatus.PENDING
+
+
+def test_assign_tasks_update_existing(task_manager: TaskManager) -> None:
+    """
+    契约：assign_tasks() 更新现有任务
+
+    验证方式：
+    1. 第一次创建任务 t1(pending), t2(pending)
+    2. 第二次更新 t1(completed), t2(pending)
+    3. 验证返回 {created: 0, updated: 1, unchanged: 1}
+    4. 验证 t1 状态已更新
+
+    如果失败，说明：更新逻辑错误
+    """
+    tasks_v1 = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "pending"},
+        {"task_id": "t2", "owner": "Worker2", "content": "编写测试", "status": "pending"},
+    ]
+    task_manager.assign_tasks("test_gc_123", tasks_v1, "Manager")
+
+    tasks_v2 = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "completed"},
+        {"task_id": "t2", "owner": "Worker2", "content": "编写测试", "status": "pending"},
+    ]
+    result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
+    assert result["created"] == 0
+    assert result["updated"] == 1
+    assert result["unchanged"] == 1
+
+    task_list = task_manager.get_active_task_list("test_gc_123")
+    t1 = next(t for t in task_list.tasks if t.task_id == "t1")
+    assert t1.status == TaskStatus.COMPLETED
+
+
+def test_assign_tasks_mixed_operations(task_manager: TaskManager) -> None:
+    """
+    契约：assign_tasks() 混合操作（创建 + 更新 + 保持不变）
+
+    验证方式：
+    1. 第一次创建 t1, t2
+    2. 第二次：更新 t1, 保持 t2, 新增 t3
+    3. 验证返回 {created: 1, updated: 1, unchanged: 1}
+
+    如果失败，说明：混合操作统计错误
+    """
+    tasks_v1 = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "pending"},
+        {"task_id": "t2", "owner": "Worker2", "content": "编写测试", "status": "pending"},
+    ]
+    task_manager.assign_tasks("test_gc_123", tasks_v1, "Manager")
+
+    tasks_v2 = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "running"},
+        {"task_id": "t2", "owner": "Worker2", "content": "编写测试", "status": "pending"},
+        {"task_id": "t3", "owner": "Worker3", "content": "代码审查", "status": "pending"},
+    ]
+    result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
+    assert result["created"] == 1
+    assert result["updated"] == 1
+    assert result["unchanged"] == 1
+
+    task_list = task_manager.get_active_task_list("test_gc_123")
+    assert len(task_list.tasks) == 3
+
+
+def test_coverage_update_semantics(task_manager: TaskManager) -> None:
+    """
+    契约：覆盖式更新语义（参照 Claude Code TodoWrite）
+
+    验证方式：
+    1. 第一次创建 t1, t2
+    2. 第二次传入 t1(更新), t2(不变), t3(新增)
+    3. 验证统计正确
+
+    如果失败，说明：覆盖式更新逻辑错误
+    """
+    tasks_v1 = [
+        {"task_id": "t1", "owner": "W1", "content": "Task 1", "status": "pending"},
+        {"task_id": "t2", "owner": "W2", "content": "Task 2", "status": "pending"},
+    ]
+    task_manager.assign_tasks("test_gc_123", tasks_v1, "Manager")
+
+    tasks_v2 = [
+        {"task_id": "t1", "owner": "W1", "content": "Task 1", "status": "running"},
+        {"task_id": "t2", "owner": "W2", "content": "Task 2", "status": "pending"},
+        {"task_id": "t3", "owner": "W3", "content": "Task 3", "status": "pending"},
+    ]
+    result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
+    assert result["created"] == 1
+    assert result["updated"] == 1
+    assert result["unchanged"] == 1
+
+
+def test_coverage_update_preserve_old(task_manager: TaskManager) -> None:
+    """
+    契约：旧列表中不在新列表的任务保持不变（不删除）
+
+    验证方式：
+    1. 第一次创建 t1, t2, t3
+    2. 第二次只传入 t1, t2（不包含 t3）
+    3. 验证 t3 仍然存在（保持不变）
+    4. 验证 unchanged 包含保留的 t3
+
+    如果失败，说明：覆盖式更新错误地删除了旧任务
+    """
+    tasks_v1 = [
+        {"task_id": "t1", "owner": "W1", "content": "Task 1", "status": "pending"},
+        {"task_id": "t2", "owner": "W2", "content": "Task 2", "status": "pending"},
+        {"task_id": "t3", "owner": "W3", "content": "Task 3", "status": "pending"},
+    ]
+    task_manager.assign_tasks("test_gc_123", tasks_v1, "Manager")
+
+    tasks_v2 = [
+        {"task_id": "t1", "owner": "W1", "content": "Task 1", "status": "running"},
+        {"task_id": "t2", "owner": "W2", "content": "Task 2", "status": "pending"},
+    ]
+    result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
+    assert result["created"] == 0
+    assert result["updated"] == 1
+    assert result["unchanged"] == 2  # t2 + t3（保留）
+
+    task_list = task_manager.get_active_task_list("test_gc_123")
+    assert len(task_list.tasks) == 3
+    t3 = next(t for t in task_list.tasks if t.task_id == "t3")
+    assert t3.status == TaskStatus.PENDING
+
+
+# ============================================================================
+# archive_task_list() 测试
+# ============================================================================
+
+
+def test_archive_task_list(task_manager: TaskManager) -> None:
+    """
+    契约：archive_task_list() 归档当前 ACTIVE 列表
+
+    验证方式：
+    1. 创建任务列表
+    2. 调用 archive_task_list()
+    3. 验证返回 archived_count=1
+    4. 验证 get_active_task_list() 返回 None
+
+    如果失败，说明：归档逻辑错误
+    """
+    tasks = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "completed"},
+    ]
+    task_manager.assign_tasks("test_gc_123", tasks, "Manager")
+
+    result = task_manager.archive_task_list("test_gc_123")
+    assert result["archived_count"] == 1
+    assert "archived_at" in result
+
+    task_list = task_manager.get_active_task_list("test_gc_123")
+    assert task_list is None, "归档后应没有 ACTIVE 列表"
+
+
+def test_archive_empty_list(task_manager: TaskManager) -> None:
+    """
+    契约：archive_task_list() 空列表时返回 archived_count=0
+
+    验证方式：
+    1. 不创建任何任务
+    2. 调用 archive_task_list()
+    3. 验证返回 archived_count=0
+
+    如果失败，说明：空列表边界处理错误
+    """
+    result = task_manager.archive_task_list("test_gc_123")
+    assert result["archived_count"] == 0
+    assert "archived_at" in result
+
+
+# ============================================================================
+# 持久化测试
+# ============================================================================
+
+
+def test_persistence_create(task_manager: TaskManager, temp_project_path: Path) -> None:
+    """
+    契约：创建任务后 tasks.jsonl 存在
+
+    验证方式：
+    1. 创建任务
+    2. 验证 tasks.jsonl 文件存在
+    3. 验证文件内容正确
+
+    如果失败，说明：持久化写入逻辑错误
+    """
+    tasks = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "pending"},
+    ]
+    task_manager.assign_tasks("test_gc_123", tasks, "Manager")
+
+    persistence_path = temp_project_path / "test_gc_123" / "tasks.jsonl"
+    assert persistence_path.exists(), "tasks.jsonl 应存在"
+
+    with open(persistence_path, encoding="utf-8") as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        data = json.loads(lines[0])
+        assert data["status"] == "active"
+        assert len(data["tasks"]) == 1
+
+
+def test_persistence_load(temp_project_path: Path) -> None:
+    """
+    契约：新 TaskManager 实例能加载历史数据
+
+    验证方式：
+    1. 第一个 TaskManager 创建任务
+    2. 创建第二个 TaskManager（同一路径）
+    3. 验证第二个实例能加载历史数据
+
+    如果失败，说明：持久化加载逻辑错误
+    """
+    tm1 = TaskManager("test_gc_123", str(temp_project_path))
+    tasks = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "pending"},
+    ]
+    tm1.assign_tasks("test_gc_123", tasks, "Manager")
+
+    tm2 = TaskManager("test_gc_123", str(temp_project_path))
+    task_list = tm2.get_active_task_list("test_gc_123")
+
+    assert task_list is not None
+    assert len(task_list.tasks) == 1
+    assert task_list.tasks[0].task_id == "t1"
+
+
+def test_persistence_archive(task_manager: TaskManager, temp_project_path: Path) -> None:
+    """
+    契约：归档后 tasks.jsonl 包含两行（ACTIVE + ARCHIVED）
+
+    验证方式：
+    1. 创建任务
+    2. 归档
+    3. 验证 tasks.jsonl 有两行
+    4. 验证第一行 status=active，第二行 status=archived
+
+    如果失败，说明：归档持久化逻辑错误
+    """
+    tasks = [
+        {"task_id": "t1", "owner": "Worker1", "content": "实现模块A", "status": "completed"},
+    ]
+    task_manager.assign_tasks("test_gc_123", tasks, "Manager")
+    task_manager.archive_task_list("test_gc_123")
+
+    persistence_path = temp_project_path / "test_gc_123" / "tasks.jsonl"
+    with open(persistence_path, encoding="utf-8") as f:
+        lines = f.readlines()
+        assert len(lines) == 2
+        data1 = json.loads(lines[0])
+        data2 = json.loads(lines[1])
+        assert data1["status"] == "active"
+        assert data2["status"] == "archived"
+        assert data2["archived_at"] is not None
