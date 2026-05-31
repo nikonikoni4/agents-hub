@@ -54,13 +54,24 @@ class TaskManager:
         # 加载历史任务列表
         self._load_from_persistence()
 
-    def get_active_task_list(self) -> TaskList | None:
+    def get_active_task_list(self, group_chat_id: str) -> TaskList | None:
         """
         获取当前 ACTIVE 任务列表
 
+        Args:
+            group_chat_id: 群聊 ID（必须与 self.group_chat_id 一致）
+
         Returns:
             TaskList | None: 当前 ACTIVE 的任务列表，不存在则返回 None
+
+        Raises:
+            ValueError: 如果 group_chat_id 与 self.group_chat_id 不一致
         """
+        if group_chat_id != self.group_chat_id:
+            raise ValueError(
+                f"group_chat_id 不匹配: 期望 {self.group_chat_id}, 实际 {group_chat_id}"
+            )
+
         for task_list in self._task_lists.values():
             if task_list.status == TaskListStatus.ACTIVE:
                 return task_list
@@ -89,7 +100,7 @@ class TaskManager:
             dict: {created: int, updated: int, unchanged: int}
         """
         # 获取当前 ACTIVE 列表
-        active_list = self.get_active_task_list()
+        active_list = self.get_active_task_list(group_chat_id)
 
         if active_list is None:
             # 创建新列表
@@ -108,7 +119,7 @@ class TaskManager:
         Returns:
             dict: {archived_count: int, archived_at: str}
         """
-        active_list = self.get_active_task_list()
+        active_list = self.get_active_task_list(group_chat_id)
 
         if active_list is None:
             self.logger.info("没有 ACTIVE 任务列表，跳过归档")
@@ -242,6 +253,7 @@ class TaskManager:
         for task_id, task in existing_tasks.items():
             if task_id not in new_task_ids:
                 new_tasks.append(task)
+                unchanged_count += 1  # 保留的任务也计入 unchanged
 
         # 更新任务列表
         active_list.tasks = new_tasks

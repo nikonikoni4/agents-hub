@@ -39,7 +39,7 @@ class TestTaskManagerBasics:
 
     def test_get_active_task_list_empty(self, task_manager: TaskManager):
         """测试获取空的 ACTIVE 任务列表"""
-        task_list = task_manager.get_active_task_list()
+        task_list = task_manager.get_active_task_list("test_gc_123")
         assert task_list is None
 
     def test_assign_tasks_create_new(self, task_manager: TaskManager):
@@ -70,7 +70,7 @@ class TestTaskManagerBasics:
         assert result["unchanged"] == 0
 
         # 验证任务列表已创建
-        task_list = task_manager.get_active_task_list()
+        task_list = task_manager.get_active_task_list("test_gc_123")
         assert task_list is not None
         assert task_list.status == TaskListStatus.ACTIVE
         assert len(task_list.tasks) == 2
@@ -120,7 +120,7 @@ class TestTaskManagerBasics:
         assert result["unchanged"] == 1
 
         # 验证更新
-        task_list = task_manager.get_active_task_list()
+        task_list = task_manager.get_active_task_list("test_gc_123")
         assert task_list is not None
         assert len(task_list.tasks) == 2
         t1 = next(t for t in task_list.tasks if t.task_id == "t1")
@@ -173,7 +173,7 @@ class TestTaskManagerBasics:
         assert result["unchanged"] == 1
 
         # 验证结果
-        task_list = task_manager.get_active_task_list()
+        task_list = task_manager.get_active_task_list("test_gc_123")
         assert task_list is not None
         assert len(task_list.tasks) == 3
 
@@ -197,7 +197,7 @@ class TestTaskManagerBasics:
         assert "archived_at" in result
 
         # 验证归档后没有 ACTIVE 列表
-        task_list = task_manager.get_active_task_list()
+        task_list = task_manager.get_active_task_list("test_gc_123")
         assert task_list is None
 
     def test_archive_empty_list(self, task_manager: TaskManager):
@@ -251,7 +251,7 @@ class TestTaskManagerPersistence:
 
         # 第二个 TaskManager 加载
         tm2 = TaskManager("test_gc_123", str(temp_project_path))
-        task_list = tm2.get_active_task_list()
+        task_list = tm2.get_active_task_list("test_gc_123")
 
         assert task_list is not None
         assert len(task_list.tasks) == 1
@@ -312,7 +312,7 @@ class TestTaskManagerCoverageUpdate:
         assert result["unchanged"] == 1  # t2
 
         # 验证最终状态
-        task_list = task_manager.get_active_task_list()
+        task_list = task_manager.get_active_task_list("test_gc_123")
         assert task_list is not None
         assert len(task_list.tasks) == 3
 
@@ -333,13 +333,13 @@ class TestTaskManagerCoverageUpdate:
         ]
         result = task_manager.assign_tasks("test_gc_123", tasks_v2, "Manager")
 
-        # 验证统计
+        # 验证统计：t1 更新，t2 不变，t3 保留（也计入 unchanged）
         assert result["created"] == 0
         assert result["updated"] == 1  # t1
-        assert result["unchanged"] == 1  # t2
+        assert result["unchanged"] == 2  # t2 + t3（保留的任务也计入 unchanged）
 
         # 验证 t3 仍然存在（保持不变）
-        task_list = task_manager.get_active_task_list()
+        task_list = task_manager.get_active_task_list("test_gc_123")
         assert task_list is not None
         assert len(task_list.tasks) == 3
         t3 = next(t for t in task_list.tasks if t.task_id == "t3")
