@@ -370,77 +370,114 @@ local_data/teams/<team>/<project>/<group_chat_id>/tasks.jsonl
 
 ### 5. Runtime Prompt 注入
 
-#### render_runtime 函数
+#### 注入方案：CLAUDE.md/AGENTS.md 动态标记替换
 
-**签名：**
-```python
-def render_runtime(
-    agent_name: str,
-    group_chat_id: str,
-    agent_token: str,
-    team_members: list[str],
-    team_workboard: list[Task] | None = None,  # 仅 Manager
-) -> str:
-    """
-    生成 <agent_runtime> 块，注入到 user prompt 前部。
-    
-    位置：agents_hub/core/foundation/renderer.py
-    """
+**方案选择依据：**
+
+根据 `docs/temp/研究报告/claude-md-runtime-injection-mechanism.md` 的调研结论：
+- CLAUDE.md 每轮都加载，但通过 prompt cache 复用，不重复消耗 token
+- 静态部分缓存命中率高，动态部分体积小，缓存失效成本低
+- 不污染对话历史（JSONL 中不可见）
+
+**实现机制：**
+
+使用 `agents_hub/core/utils/markdown_injector.py` 的 `replace_marked_section()` 函数，在 Agent._process_message() 调用前动态替换 CLAUDE.md/AGENTS.md 中的标记区域。
+
+**标记格式：**
+
+在 role 的 `work_root/CLAUDE.md` 或 `work_root/AGENTS.md` 中预置标记：
+
+```markdown
+# Agent 配置
+
+...（其他静态内容）...
+
+<AGENT_RUNTIME_START/>
+（此区域将被动态替换）
+<AGENT_RUNTIME_END/>
 ```
 
-**返回示例：**
-```xml
-<agent_runtime>
-<identity>
-你的名字：Manager
-群聊ID：gc_abc123
-身份令牌：tok_a1b2c3d4e5f6...
-</identity>
+**注入内容示例：**
 
-<team>
-团队成员：Worker1, Worker2, Worker3
-</team>
+```markdown
+<AGENT_RUNTIME_START/>
+## 运行时状态
 
-<team_workboard>
-当前任务列表：
+### 身份信息
+- 你的名字：Manager
+- 群聊ID：gc_abc123
+- 身份令牌：tok_a1b2c3d4e5f6...
+
+### 团队信息
+- 团队成员：Worker1, Worker2, Worker3
+
+### 当前任务看板（仅 Manager）
 - [PENDING] task_1: 实现模块A (owner: Worker1)
 - [RUNNING] task_2: 编写测试 (owner: Worker2)
 - [COMPLETED] task_3: 代码审查 (owner: Worker3)
-</team_workboard>
-</agent_runtime>
+<AGENT_RUNTIME_END/>
 ```
 
-**注入位置：**
+**注入时机：**
 
-在 Agent._process_message() 中，拼接最终 prompt 时：
+在 Agent._process_message() 中，调用 LLM 前：
 
 ```python
-# 生成 runtime 块
-runtime_block = render_runtime(
-    agent_name=self.name,
-    group_chat_id=self.group_chat_context.group_chat_id,
-    agent_token=self.agent_token,  # 从 agent 实例获取
-    team_members=self.group_chat_context.get_team_members(),
-    team_workboard=self._get_workboard() if self.is_leader else None,
-)
+async def _process_message(self, msg: AgentMessage, prompt: str):
+    # 1. 生成 runtime 内容
+    runtime_content = self._generate_runtime_content()
+    
+    # 2. 注入到 CLAUDE.md/AGENTS.md
+    md_path = self.role_config.work_root / self._get_md_filename()
+    replace_marked_section(
+        file_path=md_path,
+        marker="AGENT_RUNTIME",
+        content=runtime_content,
+    )
+    
+    # 3. 调用 LLM（CLAUDE.md/AGENTS.md 会被自动加载）
+    result = await self.bridge.execute(prompt, ...)
+    
+    # ... 后续处理 ...
+```
 
-# 加载增量上下文
-context = self.agent_context.get_context()
+**_generate_runtime_content 实现：**
 
-# 渲染当前消息
-incoming = render_for_llm(msg)
-
-# 拼接最终 prompt
-final_prompt = f"{runtime_block}\n\n{context}\n\n{incoming}"
-
-# 调用 LLM
-result = await self.bridge.execute(final_prompt, ...)
+```python
+def _generate_runtime_content(self) -> str:
+    """生成运行时注入内容"""
+    lines = [
+        "## 运行时状态",
+        "",
+        "### 身份信息",
+        f"- 你的名字：{self.name}",
+        f"- 群聊ID：{self.group_chat_context.group_chat_id}",
+        f"- 身份令牌：{self.agent_token}",
+        "",
+        "### 团队信息",
+        f"- 团队成员：{', '.join(self.group_chat_context.get_team_members())}",
+    ]
+    
+    # 仅 Manager 注入任务看板
+    if self.is_leader:
+        workboard = self._get_workboard()
+        if workboard:
+            lines.extend([
+                "",
+                "### 当前任务看板",
+            ])
+            for task in workboard:
+                lines.append(f"- [{task.status.value.upper()}] {task.task_id}: {task.content} (owner: {task.owner})")
+    
+    return "\n".join(lines)
 ```
 
 **关键特性：**
-- 每次调用时生成（不进 system prompt，避免被压缩/改写）
+- 每次调用前动态更新 CLAUDE.md/AGENTS.md
 - token 明文可见（LLM 需要它调用工具）
+- 通过 prompt cache 避免重复消耗 token
 - 仅 Manager 注入 team_workboard
+- 标记不存在时自动追加到文件末尾
 
 ### 6. User 路径分流
 
@@ -711,7 +748,6 @@ def call_agent(agent_token: str, send_to: str, ...):
 按依赖关系从底层到上层：
 
 1. **foundation 层**：
-   - 新增 `render_runtime()` 纯函数
    - 新增 Token 类型和工具函数（生成、剥离正则）
    - 新增 TaskStatus / TaskListStatus 枚举
 
@@ -730,7 +766,8 @@ def call_agent(agent_token: str, send_to: str, ...):
 
 5. **agent 层**：
    - Agent 实例新增 `agent_token` 属性
-   - Agent._process_message 调用 render_runtime 注入 token
+   - Agent 新增 `_generate_runtime_content()` 方法
+   - Agent._process_message 调用 markdown_injector 注入 runtime 到 CLAUDE.md/AGENTS.md
    - Agent.run() 出口 A 在写群聊前调用 token redact
 
 6. **mcp 层**（新增）：
@@ -740,6 +777,7 @@ def call_agent(agent_token: str, send_to: str, ...):
 
 7. **bridge 层**：
    - 为每个 role 的 `work_root/.mcp.json` 生成配置模板
+   - 为每个 role 的 `work_root/CLAUDE.md` 或 `work_root/AGENTS.md` 预置 `<AGENT_RUNTIME_START/>` 标记
 
 8. **业务层**：
    - 实现 `user_send_message` 业务函数
@@ -886,7 +924,7 @@ assign_tasks_to_team 的覆盖式更新语义参照 Claude Code 的 TodoWrite：
 
 | 项 | 说明 |
 |----|------|
-| `<agent_runtime>` 的精确 XML 结构 | 实现 render_runtime 时按现有 Tag 风格扩展 |
+| AGENT_RUNTIME 标记的精确 Markdown 结构 | 实现 _generate_runtime_content 时确定具体格式 |
 | Task 字段细节 | task_id 生成方式、content 长度限制等 |
 | TaskList 持久化文件名 | 建议 `tasks.jsonl`，与 `agent_calls.jsonl` 同目录 |
 | Token 剥离正则的具体形式 | 使用 `r"tok_[a-f0-9]{32}"` 精确匹配 32 字符 hex |
@@ -894,6 +932,7 @@ assign_tasks_to_team 的覆盖式更新语义参照 Claude Code 的 TodoWrite：
 | MCP Server 错误日志 | 是否记录到独立日志文件 |
 | 权限策略配置化 | 未来按群聊类型配置权限的具体实现 |
 | FastMCP 启动方式 | 确认 `run()` 是否需要 `create_task` 或独立线程 |
+| CLAUDE.md/AGENTS.md 标记预置时机 | 角色创建时还是首次启动时 |
 
 ---
 

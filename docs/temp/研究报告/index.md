@@ -32,6 +32,12 @@
 |------|------|------|
 | [claude-codex-role-isolation-report.md](claude-codex-role-isolation-report.md) | Claude 和 Codex 通过环境变量实现 profile 隔离的机制 | 2026-05-24 |
 
+## Claude Code 运行时机制
+
+| 文档 | 说明 | 日期 |
+|------|------|------|
+| [claude-md-runtime-injection-mechanism.md](claude-md-runtime-injection-mechanism.md) | CLAUDE.md 运行时注入机制：加载位置、缓存行为、token 消耗验证 | 2026-05-31 |
+
 ## Orchestrator 设计
 
 | 文档 | 说明 | 日期 |
@@ -40,4 +46,4 @@
 
 ---
 
-*最后更新：2026-05-24*
+*最后更新：2026-05-31*
