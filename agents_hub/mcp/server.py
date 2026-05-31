@@ -8,6 +8,8 @@ MCP Server 和 4 个工具
 4. check_agent_call: 查询 AgentCall 状态
 """
 
+from fastmcp import FastMCP
+
 from agents_hub.core.foundation import (
     AgentMessage,
     AgentNotFoundError,
@@ -23,6 +25,16 @@ from agents_hub.mcp.errors import (
     INVALID_TOKEN,
     PERMISSION_DENIED,
     make_error_response,
+)
+
+# ============================================================================
+# FastMCP 实例
+# ============================================================================
+
+mcp = FastMCP(
+    name="Agents Hub MCP Server",
+    instructions="提供 Manager 编排团队协作的能力",
+    version="0.1.0",
 )
 
 # ============================================================================
@@ -318,3 +330,13 @@ def check_agent_call(agent_token: str, call_id: str) -> dict:
             f"内部错误: {str(e)}",
             details={"exception": str(e)},
         )
+
+
+# ============================================================================
+# 注册工具到 FastMCP
+# ============================================================================
+
+mcp.tool()(call_agent)
+mcp.tool()(assign_tasks_to_team)
+mcp.tool()(archive_task_list)
+mcp.tool()(check_agent_call)
