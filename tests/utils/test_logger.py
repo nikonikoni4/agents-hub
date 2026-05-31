@@ -303,6 +303,32 @@ class TestGetSpecializedLogger:
         file_handlers = [h for h in logger1.handlers if isinstance(h, RotatingFileHandler)]
         assert len(file_handlers) == 1
 
+    def test_custom_log_dir(self, temp_log_dir):
+        """应支持自定义日志目录"""
+        setup_logging(temp_log_dir)
+        custom_dir = temp_log_dir / "custom" / "path"
+
+        logger = get_specialized_logger(
+            name="custom_logger",
+            log_filename="custom.log",
+            log_dir=custom_dir
+        )
+        logger.info("自定义路径消息")
+
+        # 强制 flush
+        for handler in logger.handlers:
+            handler.flush()
+
+        # 应在自定义目录中创建文件
+        custom_file = custom_dir / "custom.log"
+        assert custom_file.exists()
+        content = custom_file.read_text(encoding="utf-8")
+        assert "自定义路径消息" in content
+
+        # 不应在全局目录创建
+        global_file = temp_log_dir / "custom.log"
+        assert not global_file.exists()
+
 
 class TestIntegration:
     """集成测试"""

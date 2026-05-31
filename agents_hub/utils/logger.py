@@ -138,6 +138,7 @@ def get_specialized_logger(
     log_filename: str,
     level: int | None = None,
     also_to_global: bool = True,
+    log_dir: Path | None = None,
 ) -> logging.Logger:
     """
     创建特定用途的logger
@@ -147,17 +148,27 @@ def get_specialized_logger(
         log_filename: 专用日志文件名（如 "agent_calls.log"）
         level: 日志级别（可选）
         also_to_global: 是否同时输出到全局日志（默认True）
+        log_dir: 自定义日志目录（可选，默认使用全局日志目录）
 
     Returns:
         配置好的logger实例
 
     Example:
+        >>> # 使用全局日志目录
         >>> logger = get_specialized_logger(
         ...     name="agent_call_manager",
         ...     log_filename="agent_calls.log",
         ...     also_to_global=True
         ... )
-        >>> logger.info("创建调用")  # 同时写入 agent_calls.log 和 agents_hub.log
+        >>> logger.info("创建调用")  # 写入 logs/agent_calls.log
+
+        >>> # 使用自定义目录
+        >>> logger = get_specialized_logger(
+        ...     name="group_chat_123",
+        ...     log_filename="chat.log",
+        ...     log_dir=Path("logs/group_chats/123")
+        ... )
+        >>> logger.info("群聊消息")  # 写入 logs/group_chats/123/chat.log
     """
     if not _global_log_dir:
         raise RuntimeError("必须先调用 setup_logging() 初始化日志系统")
@@ -170,8 +181,12 @@ def get_specialized_logger(
     if logger.handlers:
         return logger
 
+    # 确定日志文件路径
+    target_dir = log_dir if log_dir else _global_log_dir
+    target_dir.mkdir(parents=True, exist_ok=True)
+    specialized_file = target_dir / log_filename
+
     # 专用文件handler（支持轮转）
-    specialized_file = _global_log_dir / log_filename
     file_handler = RotatingFileHandler(specialized_file, mode="a", encoding="utf-8")
     file_handler.setFormatter(TruncatingFormatter(_LOG_FORMAT))
     logger.addHandler(file_handler)
