@@ -6,7 +6,9 @@ Agent 调用管理器
 
 from datetime import datetime
 
+from agents_hub.config import config
 from agents_hub.core.foundation import CallStatus, MessageType
+from agents_hub.utils.logger import get_specialized_logger
 
 from .agent_call import AgentCall
 
@@ -14,14 +16,21 @@ from .agent_call import AgentCall
 class AgentCallManager:
     """统一管理所有跨 Agent 的异步调用"""
 
-    def __init__(self):
+    def __init__(self, group_chat_id: str, project_path: str):
         self._calls: dict[str, AgentCall] = {}  # call_id -> AgentCall
 
+        # 创建专用logger：每个群聊有独立的日志目录
+        log_dir = config.data_path / project_path / group_chat_id
+        self.logger = get_specialized_logger(
+            name=f"agent_call_manager.{group_chat_id}",
+            log_filename="agent_calls.log",
+            also_to_global=True,
+            log_dir=log_dir,
+        )
+
         # TODO: 未实现的功能
-        # 1. 与 util 统一的 logger，但 agentCall 单独保存一份
-        #    需要一个 logger 的变体类独立用于 AgentCallManager
-        # 2. 轮询线程，用于判断是否需要删除已经完成的 AgentCall
-        # 3. 超时检查：定期调用 AgentCall.is_timeout() 检查超时
+        # 1. 轮询线程，用于判断是否需要删除已经完成的 AgentCall
+        # 2. 超时检查：定期调用 AgentCall.is_timeout() 检查超时
 
     def create_call(
         self,
@@ -55,6 +64,10 @@ class AgentCallManager:
             business_task_id=business_task_id,
         )
         self._calls[call.call_id] = call
+        self.logger.info(
+            f"创建调用 {call.call_id}: {send_from} -> {send_to}, "
+            f"类型={message_type.value}, 超时={timeout_seconds}s"
+        )
         return call
 
     def get_call(self, call_id: str) -> AgentCall | None:
@@ -78,11 +91,14 @@ class AgentCallManager:
             status: 新状态
         """
         if call := self._calls.get(call_id):
+            old_status = call.status
             call.status = status
             if status == CallStatus.RUNNING:
                 call.started_at = datetime.now()
             elif status in (CallStatus.COMPLETED, CallStatus.FAILED, CallStatus.TIMEOUT):
                 call.completed_at = datetime.now()
+
+            self.logger.info(f"调用 {call_id} 状态变更: {old_status.value} -> {status.value}")
 
     def set_result(self, call_id: str, result: object):
         """
@@ -96,6 +112,7 @@ class AgentCallManager:
             call.result = result
             call.status = CallStatus.COMPLETED
             call.completed_at = datetime.now()
+            self.logger.info(f"调用 {call_id} 完成，结果类型: {type(result).__name__}")
 
     def set_error(self, call_id: str, error: str):
         """
@@ -109,3 +126,4 @@ class AgentCallManager:
             call.error = error
             call.status = CallStatus.FAILED
             call.completed_at = datetime.now()
+            self.logger.error(f"调用 {call_id} 失败: {error}")

@@ -52,7 +52,7 @@ class GroupChat:
         # 依赖组件
         self.group_chat_context = GroupChatContext(group_chat_id, project_path)
         self.message_router = MessageRouter()
-        self.agent_call_manager = AgentCallManager()
+        self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
 
     async def start(self):
         """
