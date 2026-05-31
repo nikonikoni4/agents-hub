@@ -6,6 +6,7 @@ TaskList: 任务列表，包含多个 Task，有 ACTIVE/ARCHIVED 状态
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from agents_hub.core.foundation.models import TaskListStatus, TaskStatus
 
@@ -28,7 +29,7 @@ class Task:
     created_at: datetime
     updated_at: datetime
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """序列化为 dict（用于持久化）"""
         return {
             "task_id": self.task_id,
@@ -42,7 +43,7 @@ class Task:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Task":
+    def from_dict(cls, data: dict[str, Any]) -> "Task":
         """从 dict 反序列化"""
         return cls(
             task_id=data["task_id"],
@@ -73,7 +74,7 @@ class TaskList:
     created_at: datetime
     archived_at: datetime | None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """序列化为 dict（用于持久化）"""
         return {
             "list_id": self.list_id,
@@ -85,7 +86,7 @@ class TaskList:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "TaskList":
+    def from_dict(cls, data: dict[str, Any]) -> "TaskList":
         """从 dict 反序列化"""
         return cls(
             list_id=data["list_id"],
