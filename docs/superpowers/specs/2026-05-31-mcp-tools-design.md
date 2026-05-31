@@ -427,7 +427,9 @@ async def _process_message(self, msg: AgentMessage, prompt: str):
     # 1. 生成 runtime 内容
     runtime_content = self._generate_runtime_content()
     
-    # 2. 注入到 CLAUDE.md/AGENTS.md
+    # 2. 注入到 role 的 work_root 下的 CLAUDE.md/AGENTS.md
+    # 注意：work_root 是 role 的工作目录（local_data/agents/<role_name>/work_root/）
+    # 不是 project_path（群聊的项目路径）
     md_path = self.role_config.work_root / self._get_md_filename()
     replace_marked_section(
         file_path=md_path,
@@ -435,11 +437,16 @@ async def _process_message(self, msg: AgentMessage, prompt: str):
         content=runtime_content,
     )
     
-    # 3. 调用 LLM（CLAUDE.md/AGENTS.md 会被自动加载）
+    # 3. 调用 LLM（work_root 下的 CLAUDE.md/AGENTS.md 会被自动加载）
     result = await self.bridge.execute(prompt, ...)
     
     # ... 后续处理 ...
 ```
+
+**路径说明：**
+- **work_root**：`local_data/agents/<role_name>/work_root/`（role 的固定工作目录）
+- **project_path**：群聊的项目路径（由 GroupChat 传入，用于执行任务）
+- CLAUDE.md/AGENTS.md 位于 work_root，不在 project_path
 
 **_generate_runtime_content 实现：**
 
