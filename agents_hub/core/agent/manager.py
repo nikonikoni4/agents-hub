@@ -18,5 +18,6 @@ class Manager(Agent):
         group_chat_context: GroupChatContext,
         agent_call_manager: AgentCallManager,
         message_router: MessageRouter,
+        task_manager=None,
     ):
-        super().__init__(role, group_chat_context, agent_call_manager, message_router)
+        super().__init__(role, group_chat_context, agent_call_manager, message_router, task_manager)

@@ -35,6 +35,7 @@ class Agent:
         group_chat_context: GroupChatContext,
         agent_call_manager: AgentCallManager,
         message_router: MessageRouter,
+        task_manager=None,
     ):
         self.role_config: RoleConfig = role.get_role_config()
         self.name = self.role_config.name
@@ -44,7 +45,12 @@ class Agent:
         self.agent_context = AgentContext(self.name, group_chat_context)
         self.message_router = message_router
         self.agent_call_manager = agent_call_manager
+        self.task_manager = task_manager
         self._run = True
+
+        # 从 group_chat_context 获取 agent_token
+        session_info = group_chat_context.agent_session_id.get(self.name)
+        self.agent_token: str = session_info.token if session_info else ""
 
     def set_run(self, run: bool):
         """设置该agent是否工作"""
@@ -148,6 +154,87 @@ class Agent:
                 platform=self.role_config.platform.value,
             ) from e
 
+    def _generate_runtime_content(self, task_manager=None) -> str:
+        """生成 XML 格式的 runtime 内容。
+
+        Args:
+            task_manager: TaskManager 实例（可选，仅 Manager 需要）
+
+        Returns:
+            XML 格式的 runtime 内容字符串
+        """
+        from agents_hub.config.types import RoleType
+
+        # 获取团队成员列表（排除自己）
+        team_members = [
+            name for name in self.group_chat_context.agent_session_id if name != self.name
+        ]
+        team_members_str = ", ".join(team_members)
+
+        # 构建基础内容
+        content_parts = [
+            "<AGENT_RUNTIME>",
+            "<identity>",
+            f"你的名字：{self.name}",
+            f"群聊ID：{self.group_chat_context.group_chat_id}",
+            f"身份令牌：{self.agent_token}",
+            "</identity>",
+            "",
+            "<team>",
+            f"团队成员：{team_members_str}",
+            "</team>",
+        ]
+
+        # 如果是 Manager，添加 team_workboard
+        if self.role_type == RoleType.LEADER and task_manager is not None:
+            task_list = task_manager.get_active_task_list(self.group_chat_context.group_chat_id)
+            if task_list and task_list.tasks:
+                content_parts.extend(
+                    [
+                        "",
+                        "<team_workboard>",
+                        "当前任务列表：",
+                    ]
+                )
+                for task in task_list.tasks:
+                    status_str = task.status.value.upper()
+                    content_parts.append(
+                        f"- [{status_str}] {task.task_id}: {task.content} (owner: {task.owner})"
+                    )
+                content_parts.append("</team_workboard>")
+
+        content_parts.append("</AGENT_RUNTIME>")
+
+        return "\n".join(content_parts)
+
+    def _inject_runtime_to_files(self, task_manager=None):
+        """注入 runtime 内容到 CLAUDE.md 和 AGENTS.md。
+
+        Args:
+            task_manager: TaskManager 实例（可选，仅 Manager 需要）
+        """
+        from pathlib import Path
+
+        from agents_hub.core.utils.markdown_injector import replace_marked_section
+
+        # 生成 runtime 内容
+        runtime_content = self._generate_runtime_content(task_manager)
+
+        # 获取 work_root
+        if not self.role_config.work_root:
+            return
+        work_root = Path(self.role_config.work_root)
+
+        # 注入到 CLAUDE.md
+        claude_md = work_root / "CLAUDE.md"
+        if claude_md.exists():
+            replace_marked_section(claude_md, "AGENT_RUNTIME", runtime_content)
+
+        # 注入到 AGENTS.md
+        agents_md = work_root / "AGENTS.md"
+        if agents_md.exists():
+            replace_marked_section(agents_md, "AGENT_RUNTIME", runtime_content)
+
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
         while self._run:
@@ -158,16 +245,23 @@ class Agent:
             if msg.call_id == "__STOP__":
                 break
 
-            # 3. 渲染 LLM prompt（不写回 msg.content）
+            # 3. 注入 runtime 到 CLAUDE.md/AGENTS.md
+            try:
+                self._inject_runtime_to_files(self.task_manager)
+            except Exception as e:
+                # 注入失败不应该影响消息处理
+                print(f"Warning: Runtime injection failed for {self.name}: {e}")
+
+            # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
             result = await self._process_message(msg, prompt)
 
-            # 3. 出口 A：写回群聊（@发起者 result.text）
+            # 5. 出口 A：写回群聊（@发起者 result.text）
             self.group_chat_context.add_message(
                 render_for_chat(self.name, msg.send_from, result.text)
             )
 
-            # 4. 出口 B：如果是 TASK 且发起者不是 user，投递回复
+            # 6. 出口 B：如果是 TASK 且发起者不是 user，投递回复
 
             if msg.message_type == MessageType.TASK and msg.send_from != "user":
                 # TODO ： 考虑这里是否真的需要发送全部信息？因为之前的对话记录中已经包含了result.text

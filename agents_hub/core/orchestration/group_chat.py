@@ -55,6 +55,11 @@ class GroupChat:
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
 
+        # 创建 TaskManager（用于 Agent Runtime 注入）
+        from agents_hub.core.communication import TaskManager
+
+        self.task_manager = TaskManager(self.group_chat_id, project_path)
+
     async def start(self):
         """
         启动群聊（首次创建）
@@ -120,7 +125,11 @@ class GroupChat:
         # 初始化 manager
         manager_role = role_manager.get_role("Leader")
         self.manager = Manager(
-            manager_role, self.group_chat_context, self.agent_call_manager, self.message_router
+            manager_role,
+            self.group_chat_context,
+            self.agent_call_manager,
+            self.message_router,
+            self.task_manager,
         )
 
         # 初始化 workers
@@ -131,7 +140,11 @@ class GroupChat:
         for role_name in self.team_members_name:
             role = role_manager.get_role(role_name)
             self.workers[role_name] = Worker(
-                role, self.group_chat_context, self.agent_call_manager, self.message_router
+                role,
+                self.group_chat_context,
+                self.agent_call_manager,
+                self.message_router,
+                self.task_manager,
             )
 
         # 注册所有 agent 到 message_router
