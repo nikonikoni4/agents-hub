@@ -279,7 +279,7 @@ class GroupChat:
         self.manager_task = None
         self.worker_tasks.clear()
 
-    async def _generate_and_register_tokens(self):
+    async def _generate_and_register_tokens(self) -> None:
         """
         为所有 agent 生成 token 并注册到 GroupChatManager
 
@@ -323,7 +323,7 @@ class GroupChat:
             self.group_chat_context.agent_session_id
         )
 
-    async def _restore_and_register_tokens(self):
+    async def _restore_and_register_tokens(self) -> None:
         """
         从持久化恢复 token 并注册到 GroupChatManager
 

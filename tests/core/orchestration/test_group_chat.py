@@ -6,7 +6,6 @@ import pytest
 
 from agents_hub.core.foundation import GroupChatType
 from agents_hub.core.orchestration import GroupChat
-from agents_hub.core.orchestration.group_chat_manager import GroupChatManager
 from agents_hub.core.orchestration.team import Team
 from agents_hub.utils.logger import setup_logging
 
