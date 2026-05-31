@@ -18,6 +18,12 @@ from agents_hub.mcp.errors import (
     # 错误响应函数
     make_error_response,
 )
+from agents_hub.mcp.server import (
+    archive_task_list,
+    assign_tasks_to_team,
+    call_agent,
+    check_agent_call,
+)
 
 __all__ = [
     # 错误码常量
@@ -32,4 +38,9 @@ __all__ = [
     "INTERNAL_ERROR",
     # 错误响应函数
     "make_error_response",
+    # MCP 工具
+    "call_agent",
+    "assign_tasks_to_team",
+    "archive_task_list",
+    "check_agent_call",
 ]
