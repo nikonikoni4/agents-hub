@@ -185,6 +185,7 @@ class GroupChatRepository:
                         "last_loaded_message_index", 0
                     ),
                 ),
+                token=session_data.get("token", ""),  # 加载 token 字段
             )
         return result
 
@@ -209,6 +210,7 @@ class GroupChatRepository:
                         "last_loaded_compact_index": session_info.context_state.last_loaded_compact_index,
                         "last_loaded_message_index": session_info.context_state.last_loaded_message_index,
                     },
+                    "token": session_info.token,  # 保存 token 字段
                 }
 
             # 写入文件
