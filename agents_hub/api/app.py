@@ -8,7 +8,12 @@ import asyncio
 
 from fastapi import FastAPI
 
+from .routes import router
+
 app = FastAPI(title="Agents Hub API", version="0.1.0")
+
+# 注册路由
+app.include_router(router)
 
 
 @app.get("/health")
