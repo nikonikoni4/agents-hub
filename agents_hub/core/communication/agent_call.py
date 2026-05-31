@@ -64,18 +64,63 @@ class AgentCall:
         elapsed = (datetime.now() - self.created_at).total_seconds()
         return elapsed > self.timeout_seconds
 
-    def can_be_deleted(self) -> bool:
+    def can_be_deleted(self, retention_config: dict[str, int] | None = None) -> bool:
         """
         判断是否可以删除
 
-        TODO: 删除逻辑未确认，需要根据以下因素决定：
-        1. 已完成且超过一定时间（如 1 小时）？
-        2. NOTIFICATION 类型的消息完成后立即删除？
-        3. TASK 类型的消息需要保留更久？
-        4. 是否需要考虑 business_task_id 关联？
-        5. 是否需要持久化到磁盘以便审计和恢复？
+        删除策略：
+        1. 运行中的调用（PENDING/RUNNING）：不删除
+        2. 有业务任务关联的调用：不删除（由业务任务管理器决定）
+        3. NOTIFICATION 类型 + COMPLETED：完成后 5 分钟可删除
+        4. TASK 类型 + COMPLETED：完成后 1 小时可删除
+        5. FAILED/TIMEOUT：完成后 24 小时可删除（用于调试）
+
+        Args:
+            retention_config: 自定义保留时间配置（秒），格式：
+                {
+                    "notification_completed": 300,  # NOTIFICATION 完成后保留 5 分钟
+                    "task_completed": 3600,         # TASK 完成后保留 1 小时
+                    "failed": 86400,                # 失败后保留 24 小时
+                }
 
         Returns:
             bool: 是否可以删除
         """
+        # 默认保留时间配置（秒）
+        default_retention = {
+            "notification_completed": 300,  # 5 分钟
+            "task_completed": 3600,  # 1 小时
+            "failed": 86400,  # 24 小时
+        }
+        retention = retention_config or default_retention
+
+        # 1. 运行中的调用不删除
+        if self.status in (CallStatus.PENDING, CallStatus.RUNNING):
+            return False
+
+        # 2. 有业务任务关联的调用不删除
+        if self.business_task_id is not None:
+            return False
+
+        # 3. 必须有完成时间才能判断
+        if self.completed_at is None:
+            return False
+
+        # 计算完成后经过的时间
+        elapsed_since_completion = (datetime.now() - self.completed_at).total_seconds()
+
+        # 4. 根据状态和消息类型判断
+        if self.status == CallStatus.COMPLETED:
+            if self.message_type == MessageType.NOTIFICATION:
+                # NOTIFICATION 完成后 5 分钟可删除
+                return elapsed_since_completion > retention["notification_completed"]
+            elif self.message_type == MessageType.TASK:
+                # TASK 完成后 1 小时可删除
+                return elapsed_since_completion > retention["task_completed"]
+
+        elif self.status in (CallStatus.FAILED, CallStatus.TIMEOUT):
+            # 失败/超时后 24 小时可删除
+            return elapsed_since_completion > retention["failed"]
+
+        # 默认不删除
         return False

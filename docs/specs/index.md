@@ -9,3 +9,9 @@
  - path: `docs/specs/2026-05-24-agents-role.md`
  - 触发规则：当设计、修改或扩展 roles 角色配置模块时阅读，包括角色 CRUD、头像管理、Skill 管理和权限配置
  - 内容摘要：roles 角色配置模块的正式规格，定义角色生命周期管理、配置数据结构（RoleConfig/RoleInfo）、头像引用机制和 Skill 管理
+
+## agent-call-cleanup-strategy
+ - updated_at : 2026-05-31
+ - path: `docs/specs/agent-call-cleanup-strategy.md`
+ - 触发规则：当需要了解或修改 AgentCall 的清理策略、保留时间配置或 AgentCallManager 的后台清理机制时阅读
+ - 内容摘要：AgentCall 清理策略的完整说明，定义了基于状态（COMPLETED/FAILED/TIMEOUT）和消息类型（TASK/NOTIFICATION）的删除规则、保留时间配置和 AgentCallManager 的后台清理实现
