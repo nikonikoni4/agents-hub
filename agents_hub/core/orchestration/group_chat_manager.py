@@ -19,6 +19,7 @@ class GroupChatManager:
 
     def __init__(self):
         self._group_chats: dict[str, GroupChat] = {}
+        self._tokens: dict[str, tuple[str, str]] = {}  # token → (agent_name, group_chat_id)
 
     def register(self, group_chat_id: str, group_chat: GroupChat):
         """注册一个 GroupChat"""
@@ -56,6 +57,49 @@ class GroupChatManager:
             await group_chat.cleanup(timeout=timeout)
             # 再删除引用
             self._group_chats.pop(group_chat_id, None)
+            # 清理该群聊的所有 token
+            self.unregister_tokens(group_chat_id)
+
+    def register_token(self, token: str, agent_name: str, group_chat_id: str):
+        """
+        注册一个 token，用于 MCP 工具的身份验证
+
+        Args:
+            token: 唯一标识符
+            agent_name: Agent 名称
+            group_chat_id: 群聊 ID
+        """
+        self._tokens[token] = (agent_name, group_chat_id)
+
+    def unregister_tokens(self, group_chat_id: str):
+        """
+        注销指定群聊的所有 token
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        注意：
+        - 如果 group_chat_id 不存在，静默返回（幂等性）
+        """
+        # 找出所有属于该群聊的 token
+        tokens_to_remove = [
+            token for token, (_, gid) in self._tokens.items() if gid == group_chat_id
+        ]
+        # 删除这些 token
+        for token in tokens_to_remove:
+            self._tokens.pop(token, None)
+
+    def resolve_token(self, token: str) -> tuple[str, str] | None:
+        """
+        解析 token 为身份信息
+
+        Args:
+            token: 唯一标识符
+
+        Returns:
+            (agent_name, group_chat_id) 或 None（token 不存在时）
+        """
+        return self._tokens.get(token)
 
 
 # 全局单例
