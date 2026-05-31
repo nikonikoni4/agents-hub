@@ -35,9 +35,27 @@ class GroupChatManager:
             raise GroupChatNotFoundError(group_chat_id)
         return group_chat
 
-    def unregister(self, group_chat_id: str):
-        """注销一个 GroupChat"""
-        self._group_chats.pop(group_chat_id, None)
+    async def unregister(self, group_chat_id: str, timeout: float = 10.0):
+        """
+        注销一个 GroupChat，确保资源安全释放
+
+        此方法会先调用 GroupChat.cleanup() 清理所有资源，
+        然后再从注册表中删除引用。
+
+        Args:
+            group_chat_id: 群聊 ID
+            timeout: 清理超时时间（秒），默认 10 秒
+
+        注意：
+        - 如果 group_chat_id 不存在，静默返回（幂等性）
+        - 清理超时后会强制取消任务
+        """
+        group_chat = self._group_chats.get(group_chat_id)
+        if group_chat:
+            # 先清理资源
+            await group_chat.cleanup(timeout=timeout)
+            # 再删除引用
+            self._group_chats.pop(group_chat_id, None)
 
 
 # 全局单例

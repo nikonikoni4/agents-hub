@@ -51,6 +51,34 @@ class Agent:
         # TODO 后续使用，暂时占位
         self._run = run
 
+    async def stop(self):
+        """
+        停止 Agent 的 run() 循环
+
+        使用双重保险机制：
+        1. 设置 _run 标志为 False
+        2. 发送哨兵消息唤醒可能阻塞在 queue.get() 的任务
+
+        哨兵消息会被 run() 循环识别并跳过处理，直接退出循环。
+        """
+        # 设置停止标志
+        self._run = False
+
+        # 发送哨兵消息，唤醒可能阻塞的 get()
+        try:
+            sentinel = AgentMessage(
+                call_id="__STOP__",
+                send_from="__SYSTEM__",
+                send_to=self.name,
+                content="__STOP__",
+                session_type=SessionType.MAIN,
+                message_type=MessageType.NOTIFICATION,
+            )
+            self.message_queue.put_nowait(sentinel)
+        except asyncio.QueueFull:
+            # 队列满了也没关系，_run=False 会让循环在处理完当前消息后退出
+            pass
+
     def send_message_to_agent(self, call_id: str, send_to: str, content: str):
         """投递消息给指定 agent。
 
@@ -126,7 +154,11 @@ class Agent:
             # 1. 从队列中取回消息
             msg: AgentMessage = await self.message_queue.get()
 
-            # 2. 渲染 LLM prompt（不写回 msg.content）
+            # 2. 检查是否是停止信号
+            if msg.call_id == "__STOP__":
+                break
+
+            # 3. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
             result = await self._process_message(msg, prompt)
 

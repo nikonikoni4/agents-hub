@@ -84,3 +84,23 @@ class MessageRouter:
             raise AgentNotFoundError(message.send_from)
         if message.send_to not in self._agents_queue:
             raise AgentNotFoundError(message.send_to)
+
+    def clear(self):
+        """
+        清空所有消息队列并注销所有 Agent
+
+        此方法用于资源清理，确保：
+        1. 所有队列中的消息被清空
+        2. 所有 Agent 注册被移除
+        3. 可以多次调用（幂等性）
+        """
+        # 清空所有队列中的消息
+        for queue in self._agents_queue.values():
+            while not queue.empty():
+                try:
+                    queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+
+        # 清空注册表
+        self._agents_queue.clear()

@@ -204,3 +204,19 @@ class GroupChatContext:
         # 更新 last_compacted_loc
         self.group_chat_session.last_compacted_loc = len(self.group_chat_session.messages)
         await self.repository.save_group_chat_session(self.group_chat_session)
+
+    def close(self):
+        """
+        关闭上下文，释放资源
+
+        此方法用于资源清理，确保：
+        1. Repository 被关闭（释放文件锁等）
+        2. 内存引用被清空
+        3. 可以多次调用（幂等性）
+        """
+        # 关闭 repository
+        self.repository.close()
+
+        # 清空引用
+        self.group_chat_session = None
+        self.agent_session_id.clear()

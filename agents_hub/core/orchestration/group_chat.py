@@ -204,3 +204,63 @@ class GroupChat:
             await self.manager_task
         for task in self.worker_tasks:
             await task
+
+    async def cleanup(self, timeout: float = 10.0):
+        """
+        清理所有资源，确保安全退出
+
+        此方法协调所有组件的清理，确保：
+        1. 所有 Agent 任务被停止
+        2. AgentCallManager 清理任务被停止
+        3. MessageRouter 被清空
+        4. GroupChatContext 被关闭
+        5. 所有引用被清空
+
+        Args:
+            timeout: 等待任务完成的超时时间（秒），默认 10 秒
+
+        注意：
+        - 可以多次调用（幂等性）
+        - 超时后会强制取消任务
+        - 清理过程中的异常不会阻止其他资源清理
+        """
+        # 1. 停止所有 Agent（发送停止信号）
+        if self.manager:
+            await self.manager.stop()
+        for worker in self.workers.values():
+            await worker.stop()
+
+        # 2. 等待所有任务完成（设置超时）
+        tasks = []
+        if self.manager_task and not self.manager_task.done():
+            tasks.append(self.manager_task)
+        tasks.extend([t for t in self.worker_tasks if not t.done()])
+
+        if tasks:
+            try:
+                # 等待任务自然退出
+                await asyncio.wait_for(
+                    asyncio.gather(*tasks, return_exceptions=True), timeout=timeout
+                )
+            except asyncio.TimeoutError:
+                # 超时则强制取消
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                # 等待取消完成
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+        # 3. 停止 AgentCallManager 清理任务
+        await self.agent_call_manager.stop_cleanup()
+
+        # 4. 清空 MessageRouter
+        self.message_router.clear()
+
+        # 5. 关闭 GroupChatContext
+        self.group_chat_context.close()
+
+        # 6. 清空引用
+        self.workers.clear()
+        self.manager = None
+        self.manager_task = None
+        self.worker_tasks.clear()

@@ -266,3 +266,18 @@ class GroupChatRepository:
                 raise FileSystemError(
                     operation="write", path=self.compact_history_file, reason=str(e)
                 ) from e
+
+    # ==================== 资源清理 ====================
+
+    def close(self):
+        """
+        关闭 Repository，释放资源
+
+        此方法用于资源清理。当前实现使用 asyncio.Lock，
+        不需要显式释放，但预留此接口用于未来可能的文件锁等资源。
+
+        可以多次调用（幂等性）。
+        """
+        # 当前使用 asyncio.Lock，不需要显式释放
+        # 如果未来使用文件锁（如 fcntl.flock），在这里释放
+        pass
