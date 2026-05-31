@@ -2,6 +2,8 @@
 测试 GroupChatManager 的 token 索引管理功能
 """
 
+import threading
+
 from agents_hub.core.orchestration.group_chat_manager import GroupChatManager
 
 
@@ -94,3 +96,43 @@ class TestGroupChatManagerTokens:
 
         # manager2 不应该能解析 manager1 的 token
         assert manager2.resolve_token("token_1") is None
+
+    def test_token_thread_safety(self):
+        """测试 token 操作的线程安全性"""
+        manager = GroupChatManager()
+        errors = []
+
+        def register_tokens():
+            try:
+                for i in range(100):
+                    manager.register_token(f"tok_{i}", f"agent_{i}", "gc_1")
+            except Exception as e:
+                errors.append(e)
+
+        def resolve_tokens():
+            try:
+                for i in range(100):
+                    manager.resolve_token(f"tok_{i}")
+            except Exception as e:
+                errors.append(e)
+
+        def unregister_tokens():
+            try:
+                for _ in range(10):
+                    manager.unregister_tokens("gc_1")
+            except Exception as e:
+                errors.append(e)
+
+        threads = [
+            threading.Thread(target=register_tokens),
+            threading.Thread(target=resolve_tokens),
+            threading.Thread(target=unregister_tokens),
+        ]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # 验证没有发生异常
+        assert len(errors) == 0

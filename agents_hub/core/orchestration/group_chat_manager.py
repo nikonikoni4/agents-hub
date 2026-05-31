@@ -4,6 +4,8 @@ GroupChatManager 群聊管理器
 全局管理所有 GroupChat 实例，提供 call_agent MCP 工具入口。
 """
 
+import threading
+
 from agents_hub.core.communication import AgentCall
 from agents_hub.core.foundation import (
     AgentMessage,
@@ -15,11 +17,16 @@ from .group_chat import GroupChat
 
 
 class GroupChatManager:
-    """管理所有 GroupChat 实例的全局注册表"""
+    """
+    管理所有 GroupChat 实例的全局注册表
+
+    线程安全：token 索引操作使用 RLock 保护，确保在 FastMCP HTTP 多线程环境下的正确性。
+    """
 
     def __init__(self):
         self._group_chats: dict[str, GroupChat] = {}
         self._tokens: dict[str, tuple[str, str]] = {}  # token → (agent_name, group_chat_id)
+        self._token_lock = threading.RLock()  # 保护 _tokens 字典的并发访问
 
     def register(self, group_chat_id: str, group_chat: GroupChat):
         """注册一个 GroupChat"""
@@ -68,8 +75,11 @@ class GroupChatManager:
             token: 唯一标识符
             agent_name: Agent 名称
             group_chat_id: 群聊 ID
+
+        线程安全：使用锁保护 token 字典的并发写入
         """
-        self._tokens[token] = (agent_name, group_chat_id)
+        with self._token_lock:
+            self._tokens[token] = (agent_name, group_chat_id)
 
     def unregister_tokens(self, group_chat_id: str):
         """
@@ -80,14 +90,17 @@ class GroupChatManager:
 
         注意：
         - 如果 group_chat_id 不存在，静默返回（幂等性）
+
+        线程安全：使用锁保护 token 字典的并发修改
         """
-        # 找出所有属于该群聊的 token
-        tokens_to_remove = [
-            token for token, (_, gid) in self._tokens.items() if gid == group_chat_id
-        ]
-        # 删除这些 token
-        for token in tokens_to_remove:
-            self._tokens.pop(token, None)
+        with self._token_lock:
+            # 找出所有属于该群聊的 token
+            tokens_to_remove = [
+                token for token, (_, gid) in self._tokens.items() if gid == group_chat_id
+            ]
+            # 删除这些 token
+            for token in tokens_to_remove:
+                self._tokens.pop(token, None)
 
     def resolve_token(self, token: str) -> tuple[str, str] | None:
         """
@@ -98,8 +111,11 @@ class GroupChatManager:
 
         Returns:
             (agent_name, group_chat_id) 或 None（token 不存在时）
+
+        线程安全：使用锁保护 token 字典的并发读取
         """
-        return self._tokens.get(token)
+        with self._token_lock:
+            return self._tokens.get(token)
 
 
 # 全局单例
