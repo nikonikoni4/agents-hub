@@ -1,0 +1,205 @@
+---
+version: 1.0
+created_at: 2026-05-31
+updated_at: 2026-05-31
+last_updated: 初稿
+abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制和 MCP 工具入口
+id: spec-core-agent-orchestration
+title: Core Agent & Orchestration 层规格
+status: draft
+module: core/agent, core/orchestration
+sourc_spec: null
+related_plan: null
+code_scope:
+  - agents_hub/core/agent/
+  - agents_hub/core/orchestration/
+contract_refs:
+  - agents_hub/core/agent/base_agent.py
+  - agents_hub/core/agent/manager.py
+  - agents_hub/core/agent/worker.py
+  - agents_hub/core/orchestration/team.py
+  - agents_hub/core/orchestration/group_chat.py
+  - agents_hub/core/orchestration/group_chat_manager.py
+  - agents_hub/core/foundation/models.py
+  - agents_hub/core/foundation/renderer.py
+---
+
+# Core Agent & Orchestration 层规格
+
+## 版本
+
+| 版本 | 更新内容 |
+| ---- | -------- |
+| 1.0 | 创建 spec 初稿 |
+
+## Overview
+
+agent 和 orchestration 是 core 的**上层**，共同实现多 Agent 协作的完整流程：
+
+- **agent 层**：定义 Agent 的执行模型——消息循环、上下文加载、LLM 调用、回复投递
+- **orchestration 层**：定义群聊的编排机制——团队组建、群聊生命周期、成员管理、MCP 工具入口
+
+两者合为一个 spec，因为 orchestration 直接创建和管理 Agent 实例，Agent 的行为只有在群聊上下文中才有意义。
+
+## Scope
+
+### 范围内
+
+- Agent 基类的消息循环（run loop）和执行流程
+- Manager / Worker 角色模型
+- Team 定义和成员验证
+- GroupChat 的启动、加载、初始化、停止、清理流程
+- GroupChatManager 的全局注册表和 MCP 工具入口
+
+### 范围外
+
+- Agent 的具体 LLM 调用实现（属于 agent_bridge）
+- 消息路由和调用管理的底层机制（属于 communication 层）
+- 上下文和持久化的底层机制（属于 context 层）
+- Role 配置的 CRUD 管理（属于 roles 模块）
+
+## Core Behavior
+
+### Agent 执行模型
+
+每个 Agent 运行一个**消息循环**（run loop），从私有队列中取出消息并处理：
+
+```
+while _run:
+    msg = await message_queue.get()     ← 从 MessageRouter 投递的队列取消息
+    if msg 是停止信号: break
+    prompt = render_for_llm(msg)         ← 渲染为 LLM prompt
+    result = await _process_message(msg, prompt)  ← 执行
+    写回群聊记录                           ← 出口 A
+    如果是 TASK 且发送者不是 user:         ← 出口 B
+        投递通知给发送者
+```
+
+**消息处理流程**（_process_message）：
+1. 更新调用状态为 RUNNING
+2. 如果是 MAIN 会话：加载增量上下文 + 拼接 prompt → execute()
+3. 如果是 BTW 会话：直接 btw_execute()
+4. 更新调用状态为 COMPLETED 或 FAILED
+
+**渲染分工**：
+- 入站 prompt：render_for_llm（msg.content 不被改写）
+- 出口 A 写群聊：render_for_chat
+- 出口 B 投递回复：传递 result.text 原文
+
+**停止机制**：双重保险——设置 _run=False 标志 + 发送哨兵消息（call_id="__STOP__"）唤醒阻塞的 get()。
+
+### 角色模型
+
+Agent 分为两种角色，当前行为相同，预留扩展点：
+
+| 角色 | 类 | 职责 |
+|------|-----|------|
+| Manager | Manager(Agent) | 团队管理者，负责任务分配和协调 |
+| Worker | Worker(Agent) | 团队工作者，执行具体任务 |
+
+每个 Agent 持有：
+- `role_config`：从 Role 获取的配置（名称、平台、工作目录等）
+- `message_queue`：私有消息队列
+- `group_chat_context`：群聊上下文引用
+- `agent_context`：个人上下文（增量加载）
+- `message_router`：消息路由器引用
+- `agent_call_manager`：调用管理器引用
+
+### Team 定义
+
+Team 是一个 Pydantic 模型，定义团队成员列表：
+
+- `team_members_name`：成员名称列表（必须非空）
+- `team_name`：团队名称（默认 "default_team"）
+
+**验证规则**：创建时通过 RoleManager 验证每个成员名称对应的角色是否存在。
+
+### GroupChat 生命周期
+
+GroupChat 是核心编排单元，协调 Agent、消息路由和上下文管理。
+
+**启动流程**（start / load）：
+1. 加载上下文数据（GroupChatContext.load()）
+2. 初始化 Manager 和 Workers（通过 RoleManager 获取角色配置）
+3. 注册所有 Agent 到 MessageRouter
+4. 初始化新成员（首次进入群聊的 Agent 执行打招呼）
+5. 启动所有 Agent 的 run() 任务
+
+**新成员初始化**：
+- 检查哪些成员没有 session_id
+- Manager：介绍自己是团队领导，列出成员
+- Worker：介绍自己，说明直属领导
+- 并发执行所有新成员的初始化
+
+**群聊类型**：
+- `SEQUENCE_EXECUTE`：流水线顺序执行
+- `MANAGER_ORCHESTRATE`：由 Manager 动态决定安排
+
+**清理流程**（cleanup）：
+1. 停止所有 Agent（发送停止信号）
+2. 等待任务完成（超时后强制取消）
+3. 停止 AgentCallManager 清理任务
+4. 清空 MessageRouter
+5. 关闭 GroupChatContext
+6. 清空所有引用
+
+**压缩历史**：compact_history() 方法收集所有 Agent 的职责描述，调用 context 层的压缩逻辑。
+
+### GroupChatManager 全局注册表
+
+GroupChatManager 是全局单例，管理所有 GroupChat 实例：
+
+- `register(group_chat_id, group_chat)`：注册群聊
+- `get_group_chat(group_chat_id)`：获取群聊（不存在抛 GroupChatNotFoundError）
+- `unregister(group_chat_id)`：注销群聊（先 cleanup 再删除引用，幂等）
+
+### MCP 工具入口
+
+`call_agent` 函数是 MCP Tool 的入口，Agent 平台（Claude Code / Codex）通过此函数与其他 Agent 对话：
+
+**流程**：
+1. 通过 GroupChatManager 获取 GroupChat
+2. 创建 AgentCall（根据 need_response 决定 TASK 或 NOTIFICATION）
+3. 通过 MessageRouter 发送消息
+4. 返回 call_id 供查询
+
+**参数**：
+
+| 参数 | 说明 |
+|------|------|
+| group_chat_id | 群聊 ID |
+| send_from | 发送者名称 |
+| send_to | 接收者名称 |
+| content | 消息内容 |
+| need_response | 是否需要回复（决定 MessageType） |
+| timeout_seconds | 超时阈值（可选） |
+
+## Technical Contract
+
+### 跨层依赖
+
+```
+orchestration → agent → communication → foundation
+                  ↓           ↓
+              context ────────┘
+```
+
+- agent 层依赖 communication（MessageRouter、AgentCallManager）和 context（GroupChatContext、AgentContext）
+- orchestration 层依赖 agent（Agent、Manager、Worker）和 context（GroupChatContext）
+- orchestration 层的 GroupChat 是唯一同时持有 communication 和 context 实例的组件
+
+### MCP Tool 契约
+
+call_agent 返回 call_id（字符串），调用方可通过此 ID 查询调用状态。错误时返回 MCP 响应格式的错误信息。
+
+### 与 agent_bridge 的协作
+
+Agent.execute() 和 Agent.btw_execute() 委托给 agent_bridge 的 agent_platform_client，传入渲染好的 prompt、role_config 和 session_id。Agent 不直接管理 CLI 进程。
+
+## Out of Spec
+
+- Manager 和 Worker 的行为差异（当前无差异，未来由编排策略决定）
+- GroupChatType 的具体编排实现（SEQUENCE_EXECUTE 和 MANAGER_ORCHESTRATE 的调度逻辑待实现）
+- Agent 的 set_run() 方法（当前占位，未来用于暂停/恢复 Agent）
+- Role 配置的详细结构（属于 roles 模块 spec）
+- agent_bridge 的执行细节（属于 agent_bridge spec）
