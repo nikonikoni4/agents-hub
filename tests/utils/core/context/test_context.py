@@ -1,0 +1,277 @@
+"""
+Context 层单元测试
+
+契约：
+1. group_chat_session.py: 默认值、add_message、get_uncompact_messages
+2. group_chat_repository.py: _sanitize_project_path、load/save 往返一致性
+3. group_chat_context.py: close 清空引用、add_message 未 load 抛异常
+"""
+
+from datetime import datetime
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from agents_hub.core.context.group_chat_context import GroupChatContext
+from agents_hub.core.context.group_chat_repository import GroupChatRepository
+from agents_hub.core.context.group_chat_session import (
+    AgentContextState,
+    AgentSessionInfo,
+    GroupChatSession,
+)
+from agents_hub.core.foundation import StateError
+
+
+# ==================== group_chat_session.py ====================
+
+
+class TestAgentContextState:
+    """测试 AgentContextState"""
+
+    def test_defaults(self):
+        """契约：默认值为 0"""
+        state = AgentContextState()
+        assert state.last_loaded_compact_index == 0
+        assert state.last_loaded_message_index == 0
+
+    def test_custom_values(self):
+        """契约：可自定义值"""
+        state = AgentContextState(last_loaded_compact_index=5, last_loaded_message_index=10)
+        assert state.last_loaded_compact_index == 5
+        assert state.last_loaded_message_index == 10
+
+
+class TestAgentSessionInfo:
+    """测试 AgentSessionInfo"""
+
+    def test_defaults(self):
+        """契约：默认值正确"""
+        info = AgentSessionInfo()
+        assert info.main_session == ""
+        assert info.btw_session == []
+        assert isinstance(info.context_state, AgentContextState)
+
+    def test_btw_session_isolation(self):
+        """契约：不同实例的 btw_session 互不影响"""
+        a = AgentSessionInfo()
+        b = AgentSessionInfo()
+        a.btw_session.append("s1")
+        assert "s1" not in b.btw_session
+
+
+class TestGroupChatSession:
+    """测试 GroupChatSession"""
+
+    def test_defaults(self):
+        """契约：默认值正确"""
+        session = GroupChatSession(group_chat_id="test_id")
+        assert session.group_chat_id == "test_id"
+        assert session.messages == []
+        assert session.last_compacted_loc == 0
+        assert session.created_at is not None
+        assert session.updated_at is not None
+
+    def test_add_message(self):
+        """契约：add_message 追加消息到 messages 列表"""
+        session = GroupChatSession(group_chat_id="gc1")
+        result = SimpleNamespace(
+            agent_name="agent_a",
+            text="hello",
+            timestamp="2026-01-01T00:00:00",
+            platform=SimpleNamespace(value="claude"),
+        )
+        session.add_message(result)
+
+        assert len(session.messages) == 1
+        assert session.messages[0]["agent_name"] == "agent_a"
+        assert session.messages[0]["content"] == "hello"
+        assert session.messages[0]["platform"] == "claude"
+
+    def test_get_uncompact_messages_from_zero(self):
+        """契约：last_compacted_loc=0 时返回所有消息"""
+        session = GroupChatSession(group_chat_id="gc1")
+        session.messages = [
+            {"agent_name": "a", "content": "m1"},
+            {"agent_name": "b", "content": "m2"},
+        ]
+        result = session.get_uncompact_messages()
+        assert len(result) == 2
+
+    def test_get_uncompact_messages_from_offset(self):
+        """契约：从 last_compacted_loc 开始返回消息"""
+        session = GroupChatSession(group_chat_id="gc1")
+        session.messages = [
+            {"agent_name": "a", "content": "m1"},
+            {"agent_name": "b", "content": "m2"},
+            {"agent_name": "c", "content": "m3"},
+        ]
+        session.last_compacted_loc = 1
+        result = session.get_uncompact_messages()
+        assert len(result) == 2
+        assert result[0]["content"] == "m2"
+
+    def test_get_uncompact_messages_all_compacted(self):
+        """契约：全部已压缩时返回空列表"""
+        session = GroupChatSession(group_chat_id="gc1")
+        session.messages = [{"agent_name": "a", "content": "m1"}]
+        session.last_compacted_loc = 1
+        result = session.get_uncompact_messages()
+        assert result == []
+
+
+# ==================== group_chat_repository.py ====================
+
+
+class TestGroupChatRepositorySanitize:
+    """测试路径清理"""
+
+    def test_sanitize_forward_slash(self):
+        """契约：/ 转为 -"""
+        result = GroupChatRepository._sanitize_project_path("a/b/c")
+        assert result == "a-b-c"
+
+    def test_sanitize_backslash(self):
+        """契约：\\ 转为 -"""
+        result = GroupChatRepository._sanitize_project_path("a\\b\\c")
+        assert result == "a-b-c"
+
+    def test_sanitize_colon(self):
+        """契约：: 转为 -"""
+        result = GroupChatRepository._sanitize_project_path("C:Users")
+        assert result == "C-Users"
+
+    def test_sanitize_consecutive_dashes(self):
+        """契约：连续横线合并为单个"""
+        result = GroupChatRepository._sanitize_project_path("a///b")
+        assert result == "a-b"
+
+    def test_sanitize_strips_leading_trailing(self):
+        """契约：去除首尾横线"""
+        result = GroupChatRepository._sanitize_project_path("/a/b/")
+        assert result == "a-b"
+
+
+class TestGroupChatRepositoryLoadSession:
+    """测试 load_group_chat_session"""
+
+    @pytest.mark.asyncio
+    async def test_load_session_file_not_exists(self, tmp_path):
+        """契约：文件不存在返回空 session"""
+        repo = GroupChatRepository("gc1", "test/project")
+        # 覆盖路径到临时目录
+        repo.group_chat_session_path = str(tmp_path / "gc1")
+        repo.messages_file = str(tmp_path / "gc1" / "gc1.jsonl")
+
+        with patch("agents_hub.core.context.group_chat_repository.os.makedirs"):
+            session = await repo.load_group_chat_session()
+
+        assert session.group_chat_id == "gc1"
+        assert session.messages == []
+
+
+class TestGroupChatRepositoryRoundtrip:
+    """测试 save/load 往返一致性"""
+
+    @pytest.mark.asyncio
+    async def test_save_load_agent_state_roundtrip(self, tmp_path):
+        """契约：save/load agent_session_state 往返一致"""
+        repo = GroupChatRepository("gc1", "test/project")
+        repo.session_file = str(tmp_path / "agent_session_state.json")
+
+        state = {
+            "agent_a": AgentSessionInfo(
+                main_session="sess_1",
+                btw_session=["btw_1"],
+                context_state=AgentContextState(
+                    last_loaded_compact_index=3,
+                    last_loaded_message_index=7,
+                ),
+            )
+        }
+
+        with patch("agents_hub.core.context.group_chat_repository.os.makedirs"):
+            await repo.save_agent_session_state(state)
+            loaded = await repo.load_agent_session_state()
+
+        assert "agent_a" in loaded
+        assert loaded["agent_a"].main_session == "sess_1"
+        assert loaded["agent_a"].btw_session == ["btw_1"]
+        assert loaded["agent_a"].context_state.last_loaded_compact_index == 3
+        assert loaded["agent_a"].context_state.last_loaded_message_index == 7
+
+    @pytest.mark.asyncio
+    async def test_save_load_compact_history_roundtrip(self, tmp_path):
+        """契约：save/load compact_history 往返一致"""
+        repo = GroupChatRepository("gc1", "test/project")
+        repo.compact_history_file = str(tmp_path / "compact_history.jsonl")
+
+        history = [
+            {"create_at": "2026-01-01", "content": {"summary": "s1", "agent_a": "a1"}},
+            {"create_at": "2026-01-02", "content": {"summary": "s2"}},
+        ]
+
+        with patch("agents_hub.core.context.group_chat_repository.os.makedirs"):
+            await repo.save_compact_history(history)
+            loaded = await repo.load_compact_history()
+
+        assert len(loaded) == 2
+        assert loaded[0]["content"]["summary"] == "s1"
+        assert loaded[1]["content"]["summary"] == "s2"
+
+    @pytest.mark.asyncio
+    async def test_load_compact_history_file_not_exists(self, tmp_path):
+        """契约：compact_history 文件不存在返回空列表"""
+        repo = GroupChatRepository("gc1", "test/project")
+        repo.compact_history_file = str(tmp_path / "nonexistent.jsonl")
+
+        loaded = await repo.load_compact_history()
+        assert loaded == []
+
+
+# ==================== group_chat_context.py ====================
+
+
+class TestGroupChatContextClose:
+    """测试 GroupChatContext.close()"""
+
+    def test_close_clears_references(self):
+        """契约：close() 清空 group_chat_session 和 agent_session_id"""
+        with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
+            ctx = GroupChatContext.__new__(GroupChatContext)
+            ctx.group_chat_session = GroupChatSession(group_chat_id="gc1")
+            ctx.agent_session_id = {"a": AgentSessionInfo()}
+            ctx.repository = MagicMock()
+
+            ctx.close()
+
+            assert ctx.group_chat_session is None
+            assert ctx.agent_session_id == {}
+
+    def test_close_idempotent(self):
+        """契约：close() 可多次调用不报错"""
+        with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
+            ctx = GroupChatContext.__new__(GroupChatContext)
+            ctx.group_chat_session = GroupChatSession(group_chat_id="gc1")
+            ctx.agent_session_id = {"a": AgentSessionInfo()}
+            ctx.repository = MagicMock()
+
+            ctx.close()
+            ctx.close()  # 第二次不应报错
+
+
+class TestGroupChatContextAddMessage:
+    """测试 add_message 未加载场景"""
+
+    @pytest.mark.asyncio
+    async def test_add_message_before_load_raises(self):
+        """契约：未 load 时 add_message 抛 StateError"""
+        with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
+            ctx = GroupChatContext.__new__(GroupChatContext)
+            ctx.group_chat_session = None
+            ctx.agent_session_id = {}
+            ctx.repository = MagicMock()
+
+            with pytest.raises(StateError):
+                await ctx.add_message(SimpleNamespace(agent_name="a", text="hi"))
