@@ -28,6 +28,10 @@ class GroupChat:
     1. session_id，管理与每个 team member 的 session_id
     2. 初始化各个 member 的状态，在群聊中回复
     3. 管理消息路由和 agent 生命周期
+
+    启动方式：
+    - start(): 首次创建群聊
+    - load(): 加载已有群聊，验证 role 有效性
     """
 
     def __init__(
@@ -52,7 +56,7 @@ class GroupChat:
 
     async def start(self):
         """
-        启动群聊
+        启动群聊（首次创建）
 
         1. 加载上下文数据
         2. 初始化 manager 和 workers
@@ -63,14 +67,53 @@ class GroupChat:
         # 1. 加载上下文数据
         await self.group_chat_context.load()
 
-        # 2. 初始化 manager
+        # 2-4. 初始化并注册 agents（含 role 验证）
+        await self._init_agents()
+
+        # 5. 初始化新成员（第一次会话的成员）
+        await self._initialize_new_members()
+
+        # 6. 启动所有 agent 的 run() 任务
+        assert self.manager is not None
+        self.manager_task = asyncio.create_task(self.manager.run())
+        self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
+
+    async def load(self):
+        """
+        加载已有的群聊
+
+        从 agent_session_id.json 加载已有 session，恢复 manager 和 workers，
+        并验证每个 role 是否存在。对新增成员执行初始化（打招呼）。
+        """
+        # 1. 加载上下文数据
+        await self.group_chat_context.load()
+
+        # 2. 初始化并注册 agents（含 role 验证）
+        await self._init_agents()
+
+        # 3. 初始化新成员（第一次会话的成员）
+        await self._initialize_new_members()
+
+        # 4. 启动所有 agent 的 run() 任务
+        assert self.manager is not None
+        self.manager_task = asyncio.create_task(self.manager.run())
+        self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
+
+    async def _init_agents(self):
+        """
+        初始化 manager 和 workers，注册到 message_router
+
+        RoleManager.get_role() 会验证 role 是否存在，不存在则抛出 RoleNotFoundError。
+        """
         role_manager = RoleManager()
+
+        # 初始化 manager
         manager_role = role_manager.get_role("Leader")
         self.manager = Manager(
             manager_role, self.group_chat_context, self.agent_call_manager, self.message_router
         )
 
-        # 3. 初始化 workers
+        # 初始化 workers
         if not self.team_members_name:
             print("warning : 无团队成员")
             return
@@ -81,17 +124,10 @@ class GroupChat:
                 role, self.group_chat_context, self.agent_call_manager, self.message_router
             )
 
-        # 4. 注册所有 agent 到 message_router
+        # 注册所有 agent 到 message_router
         self.message_router.register(self.manager.name, self.manager.message_queue)
         for worker in self.workers.values():
             self.message_router.register(worker.name, worker.message_queue)
-
-        # 5. 初始化新成员（第一次会话的成员）
-        await self._initialize_new_members()
-
-        # 6. 启动所有 agent 的 run() 任务
-        self.manager_task = asyncio.create_task(self.manager.run())
-        self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
 
     async def _initialize_new_members(self):
         """
@@ -154,7 +190,7 @@ class GroupChat:
         await self.group_chat_context.compact_messages(agent_info)
 
     async def stop(self):
-        """停止群聊，停止所有 agent 的 run() 任务"""
+        """停止群聊，停止所有 agent 的 run() 任务。 暂时不要使用这个方法"""
         # 设置所有 agent 停止
         if self.manager:
             self.manager.set_run(False)
