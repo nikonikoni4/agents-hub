@@ -26,6 +26,7 @@ from agents_hub.core.foundation import (
     render_for_chat,
     render_for_llm,
 )
+from agents_hub.core.foundation.token import redact_token
 
 
 class Agent:
@@ -257,9 +258,21 @@ class Agent:
             result = await self._process_message(msg, prompt)
 
             # 5. 出口 A：写回群聊（@发起者 result.text）
-            self.group_chat_context.add_message(
-                render_for_chat(self.name, msg.send_from, result.text)
+            # Token 剥离：防止 token 泄漏到群聊消息中
+            safe_text = redact_token(result.text)
+            # 创建一个新的 AgentResult，替换 text 为剥离后的版本
+            from agents_hub.agent_bridge.models import AgentResult as AgentResultModel
+
+            safe_result = AgentResultModel(
+                text=render_for_chat(self.name, msg.send_from, safe_text),
+                session_id=result.session_id,
+                timestamp=result.timestamp,
+                agent_name=result.agent_name,
+                platform=result.platform,
+                role_type=result.role_type,
+                usage=result.usage,
             )
+            await self.group_chat_context.add_message(safe_result)
 
             # 6. 出口 B：如果是 TASK 且发起者不是 user，投递回复
 
