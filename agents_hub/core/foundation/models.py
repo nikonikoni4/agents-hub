@@ -36,3 +36,29 @@ class GroupChatType(Enum):
 
     SEQUENCE_EXECUTE = "sequence_execute"  # 流水线顺序执行
     MANAGER_ORCHESTRATE = "manager_orchestrate"  # 由 Team manager 动态决定安排
+
+
+class TaskStatus(str, Enum):
+    """任务状态枚举
+
+    - PENDING: 待执行
+    - RUNNING: 执行中
+    - COMPLETED: 已完成
+    - FAILED: 失败
+    """
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class TaskListStatus(str, Enum):
+    """任务列表状态枚举
+
+    - ACTIVE: 激活（当前使用）
+    - ARCHIVED: 已归档
+    """
+
+    ACTIVE = "active"
+    ARCHIVED = "archived"
