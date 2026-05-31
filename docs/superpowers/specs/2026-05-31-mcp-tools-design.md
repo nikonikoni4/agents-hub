@@ -399,24 +399,33 @@ local_data/teams/<team>/<project>/<group_chat_id>/tasks.jsonl
 
 **注入内容示例：**
 
-```markdown
+```xml
 <AGENT_RUNTIME_START/>
-## 运行时状态
+<AGENT_RUNTIME>
+<identity>
+你的名字：Manager
+群聊ID：gc_abc123
+身份令牌：tok_a1b2c3d4e5f6...
+</identity>
 
-### 身份信息
-- 你的名字：Manager
-- 群聊ID：gc_abc123
-- 身份令牌：tok_a1b2c3d4e5f6...
+<team>
+团队成员：Worker1, Worker2, Worker3
+</team>
 
-### 团队信息
-- 团队成员：Worker1, Worker2, Worker3
-
-### 当前任务看板（仅 Manager）
+<team_workboard>
+当前任务列表：
 - [PENDING] task_1: 实现模块A (owner: Worker1)
 - [RUNNING] task_2: 编写测试 (owner: Worker2)
 - [COMPLETED] task_3: 代码审查 (owner: Worker3)
+</team_workboard>
+</AGENT_RUNTIME>
 <AGENT_RUNTIME_END/>
 ```
+
+**说明：**
+- markdown_injector.py 负责替换 `<AGENT_RUNTIME_START/>` 和 `<AGENT_RUNTIME_END/>` 之间的内容
+- 注入的内容格式是 XML（与原设计一致），不是 Markdown
+- 这样可以保持与现有 renderer.py 的 Tag 风格一致
 
 **注入时机：**
 
@@ -452,18 +461,25 @@ async def _process_message(self, msg: AgentMessage, prompt: str):
 
 ```python
 def _generate_runtime_content(self) -> str:
-    """生成运行时注入内容"""
-    lines = [
-        "## 运行时状态",
+    """生成运行时注入内容（XML 格式）"""
+    lines = ["<AGENT_RUNTIME>"]
+    
+    # 身份信息
+    lines.extend([
+        "<identity>",
+        f"你的名字：{self.name}",
+        f"群聊ID：{self.group_chat_context.group_chat_id}",
+        f"身份令牌：{self.agent_token}",
+        "</identity>",
         "",
-        "### 身份信息",
-        f"- 你的名字：{self.name}",
-        f"- 群聊ID：{self.group_chat_context.group_chat_id}",
-        f"- 身份令牌：{self.agent_token}",
-        "",
-        "### 团队信息",
-        f"- 团队成员：{', '.join(self.group_chat_context.get_team_members())}",
-    ]
+    ])
+    
+    # 团队信息
+    lines.extend([
+        "<team>",
+        f"团队成员：{', '.join(self.group_chat_context.get_team_members())}",
+        "</team>",
+    ])
     
     # 仅 Manager 注入任务看板
     if self.is_leader:
@@ -471,11 +487,14 @@ def _generate_runtime_content(self) -> str:
         if workboard:
             lines.extend([
                 "",
-                "### 当前任务看板",
+                "<team_workboard>",
+                "当前任务列表：",
             ])
             for task in workboard:
                 lines.append(f"- [{task.status.value.upper()}] {task.task_id}: {task.content} (owner: {task.owner})")
+            lines.append("</team_workboard>")
     
+    lines.append("</AGENT_RUNTIME>")
     return "\n".join(lines)
 ```
 

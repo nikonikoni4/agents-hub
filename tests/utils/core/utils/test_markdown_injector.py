@@ -42,9 +42,9 @@ class TestReplaceMarkedSection:
         result = replace_marked_section(md_file, "RUNTIME", "injected")
         assert result is False
         text = md_file.read_text(encoding="utf-8")
-        assert "<RUNTIME_START/>" in text
+        assert "<RUNTIME>" in text
         assert "injected" in text
-        assert "<RUNTIME_END/>" in text
+        assert "</RUNTIME>" in text
 
     def test_preserves_other_content(self, md_file):
         """契约：不影响标记外的其他内容"""
@@ -60,8 +60,8 @@ class TestReplaceMarkedSection:
         replace_marked_section(md_file, "RUNTIME", "content v3")
         text = md_file.read_text(encoding="utf-8")
         # 只出现一对标记
-        assert text.count("<RUNTIME_START/>") == 1
-        assert text.count("<RUNTIME_END/>") == 1
+        assert text.count("<RUNTIME>") == 1
+        assert text.count("</RUNTIME>") == 1
         assert "content v3" in text
         assert "content v1" not in text
         assert "content v2" not in text
@@ -71,8 +71,8 @@ class TestReplaceMarkedSection:
         replace_marked_section(md_file, "IDENTITY", "agent info")
         replace_marked_section(md_file, "WORKBOARD", "task list")
         text = md_file.read_text(encoding="utf-8")
-        assert "<IDENTITY_START/>" in text
-        assert "<WORKBOARD_START/>" in text
+        assert "<IDENTITY>" in text
+        assert "<WORKBOARD>" in text
         assert "agent info" in text
         assert "task list" in text
 

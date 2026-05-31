@@ -15,8 +15,8 @@ def _build_pattern(marker: str) -> re.Pattern[str]:
     Args:
         marker: 标记名称（如 "AGENT_RUNTIME"）
     """
-    escaped_start = re.escape(f"<{marker}_START/>")
-    escaped_end = re.escape(f"<{marker}_END/>")
+    escaped_start = re.escape(f"<{marker}>")
+    escaped_end = re.escape(f"</{marker}>")
     return re.compile(
         f"{escaped_start}\\n(.*?)\\n{escaped_end}",
         re.DOTALL,
@@ -30,7 +30,7 @@ def replace_marked_section(
 ) -> bool:
     """替换文件中被标记包裹的内容块。
 
-    在文件中查找 <{marker}_START/> 和 <{marker}_END/> 标记，
+    在文件中查找 <{marker}> 和 </{marker}> 标记，
     替换两者之间的内容。如果标记不存在，追加到文件末尾。
 
     Args:
@@ -44,7 +44,7 @@ def replace_marked_section(
     text = file_path.read_text(encoding="utf-8")
     pattern = _build_pattern(marker)
 
-    new_block = f"<{marker}_START/>\n{content}\n<{marker}_END/>"
+    new_block = f"<{marker}>\n{content}\n</{marker}>"
 
     match = pattern.search(text)
     if match:
