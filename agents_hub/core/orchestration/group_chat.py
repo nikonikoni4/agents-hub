@@ -14,7 +14,7 @@ from agents_hub.config.types import RoleType
 from agents_hub.core.agent import Agent, Manager, Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import GroupChatContext
-from agents_hub.core.foundation import GroupChatType
+from agents_hub.core.foundation import GroupChatType, StateError
 from agents_hub.roles import RoleManager
 
 from .team import Team
@@ -74,7 +74,8 @@ class GroupChat:
         await self._initialize_new_members()
 
         # 6. 启动所有 agent 的 run() 任务
-        assert self.manager is not None
+        if self.manager is None:
+            raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())
         self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
 
@@ -95,7 +96,8 @@ class GroupChat:
         await self._initialize_new_members()
 
         # 4. 启动所有 agent 的 run() 任务
-        assert self.manager is not None
+        if self.manager is None:
+            raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())
         self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
 
