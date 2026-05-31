@@ -266,6 +266,7 @@ class RoleManager:
         """初始化 Claude 平台配置。
 
         从 ~/.claude 复制 settings.json，创建空白 CLAUDE.md。
+        生成 .mcp.json 配置文件和 AGENT_RUNTIME 标记。
 
         Args:
             work_root: 角色的 work_root 目录路径。
@@ -281,13 +282,26 @@ class RoleManager:
         if settings_src.exists():
             shutil.copy2(settings_src, work_root / "settings.json")
 
-        (work_root / "CLAUDE.md").write_text("", encoding="utf-8")
+        # 生成 .mcp.json（如果不存在）
+        mcp_json_path = work_root / ".mcp.json"
+        if not mcp_json_path.exists():
+            mcp_config = {"mcpServers": {"agents-hub": {"url": "http://localhost:8001/mcp"}}}
+            mcp_json_path.write_text(
+                json.dumps(mcp_config, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+
+        # 创建 CLAUDE.md 并预置 AGENT_RUNTIME 标记（如果不存在）
+        claude_md_path = work_root / "CLAUDE.md"
+        if not claude_md_path.exists():
+            claude_md_content = "<AGENT_RUNTIME_START/>\n<AGENT_RUNTIME_END/>\n"
+            claude_md_path.write_text(claude_md_content, encoding="utf-8")
 
     def _init_codex_config(self, work_root: Path) -> None:
         """初始化 Codex 平台配置。
 
         从 ~/.codex 复制 auth.json、config.toml 和 rules/ 目录，
         创建空白 AGENTS.md。
+        生成 .mcp.json 配置文件和 AGENT_RUNTIME 标记。
 
         Args:
             work_root: 角色的 work_root 目录路径。
@@ -308,4 +322,16 @@ class RoleManager:
         if rules_src.exists():
             shutil.copytree(rules_src, work_root / "rules")
 
-        (work_root / "AGENTS.md").write_text("", encoding="utf-8")
+        # 生成 .mcp.json（如果不存在）
+        mcp_json_path = work_root / ".mcp.json"
+        if not mcp_json_path.exists():
+            mcp_config = {"mcpServers": {"agents-hub": {"url": "http://localhost:8001/mcp"}}}
+            mcp_json_path.write_text(
+                json.dumps(mcp_config, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+
+        # 创建 AGENTS.md 并预置 AGENT_RUNTIME 标记（如果不存在）
+        agents_md_path = work_root / "AGENTS.md"
+        if not agents_md_path.exists():
+            agents_md_content = "<AGENT_RUNTIME_START/>\n<AGENT_RUNTIME_END/>\n"
+            agents_md_path.write_text(agents_md_content, encoding="utf-8")
