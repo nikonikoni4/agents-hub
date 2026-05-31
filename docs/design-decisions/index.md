@@ -28,6 +28,20 @@
 - 触发规则：当设计或修改多 Agent 消息传递机制、消息路由方式、Agent 权限控制时阅读
 - 内容摘要：拒绝 MetaGPT 双向引用（越权风险）和 AutoGen 公共 Buffer（不符合按需上下文原则）方案，选择 MessageRouter + 私有队列的点对点路由方案。核心原则：避免越权访问、按需提供上下文、点对点优于广播
 
+## explicit-group-chat-speech
+- updated_at: 2026-05-31
+- path: `docs/design-decisions/0006-explicit-group-chat-speech.md`
+- 状态：deferred（方向已定，等 MCP 主流程跑通后实施）
+- 触发规则：当修改 Agent.run() 的出口 A/B 写入逻辑、新增/调整对外发言相关工具、或 LLM 中间过程污染群聊历史的问题再次浮现时阅读
+- 内容摘要：群聊发言从隐式自动写入（出口 A/B）改为显式 MCP 工具调用（speak_in_group_chat）。目的是分离 LLM 的私下思考与对外公开发言，避免工具调用细节污染群聊历史和下游 agent 上下文。本次仅记录决策方向，实施延后
+
+## agent-token-identity-model
+- updated_at: 2026-05-31
+- path: `docs/design-decisions/0007-agent-token-identity-model.md`
+- 状态：decided
+- 触发规则：当设计或修改 MCP Tool 签名、调用者身份校验逻辑、GroupChatManager 的注册逻辑、agent_session_state 持久化结构时阅读
+- 内容摘要：MCP Tool 调用者的身份模型选用 Agent Token——Server 维护 token→(agent_name, group_chat_id) 索引，LLM 通过 runtime user prompt 拿到 token 并在 tool 调用时回传。否决了"LLM 自报身份"（伪造）和"每 Agent 一个 MCP Server 子进程"（爆炸）。Token 群聊级生命周期，runtime 注入，剥离过滤兜底
+
 ## user-design-summary
 - updated_at: 2026-05-28
 - path: `docs/design-decisions/user-design-summary.md`
