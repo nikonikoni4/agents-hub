@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agents Hub - v5 温暖亲和风格</title>
+
+  <!-- 引入 Space Grotesk 字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /*
+      DESIGN v5 - 温暖亲和方向
+      基于 v4，增加：
+      1. Display 字体（Space Grotesk）用于标题
+      2. 暖橙色点缀 (#ff8c42)
+      3. 背景带微妙暖色倾向
+      4. 微妙的渐变 + 纹理
+      5. 弹性缓动 + 入场动画
+      6. 更大的间距（呼吸感）
+    */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      /* 正文使用系统字体 */
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      /* 背景带微妙暖色倾向 */
+      background: #1f1e1d;
+      color: #e0e0e0;
+      height: 100vh;
+      overflow: hidden;
+
+      /* 增加极淡的径向渐变纹理 */
+      background-image:
+        radial-gradient(circle at 20% 50%, rgba(255, 140, 66, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(74, 158, 255, 0.02) 0%, transparent 50%);
+    }
+
+    .app-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ========== 侧边栏 ========== */
+    .sidebar {
+      width: 280px;
+      /* 背景带微妙暖色倾向 + 渐变 */
+      background: linear-gradient(180deg, #262524 0%, #242220 100%);
+      display: flex;
+      flex-direction: column;
+      /* 顶部更多空间 */
+      padding: 32px 20px 20px;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding: 8px 4px;
+    }
+
+    .logo {
+      width: 24px;
+      height: 24px;
+      /* 暖色渐变 logo */
+      background: linear-gradient(135deg, #ff8c42 0%, #ff6b6b 100%);
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(255, 140, 66, 0.3);
+    }
+
+    .app-title {
+      /* 使用 Space Grotesk 字体 */
+      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+
+    .new-session-btn {
+      background: linear-gradient(135deg, #2f2e2d 0%, #2a2928 100%);
+      border: 1px solid #3d3c3a;
+      color: #e0e0e0;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      /* 弹性缓动 */
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      font-weight: 500;
+    }
+
+    .new-session-btn:hover {
+      background: linear-gradient(135deg, #383736 0%, #333231 100%);
+      border-color: #4a4948;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .new-session-btn:active {
+      background: linear-gradient(135deg, #2a2928 0%, #252423 100%);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      transform: translateY(0);
+    }
+
+    .section-title {
+      font-size: 11px;
+      color: #888888;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 20px 0 10px 4px;
+      font-weight: 600;
+    }
+
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+      margin: 0 -4px;
+      padding: 0 4px;
+    }
+
+    .session-item {
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #b0b0b0;
+      cursor: pointer;
+      margin-bottom: 2px;
+      /* 弹性缓动 */
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      font-weight: 400;
+    }
+
+    .session-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #d0d0d0;
+      /* 向右微移 */
+      transform: translateX(4px);
+    }
+
+    .session-item.active {
+      background: linear-gradient(135deg, #2f2e2d 0%, #2a2928 100%);
+      color: #ffffff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      font-weight: 500;
+    }
+
+    .session-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 16px;
+      /* 暖色渐变指示条 */
+      background: linear-gradient(180deg, #ff8c42 0%, #ff6b6b 100%);
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* ========== 主内容区 ========== */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-left: 8px;
+    }
+
+    .content-header {
+      padding: 24px 32px 20px;
+      border-bottom: 1px solid #2a2928;
+      background: #1f1e1d;
+    }
+
+    .content-title {
+      /* 使用 Space Grotesk 字体 */
+      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: -0.03em;
+    }
+
+    .title-icon {
+      width: 28px;
+      height: 28px;
+      /* 暖色渐变图标 */
+      background: linear-gradient(135deg, #ff8c42 0%, #ff6b6b 100%);
+      border-radius: 7px;
+      box-shadow: 0 2px 6px rgba(255, 140, 66, 0.3);
+    }
+
+    .content-body {
+      flex: 1;
+      padding: 32px 32px 32px;
+      overflow-y: auto;
+    }
+
+    /* ========== 消息容器 ========== */
+    .messages-container {
+      display: flex;
+      flex-direction: column;
+      /* 更大的间距 */
+      gap: 32px;
+      /* 更窄的内容宽度 */
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* 入场动画 */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      /* 入场动画 */
+      animation: fadeInUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .message:nth-child(1) { animation-delay: 0s; }
+    .message:nth-child(2) { animation-delay: 0.1s; }
+    .message:nth-child(3) { animation-delay: 0.2s; }
+    .message:nth-child(4) { animation-delay: 0.3s; }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .user-avatar {
+      /* 暖色渐变头像 */
+      background: linear-gradient(135deg, #ff8c42 0%, #ff6b6b 100%);
+      color: #ffffff;
+    }
+
+    .assistant-avatar {
+      background: linear-gradient(135deg, #2a2928 0%, #272625 100%);
+      color: #ff8c42;
+      border: 1px solid #3a3938;
+    }
+
+    .message-content {
+      flex: 1;
+      max-width: 720px;
+    }
+
+    .message-text {
+      /* 微妙的渐变背景 */
+      background: linear-gradient(135deg, #2a2928 0%, #272625 100%);
+      border: 1px solid #333231;
+      border-radius: 12px;
+      padding: 18px 20px;
+      color: #e0e0e0;
+      font-size: 15px;
+      line-height: 1.6;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      /* 平滑缓动 */
+      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .message-text:hover {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      border-color: #3a3938;
+      /* 微妙放大 */
+      transform: scale(1.01);
+    }
+
+    .user-message .message-text {
+      background: linear-gradient(135deg, #1e2936 0%, #1b2630 100%);
+      border-color: #2a3a4a;
+    }
+
+    .user-message .message-text:hover {
+      border-color: #3a4a5a;
+    }
+
+    .message-text p {
+      margin: 0 0 12px 0;
+    }
+
+    .message-text p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-text ol {
+      margin: 8px 0 0 20px;
+      padding: 0;
+    }
+
+    .message-text li {
+      margin: 6px 0;
+      color: #c0c0c0;
+    }
+
+    /* ========== 底部输入区 ========== */
+    .input-container {
+      padding: 16px 32px 20px;
+      background: transparent;
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      /* 微妙的渐变背景 */
+      background: linear-gradient(135deg, #2a2928 0%, #272625 100%);
+      border: 1px solid #3a3938;
+      border-radius: 12px;
+      padding: 14px 18px;
+      /* 平滑缓动 */
+      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    .input-wrapper:focus-within {
+      border-color: #ff8c42;
+      /* 暖色光晕 */
+      box-shadow: 0 6px 20px rgba(255, 140, 66, 0.15), 0 4px 16px rgba(0, 0, 0, 0.25);
+      background: linear-gradient(135deg, #2d2c2b 0%, #2a2928 100%);
+    }
+
+    .input-field {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #e0e0e0;
+      font-size: 15px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .input-field::placeholder {
+      color: #666666;
+    }
+
+    .send-btn {
+      /* 暖色渐变按钮 */
+      background: linear-gradient(135deg, #ff8c42 0%, #ff6b6b 100%);
+      border: none;
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      /* 弹性缓动 */
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow:
+        0 2px 6px rgba(255, 140, 66, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1); /* 顶部高光 */
+    }
+
+    .send-btn:hover {
+      box-shadow:
+        0 4px 10px rgba(255, 140, 66, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .send-btn:active {
+      transform: translateY(0);
+      box-shadow:
+        0 2px 6px rgba(255, 140, 66, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    /* ========== 滚动条样式 ========== */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #3a3938;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4a4948;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo"></div>
+        <span class="app-title">Agents Hub</span>
+      </div>
+
+      <button class="new-session-btn">
+        <span>+</span>
+        <span>New Session</span>
+      </button>
+
+      <div class="section-title">Pinned</div>
+      <div class="session-list">
+        <div class="session-item active">
+          <span>错误处理</span>
+        </div>
+
+        <div class="section-title">Recents</div>
+        <div class="session-item">
+          <span>General coding session</span>
+        </div>
+        <div class="session-item">
+          <span>MCP tool design</span>
+        </div>
+        <div class="session-item">
+          <span>学习单元测试</span>
+        </div>
+        <div class="session-item">
+          <span>Settings module design</span>
+        </div>
+        <div class="session-item">
+          <span>Custom logger system</span>
+        </div>
+        <div class="session-item">
+          <span>AgentCall singleton scope</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <header class="content-header">
+        <h1 class="content-title">
+          <div class="title-icon"></div>
+          <span>What's up next?</span>
+        </h1>
+      </header>
+
+      <div class="content-body">
+        <div class="messages-container">
+          <!-- 用户消息 -->
+          <div class="message user-message">
+            <div class="message-avatar user-avatar">U</div>
+            <div class="message-content">
+              <div class="message-text">
+                <p>帮我设计一个 Agent 协作系统</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 助手消息 -->
+          <div class="message assistant-message">
+            <div class="message-avatar assistant-avatar">A</div>
+            <div class="message-content">
+              <div class="message-text">
+                <p>好的，我来帮你设计一个 Agent 协作系统。首先让我了解一下你的需求：</p>
+                <ol>
+                  <li>这个系统主要用于什么场景？</li>
+                  <li>需要支持多少个 Agent 同时协作？</li>
+                  <li>Agent 之间的通信方式有什么要求？</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <!-- 用户消息 -->
+          <div class="message user-message">
+            <div class="message-avatar user-avatar">U</div>
+            <div class="message-content">
+              <div class="message-text">
+                <p>用于代码生成和测试，需要支持 3-5 个 Agent</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 助手消息 -->
+          <div class="message assistant-message">
+            <div class="message-avatar assistant-avatar">A</div>
+            <div class="message-content">
+              <div class="message-text">
+                <p>明白了。基于你的需求，我建议采用以下架构：</p>
+                <ol>
+                  <li><strong>Coordinator Agent</strong>：负责任务分配和结果聚合</li>
+                  <li><strong>Code Generator Agent</strong>：生成代码实现</li>
+                  <li><strong>Test Writer Agent</strong>：编写单元测试</li>
+                  <li><strong>Reviewer Agent</strong>：代码审查和优化建议</li>
+                </ol>
+                <p>这样的设计可以确保每个 Agent 专注于自己的职责，同时通过 Coordinator 协调整体流程。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部输入 -->
+      <div class="input-container">
+        <div class="input-wrapper">
+          <input
+            type="text"
+            class="input-field"
+            placeholder="Describe a task or ask a question"
+          />
+          <button class="send-btn">Send</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agents-hub": {
+      "type": "http",
+      "url": "http://localhost:8001/mcp"
+    }
+  }
+}

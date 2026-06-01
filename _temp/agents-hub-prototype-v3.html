@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agents Hub - Claude Code Style v3</title>
+  <style>
+    /*
+      DESIGN REFINEMENTS v3:
+      1. 侧边栏右侧圆角（像卡片浮在主界面上）
+      2. 输入框浮动感（明显的阴影 + 与底部有间距）
+      3. 更柔和的阴影（减少视觉重量）
+      4. 增加空气感（元素不贴边）
+    */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #1f1f1e;
+      color: #e0e0e0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ========== 侧边栏（带右侧圆角） ========== */
+    .sidebar {
+      width: 280px;
+      background: #262626;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      /* 关键：右侧圆角，让侧边栏像"卡片" */
+      border-radius: 0 12px 12px 0;
+      /* 微妙的右侧阴影 */
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 8px;
+    }
+
+    .logo {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(74, 158, 255, 0.25);
+    }
+
+    .app-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+
+    .new-session-btn {
+      background: #2f2f2f;
+      border: 1px solid #3d3d3d;
+      color: #e0e0e0;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      /* 更柔和的阴影 */
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .new-session-btn:hover {
+      background: #383838;
+      border-color: #4a4a4a;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .new-session-btn:active {
+      background: #2a2a2a;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      transform: translateY(1px);
+    }
+
+    .section-title {
+      font-size: 11px;
+      color: #888888;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 16px 0 8px 8px;
+      font-weight: 600;
+    }
+
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .session-item {
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #b0b0b0;
+      cursor: pointer;
+      margin-bottom: 2px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+
+    .session-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #d0d0d0;
+    }
+
+    .session-item.active {
+      background: #2f2f2f;
+      color: #ffffff;
+      /* 更柔和的阴影 */
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .session-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 16px;
+      background: #4a9eff;
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* ========== 主内容区 ========== */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      /* 关键：左侧留出间距，不贴边 */
+      padding-left: 8px;
+    }
+
+    .content-header {
+      padding: 20px 32px;
+      border-bottom: 1px solid #2a2a2a;
+      background: #1f1f1e;
+    }
+
+    .content-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .title-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+      border-radius: 7px;
+      box-shadow: 0 2px 6px rgba(255, 107, 107, 0.25);
+    }
+
+    .content-body {
+      flex: 1;
+      padding: 24px 32px 32px;
+      overflow-y: auto;
+    }
+
+    /* ========== 消息容器 ========== */
+    .messages-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 900px;
+    }
+
+    .message {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+      /* 更柔和的阴影 */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .user-avatar {
+      background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+      color: #ffffff;
+    }
+
+    .assistant-avatar {
+      background: #2a2a2a;
+      color: #4a9eff;
+      border: 1px solid #3a3a3a;
+    }
+
+    .message-content {
+      flex: 1;
+      max-width: 720px;
+    }
+
+    .message-text {
+      background: #2a2a2a;
+      border: 1px solid #333333;
+      border-radius: 12px;
+      padding: 16px 20px;
+      color: #e0e0e0;
+      font-size: 14px;
+      line-height: 1.6;
+      /* 关键：更柔和的阴影 */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+    }
+
+    .message-text:hover {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      border-color: #3a3a3a;
+    }
+
+    .user-message .message-text {
+      background: #1e2936;
+      border-color: #2a3a4a;
+    }
+
+    .user-message .message-text:hover {
+      border-color: #3a4a5a;
+    }
+
+    .message-text p {
+      margin: 0 0 12px 0;
+    }
+
+    .message-text p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-text ol {
+      margin: 8px 0 0 20px;
+      padding: 0;
+    }
+
+    .message-text li {
+      margin: 6px 0;
+      color: #c0c0c0;
+    }
+
+    /* ========== 底部输入区（浮动感） ========== */
+    .input-container {
+      /* 关键：不贴底部，留出间距 */
+      padding: 16px 32px 20px;
+      background: transparent;
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 12px;
+      padding: 12px 16px;
+      transition: all 0.2s ease;
+      /* 关键：强烈的浮动阴影 */
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    .input-wrapper:focus-within {
+      border-color: #4a9eff;
+      /* 聚焦时阴影更强 */
+      box-shadow: 0 6px 20px rgba(74, 158, 255, 0.15), 0 4px 16px rgba(0, 0, 0, 0.25);
+      background: #2d2d2d;
+    }
+
+    .input-field {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .input-field::placeholder {
+      color: #666666;
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+      border: none;
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+    }
+
+    .send-btn:hover {
+      box-shadow: 0 4px 10px rgba(74, 158, 255, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .send-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+    }
+
+    /* ========== 滚动条样式 ========== */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #3a3a3a;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4a4a4a;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边栏（带右侧圆角） -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo"></div>
+        <span class="app-title">Agents Hub</span>
+      </div>
+
+      <button class="new-session-btn">
+        <span>+</span>
+        <span>New Session</span>
+      </button>
+
+      <div class="section-title">Pinned</div>
+      <div class="session-list">
+        <div class="session-item active">
+          <span>错误处理</span>
+        </div>
+
+        <div class="section-title">Recents</div>
+        <div class="session-item">
+          <span>General coding session</span>
+        </div>
+        <div class="session-item">
+          <span>MCP tool design</span>
+        </div>
+        <div class="session-item">
+          <span>学习单元测试</span>
+        </div>
+        <div class="session-item">
+          <span>Settings module design</span>
+        </div>
+        <div class="session-item">
+          <span>Custom logger system</span>
+        </div>
+        <div class="session-item">
+          <span>AgentCall singleton scope</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <header class="content-header">
+        <h1 class="content-title">
+          <div class="title-icon"></div>
+          <span>What's up next?</span>
+        </h1>
+      </header>
+
+      <div class="content-body">
+        <div class="messages-container">
+          <!-- 用户消息 -->
+          <div class="message user-message">
+            <div class="message-avatar user-avatar">U</div>
+            <div class="message-content">
+              <div class="message-text">
+                <p>帮我设计一个 Agent 协作系统</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 助手消息 -->
+          <div class="message assistant-message">
+            <div class="message-avatar assistant-avatar">A</div>
+            <div class="message-content">
+              <div class="message-text">
+                <p>好的，我来帮你设计一个 Agent 协作系统。首先让我了解一下你的需求：</p>
+                <ol>
+                  <li>这个系统主要用于什么场景？</li>
+                  <li>需要支持多少个 Agent 同时协作？</li>
+                  <li>Agent 之间的通信方式有什么要求？</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <!-- 用户消息 -->
+          <div class="message user-message">
+            <div class="message-avatar user-avatar">U</div>
+            <div class="message-content">
+              <div class="message-text">
+                <p>用于代码生成和测试，需要支持 3-5 个 Agent</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 助手消息 -->
+          <div class="message assistant-message">
+            <div class="message-avatar assistant-avatar">A</div>
+            <div class="message-content">
+              <div class="message-text">
+                <p>明白了。基于你的需求，我建议采用以下架构：</p>
+                <ol>
+                  <li><strong>Coordinator Agent</strong>：负责任务分配和结果聚合</li>
+                  <li><strong>Code Generator Agent</strong>：生成代码实现</li>
+                  <li><strong>Test Writer Agent</strong>：编写单元测试</li>
+                  <li><strong>Reviewer Agent</strong>：代码审查和优化建议</li>
+                </ol>
+                <p>这样的设计可以确保每个 Agent 专注于自己的职责，同时通过 Coordinator 协调整体流程。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部输入（浮动感） -->
+      <div class="input-container">
+        <div class="input-wrapper">
+          <input
+            type="text"
+            class="input-field"
+            placeholder="Describe a task or ask a question"
+          />
+          <button class="send-btn">Send</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
