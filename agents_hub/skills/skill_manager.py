@@ -41,3 +41,16 @@ class SkillManager:
             description=frontmatter["description"],
             path=str(skill_path),
         )
+
+    def list_skills(self) -> list[SkillInfo]:
+        """列出所有 skills"""
+        skills = []
+        for skill_dir in self.skills_root.iterdir():
+            if skill_dir.is_dir():
+                try:
+                    skill_info = self._parse_skill_md(skill_dir)
+                    skills.append(skill_info)
+                except InvalidSkillError:
+                    # 跳过无效的 skill 目录
+                    continue
+        return skills

@@ -49,3 +49,28 @@ def test_parse_skill_md_success():
     assert skill_info.name == "test-skill"
     assert skill_info.description == "A test skill for unit testing"
     assert str(valid_path) in skill_info.path
+
+
+def test_list_skills_empty():
+    """测试：空的 skills 目录"""
+    manager = SkillManager()
+    # 临时修改 skills_root 为空目录
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager.skills_root = Path(tmpdir)
+        skills = manager.list_skills()
+        assert skills == []
+
+
+def test_list_skills_with_valid_skills():
+    """测试：列出有效的 skills"""
+    manager = SkillManager()
+    # 使用 fixtures 目录
+    manager.skills_root = Path("tests/skills/fixtures")
+
+    skills = manager.list_skills()
+
+    # 应该只包含 valid-skill（跳过无效的）
+    assert len(skills) >= 1
+    skill_names = [s.name for s in skills]
+    assert "test-skill" in skill_names
