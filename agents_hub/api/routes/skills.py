@@ -1,5 +1,5 @@
 # agents_hub/api/routes/skills.py
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from agents_hub.api.schemas.skills import SkillCreateRequest, SkillResponse
 from agents_hub.api.services.skill_service import SkillService
@@ -8,20 +8,24 @@ from agents_hub.skills.exceptions import SkillNotFoundError
 router = APIRouter()
 
 
+def get_skill_service() -> SkillService:
+    """获取 SkillService 实例（依赖注入）"""
+    return SkillService()
+
+
 @router.get("/skills", response_model=list[SkillResponse])
-async def list_skills():
+def list_skills(service: SkillService = Depends(get_skill_service)):
     """获取所有 skills
 
     Returns:
         list[SkillResponse]: skills 列表
     """
-    service = SkillService()
     skills = service.list_skills()
     return [SkillResponse.from_domain(s) for s in skills]
 
 
 @router.get("/skills/{skill_name}", response_model=SkillResponse)
-async def get_skill(skill_name: str):
+def get_skill(skill_name: str, service: SkillService = Depends(get_skill_service)):
     """获取单个 skill
 
     Args:
@@ -33,16 +37,15 @@ async def get_skill(skill_name: str):
     Raises:
         HTTPException: 404 - skill 不存在
     """
-    service = SkillService()
     try:
         skill = service.get_skill(skill_name)
         return SkillResponse.from_domain(skill)
     except SkillNotFoundError as e:
-        raise HTTPException(status_code=404, detail="Skill not found") from e
+        raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' 不存在") from e
 
 
-@router.delete("/skills/{skill_name}")
-async def delete_skill(skill_name: str):
+@router.delete("/skills/{skill_name}", response_model=dict[str, str])
+def delete_skill(skill_name: str, service: SkillService = Depends(get_skill_service)):
     """删除 skill
 
     Args:
@@ -54,16 +57,15 @@ async def delete_skill(skill_name: str):
     Raises:
         HTTPException: 404 - skill 不存在
     """
-    service = SkillService()
     try:
         service.delete_skill(skill_name)
-        return {"message": "Skill deleted successfully"}
+        return {"message": "Skill 删除成功"}
     except SkillNotFoundError as e:
-        raise HTTPException(status_code=404, detail="Skill not found") from e
+        raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' 不存在") from e
 
 
 @router.post("/skills", response_model=SkillResponse)
-async def add_skill(request: SkillCreateRequest):
+def add_skill(request: SkillCreateRequest, service: SkillService = Depends(get_skill_service)):
     """从网络添加 skill(预留接口)
 
     Args:
@@ -75,7 +77,6 @@ async def add_skill(request: SkillCreateRequest):
     Raises:
         HTTPException: 501 - 功能暂未实现
     """
-    service = SkillService()
     try:
         skill = service.add_skill_from_url(request.url)
         return SkillResponse.from_domain(skill)
