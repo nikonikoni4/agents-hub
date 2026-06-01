@@ -9,8 +9,7 @@ import contextlib
 import json
 from datetime import datetime
 
-from agents_hub.config import config
-from agents_hub.core.foundation import CallStatus, MessageType
+from agents_hub.core.foundation import CallStatus, MessageType, group_chat_paths
 from agents_hub.utils.logger import get_specialized_logger
 
 from .agent_call import AgentCall
@@ -42,7 +41,7 @@ class AgentCallManager:
         self._retention_config = retention_config
 
         # 创建专用logger：每个群聊有独立的日志目录
-        log_dir = config.data_path / "teams" / project_path / group_chat_id
+        log_dir = group_chat_paths.base_dir(group_chat_id, project_path)
         self.logger = get_specialized_logger(
             name=f"agent_call_manager.{group_chat_id}",
             log_filename="agent_calls.log",
@@ -51,7 +50,7 @@ class AgentCallManager:
         )
 
         # 持久化路径
-        self._persistence_path = log_dir / "agent_calls.jsonl"
+        self._persistence_path = group_chat_paths.agent_calls_data(group_chat_id, project_path)
         self._persistence_path.parent.mkdir(parents=True, exist_ok=True)
 
         # 加载历史调用记录

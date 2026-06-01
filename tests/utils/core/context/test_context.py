@@ -3,7 +3,7 @@ Context 层单元测试
 
 契约：
 1. group_chat_session.py: 默认值、add_message、get_uncompact_messages
-2. group_chat_repository.py: _sanitize_project_path、load/save 往返一致性
+2. group_chat_repository.py: sanitize_project_path、load/save 往返一致性
 3. group_chat_context.py: close 清空引用、add_message 未 load 抛异常
 """
 
@@ -23,6 +23,7 @@ from agents_hub.core.context.group_chat_session import (
     GroupChatSession,
 )
 from agents_hub.core.foundation import StateError, Tag, wrap_xml
+from agents_hub.core.utils import sanitize_project_path
 
 
 # ==================== group_chat_session.py ====================
@@ -125,32 +126,32 @@ class TestGroupChatSession:
 # ==================== group_chat_repository.py ====================
 
 
-class TestGroupChatRepositorySanitize:
+class TestSanitizeProjectPath:
     """测试路径清理"""
 
     def test_sanitize_forward_slash(self):
         """契约：/ 转为 -"""
-        result = GroupChatRepository._sanitize_project_path("a/b/c")
+        result = sanitize_project_path("a/b/c")
         assert result == "a-b-c"
 
     def test_sanitize_backslash(self):
         """契约：\\ 转为 -"""
-        result = GroupChatRepository._sanitize_project_path("a\\b\\c")
+        result = sanitize_project_path("a\\b\\c")
         assert result == "a-b-c"
 
     def test_sanitize_colon(self):
         """契约：: 转为 -"""
-        result = GroupChatRepository._sanitize_project_path("C:Users")
+        result = sanitize_project_path("C:Users")
         assert result == "C-Users"
 
     def test_sanitize_consecutive_dashes(self):
         """契约：连续横线合并为单个"""
-        result = GroupChatRepository._sanitize_project_path("a///b")
+        result = sanitize_project_path("a///b")
         assert result == "a-b"
 
     def test_sanitize_strips_leading_trailing(self):
         """契约：去除首尾横线"""
-        result = GroupChatRepository._sanitize_project_path("/a/b/")
+        result = sanitize_project_path("/a/b/")
         assert result == "a-b"
 
 

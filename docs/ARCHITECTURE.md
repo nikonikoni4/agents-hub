@@ -480,29 +480,175 @@ local_data/
 
 ## 前端架构
 
-技术栈：React + Electron
+### 技术栈
 
-**目录结构**： [暂定结构，未最终确认]
+| 层面 | 技术选择 | 说明 |
+|------|---------|------|
+| **框架** | React 18+ | UI 框架 |
+| **桌面端** | Electron | 跨平台桌面应用 |
+| **状态管理** | Zustand | 轻量、模块化切片，支持 persist/devtools 中间件 |
+| **路由** | React Router v6 | 支持嵌套路由，为多视图切换做准备 |
+| **样式** | Tailwind CSS + CSS Modules | Tailwind 快速开发，CSS Modules 处理复杂组件样式隔离 |
+| **Markdown** | react-markdown + rehype-highlight | 轻量、可扩展、支持代码高亮 |
+| **虚拟滚动** | @tanstack/react-virtual | 高性能虚拟滚动 |
+| **代码编辑器** | Monaco Editor | 用于预览/编辑代码 |
+| **Diff 视图** | react-diff-view | 专业 diff 渲染（side-by-side / unified） |
+| **打包** | Vite + Electron | 快速构建 |
+
+### 架构原则
+
+采用 **分层 + 按功能模块化** 的组织方式：
+
+- **core/**：业务无关的核心层（WebSocket、API、Storage），可被任意 feature 复用
+- **features/**：按业务领域划分的独立功能模块，每个模块自带 components/hooks/store
+- **shared/**：跨 feature 复用的通用资源（按钮、输入框、工具函数等）
+- **layouts/**：页面级布局组件
+
+**模块隔离原则**：
+- features 之间不直接相互依赖，通过 core 层或 shared 层通信
+- 每个 feature 内部自治：UI、状态、副作用都封装在模块内
+- 新增功能（预览/Diff/任务管理）只需新增 feature 模块，无需改动现有代码
+
+### 目录结构
+
 ```
 frontend/
 ├── src/
-│   ├── components/                # React 组件
-│   │   ├── ChatList/              # 对话列表
-│   │   ├── ChatWindow/            # 聊天窗口
-│   │   └── MessageItem/           # 消息项
+│   ├── core/                       # 核心层（业务无关）
+│   │   ├── websocket/              # WebSocket 管理（连接、重连、消息分发）
+│   │   │   └── WebSocketManager.ts
+│   │   ├── api/                    # REST API 封装
+│   │   │   └── client.ts
+│   │   └── storage/                # 本地存储（IndexedDB 封装）
+│   │       └── index.ts
 │   │
-│   ├── services/                  # 服务层
-│   │   ├── websocket.ts           # WebSocket 连接
-│   │   └── api.ts                 # REST API 调用
+│   ├── features/                   # 功能模块（按业务领域划分）
+│   │   ├── chat/                   # 聊天功能（MVP 核心）
+│   │   │   ├── components/         # ChatWindow、MessageList、InputArea 等
+│   │   │   ├── hooks/              # useChat、useMessages 等
+│   │   │   ├── store/              # chatStore.ts（Zustand）
+│   │   │   └── types.ts
+│   │   │
+│   │   ├── session/                # 会话管理（会话列表、切换）
+│   │   │   ├── components/         # SessionList、SessionItem 等
+│   │   │   ├── hooks/
+│   │   │   ├── store/
+│   │   │   └── types.ts
+│   │   │
+│   │   ├── preview/                # 预览功能（Phase 2）
+│   │   │   ├── components/         # PreviewPanel、FileTree、LivePreview 等
+│   │   │   ├── hooks/              # useFileSystem、usePreviewServer
+│   │   │   ├── store/
+│   │   │   └── types.ts
+│   │   │
+│   │   ├── diff/                   # Diff 视图（Phase 2）
+│   │   │   ├── components/         # DiffPanel、DiffViewer、FileChanges
+│   │   │   ├── hooks/              # useDiff
+│   │   │   ├── store/
+│   │   │   └── types.ts
+│   │   │
+│   │   └── tasks/                  # Agent 任务管理（Phase 2）
+│   │       ├── components/         # TaskPanel、TaskList、TaskProgress
+│   │       ├── hooks/              # useTasks
+│   │       ├── store/
+│   │       └── types.ts
 │   │
-│   ├── store/                     # 状态管理
-│   │   └── chatStore.ts           # 聊天状态
+│   ├── shared/                     # 共享资源
+│   │   ├── components/             # 通用组件（Button、Input、Modal 等）
+│   │   ├── hooks/                  # 通用 hooks
+│   │   ├── utils/                  # 工具函数
+│   │   └── types/                  # 全局类型定义
 │   │
-│   └── App.tsx                    # 主应用
+│   ├── layouts/                    # 布局组件
+│   │   ├── MainLayout.tsx          # 主布局（TopBar + 两栏）
+│   │   └── ChatLayout.tsx          # 聊天布局
+│   │
+│   └── App.tsx                     # 主应用入口
 │
-└── electron/                      # Electron 主进程
+└── electron/                       # Electron 主进程
     └── main.ts
 ```
+
+### 核心模块说明
+
+#### core/websocket
+**职责**：统一管理 WebSocket 连接、自动重连、消息分发
+
+**关键能力**：
+- 单例模式管理连接生命周期
+- 指数退避重连策略（最多 5 次）
+- 基于事件类型的消息订阅/分发（`on(event, callback)`）
+- 消息发送队列（断连时缓存，恢复后重发）
+
+#### core/api
+**职责**：封装所有 REST API 调用
+
+**关键能力**：
+- 统一的请求/响应拦截
+- 错误处理和重试
+- TypeScript 类型自动推导
+
+#### core/storage
+**职责**：本地数据持久化（用户偏好、未发送消息草稿等）
+
+**关键能力**：
+- IndexedDB 封装（支持大数据量）
+- 与 Zustand persist 中间件集成
+
+### Feature 模块组织规范
+
+每个 feature 模块遵循统一结构：
+
+```
+features/<feature_name>/
+├── components/      # UI 组件，仅消费本模块的 hooks 和 store
+├── hooks/           # 业务逻辑封装，调用 core 层和 store
+├── store/           # Zustand store，管理本模块状态
+└── types.ts         # 模块专属类型定义
+```
+
+**依赖方向**：
+```
+components → hooks → store
+              ↓
+            core/
+```
+
+- `components` 只关心展示，不直接调用 API 或操作 WebSocket
+- `hooks` 负责副作用（API 调用、WebSocket 订阅）和状态变更
+- `store` 只负责状态存储和派生计算
+
+### 状态管理策略
+
+使用 **Zustand** 进行模块化状态管理：
+
+- **每个 feature 拥有独立 store**，避免单一全局状态膨胀
+- **跨模块状态共享**通过 store 之间的订阅实现，而非提升到全局
+- **持久化数据**（如会话列表、未发送消息）使用 `persist` 中间件
+- **临时状态**（如 UI 展开/收起）放在组件内部 useState
+
+### 性能优化策略
+
+| 场景 | 优化方案 |
+|------|---------|
+| 长消息列表渲染 | 虚拟滚动（@tanstack/react-virtual） |
+| 历史消息加载 | 分页加载 + 滚动到顶部触发加载 |
+| WebSocket 高频消息 | 批量更新（requestAnimationFrame 节流） |
+| Markdown 渲染 | React.memo + useMemo 缓存渲染结果 |
+| 代码高亮 | Web Worker 异步处理 |
+| 文件预览 | 懒加载 + 按需渲染 iframe |
+
+### 扩展性设计
+
+后续功能直接以 feature 模块形式新增，无需改动现有架构：
+
+| 功能 | 落点 | 关键依赖 |
+|------|------|---------|
+| **预览** | `features/preview/` | iframe 隔离 + Monaco Editor + WebSocket 实时同步 |
+| **Diff 视图** | `features/diff/` | react-diff-view + 语法高亮 |
+| **Agent 任务管理** | `features/tasks/` | WebSocket 状态推送 + 任务日志查看 |
+| **文件上传** | `features/files/` | core/api 扩展上传接口 |
+| **消息搜索** | `features/search/` | 复用 core/storage 做索引 |
 
 ## 开发计划
 
@@ -517,9 +663,9 @@ frontend/
 - [x] 实现 config 模块（SystemConfig + types）
 
 ### 阶段 2：MCP Server（当前阶段）
-- [ ] 实现 MCP Server 框架
-- [ ] 注册 call_agent tool
-- [ ] 在 Claude Code 中测试
+- [x] 实现 MCP Server 框架
+- [x] 注册 call_agent tool
+- [x] 在 Claude Code 中测试
 
 ### 阶段 3：API Server
 - [ ] 实现 WebSocket 端点

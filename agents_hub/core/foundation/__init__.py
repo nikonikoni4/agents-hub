@@ -22,6 +22,7 @@ from .exceptions import (
 )
 from .message import AgentMessage
 from .models import CallStatus, GroupChatType, MessageType, SessionType
+from .paths import GroupChatPaths, group_chat_paths
 from .renderer import Tag, parse_chat_input, render_for_chat, render_for_llm, wrap_xml
 
 __all__ = [
@@ -50,6 +51,9 @@ __all__ = [
     # constants
     "MAX_TOKEN",
     "LOCAL_DATA_PATH",
+    # paths
+    "GroupChatPaths",
+    "group_chat_paths",
     # renderer
     "render_for_llm",
     "render_for_chat",

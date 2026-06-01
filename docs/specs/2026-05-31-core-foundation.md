@@ -1,8 +1,8 @@
 ---
-version: 1.0
+version: 1.2
 created_at: 2026-05-31
-updated_at: 2026-06-01
-last_updated: 新增 TaskStatus/TaskListStatus 枚举、token.py 工具函数
+updated_at: 2026-06-02
+last_updated: 新增 paths.py 路径集中管理模块
 abstract: core/foundation 层的正式规格，定义系统共享的基础数据模型、消息格式、渲染契约和异常体系
 id: spec-core-foundation
 title: Core Foundation 层规格
@@ -19,6 +19,7 @@ contract_refs:
   - agents_hub/core/foundation/exceptions.py
   - agents_hub/core/foundation/constants.py
   - agents_hub/core/foundation/token.py
+  - agents_hub/core/foundation/paths.py
 ---
 
 # Core Foundation 层规格
@@ -29,6 +30,7 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | 新增 TaskStatus/TaskListStatus 枚举、token.py 工具函数 |
+| 1.2 | 新增 paths.py 路径集中管理模块 |
 
 ## Overview
 
@@ -130,7 +132,41 @@ Agent 间传递的消息结构，核心字段：
 ### 常量与持久化格式
 
 - `MAX_TOKEN`：压缩阈值（当前 1000 token），用于判断是否需要压缩群聊历史
-- `LOCAL_DATA_PATH`：本地数据存储根路径
+- `LOCAL_DATA_PATH`：本地数据存储根路径（保留用于向后兼容，新代码应使用 group_chat_paths）
+
+### 路径集中管理（GroupChatPaths）
+
+`paths.py` 提供群聊相关路径的集中管理，采用单例模式：
+
+**设计目的**：
+- 统一路径构建规则，避免各模块自行拼接导致不一致
+- 集中管理所有群聊相关文件的路径定义
+- 提供清晰的路径结构文档，便于理解和维护
+
+**使用方式**：
+```python
+from agents_hub.core.foundation.paths import group_chat_paths
+
+msg_file = group_chat_paths.messages_file("gc123", "D:/projects/agents-hub")
+# → local_data/teams/D-projects-agents-hub/gc123/gc123.jsonl
+```
+
+**路径方法**：
+
+| 方法 | 路径格式 | 存储内容 |
+|------|---------|---------|
+| `base_dir()` | `local_data/teams/<project>/<id>/` | 群聊基础目录 |
+| `messages_file()` | `local_data/teams/<project>/<id>/<id>.jsonl` | 群聊消息历史 |
+| `session_state_file()` | `local_data/teams/<project>/<id>/agent_session_state.json` | Agent session 状态 |
+| `compact_history_file()` | `local_data/teams/<project>/<id>/memory/compact_history.jsonl` | 压缩历史 |
+| `agent_calls_log()` | `local_data/teams/<project>/<id>/agent_calls.log` | Agent 调用日志 |
+| `agent_calls_data()` | `local_data/teams/<project>/<id>/agent_calls.jsonl` | Agent 调用数据 |
+| `tasks_log()` | `local_data/teams/<project>/<id>/tasks.log` | 任务管理日志 |
+| `tasks_data()` | `local_data/teams/<project>/<id>/tasks.jsonl` | 任务数据 |
+
+**路径规则**：
+- project_path 中的 `/ : \` 转换为 `-`，连续 `-` 合并为单个
+- 所有群聊相关文件统一存放在 `local_data/teams/<sanitized_project>/<group_chat_id>/` 下
 
 ### Token 工具函数
 

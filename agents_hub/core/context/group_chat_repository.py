@@ -7,12 +7,11 @@
 import asyncio
 import json
 import os
-import re
 from datetime import datetime
 
 import aiofiles  # type: ignore[import-untyped]
 
-from agents_hub.core.foundation import LOCAL_DATA_PATH, FileSystemError
+from agents_hub.core.foundation import FileSystemError, group_chat_paths
 
 from .group_chat_session import AgentContextState, AgentSessionInfo, GroupChatSession
 
@@ -34,34 +33,13 @@ class GroupChatRepository:
         self._agent_state_lock = asyncio.Lock()  # 保护 agent_session_state 文件读写
         self._compact_lock = asyncio.Lock()  # 保护 compact_history 文件读写
 
-        # 文件路径
-        sanitized_path = self._sanitize_project_path(project_path)
-        self.group_chat_session_path = f"{LOCAL_DATA_PATH}/teams/{sanitized_path}/{group_chat_id}"
-        self.messages_file = f"{self.group_chat_session_path}/{group_chat_id}.jsonl"
-        self.session_file = f"{self.group_chat_session_path}/agent_session_state.json"
-        self.compact_history_file = f"{self.group_chat_session_path}/memory/compact_history.jsonl"
-
-    # ==================== 工具方法 ====================
-
-    @staticmethod
-    def _sanitize_project_path(project_path: str) -> str:
-        """
-        将 project_path 转换为安全的存储路径名称。
-        将 / : \\ 等 Windows 文件夹命名非法字符转化为 -
-
-        Args:
-            project_path: 原始项目路径字符串
-
-        Returns:
-            转换后的安全路径名称
-        """
-        # 将 / : \\ 替换为 -
-        sanitized = re.sub(r"[/:\\]", "-", project_path)
-        # 移除开头和结尾的 -
-        sanitized = sanitized.strip("-")
-        # 将连续的 - 合并为单个 -
-        sanitized = re.sub(r"-+", "-", sanitized)
-        return sanitized
+        # 文件路径（集中管理）
+        self.group_chat_session_path = str(group_chat_paths.base_dir(group_chat_id, project_path))
+        self.messages_file = str(group_chat_paths.messages_file(group_chat_id, project_path))
+        self.session_file = str(group_chat_paths.session_state_file(group_chat_id, project_path))
+        self.compact_history_file = str(
+            group_chat_paths.compact_history_file(group_chat_id, project_path)
+        )
 
     # ==================== GroupChatSession 持久化 ====================
 

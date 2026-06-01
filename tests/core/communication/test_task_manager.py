@@ -287,7 +287,7 @@ def test_archive_empty_list(task_manager: TaskManager) -> None:
 # ============================================================================
 
 
-def test_persistence_create(task_manager: TaskManager, temp_project_path: Path) -> None:
+def test_persistence_create(task_manager: TaskManager) -> None:
     """
     契约：创建任务后 tasks.jsonl 存在
 
@@ -303,7 +303,8 @@ def test_persistence_create(task_manager: TaskManager, temp_project_path: Path) 
     ]
     task_manager.assign_tasks("test_gc_123", tasks, "Manager")
 
-    persistence_path = temp_project_path / "test_gc_123" / "tasks.jsonl"
+    # 使用 TaskManager 内部的持久化路径（由 group_chat_paths 管理）
+    persistence_path = task_manager._persistence_path
     assert persistence_path.exists(), "tasks.jsonl 应存在"
 
     with open(persistence_path, encoding="utf-8") as f:
@@ -339,7 +340,7 @@ def test_persistence_load(temp_project_path: Path) -> None:
     assert task_list.tasks[0].task_id == "t1"
 
 
-def test_persistence_archive(task_manager: TaskManager, temp_project_path: Path) -> None:
+def test_persistence_archive(task_manager: TaskManager) -> None:
     """
     契约：归档后 tasks.jsonl 包含两行（ACTIVE + ARCHIVED）
 
@@ -357,7 +358,8 @@ def test_persistence_archive(task_manager: TaskManager, temp_project_path: Path)
     task_manager.assign_tasks("test_gc_123", tasks, "Manager")
     task_manager.archive_task_list("test_gc_123")
 
-    persistence_path = temp_project_path / "test_gc_123" / "tasks.jsonl"
+    # 使用 TaskManager 内部的持久化路径（由 group_chat_paths 管理）
+    persistence_path = task_manager._persistence_path
     with open(persistence_path, encoding="utf-8") as f:
         lines = f.readlines()
         assert len(lines) == 2

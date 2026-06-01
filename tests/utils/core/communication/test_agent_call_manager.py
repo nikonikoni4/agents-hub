@@ -11,10 +11,7 @@ AgentCallManager 单元测试
 7. get_stats() 返回正确统计
 """
 
-import json
 import logging
-import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,15 +29,11 @@ def tmp_project(tmp_path):
 @pytest.fixture
 def manager(tmp_project):
     """创建 AgentCallManager 实例，使用临时路径"""
-    with (
-        patch("agents_hub.core.communication.agent_call_manager.config") as mock_config,
-        patch("agents_hub.core.communication.agent_call_manager.get_specialized_logger") as mock_logger,
-    ):
-        mock_config.data_path = Path(tmp_project)
+    with patch("agents_hub.core.communication.agent_call_manager.get_specialized_logger") as mock_logger:
         mock_logger.return_value = MagicMock(spec=logging.Logger)
         mgr = AgentCallManager(
             group_chat_id="gc_test",
-            project_path="test/project",
+            project_path=tmp_project,
             cleanup_interval=60,
         )
         return mgr

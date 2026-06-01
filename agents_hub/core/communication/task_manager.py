@@ -8,7 +8,7 @@ import json
 import uuid
 from datetime import datetime
 
-from agents_hub.config import config
+from agents_hub.core.foundation import group_chat_paths
 from agents_hub.core.foundation.models import TaskListStatus, TaskStatus
 from agents_hub.utils.logger import get_specialized_logger
 
@@ -36,7 +36,7 @@ class TaskManager:
         self.group_chat_id = group_chat_id
 
         # 创建专用 logger
-        log_dir = config.data_path / project_path / group_chat_id
+        log_dir = group_chat_paths.base_dir(group_chat_id, project_path)
         self.logger = get_specialized_logger(
             name=f"task_manager.{group_chat_id}",
             log_filename="tasks.log",
@@ -45,7 +45,7 @@ class TaskManager:
         )
 
         # 持久化路径
-        self._persistence_path = log_dir / "tasks.jsonl"
+        self._persistence_path = group_chat_paths.tasks_data(group_chat_id, project_path)
         self._persistence_path.parent.mkdir(parents=True, exist_ok=True)
 
         # 内存中的任务列表（list_id -> TaskList）

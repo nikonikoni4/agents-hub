@@ -3,7 +3,9 @@
 """
 
 from .markdown_injector import replace_marked_section
+from .path_utils import sanitize_project_path
 
 __all__ = [
     "replace_marked_section",
+    "sanitize_project_path",
 ]

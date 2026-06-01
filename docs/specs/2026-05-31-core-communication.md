@@ -1,8 +1,8 @@
 ---
-version: 1.0
+version: 1.2
 created_at: 2026-05-31
-updated_at: 2026-06-01
-last_updated: 新增 Task/TaskList 数据模型和 TaskManager
+updated_at: 2026-06-02
+last_updated: 路径管理改用 group_chat_paths 集中管理
 abstract: core/communication 层的正式规格，定义消息路由机制和 Agent 调用生命周期管理
 id: spec-core-communication
 title: Core Communication 层规格
@@ -20,6 +20,7 @@ contract_refs:
   - agents_hub/core/communication/task_manager.py
   - agents_hub/core/foundation/models.py
   - agents_hub/core/foundation/message.py
+  - agents_hub/core/foundation/paths.py
 ---
 
 # Core Communication 层规格
@@ -30,6 +31,7 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | 新增 Task/TaskList 数据模型和 TaskManager |
+| 1.2 | 路径管理改用 group_chat_paths 集中管理 |
 
 ## Overview
 
@@ -128,6 +130,11 @@ AgentCallManager 在每个群聊的数据目录下维护 `agent_calls.jsonl` 持
 - **容错设计**：同一条 call_id 的多条记录取最新一条（后写覆盖前写）
 - **result 不持久化**：执行结果可能很大且重启后无法恢复，不写入文件
 
+**路径管理**：
+- 使用 foundation 层的 `group_chat_paths` 单例集中管理路径
+- 日志路径：`group_chat_paths.base_dir(group_chat_id, project_path)`
+- 数据路径：`group_chat_paths.agent_calls_data(group_chat_id, project_path)`
+
 ### 任务管理（TaskManager）
 
 TaskManager 管理团队任务的 CRUD 和持久化（设计详见 `2026-05-31-mcp-tools-design.md` §4）。
@@ -151,6 +158,11 @@ class TaskManager:
 - `archive_task_list`：ACTIVE → ARCHIVED，返回 `{archived_count, archived_at}`
 
 **持久化**：append-only JSONL（`tasks.jsonl`），同 `list_id` 取最新记录。
+
+**路径管理**：
+- 使用 foundation 层的 `group_chat_paths` 单例集中管理路径
+- 日志路径：`group_chat_paths.base_dir(group_chat_id, project_path)`
+- 数据路径：`group_chat_paths.tasks_data(group_chat_id, project_path)`
 
 ## Technical Contract
 

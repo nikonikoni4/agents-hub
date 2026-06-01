@@ -94,7 +94,7 @@
 #### 3.2 group_chat_repository.py - GroupChatRepository
 
 **契约点**：
-- _sanitize_project_path() 正确转换特殊字符
+- sanitize_project_path() 正确转换特殊字符（已移至 core.utils）
 - load_group_chat_session() 文件不存在返回空 session
 - save/load agent_session_state 往返一致
 - save/load compact_history 往返一致
@@ -225,8 +225,8 @@
 - [x] `test_get_uncompact_messages_from_loc` - 验证增量获取
 
 #### group_chat_repository.py
-- [x] `test_sanitize_project_path_special_chars` - 验证路径清理
-- [x] `test_sanitize_project_path_consecutive_dashes` - 验证连续横线合并
+- [x] `test_sanitize_project_path_special_chars` - 验证路径清理（已移至 core.utils）
+- [x] `test_sanitize_project_path_consecutive_dashes` - 验证连续横线合并（已移至 core.utils）
 - [x] `test_load_session_file_not_exists` - 验证文件不存在返回空
 - [x] `test_save_load_session_roundtrip` - 验证 session 往返
 - [x] `test_save_load_agent_state_roundtrip` - 验证 agent state 往返
