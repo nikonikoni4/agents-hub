@@ -161,12 +161,18 @@ class GroupChat:
         new_members: list[Agent] = []
 
         # 检查 manager 是否需要初始化
-        if self.manager and self.manager.name not in self.group_chat_context.agent_session_id:
+        session_info = (
+            self.group_chat_context.agent_session_id.get(self.manager.name)
+            if self.manager
+            else None
+        )
+        if self.manager and (not session_info or not session_info.main_session):
             new_members.append(self.manager)
 
         # 检查 workers 是否需要初始化
         for name, worker in self.workers.items():
-            if name not in self.group_chat_context.agent_session_id:
+            session_info = self.group_chat_context.agent_session_id.get(name)
+            if not session_info or not session_info.main_session:
                 new_members.append(worker)
 
         if not new_members:

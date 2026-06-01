@@ -42,7 +42,7 @@ class AgentCallManager:
         self._retention_config = retention_config
 
         # 创建专用logger：每个群聊有独立的日志目录
-        log_dir = config.data_path / project_path / group_chat_id
+        log_dir = config.data_path / "teams" / project_path / group_chat_id
         self.logger = get_specialized_logger(
             name=f"agent_call_manager.{group_chat_id}",
             log_filename="agent_calls.log",

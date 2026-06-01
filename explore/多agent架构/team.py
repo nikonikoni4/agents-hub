@@ -992,7 +992,7 @@ async def main():
     role_manager.create_role("小李",AgentPlatform.CLAUDE,type = RoleType.TEAM_MEMBER)
     role_manager.create_role("小赵",AgentPlatform.CODEX,type = RoleType.TEAM_MEMBER)
     role_manager.create_role("Leader",AgentPlatform.CLAUDE,type = RoleType.LEADER)
-    role_manager.create_role("llm_call",AgentPlatform.CODEX,type = RoleType.LEADER)
+    # role_manager.create_role("llm_call",AgentPlatform.CODEX,type = RoleType.LEADER)
     team_member_list = ["小李","小赵"]
     team = Team(team_name= "测试",team_members_name=team_member_list)
     group_chat = GroupChat(team,GroupChatType.MANAGER_ORCHESTRATE,project_path='D:/desktop/软件开发/agents-hub')

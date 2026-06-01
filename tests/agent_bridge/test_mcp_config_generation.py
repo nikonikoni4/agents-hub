@@ -116,8 +116,9 @@ class TestMcpConfigGeneration:
 
         assert "mcpServers" in content, "缺少 mcpServers 字段"
         assert "agents-hub" in content["mcpServers"], "缺少 agents-hub 服务器配置"
-        assert content["mcpServers"]["agents-hub"]["url"] == "http://localhost:8001/mcp", \
-            "MCP Server URL 不正确"
+        server_config = content["mcpServers"]["agents-hub"]
+        assert server_config["type"] == "http", "MCP Server type 应为 http"
+        assert server_config["url"] == "http://localhost:8001/mcp", "MCP Server URL 不正确"
 
     def test_claude_md_has_runtime_markers(self, role_manager, agents_dir, mock_claude_home):
         """

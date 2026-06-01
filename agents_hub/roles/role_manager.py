@@ -5,6 +5,7 @@ import re
 import shutil
 from pathlib import Path
 
+from agents_hub.config import config
 from agents_hub.config.types import AgentPlatform
 from agents_hub.roles.exceptions import (
     PlatformConfigNotFoundError,
@@ -31,7 +32,7 @@ class RoleManager:
         Args:
             agents_dir: agents 目录路径 (local_data/agents)。
         """
-        self.agents_dir = agents_dir or Path("local_data/agents")
+        self.agents_dir = agents_dir or config.data_path / "agents"
 
     def _validate_role_name(self, name: str) -> None:
         """验证角色名称是否为合法的目录名。
@@ -285,7 +286,9 @@ class RoleManager:
         # 生成 .mcp.json（如果不存在）
         mcp_json_path = work_root / ".mcp.json"
         if not mcp_json_path.exists():
-            mcp_config = {"mcpServers": {"agents-hub": {"url": "http://localhost:8001/mcp"}}}
+            mcp_config = {
+                "mcpServers": {"agents-hub": {"type": "http", "url": "http://localhost:8001/mcp"}}
+            }
             mcp_json_path.write_text(
                 json.dumps(mcp_config, ensure_ascii=False, indent=2), encoding="utf-8"
             )
@@ -325,7 +328,9 @@ class RoleManager:
         # 生成 .mcp.json（如果不存在）
         mcp_json_path = work_root / ".mcp.json"
         if not mcp_json_path.exists():
-            mcp_config = {"mcpServers": {"agents-hub": {"url": "http://localhost:8001/mcp"}}}
+            mcp_config = {
+                "mcpServers": {"agents-hub": {"type": "http", "url": "http://localhost:8001/mcp"}}
+            }
             mcp_json_path.write_text(
                 json.dumps(mcp_config, ensure_ascii=False, indent=2), encoding="utf-8"
             )
