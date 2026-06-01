@@ -4,7 +4,12 @@ from agents_hub.skills.skill_manager import SkillManager
 
 
 class SkillService:
-    """Skills 应用服务层"""
+    """Skills 应用服务层
+
+    协调 SkillManager，提供业务逻辑封装。
+    当前阶段逻辑简单，主要是转发调用。
+    未来可以在这里添加权限验证、审计日志等。
+    """
 
     def __init__(self):
         self.skill_manager = SkillManager()

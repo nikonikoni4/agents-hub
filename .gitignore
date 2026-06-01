@@ -228,3 +228,7 @@ tests\explore\test_cli_error\codex_home
 local_data
 .pytest_tmp
 927e0e2c-2c69-40d4-9e6a-f494a92efe4a.jsonl
+
+# Docker experiment
+explore/docker-experiment/
+explore\docker-experiment
