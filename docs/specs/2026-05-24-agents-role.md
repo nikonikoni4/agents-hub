@@ -1,8 +1,8 @@
 ---
-version: 1.2
+version: 1.3
 created_at: 2026-05-24
-updated_at: 2026-05-30
-last_updated: RoleConfig 字段重构（统一 work_root，新增 description/role_type/bare）
+updated_at: 2026-06-01
+last_updated: 新增角色名称互为前缀冲突校验规则
 abstract: roles 角色配置模块的正式规格，定义角色生命周期管理、配置数据结构、头像引用机制和 Skill 管理
 id: spec-roles
 title: Roles 角色配置模块规格
@@ -27,6 +27,7 @@ contract_refs:
 | 1.0 | 从当前代码提炼生成正式 spec 初稿 |
 | 1.1 | 模块路径从 agents 重命名为 roles |
 | 1.2 | RoleConfig 字段重构（统一 work_root，新增 description/role_type/bare）；RoleInfo 默认 role_type；contract_refs 更新 |
+| 1.3 | 新增角色名称互为前缀冲突校验规则，避免 @mention 歧义 |
 
 ---
 
@@ -118,15 +119,41 @@ Skill 采用**复制模式**：从全局 `local_data/skills/` 复制到角色的
 ### 角色创建初始化
 
 创建角色时的目录初始化顺序：
-1. 验证角色名称合法性（非空、不以 `.` 开头、不以空格结尾、不包含 Windows 禁止字符 `\/:*?"<>|`、不是 Windows 保留名）
-2. 创建 `role_dir`、`work_root`、`work_root/skills` 目录
-3. 根据 platform 复制平台配置（从 `~/.claude` 或 `~/.codex`）
-4. 写入 `role.json`
-5. 若初始化失败，自动清理已创建的目录（回滚）
+1. 验证角色名称合法性（见下方命名规则）
+2. 检查名称与已有角色是否存在互为前缀冲突
+3. 创建 `role_dir`、`work_root`、`work_root/skills` 目录
+4. 根据 platform 复制平台配置（从 `~/.claude` 或 `~/.codex`）
+5. 写入 `role.json`
+6. 若初始化失败，自动清理已创建的目录（回滚）
+
+### 角色命名规则
+
+角色名称需同时满足以下两层校验：
+
+**基础校验**（`_validate_role_name`）：
+- 非空
+- 不以 `.` 开头
+- 不以空格结尾
+- 不包含空格
+- 不包含 Windows 禁止字符 `\/:*?"<>|`
+- 不是 Windows 保留名（CON、PRN、AUX、NUL、COM1-9、LPT1-9）
+
+**前缀冲突校验**（`_check_name_prefix_conflict`）：
+
+新名称 A 与任意已有名称 B 不能互为前缀，即不能满足 `A.startswith(B)` 或 `B.startswith(A)`。
+
+目的：避免群聊中 `@mention` 解析歧义。例如 `nico` 与 `nico_1` 互为前缀，`@nico` 会误匹配 `@nico_1`，因此禁止。
+
+| 新名称 | 已有名称 | 结果 | 原因 |
+|--------|----------|------|------|
+| `nico_1` | `nico` | 冲突 | `nico` 是 `nico_1` 的前缀 |
+| `nico` | `nico_1` | 冲突 | 同上 |
+| `1_nico` | `nico` | 不冲突 | 互不为前缀 |
+| `alice` | `nico` | 不冲突 | 互不为前缀 |
 
 ### 角色名称更新
 
-更新角色名称时，同步修改 `role.json` 中的 `name` 字段和角色目录名，保持二者一致。
+更新角色名称时，同步修改 `role.json` 中的 `name` 字段和角色目录名，保持二者一致。新名称同样需要通过基础校验和前缀冲突校验。
 
 ## Technical Contract
 
@@ -177,7 +204,8 @@ Skill 采用**复制模式**：从全局 `local_data/skills/` 复制到角色的
 | 异常 | 触发场景 |
 |------|----------|
 | RoleNotFoundError | get_role 时角色不存在 |
-| RoleAlreadyExistsError | create_role 时名称冲突 |
+| RoleAlreadyExistsError | create_role 时名称已存在 |
+| ValueError | 名称不合法（基础校验失败）或与已有角色互为前缀冲突 |
 | PlatformConfigNotFoundError | 平台源配置目录不存在（~/.claude 或 ~/.codex） |
 | SkillNotFoundError | add/remove skill 时 skill 不存在 |
 | SkillAlreadyExistsError | add_skill 时 skill 已存在于角色中 |

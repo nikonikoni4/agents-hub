@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from agents_hub.core.context.agent_context import AgentContext
 from agents_hub.core.context.group_chat_context import GroupChatContext
 from agents_hub.core.context.group_chat_repository import GroupChatRepository
 from agents_hub.core.context.group_chat_session import (
@@ -21,7 +22,7 @@ from agents_hub.core.context.group_chat_session import (
     AgentSessionInfo,
     GroupChatSession,
 )
-from agents_hub.core.foundation import StateError
+from agents_hub.core.foundation import StateError, Tag, wrap_xml
 
 
 # ==================== group_chat_session.py ====================
@@ -275,3 +276,231 @@ class TestGroupChatContextAddMessage:
 
             with pytest.raises(StateError):
                 await ctx.add_message(SimpleNamespace(agent_name="a", text="hi"))
+
+
+# ==================== agent_context.py ====================
+
+
+class TestBuildCompactHistoryXml:
+    """测试 AgentContext._build_compact_history_xml"""
+
+    @pytest.mark.asyncio
+    async def test_no_new_history_returns_empty(self):
+        """契约：无新压缩历史时返回空串"""
+        ctx = AgentContext.__new__(AgentContext)
+        ctx.agent_name = "agent_a"
+
+        result = await ctx._build_compact_history_xml(compact_history=[], last_loaded_compact_index=0)
+        assert result == ""
+
+        # index 已到末尾
+        history = [{"content": {"summary": "s1"}}]
+        result = await ctx._build_compact_history_xml(compact_history=history, last_loaded_compact_index=1)
+        assert result == ""
+
+    @pytest.mark.asyncio
+    async def test_overall_summary_only(self):
+        """契约：只有 overall 摘要时，不包含 for_you 块"""
+        ctx = AgentContext.__new__(AgentContext)
+        ctx.agent_name = "agent_a"
+
+        history = [{"content": {"summary": "发生了X事件"}}]
+        result = await ctx._build_compact_history_xml(history, last_loaded_compact_index=0)
+
+        assert f"<{Tag.GROUP_HISTORY}>" in result
+        assert f"<{Tag.SUMMARY_OVERALL}>" in result
+        assert "1. 发生了X事件" in result
+        assert Tag.SUMMARY_FOR_YOU not in result
+
+    @pytest.mark.asyncio
+    async def test_overall_and_for_you(self):
+        """契约：有针对当前 agent 的摘要时，同时包含 overall 和 for_you"""
+        ctx = AgentContext.__new__(AgentContext)
+        ctx.agent_name = "agent_a"
+
+        history = [{"content": {"summary": "整体摘要", "agent_a": "你的专属摘要"}}]
+        result = await ctx._build_compact_history_xml(history, last_loaded_compact_index=0)
+
+        assert "1. 整体摘要" in result
+        assert f"<{Tag.SUMMARY_FOR_YOU}>" in result
+        assert "1. 你的专属摘要" in result
+
+    @pytest.mark.asyncio
+    async def test_incremental_loading(self):
+        """契约：只处理 last_loaded_compact_index 之后的历史"""
+        ctx = AgentContext.__new__(AgentContext)
+        ctx.agent_name = "agent_a"
+
+        history = [
+            {"content": {"summary": "旧摘要"}},
+            {"content": {"summary": "新摘要"}},
+        ]
+        result = await ctx._build_compact_history_xml(history, last_loaded_compact_index=1)
+
+        assert "旧摘要" not in result
+        assert "1. 新摘要" in result
+
+    @pytest.mark.asyncio
+    async def test_multiple_records_numbering(self):
+        """契约：多条记录按序编号"""
+        ctx = AgentContext.__new__(AgentContext)
+        ctx.agent_name = "agent_a"
+
+        history = [
+            {"content": {"summary": "s1", "agent_a": "a1"}},
+            {"content": {"summary": "s2", "agent_a": "a2"}},
+        ]
+        result = await ctx._build_compact_history_xml(history, last_loaded_compact_index=0)
+
+        assert "1. s1" in result
+        assert "2. s2" in result
+        assert "1. a1" in result
+        assert "2. a2" in result
+
+
+class TestGetFilteredMessages:
+    """测试 AgentContext._get_filtered_messages"""
+
+    def _make_context(self, agent_name: str, messages: list[dict]) -> AgentContext:
+        ctx = AgentContext.__new__(AgentContext)
+        ctx.agent_name = agent_name
+        session = GroupChatSession(group_chat_id="gc1")
+        session.messages = messages
+        group_ctx = GroupChatContext.__new__(GroupChatContext)
+        group_ctx.group_chat_session = session
+        ctx.group_chat_context = group_ctx
+        return ctx
+
+    def test_filters_self_sent_messages(self):
+        """契约：排除自己发送的消息"""
+        messages = [
+            {"agent_name": "agent_a", "content": "我发的"},
+            {"agent_name": "agent_b", "content": "别人发的"},
+        ]
+        ctx = self._make_context("agent_a", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+
+        assert len(result) == 1
+        assert result[0]["content"] == "别人发的"
+
+    def test_filters_at_self_messages(self):
+        """契约：排除 @ 自己的消息"""
+        messages = [
+            {"agent_name": "agent_b", "content": "@agent_a 请处理"},
+            {"agent_name": "agent_b", "content": "普通消息"},
+        ]
+        ctx = self._make_context("agent_a", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+
+        assert len(result) == 1
+        assert result[0]["content"] == "普通消息"
+
+    def test_filters_both_conditions(self):
+        """契约：同时过滤自己发送和 @ 自己的消息"""
+        messages = [
+            {"agent_name": "agent_a", "content": "自己发的"},
+            {"agent_name": "agent_b", "content": "@agent_a 你看下"},
+            {"agent_name": "agent_c", "content": "与你无关"},
+        ]
+        ctx = self._make_context("agent_a", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+
+        assert len(result) == 1
+        assert result[0]["content"] == "与你无关"
+
+    def test_partial_at_match_not_filtered(self):
+        """契约：@agent_a_xx 不算 @ agent_a，不应被过滤"""
+        messages = [
+            {"agent_name": "agent_b", "content": "@agent_a_extended 请处理"},
+        ]
+        ctx = self._make_context("agent_a", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+
+        assert len(result) == 1
+
+    def test_at_no_space_after_name(self):
+        """契约：@nico你好 无空格也应被过滤（@nico 后跟中文非词边界）"""
+        messages = [
+            {"agent_name": "other", "content": "@nico你好吗"},
+        ]
+        ctx = self._make_context("nico", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+        assert result == []
+
+    def test_at_with_space_after_name(self):
+        """契约：@nico 你好 有空格应被过滤"""
+        messages = [
+            {"agent_name": "other", "content": "@nico 你好吗"},
+        ]
+        ctx = self._make_context("nico", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+        assert result == []
+
+    def test_at_multiple_mentions_including_self(self):
+        """契约：@nico@小李 中包含 @nico 应被过滤"""
+        messages = [
+            {"agent_name": "other", "content": "@nico@小李 你们需要处理"},
+        ]
+        ctx = self._make_context("nico", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+        assert result == []
+
+    def test_at_middle_of_word_not_matched(self):
+        """契约：xx@nico 不算 @nico（前面有字符，不是独立 @ 提及）"""
+        messages = [
+            {"agent_name": "other", "content": "xx@nico 你好"},
+        ]
+        ctx = self._make_context("nico", messages)
+        # @nico 仍然是独立的 @ 提及（前面是字母，但 @ 是分隔符）
+        # re.search 会在 xx@nico 中找到 @nico，所以应该被过滤
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+        assert result == []
+
+    def test_at_different_agent_not_filtered(self):
+        """契约：@other_agent 不应匹配 @nico"""
+        messages = [
+            {"agent_name": "other", "content": "@other_agent 你好"},
+        ]
+        ctx = self._make_context("nico", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+        assert len(result) == 1
+
+    def test_at_end_of_message(self):
+        """契约：@nico 在消息末尾也应被过滤"""
+        messages = [
+            {"agent_name": "other", "content": "请处理 @nico"},
+        ]
+        ctx = self._make_context("nico", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+        assert result == []
+
+    def test_at_with_punctuation_after(self):
+        """契约：@nico, @nico! @nico。各种标点后也应被过滤"""
+        for content in ["@nico,你好", "@nico!快看", "@nico。处理一下"]:
+            messages = [{"agent_name": "other", "content": content}]
+            ctx = self._make_context("nico", messages)
+            result = ctx._get_filtered_messages(last_loaded_message_index=0)
+            assert result == [], f"应过滤: {content}"
+
+    def test_incremental_loading(self):
+        """契约：只处理 last_loaded_message_index 之后的消息"""
+        messages = [
+            {"agent_name": "agent_b", "content": "旧消息"},
+            {"agent_name": "agent_b", "content": "新消息"},
+        ]
+        ctx = self._make_context("agent_a", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=1)
+
+        assert len(result) == 1
+        assert result[0]["content"] == "新消息"
+
+    def test_all_filtered_returns_empty(self):
+        """契约：所有消息都被过滤时返回空列表"""
+        messages = [
+            {"agent_name": "agent_a", "content": "自己发的"},
+            {"agent_name": "agent_b", "content": "@agent_a 你来"},
+        ]
+        ctx = self._make_context("agent_a", messages)
+        result = ctx._get_filtered_messages(last_loaded_message_index=0)
+
+        assert result == []

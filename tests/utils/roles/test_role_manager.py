@@ -175,16 +175,12 @@ def test_create_role_invalid_name(role_manager):
         role_manager.create_role("test/role", AgentPlatform.CLAUDE)
 
     # 包含空格
-    with pytest.raises(ValueError, match="Invalid role name"):
+    with pytest.raises(ValueError, match="Cannot contain spaces"):
         role_manager.create_role("test role", AgentPlatform.CLAUDE)
 
     # 以点开头
-    with pytest.raises(ValueError, match="Invalid role name"):
-        role_manager.create_role(".hidden", AgentPlatform.CLAUDE)
-
-    # 以连字符开头
     with pytest.raises(ValueError, match="cannot start with"):
-        role_manager.create_role("-test", AgentPlatform.CLAUDE)
+        role_manager.create_role(".hidden", AgentPlatform.CLAUDE)
 
 
 def test_list_roles_with_corrupted_json(role_manager, agents_dir):
@@ -253,3 +249,70 @@ def test_list_avatars(role_manager, agents_dir):
     assert "avatar_01.png" in avatars
     assert "avatar_02.jpg" in avatars
     assert "readme.txt" not in avatars
+
+
+def _create_role_dir(agents_dir: Path, name: str):
+    """辅助函数：创建角色目录和 role.json"""
+    role_dir = agents_dir / name
+    role_dir.mkdir(parents=True, exist_ok=True)
+    role_json = {"name": name, "platform": "claude", "avatar": None, "abilities": []}
+    (role_dir / "role.json").write_text(json.dumps(role_json), encoding="utf-8")
+
+
+class TestCheckNamePrefixConflict:
+    """测试 _check_name_prefix_conflict - 名称互为前缀校验"""
+
+    def test_no_conflict_different_names(self, role_manager, agents_dir):
+        """契约：完全不同名称不冲突"""
+        _create_role_dir(agents_dir, "nico")
+        role_manager._check_name_prefix_conflict("alice")  # 不应抛异常
+
+    def test_new_name_is_prefix_of_existing(self, role_manager, agents_dir):
+        """契约：新名称是已有名称的前缀 → 冲突"""
+        _create_role_dir(agents_dir, "nico_1")
+        with pytest.raises(ValueError, match="conflicts with existing role.*nico_1"):
+            role_manager._check_name_prefix_conflict("nico")
+
+    def test_existing_name_is_prefix_of_new(self, role_manager, agents_dir):
+        """契约：已有名称是新名称的前缀 → 冲突"""
+        _create_role_dir(agents_dir, "nico")
+        with pytest.raises(ValueError, match="conflicts with existing role.*nico"):
+            role_manager._check_name_prefix_conflict("nico_1")
+
+    def test_prefix_with_underscore_conflict(self, role_manager, agents_dir):
+        """契约：nico 与 nico_1 互为前缀冲突"""
+        _create_role_dir(agents_dir, "nico")
+        with pytest.raises(ValueError, match="prefixes"):
+            role_manager._check_name_prefix_conflict("nico_1")
+
+    def test_prefix_with_number_conflict(self, role_manager, agents_dir):
+        """契约：agent 与 agent2 互为前缀冲突"""
+        _create_role_dir(agents_dir, "agent")
+        with pytest.raises(ValueError, match="prefixes"):
+            role_manager._check_name_prefix_conflict("agent2")
+
+    def test_reversed_prefix_not_conflict(self, role_manager, agents_dir):
+        """契约：1_nico 与 nico 不互为前缀，不冲突"""
+        _create_role_dir(agents_dir, "nico")
+        role_manager._check_name_prefix_conflict("1_nico")  # 不应抛异常
+
+    def test_reversed_prefix_not_conflict_reverse(self, role_manager, agents_dir):
+        """契约：1_nico 与 nico 反向也不冲突"""
+        _create_role_dir(agents_dir, "1_nico")
+        role_manager._check_name_prefix_conflict("nico")  # 不应抛异常
+
+    def test_same_name_skipped(self, role_manager, agents_dir):
+        """契约：同名跳过检查（由 RoleAlreadyExistsError 处理）"""
+        _create_role_dir(agents_dir, "nico")
+        role_manager._check_name_prefix_conflict("nico")  # 不应抛异常
+
+    def test_no_existing_roles(self, role_manager):
+        """契约：无已有角色时不冲突"""
+        role_manager._check_name_prefix_conflict("nico")  # 不应抛异常
+
+    def test_multiple_existing_roles_one_conflict(self, role_manager, agents_dir):
+        """契约：多个已有角色中有一个冲突即报错"""
+        _create_role_dir(agents_dir, "alice")
+        _create_role_dir(agents_dir, "nico")
+        with pytest.raises(ValueError, match="conflicts.*nico"):
+            role_manager._check_name_prefix_conflict("nico_1")

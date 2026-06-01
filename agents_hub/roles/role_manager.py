@@ -56,6 +56,8 @@ class RoleManager:
             raise ValueError("Role name cannot start with '.'")
         if name.endswith(" "):
             raise ValueError("Role name cannot end with space")
+        if " " in name:
+            raise ValueError(f"Invalid role name: '{name}'. Cannot contain spaces")
         if re.search(r'[\\/:*?"<>|]', name):
             raise ValueError(f"Invalid role name: '{name}'. Cannot contain: \\ / : * ? \" < > |")
         # Windows 保留名
@@ -85,6 +87,28 @@ class RoleManager:
         }
         if name.upper() in reserved:
             raise ValueError(f"Invalid role name: '{name}' is a Windows reserved name")
+
+    def _check_name_prefix_conflict(self, name: str) -> None:
+        """检查新名称是否与已有角色名称互为前缀。
+
+        规则：新名称 A 与已有名称 B 不能满足 A.startswith(B) 或 B.startswith(A)。
+        避免 @name 匹配歧义，例如 nico 与 nico_1 会冲突。
+
+        Args:
+            name: 要检查的角色名称。
+
+        Raises:
+            ValueError: 名称与已有角色互为前缀时抛出。
+        """
+        existing_names = self.list_role_names()
+        for existing in existing_names:
+            if existing == name:
+                continue
+            if name.startswith(existing) or existing.startswith(name):
+                raise ValueError(
+                    f"Role name '{name}' conflicts with existing role '{existing}': "
+                    f"names cannot be prefixes of each other"
+                )
 
     def list_roles(self) -> list[RoleInfo]:
         """列出所有角色。
@@ -209,6 +233,7 @@ class RoleManager:
             PlatformConfigNotFoundError: 平台配置目录不存在。
         """
         self._validate_role_name(name)
+        self._check_name_prefix_conflict(name)
 
         role_dir = self.agents_dir / name
         if role_dir.exists():
