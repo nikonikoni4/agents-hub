@@ -6,6 +6,18 @@ MCP Server 和 4 个工具
 2. assign_tasks_to_team: 覆盖式更新任务列表
 3. archive_task_list: 归档当前 ACTIVE 列表
 4. check_agent_call: 查询 AgentCall 状态
+
+维护说明：
+- 当前 tool 数量少，且共享同一套 token 解析、GroupChat 获取和错误响应约定，
+  所以集中放在 server.py 中是可以接受的。
+- 当出现以下任一情况时，再拆分到 agents_hub/mcp/tools/：
+  1. tool 数量超过 5-6 个；
+  2. 单个 tool 逻辑明显变长，影响阅读 server.py 的主入口职责；
+  3. 需要为 tool 单独编写测试；
+  4. tool 开始分化为多个领域，例如 agent、task、history、role；
+  5. token 解析、权限校验、GroupChat 获取等重复逻辑继续增加。
+- 拆分优先采用 tools/<domain>.py 或 tools/<tool_name>.py；只有当某个 tool
+  自身包含复杂 schema、辅助函数或测试夹具时，才升级为独立文件夹。
 """
 
 from fastmcp import FastMCP
