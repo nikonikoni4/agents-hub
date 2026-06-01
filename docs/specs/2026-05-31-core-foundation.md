@@ -1,8 +1,8 @@
 ---
 version: 1.0
 created_at: 2026-05-31
-updated_at: 2026-05-31
-last_updated: 初稿
+updated_at: 2026-06-01
+last_updated: 新增 TaskStatus/TaskListStatus 枚举、token.py 工具函数
 abstract: core/foundation 层的正式规格，定义系统共享的基础数据模型、消息格式、渲染契约和异常体系
 id: spec-core-foundation
 title: Core Foundation 层规格
@@ -18,6 +18,7 @@ contract_refs:
   - agents_hub/core/foundation/renderer.py
   - agents_hub/core/foundation/exceptions.py
   - agents_hub/core/foundation/constants.py
+  - agents_hub/core/foundation/token.py
 ---
 
 # Core Foundation 层规格
@@ -27,6 +28,7 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
+| 1.1 | 新增 TaskStatus/TaskListStatus 枚举、token.py 工具函数 |
 
 ## Overview
 
@@ -62,6 +64,8 @@ foundation 定义四个核心枚举，构成系统的状态词汇表：
 | MessageType | 区分是否需要自动回复 | TASK（需要回复）、NOTIFICATION（不需要回复） |
 | CallStatus | Agent 调用的生命周期状态 | PENDING → RUNNING → COMPLETED / FAILED / TIMEOUT |
 | GroupChatType | 群聊的编排模式 | SEQUENCE_EXECUTE（流水线）、MANAGER_ORCHESTRATE（动态编排） |
+| TaskStatus | 任务生命周期状态 | PENDING → RUNNING → COMPLETED / FAILED |
+| TaskListStatus | 任务列表状态 | ACTIVE / ARCHIVED |
 
 **状态转换规则**（CallStatus）：
 - 一次调用的生命周期：PENDING → RUNNING → 终态（COMPLETED / FAILED / TIMEOUT）
@@ -127,6 +131,14 @@ Agent 间传递的消息结构，核心字段：
 
 - `MAX_TOKEN`：压缩阈值（当前 1000 token），用于判断是否需要压缩群聊历史
 - `LOCAL_DATA_PATH`：本地数据存储根路径
+
+### Token 工具函数
+
+`token.py` 提供 Agent Token 的生成和安全处理（详见 `2026-05-31-mcp-tools-design.md`）：
+
+- `generate_token()` → `tok_<32位hex>`（`secrets.token_hex(16)`）
+- `redact_token(text)` → 替换所有 token 为 `[REDACTED]`
+- `TOKEN_PATTERN`：编译正则 `r"tok_[a-f0-9]{32}"`
 
 持久化文件格式定义（详见 constants.py 注释）：
 - `<group_chat_id>.jsonl`：群聊消息历史，首行为 meta_data

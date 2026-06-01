@@ -1,8 +1,8 @@
 ---
 version: 1.0
 created_at: 2026-05-31
-updated_at: 2026-05-31
-last_updated: 初稿
+updated_at: 2026-06-01
+last_updated: 新增 Task/TaskList 数据模型和 TaskManager
 abstract: core/communication 层的正式规格，定义消息路由机制和 Agent 调用生命周期管理
 id: spec-core-communication
 title: Core Communication 层规格
@@ -16,6 +16,8 @@ contract_refs:
   - agents_hub/core/communication/message_router.py
   - agents_hub/core/communication/agent_call.py
   - agents_hub/core/communication/agent_call_manager.py
+  - agents_hub/core/communication/task.py
+  - agents_hub/core/communication/task_manager.py
   - agents_hub/core/foundation/models.py
   - agents_hub/core/foundation/message.py
 ---
@@ -27,6 +29,7 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
+| 1.1 | 新增 Task/TaskList 数据模型和 TaskManager |
 
 ## Overview
 
@@ -45,6 +48,7 @@ communication 只依赖 foundation 层，不依赖 context、agent 或 orchestra
 - AgentCall 的生命周期状态管理
 - 调用超时检测与自动清理策略
 - 调用记录的持久化与恢复
+- Task / TaskList 数据模型和 TaskManager 任务管理
 
 ### 范围外
 
@@ -123,6 +127,30 @@ AgentCallManager 在每个群聊的数据目录下维护 `agent_calls.jsonl` 持
 - **压缩时机**：清理过期调用后重写文件，只保留内存中的有效记录
 - **容错设计**：同一条 call_id 的多条记录取最新一条（后写覆盖前写）
 - **result 不持久化**：执行结果可能很大且重启后无法恢复，不写入文件
+
+### 任务管理（TaskManager）
+
+TaskManager 管理团队任务的 CRUD 和持久化（设计详见 `2026-05-31-mcp-tools-design.md` §4）。
+
+**数据模型**：
+
+- `Task`：单个任务，字段包括 `task_id`、`owner`、`content`、`status`（TaskStatus）、`group_chat_id`、`created_by`、时间戳
+- `TaskList`：任务列表，状态机 ACTIVE → ARCHIVED，包含 `tasks: list[Task]`
+
+**核心接口**：
+
+```python
+class TaskManager:
+    def __init__(self, group_chat_id: str, project_path: str): ...
+    def get_active_task_list(self, group_chat_id: str) -> TaskList | None: ...
+    def assign_tasks(self, group_chat_id: str, tasks: list[dict], created_by: str) -> dict: ...
+    def archive_task_list(self, group_chat_id: str) -> dict: ...
+```
+
+- `assign_tasks`：覆盖式更新语义（参照 Claude Code TodoWrite），返回 `{created, updated, unchanged}`
+- `archive_task_list`：ACTIVE → ARCHIVED，返回 `{archived_count, archived_at}`
+
+**持久化**：append-only JSONL（`tasks.jsonl`），同 `list_id` 取最新记录。
 
 ## Technical Contract
 
