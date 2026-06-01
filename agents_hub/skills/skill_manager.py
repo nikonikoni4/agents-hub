@@ -37,6 +37,13 @@ class SkillManager:
         if "name" not in frontmatter or "description" not in frontmatter:
             raise InvalidSkillError(f"Missing name or description in {skill_path}/SKILL.md")
 
+        if not isinstance(frontmatter["name"], str) or not isinstance(
+            frontmatter["description"], str
+        ):
+            raise InvalidSkillError(
+                f"Invalid field types in {skill_path}/SKILL.md (name and description must be strings)"
+            )
+
         return SkillInfo(
             name=frontmatter["name"],
             description=frontmatter["description"],
@@ -58,7 +65,10 @@ class SkillManager:
 
     def get_skill(self, skill_name: str) -> SkillInfo:
         """获取单个 skill 信息"""
-        skill_path = self.skills_root / skill_name
+        skill_path = (self.skills_root / skill_name).resolve()
+        # Security: Prevent path traversal attacks
+        if not skill_path.is_relative_to(self.skills_root.resolve()):
+            raise InvalidSkillError(f"Invalid skill name: {skill_name}")
         if not skill_path.exists():
             raise SkillNotFoundError(f"Skill '{skill_name}' not found")
 
@@ -66,7 +76,10 @@ class SkillManager:
 
     def delete_skill(self, skill_name: str) -> None:
         """删除 skill"""
-        skill_path = self.skills_root / skill_name
+        skill_path = (self.skills_root / skill_name).resolve()
+        # Security: Prevent path traversal attacks
+        if not skill_path.is_relative_to(self.skills_root.resolve()):
+            raise InvalidSkillError(f"Invalid skill name: {skill_name}")
         if not skill_path.exists():
             raise SkillNotFoundError(f"Skill '{skill_name}' not found")
 

@@ -123,3 +123,39 @@ def test_delete_skill_success():
 
         # 验证目录已删除
         assert not test_skill_path.exists()
+
+
+def test_get_skill_path_traversal():
+    """测试：get_skill 防止路径穿越攻击"""
+    manager = SkillManager()
+
+    with pytest.raises(InvalidSkillError, match="Invalid skill name"):
+        manager.get_skill("../../sensitive_dir")
+
+    with pytest.raises(InvalidSkillError, match="Invalid skill name"):
+        manager.get_skill("../../../etc/passwd")
+
+
+def test_delete_skill_path_traversal():
+    """测试：delete_skill 防止路径穿越攻击"""
+    manager = SkillManager()
+
+    with pytest.raises(InvalidSkillError, match="Invalid skill name"):
+        manager.delete_skill("../../sensitive_dir")
+
+    with pytest.raises(InvalidSkillError, match="Invalid skill name"):
+        manager.delete_skill("../../../etc/passwd")
+
+
+def test_parse_skill_md_invalid_field_types():
+    """测试：SKILL.md 字段类型错误"""
+    manager = SkillManager()
+    # 创建包含错误类型字段的 SKILL.md
+    invalid_path = Path("tests/skills/fixtures/invalid-types")
+    invalid_path.mkdir(parents=True, exist_ok=True)
+    (invalid_path / "SKILL.md").write_text(
+        "---\nname: 123\ndescription: test\n---\nContent", encoding="utf-8"
+    )
+
+    with pytest.raises(InvalidSkillError, match="Invalid field types"):
+        manager._parse_skill_md(invalid_path)
