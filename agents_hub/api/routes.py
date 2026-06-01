@@ -7,6 +7,7 @@ API 路由定义
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from agents_hub.api.routes.skills import router as skills_router
 from agents_hub.core.foundation import (
     AgentMessage,
     AgentNotFoundError,
@@ -17,6 +18,9 @@ from agents_hub.core.foundation import (
 from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
 
 router = APIRouter()
+
+# Include skills routes
+router.include_router(skills_router)
 
 
 class SendMessageRequest(BaseModel):

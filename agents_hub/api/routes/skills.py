@@ -1,0 +1,83 @@
+# agents_hub/api/routes/skills.py
+from fastapi import APIRouter, HTTPException
+
+from agents_hub.api.schemas.skills import SkillCreateRequest, SkillResponse
+from agents_hub.api.services.skill_service import SkillService
+from agents_hub.skills.exceptions import SkillNotFoundError
+
+router = APIRouter()
+
+
+@router.get("/skills", response_model=list[SkillResponse])
+async def list_skills():
+    """获取所有 skills
+
+    Returns:
+        list[SkillResponse]: skills 列表
+    """
+    service = SkillService()
+    skills = service.list_skills()
+    return [SkillResponse.from_domain(s) for s in skills]
+
+
+@router.get("/skills/{skill_name}", response_model=SkillResponse)
+async def get_skill(skill_name: str):
+    """获取单个 skill
+
+    Args:
+        skill_name: skill 名称
+
+    Returns:
+        SkillResponse: skill 信息
+
+    Raises:
+        HTTPException: 404 - skill 不存在
+    """
+    service = SkillService()
+    try:
+        skill = service.get_skill(skill_name)
+        return SkillResponse.from_domain(skill)
+    except SkillNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Skill not found") from e
+
+
+@router.delete("/skills/{skill_name}")
+async def delete_skill(skill_name: str):
+    """删除 skill
+
+    Args:
+        skill_name: skill 名称
+
+    Returns:
+        dict: 成功消息
+
+    Raises:
+        HTTPException: 404 - skill 不存在
+    """
+    service = SkillService()
+    try:
+        service.delete_skill(skill_name)
+        return {"message": "Skill deleted successfully"}
+    except SkillNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Skill not found") from e
+
+
+@router.post("/skills", response_model=SkillResponse)
+async def add_skill(request: SkillCreateRequest):
+    """从网络添加 skill(预留接口)
+
+    Args:
+        request: 包含 skill URL 的请求
+
+    Returns:
+        SkillResponse: 添加的 skill 信息
+
+    Raises:
+        HTTPException: 501 - 功能暂未实现
+    """
+    service = SkillService()
+    try:
+        skill = service.add_skill_from_url(request.url)
+        return SkillResponse.from_domain(skill)
+    except NotImplementedError as e:
+        raise HTTPException(status_code=501, detail="功能暂未实现") from e
