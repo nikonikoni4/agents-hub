@@ -1,9 +1,10 @@
+import shutil
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
 
 from agents_hub.config import config
-from agents_hub.skills.exceptions import InvalidSkillError
+from agents_hub.skills.exceptions import InvalidSkillError, SkillNotFoundError
 from agents_hub.skills.models import SkillInfo
 
 
@@ -54,3 +55,19 @@ class SkillManager:
                     # 跳过无效的 skill 目录
                     continue
         return skills
+
+    def get_skill(self, skill_name: str) -> SkillInfo:
+        """获取单个 skill 信息"""
+        skill_path = self.skills_root / skill_name
+        if not skill_path.exists():
+            raise SkillNotFoundError(f"Skill '{skill_name}' not found")
+
+        return self._parse_skill_md(skill_path)
+
+    def delete_skill(self, skill_name: str) -> None:
+        """删除 skill"""
+        skill_path = self.skills_root / skill_name
+        if not skill_path.exists():
+            raise SkillNotFoundError(f"Skill '{skill_name}' not found")
+
+        shutil.rmtree(skill_path)

@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from agents_hub.skills.skill_manager import SkillManager
-from agents_hub.skills.exceptions import InvalidSkillError
+from agents_hub.skills.exceptions import InvalidSkillError, SkillNotFoundError
 
 
 def test_parse_skill_md_missing_file():
@@ -74,3 +74,52 @@ def test_list_skills_with_valid_skills():
     assert len(skills) >= 1
     skill_names = [s.name for s in skills]
     assert "test-skill" in skill_names
+
+
+def test_get_skill_not_found():
+    """测试：获取不存在的 skill"""
+    manager = SkillManager()
+
+    with pytest.raises(SkillNotFoundError, match="Skill 'nonexistent' not found"):
+        manager.get_skill("nonexistent")
+
+
+def test_get_skill_success():
+    """测试：成功获取 skill"""
+    manager = SkillManager()
+    manager.skills_root = Path("tests/skills/fixtures")
+
+    skill = manager.get_skill("valid-skill")
+
+    assert skill.name == "test-skill"
+    assert skill.description == "A test skill for unit testing"
+
+
+def test_delete_skill_not_found():
+    """测试：删除不存在的 skill"""
+    manager = SkillManager()
+
+    with pytest.raises(SkillNotFoundError, match="Skill 'nonexistent' not found"):
+        manager.delete_skill("nonexistent")
+
+
+def test_delete_skill_success():
+    """测试：成功删除 skill"""
+    import tempfile
+
+    manager = SkillManager()
+
+    # 创建临时 skill 目录
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager.skills_root = Path(tmpdir)
+        test_skill_path = manager.skills_root / "test-delete-skill"
+        test_skill_path.mkdir()
+        (test_skill_path / "SKILL.md").write_text(
+            "---\nname: test\ndescription: test\n---\n", encoding="utf-8"
+        )
+
+        # 删除 skill
+        manager.delete_skill("test-delete-skill")
+
+        # 验证目录已删除
+        assert not test_skill_path.exists()
