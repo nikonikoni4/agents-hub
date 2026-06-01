@@ -86,5 +86,21 @@ class SkillManager:
         shutil.rmtree(skill_path)
 
     def add_skill_from_url(self, url: str) -> SkillInfo:
-        """从网络添加 skill（预留接口，暂不实现）"""
+        """从网络添加 skill（预留接口，暂不实现）
+
+        Args:
+            url: skill 的网络地址
+
+        Returns:
+            SkillInfo: 添加的 skill 信息
+
+        Raises:
+            NotImplementedError: 功能暂未实现
+
+        未来实现：
+            1. 下载 skill 压缩包
+            2. 解压到临时目录
+            3. 验证 SKILL.md 格式
+            4. 移动到 skills_root
+        """
         raise NotImplementedError("网络获取功能暂未实现")
