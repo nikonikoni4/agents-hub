@@ -84,3 +84,7 @@ class SkillManager:
             raise SkillNotFoundError(f"Skill '{skill_name}' not found")
 
         shutil.rmtree(skill_path)
+
+    def add_skill_from_url(self, url: str) -> SkillInfo:
+        """从网络添加 skill（预留接口，暂不实现）"""
+        raise NotImplementedError("网络获取功能暂未实现")

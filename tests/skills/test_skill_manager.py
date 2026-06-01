@@ -159,3 +159,11 @@ def test_parse_skill_md_invalid_field_types():
 
     with pytest.raises(InvalidSkillError, match="Invalid field types"):
         manager._parse_skill_md(invalid_path)
+
+
+def test_add_skill_from_url_not_implemented():
+    """测试：add_skill_from_url 抛出 NotImplementedError"""
+    manager = SkillManager()
+
+    with pytest.raises(NotImplementedError, match="网络获取功能暂未实现"):
+        manager.add_skill_from_url("https://example.com/skill.zip")
