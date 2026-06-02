@@ -141,6 +141,71 @@ AgentBridge.execute(use_docker=True/False)
 
 ## 四、关键实现细节
 
+### 4.0 Docker Engine 可用性检查（方案 C）
+
+**策略**：懒检查 + 清晰提示
+
+#### 设计原则
+1. **不在初始化时检查**：`DockerManager` 初始化时不检查 Docker Engine
+2. **执行时懒检查**：每次 `get_or_create_container()` 时检查
+3. **带缓存避免频繁检查**：30 秒 TTL，减少 `docker info` 调用
+4. **清晰的错误提示**：告知用户问题和解决方案
+5. **不自动降级**：不会默默切换到本地执行（安全优先）
+
+#### 检查时机
+
+```
+Agent._process_message()
+  ↓
+Agent.execute(use_docker=True)
+  ↓
+AgentBridge.execute_stream(use_docker=True)
+  ↓
+DockerClaudeExecutor.execute()
+  ↓
+DockerManager.get_or_create_container()
+  ↓
+_is_docker_running() 检查（带 30 秒缓存）
+  ↓ False
+  ↓
+抛出 DockerNotAvailableError
+  ↓
+Agent._process_message() 捕获
+  ↓
+agent_call_manager.update_status(FAILED)
+  ↓
+返回错误消息给用户
+```
+
+#### 错误提示示例
+
+```
+Docker Engine 未运行，无法启动沙箱容器。
+
+解决方案：
+1. 启动 Docker Desktop
+2. 或在 agent_session_state.json 中设置 use_docker=false
+   路径：local_data/teams/.../e2e_demo_chat/agent_session_state.json
+   修改 '小李' 的 use_docker 字段
+```
+
+#### 为什么不选择其他方案？
+
+**方案 A（严格模式）**：启动时检查，未运行则完全阻止
+- ❌ 用户必须先启动 Docker 再启动应用
+- ❌ Docker Desktop 可以在运行时启动，但应用无法感知
+
+**方案 B（兼容模式）**：自动降级为本地执行
+- ❌ 用户以为有沙箱保护，实际没有（安全风险）
+- ❌ 日志中有警告，但用户可能不注意
+
+**方案 C（懒检查）**：执行时检查 + 清晰提示 ✅
+- ✅ Docker Desktop 可以在运行时启动
+- ✅ 不会默默降级，安全可靠
+- ✅ 错误提示清晰，用户知道如何解决
+
+---
+
 ### 4.1 Agent 层校验
 
 **位置**：`agents_hub/core/agent/base_agent.py`
@@ -175,7 +240,9 @@ def _validate_docker_config(self):
     
     # 启用了 Docker，检查路径条件
     agent_cwd = session_info.cwd
-    group_chat_path = self.group_chat_context.get_group_chat_path()
+    
+    # 获取群聊的项目路径（从 GroupChatRepository.project_path）
+    group_chat_path = self.group_chat_context.repository.project_path
     
     if self._is_same_path(agent_cwd, group_chat_path):
         raise DockerConfigError(
@@ -257,6 +324,8 @@ docker exec \
 
 ```python
 # agent_bridge/docker/manager.py
+import time
+
 class DockerManager:
     def __init__(self):
         # 容器池：(agent_name, group_chat_id) → DockerContainer
@@ -264,6 +333,10 @@ class DockerManager:
         
         # 清理任务
         self._cleanup_tasks: dict[tuple[str, str], asyncio.Task] = {}
+        
+        # Docker Engine 状态缓存（避免频繁检查）
+        self._docker_status_cache: tuple[bool, float] = (False, 0)
+        self._cache_ttl = 30  # 缓存 30 秒
     
     async def get_or_create_container(
         self, 
@@ -272,38 +345,93 @@ class DockerManager:
         work_root: str,
         cwd: str
     ) -> DockerContainer:
-        """获取或创建容器（懒启动）"""
+        """获取或创建容器（懒启动 + 懒检查）"""
         key = (agent_name, group_chat_id)
         
-        # 取消清理任务（如果存在）
+        # 1. 懒检查：Docker Engine 是否运行
+        if not self._is_docker_running():
+            raise DockerNotAvailableError(
+                agent_name=agent_name,
+                group_chat_id=group_chat_id,
+                message=(
+                    "Docker Engine 未运行，无法启动沙箱容器。\n\n"
+                    "解决方案：\n"
+                    "1. 启动 Docker Desktop\n"
+                    "2. 或在 agent_session_state.json 中设置 use_docker=false\n"
+                    f"   路径：local_data/teams/.../agent_session_state.json\n"
+                    f"   修改 '{agent_name}' 的 use_docker 字段"
+                )
+            )
+        
+        # 2. 取消延迟销毁任务（如果存在）
         if key in self._cleanup_tasks:
             self._cleanup_tasks[key].cancel()
             del self._cleanup_tasks[key]
         
-        # 创建或复用容器
-        if key not in self._containers:
-            self._containers[key] = await self._create_container(
-                agent_name, group_chat_id, work_root, cwd
-            )
+        # 3. 容器是否存在？
+        if key in self._containers:
+            # 复用现有容器
+            return self._containers[key]
+        
+        # 4. 创建新容器
+        self._containers[key] = await self._create_container(
+            agent_name, group_chat_id, work_root, cwd
+        )
         
         return self._containers[key]
     
-    async def schedule_cleanup(
+    async def release_container(
         self, 
         agent_name: str, 
-        group_chat_id: str, 
-        delay_minutes: int = 10
+        group_chat_id: str
     ):
-        """延迟销毁容器（10 分钟空闲）"""
+        """释放容器（启动延迟销毁）"""
         key = (agent_name, group_chat_id)
         
         async def cleanup():
-            await asyncio.sleep(delay_minutes * 60)
+            await asyncio.sleep(10 * 60)  # 等待 10 分钟
+            
             if key in self._containers:
-                await self._containers[key].stop()
+                container = self._containers[key]
+                
+                # 停止并删除容器
+                await asyncio.create_subprocess_exec(
+                    "docker", "stop", container.name
+                )
+                await asyncio.create_subprocess_exec(
+                    "docker", "rm", container.name
+                )
+                
                 del self._containers[key]
+                logger.info(f"容器 {container.name} 已销毁（10分钟空闲）")
         
         self._cleanup_tasks[key] = asyncio.create_task(cleanup())
+    
+    def _is_docker_running(self) -> bool:
+        """检查 Docker Engine 是否运行（带缓存，避免频繁检查）"""
+        now = time.time()
+        cached_status, cached_time = self._docker_status_cache
+        
+        # 缓存有效（30 秒内）
+        if now - cached_time < self._cache_ttl:
+            return cached_status
+        
+        # 重新检查 Docker Engine
+        try:
+            result = subprocess.run(
+                ["docker", "info"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=5,
+                check=False
+            )
+            status = result.returncode == 0
+        except Exception:
+            status = False
+        
+        # 更新缓存
+        self._docker_status_cache = (status, now)
+        return status
     
     async def _create_container(
         self, 
@@ -315,7 +443,12 @@ class DockerManager:
         """创建新容器"""
         container_name = f"container-{agent_name}-{group_chat_id}"
         
-        # 构建 docker run 命令
+        # 检查容器是否已存在（避免重复创建错误）
+        if await self._container_exists(container_name):
+            # 先删除旧容器
+            await asyncio.create_subprocess_exec("docker", "rm", "-f", container_name)
+        
+        # 构建 docker run 命令（不使用 --rm）
         cmd = [
             "docker", "run", "-d",
             "--name", container_name,
@@ -324,7 +457,7 @@ class DockerManager:
             "-v", f"{self._get_git_dir()}:/repo-git:rw",
             "--network", "host",
             "ai-tools:latest",
-            "sleep", "infinity"
+            "sleep", "infinity"  # 容器持续运行
         ]
         
         # 启动容器
@@ -343,6 +476,17 @@ class DockerManager:
             )
         
         return DockerContainer(container_name, agent_name, group_chat_id)
+    
+    async def _container_exists(self, container_name: str) -> bool:
+        """检查容器是否已存在"""
+        process = await asyncio.create_subprocess_exec(
+            "docker", "ps", "-a",
+            "--filter", f"name={container_name}",
+            "--format", "{{.Names}}",
+            stdout=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await process.communicate()
+        return bool(stdout.strip())
 ```
 
 ---
@@ -392,6 +536,17 @@ class DockerConfigError(ValidationError):
         self.reason = reason
         super().__init__(
             f"Agent '{agent_name}' 在群聊 '{group_chat_id}' 中的 Docker 配置不合理：\n{reason}"
+        )
+
+class DockerNotAvailableError(ExternalServiceError):
+    """Docker Engine 不可用"""
+    
+    def __init__(self, agent_name: str, group_chat_id: str, message: str):
+        self.agent_name = agent_name
+        self.group_chat_id = group_chat_id
+        super().__init__(
+            service="Docker",
+            reason=message
         )
 
 class DockerStartError(ExternalServiceError):
@@ -453,10 +608,15 @@ docker exec container-小李-群聊A claude "Read ../../../MAIN_REPO_ONLY.md"
 
 | 资源类型 | 空闲容器 | 运行 Claude Code 时 |
 |---------|---------|-------------------|
-| **内存** | 1-2 MB | 200-500 MB (主要是 Claude Code 进程) |
+| **内存** | 1-2 MB (仅容器进程) | 200-500 MB (主要是 Claude Code 进程) |
 | **CPU** | 0% | 根据任务（10%-100%） |
-| **磁盘** | 0 MB | 临时文件 < 100 MB |
+| **磁盘** | 0 MB (使用挂载卷) | 临时文件 < 100 MB |
 | **启动时间** | 200-500 ms | - |
+
+**说明**：
+- **容器本身**开销极小（1-2 MB），可忽略
+- **主要开销**来自 Claude Code 进程（200-500 MB）
+- 无论是本地执行还是 Docker 执行，Claude Code 进程开销相同
 
 ### 7.2 实际场景
 
@@ -479,6 +639,20 @@ Claude Code 进程：6 × 300 MB = 1.8 GB 内存（执行时）
 ```
 
 **结论**：容器本身开销完全可忽略，主要开销来自 Claude Code 进程
+
+### 7.3 Docker Engine 检查开销
+
+**检查频率**：
+- 每次 `get_or_create_container()` 调用时检查
+- 带缓存（30 秒 TTL）
+
+**单次检查开销**：
+- `docker info` 命令：~50ms
+- 缓存命中：0ms
+
+**实际影响**：
+- 平均每 30 秒检查一次
+- 对用户体验无感知
 
 ---
 
