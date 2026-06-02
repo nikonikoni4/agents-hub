@@ -37,10 +37,10 @@ class RoleResponse(BaseModel):
     """角色响应"""
 
     name: str
-    platform: str
+    platform: Literal["claude", "codex"]
     avatar: str | None = None
     abilities: list[str] = []
-    type: str | None = None
+    type: Literal["leader", "team_member"] | None = None
     scope: list[str] | None = None
     description: str | None = None
 
@@ -58,15 +58,15 @@ class RoleResponse(BaseModel):
         )
 
 
-class SkillResponse(BaseModel):
-    """Skill 响应"""
+class RoleSkillResponse(BaseModel):
+    """角色关联的 Skill 响应"""
 
     id: str
     name: str
     description: str
 
     @classmethod
-    def from_domain(cls, skill_info: SkillInfo) -> "SkillResponse":
+    def from_domain(cls, skill_info: SkillInfo) -> "RoleSkillResponse":
         """从领域模型转换"""
         return cls(
             id=skill_info.id,
