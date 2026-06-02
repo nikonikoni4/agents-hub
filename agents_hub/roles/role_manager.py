@@ -1,8 +1,10 @@
 """RoleManager 类 - 角色生命周期管理。"""
 
 import json
+import os
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 from agents_hub.config import config
@@ -368,4 +370,27 @@ class RoleManager:
 
     def _init_agents_hub_mcp(self, platform: AgentPlatform, work_root: Path) -> None:
         """Initialize the fixed agents-hub MCP for this role's platform config root."""
-        return None
+        env = os.environ.copy()
+        if platform == AgentPlatform.CLAUDE:
+            env["CLAUDE_CONFIG_DIR"] = str(work_root)
+            cmd = [
+                "claude",
+                "mcp",
+                "add",
+                "--transport",
+                "http",
+                "agents-hub",
+                "--",
+                "http://localhost:8001/mcp",
+            ]
+        else:
+            env["CODEX_HOME"] = str(work_root)
+            cmd = [
+                "codex",
+                "mcp",
+                "add",
+                "agents-hub",
+                "--url",
+                "http://localhost:8001/mcp",
+            ]
+        subprocess.run(cmd, check=True, env=env)

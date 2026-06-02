@@ -1,6 +1,7 @@
 """RoleManager 类的单元测试"""
 
 import json
+import subprocess
 import tempfile
 import pytest
 import shutil
@@ -117,6 +118,73 @@ def test_create_role_platform_config_not_found(role_manager):
     with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home):
         with pytest.raises(PlatformConfigNotFoundError):
             role_manager.create_role("test_role", AgentPlatform.CLAUDE)
+
+
+def test_init_agents_hub_mcp_claude_sets_config_root(role_manager, agents_dir):
+    """创建 Claude 角色时，MCP 添加命令写入角色 CLAUDE_CONFIG_DIR"""
+    work_root = agents_dir / "test_claude" / "work_root"
+    work_root.mkdir(parents=True)
+
+    with patch("agents_hub.roles.role_manager.subprocess.run") as run:
+        role_manager._init_agents_hub_mcp(AgentPlatform.CLAUDE, work_root)
+
+    run.assert_called_once()
+    args, kwargs = run.call_args
+    assert args[0] == [
+        "claude",
+        "mcp",
+        "add",
+        "--transport",
+        "http",
+        "agents-hub",
+        "--",
+        "http://localhost:8001/mcp",
+    ]
+    assert kwargs["check"] is True
+    assert kwargs["env"]["CLAUDE_CONFIG_DIR"] == str(work_root)
+
+
+def test_init_agents_hub_mcp_codex_sets_config_root(role_manager, agents_dir):
+    """创建 Codex 角色时，MCP 添加命令写入角色 CODEX_HOME"""
+    work_root = agents_dir / "test_codex" / "work_root"
+    work_root.mkdir(parents=True)
+
+    with patch("agents_hub.roles.role_manager.subprocess.run") as run:
+        role_manager._init_agents_hub_mcp(AgentPlatform.CODEX, work_root)
+
+    run.assert_called_once()
+    args, kwargs = run.call_args
+    assert args[0] == [
+        "codex",
+        "mcp",
+        "add",
+        "agents-hub",
+        "--url",
+        "http://localhost:8001/mcp",
+    ]
+    assert kwargs["check"] is True
+    assert kwargs["env"]["CODEX_HOME"] == str(work_root)
+
+
+def test_create_role_cleanup_on_mcp_failure(role_manager, agents_dir):
+    """MCP 自动添加失败时，创建角色回滚整个角色目录"""
+    mock_home = Path(tempfile.mkdtemp())
+    mock_claude = mock_home / ".claude"
+    mock_claude.mkdir()
+    (mock_claude / "settings.json").write_text("{}", encoding="utf-8")
+
+    with (
+        patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home),
+        patch.object(
+            role_manager,
+            "_init_agents_hub_mcp",
+            side_effect=subprocess.CalledProcessError(1, ["claude", "mcp", "add"]),
+        ),
+    ):
+        with pytest.raises(subprocess.CalledProcessError):
+            role_manager.create_role("test_role", AgentPlatform.CLAUDE)
+
+    assert not (agents_dir / "test_role").exists()
 
 
 def test_get_role(role_manager, agents_dir):
