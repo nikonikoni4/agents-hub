@@ -409,3 +409,146 @@ async def test_get_group_chat_info_not_found(service, mock_group_chat_manager):
     # Act & Assert
     with pytest.raises(ResourceNotFoundError):
         await service.get_group_chat_info("gc_nonexistent")
+
+
+# Task 8: get_group_chat_members 测试
+
+async def test_get_group_chat_members_success(service, mock_group_chat_manager):
+    """测试成功获取群聊成员"""
+    # Arrange
+    import json
+
+    group_chat_id = "gc_members"
+    project_path = "/path/to/project"
+
+    mock_group_chat = Mock()
+    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
+        return_value=Mock(project_path=project_path)
+    )
+    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
+
+    session_state_data = {
+        "Leader": {
+            "main_session": "session_123",
+            "btw_session": ["btw_1", "btw_2"],
+            "cwd": "/path/to/project",
+            "use_docker": False,
+        },
+        "Worker1": {
+            "main_session": None,
+            "btw_session": [],
+            "cwd": "/path/to/project",
+        },
+    }
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
+         patch("json.load", return_value=session_state_data), \
+         patch("builtins.open", MagicMock()):
+        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_members"
+
+        mock_session_file = MagicMock()
+        mock_session_file.exists.return_value = True
+        # Mock Path 的 __truediv__ 操作
+        with patch("agents_hub.api.services.group_chat_service.Path", return_value=mock_session_file):
+            # Act
+            result = await service.get_group_chat_members(group_chat_id)
+
+    # Assert
+    assert len(result) == 2
+    assert result[0].name == "Leader"
+    assert result[0].main_session == "session_123"
+    assert len(result[0].btw_session) == 2
+    assert result[0].use_docker is False
+    assert result[1].name == "Worker1"
+    assert result[1].main_session is None
+
+
+async def test_get_group_chat_members_file_not_found(service, mock_group_chat_manager):
+    """测试 session_state 文件不存在"""
+    # Arrange
+    mock_group_chat = Mock()
+    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
+        return_value=Mock(project_path="/path")
+    )
+    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_no_file"
+
+        # Mock Path 的 / 操作和 exists
+        mock_path_obj = MagicMock()
+        mock_session_file = MagicMock()
+        mock_session_file.exists.return_value = False
+        mock_path_obj.__truediv__ = MagicMock(return_value=mock_session_file)
+
+        with patch("agents_hub.api.services.group_chat_service.Path", return_value=mock_path_obj):
+            # Act & Assert
+            with pytest.raises(ResourceNotFoundError) as exc_info:
+                await service.get_group_chat_members("gc_no_file")
+            assert "session_state 文件不存在" in str(exc_info.value)
+
+
+async def test_get_group_chat_members_json_decode_error(service, mock_group_chat_manager):
+    """测试 JSON 格式错误转换为 StateError"""
+    # Arrange
+    import json
+    from agents_hub.exceptions import StateError
+
+    mock_group_chat = Mock()
+    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
+        return_value=Mock(project_path="/path")
+    )
+    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
+         patch("builtins.open", MagicMock()), \
+         patch("json.load", side_effect=json.JSONDecodeError("Invalid JSON", "", 0)):
+        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_bad_json"
+
+        mock_file = MagicMock()
+        mock_file.exists.return_value = True
+
+        with patch("agents_hub.api.services.group_chat_service.Path", return_value=mock_file):
+            # Act & Assert
+            with pytest.raises(StateError) as exc_info:
+                await service.get_group_chat_members("gc_bad_json")
+            assert "JSON 格式错误" in str(exc_info.value)
+
+
+async def test_get_group_chat_members_missing_fields_use_defaults(service, mock_group_chat_manager):
+    """测试缺失字段使用默认值"""
+    # Arrange
+    import json
+
+    mock_group_chat = Mock()
+    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
+        return_value=Mock(project_path="/path")
+    )
+    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
+
+    # 缺少某些字段
+    session_state_data = {
+        "Leader": {
+            "main_session": "session_123",
+            # 缺少 btw_session, cwd, use_docker
+        },
+    }
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
+         patch("json.load", return_value=session_state_data), \
+         patch("builtins.open", MagicMock()):
+        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_partial"
+
+        mock_session_file = MagicMock()
+        mock_session_file.exists.return_value = True
+
+        with patch("agents_hub.api.services.group_chat_service.Path", return_value=mock_session_file):
+            # Act
+            result = await service.get_group_chat_members("gc_partial")
+
+    # Assert
+    assert len(result) == 1
+    assert result[0].name == "Leader"
+    assert result[0].btw_session == []  # 默认空列表
+    assert result[0].cwd is None
+    assert result[0].use_docker is False  # 默认 False

@@ -4,11 +4,13 @@ GroupChatService 业务编排层
 协调 GroupChatManager、Team、RoleManager，提供群聊生命周期管理和查询接口
 """
 
+import json
 import shutil
 from pathlib import Path
 
 from agents_hub.api.schemas.group_chats import (
     GroupChatInfo,
+    GroupChatMember,
     GroupChatSummary,
 )
 from agents_hub.core.context.group_metadata import GroupMetadata
@@ -266,6 +268,71 @@ class GroupChatService:
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
             ) from e
+
+    async def get_group_chat_members(self, group_chat_id: str) -> list[GroupChatMember]:
+        """获取群聊成员列表
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            list[GroupChatMember]: 成员列表
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在或 session_state 文件不存在
+            StateError: JSON 格式错误或数据损坏
+        """
+        # 1. 读取 metadata 获取 project_path
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat_from_disk(group_chat_id)
+            metadata = await group_chat.group_chat_context.repository.load_group_metadata()
+            project_path = metadata.project_path
+        except FileNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 2. 构建 agent_session_state.json 文件路径
+        group_chat_dir = Path(group_chat_paths.base_dir(group_chat_id, project_path))
+        session_state_file = group_chat_dir / "agent_session_state.json"
+
+        # 3. 验证文件存在性
+        if not session_state_file.exists():
+            raise ResourceNotFoundError(
+                f"session_state 文件不存在: {session_state_file}",
+                details={
+                    "group_chat_id": group_chat_id,
+                    "session_state_file": str(session_state_file),
+                },
+            )
+
+        # 4. 读取并解析 JSON（带异常捕获）
+        try:
+            with session_state_file.open("r", encoding="utf-8") as f:
+                session_data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise StateError(
+                f"session_state JSON 格式错误: {e}",
+                details={
+                    "group_chat_id": group_chat_id,
+                    "session_state_file": str(session_state_file),
+                },
+            ) from e
+
+        # 5. 使用 Pydantic 模型验证并转换
+        members: list[GroupChatMember] = []
+        for agent_name, agent_data in session_data.items():
+            member = GroupChatMember(
+                name=agent_name,
+                main_session=agent_data.get("main_session"),
+                btw_session=agent_data.get("btw_session", []),
+                cwd=agent_data.get("cwd"),
+                use_docker=agent_data.get("use_docker", False),
+            )
+            members.append(member)
+
+        return members
 
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""
