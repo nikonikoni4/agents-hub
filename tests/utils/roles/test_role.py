@@ -201,11 +201,15 @@ def test_remove_skill_deletes_copied_fallback_without_touching_global_skill(clau
     with patch("pathlib.Path.symlink_to", side_effect=OSError("symlink disabled")):
         claude_role.add_skill("copy_skill")
 
+    before = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
+
     claude_role.remove_skill("copy_skill")
 
     assert not (claude_role.role_dir / "work_root" / "skills" / "copy_skill").exists()
     assert global_skill_dir.exists()
     assert (global_skill_dir / "skill.json").exists()
+    after = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
+    assert after == before
 
 
 def test_remove_skill_not_found(claude_role):
