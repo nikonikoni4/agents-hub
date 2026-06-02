@@ -59,7 +59,7 @@ def delete_skill(skill_name: str, service: SkillService = Depends(get_skill_serv
     """
     try:
         service.delete_skill(skill_name)
-        return {"message": "Skill 删除成功"}
+        return {"message": f"Skill '{skill_name}' 删除成功"}
     except SkillNotFoundError as e:
         raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' 不存在") from e
 
@@ -81,4 +81,6 @@ def add_skill(request: SkillCreateRequest, service: SkillService = Depends(get_s
         skill = service.add_skill_from_url(request.url)
         return SkillResponse.from_domain(skill)
     except NotImplementedError as e:
-        raise HTTPException(status_code=501, detail="功能暂未实现") from e
+        raise HTTPException(
+            status_code=501, detail=f"从 URL 添加 skill 功能暂未实现: {request.url}"
+        ) from e
