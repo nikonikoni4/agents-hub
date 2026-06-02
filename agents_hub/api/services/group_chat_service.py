@@ -15,7 +15,7 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatSummary,
 )
 from agents_hub.core.context.group_metadata import GroupMetadata
-from agents_hub.core.foundation import GroupChatType, group_chat_paths
+from agents_hub.core.foundation import GroupChatNotFoundError, GroupChatType, group_chat_paths
 from agents_hub.core.orchestration import GroupChat, GroupChatManager, Team
 from agents_hub.exceptions import (
     ExternalServiceError,
@@ -118,16 +118,9 @@ class GroupChatService:
             ResourceNotFoundError: 群聊不存在或 role 已被删除
             StateError: 加载失败
         """
-        # 1. 检查是否已在内存中
-        group_chat = self.group_chat_manager.get_group_chat(group_chat_id)
-        if group_chat:
-            # 已在内存，直接返回（幂等性）
-            return await self._build_group_chat_info_from_instance(group_chat)
-
-        # 2. 从磁盘加载
         try:
-            group_chat = await self.group_chat_manager.load_group_chat_from_disk(group_chat_id)
-        except FileNotFoundError as e:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
@@ -144,7 +137,6 @@ class GroupChatService:
                 details={"group_chat_id": group_chat_id},
             ) from e
 
-        # 3. 返回 GroupChatInfo
         return await self._build_group_chat_info_from_instance(group_chat)
 
     async def delete_group_chat(self, group_chat_id: str, keep_data: bool = False) -> None:
@@ -163,7 +155,7 @@ class GroupChatService:
         # 1. 如果 keep_data=False，先读取 metadata（在 unregister 之前）
         if not keep_data:
             # 尝试从内存中的 GroupChat 实例读取
-            group_chat = self.group_chat_manager.get_group_chat(group_chat_id)
+            group_chat = self.group_chat_manager._group_chats.get(group_chat_id)
             if group_chat:
                 metadata = await group_chat.group_chat_context.repository.load_group_metadata()
                 project_path = metadata.project_path
@@ -212,7 +204,7 @@ class GroupChatService:
             metadata = GroupMetadata(**metadata_dict)
 
             # 检查是否在内存中（活跃状态）
-            is_active = self.group_chat_manager.get_group_chat(metadata.group_chat_id) is not None
+            is_active = self.group_chat_manager.is_active_group(metadata.group_chat_id)
 
             # 3. 如果 is_active_only=True，过滤出活跃的
             if is_active_only and not is_active:
@@ -242,31 +234,24 @@ class GroupChatService:
         Raises:
             ResourceNotFoundError: 群聊不存在
         """
-        # 1. 尝试从内存获取
-        group_chat = self.group_chat_manager.get_group_chat(group_chat_id)
-        if group_chat:
-            # 内存中存在，is_active=True
-            info = await self._build_group_chat_info_from_instance(group_chat)
-            return info
-
-        # 2. 从磁盘读取
         try:
-            group_chat = await self.group_chat_manager.load_group_chat_from_disk(group_chat_id)
-            # 从磁盘加载，is_active=False
-            metadata = await group_chat.group_chat_context.repository.load_group_metadata()
-            return GroupChatInfo(
-                group_chat_id=metadata.group_chat_id,
-                group_chat_name=metadata.group_chat_name,
-                project_path=metadata.project_path,
-                created_at=metadata.created_at,
-                group_type=metadata.group_type,
-                is_active=False,
-            )
-        except FileNotFoundError as e:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
             ) from e
+
+        is_active = self.group_chat_manager.is_active_group(group_chat_id)
+        metadata = await group_chat.group_chat_context.repository.load_group_metadata()
+        return GroupChatInfo(
+            group_chat_id=metadata.group_chat_id,
+            group_chat_name=metadata.group_chat_name,
+            project_path=metadata.project_path,
+            created_at=metadata.created_at,
+            group_type=metadata.group_type,
+            is_active=is_active,
+        )
 
     async def get_group_chat_members(self, group_chat_id: str) -> list[GroupChatMember]:
         """获取群聊成员列表

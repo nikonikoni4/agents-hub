@@ -60,7 +60,7 @@ async def user_send_message(
     """
     try:
         # 1. 获取 GroupChat
-        group_chat = group_chat_manager.get_group_chat(group_chat_id)
+        group_chat = await group_chat_manager.load_group_chat(group_chat_id)
 
         # 2. 创建 AgentCall
         call = group_chat.agent_call_manager.create_call(

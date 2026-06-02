@@ -42,12 +42,32 @@ class GroupChatManager:
             raise ValueError("无效的 group_chat 类型")
         self._group_chats[group_chat_id] = group_chat
 
-    def get_group_chat(self, group_chat_id: str) -> GroupChat:
-        """获取 GroupChat，不存在时抛出 GroupChatNotFoundError"""
+    def is_active_group(self, group_chat_id: str) -> bool:
+        """检查群聊是否在内存中活跃"""
+        return group_chat_id in self._group_chats
+
+    async def load_group_chat(self, group_chat_id: str) -> GroupChat:
+        """获取 GroupChat，优先从内存加载，不存在时从磁盘加载
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            GroupChat 实例
+
+        Raises:
+            GroupChatNotFoundError: 群聊不存在（内存和磁盘都没有）
+        """
+        # 1. 优先从内存获取
         group_chat = self._group_chats.get(group_chat_id)
-        if not group_chat:
+        if group_chat:
+            return group_chat
+
+        # 2. 从磁盘加载
+        try:
+            return await self.load_group_chat_from_disk(group_chat_id)
+        except FileNotFoundError:
             raise GroupChatNotFoundError(group_chat_id)
-        return group_chat
 
     async def unregister(self, group_chat_id: str, timeout: float = 10.0):
         """
@@ -322,7 +342,7 @@ class GroupChatManager:
 group_chat_manager = GroupChatManager()
 
 
-def call_agent(
+async def call_agent(
     group_chat_id: str,
     send_from: str,
     send_to: str,
@@ -348,7 +368,7 @@ def call_agent(
     """
     try:
         # 1. 获取 group chat
-        group_chat = group_chat_manager.get_group_chat(group_chat_id)
+        group_chat = await group_chat_manager.load_group_chat(group_chat_id)
 
         # 2. 创建 AgentCall
         call: AgentCall = group_chat.agent_call_manager.create_call(
