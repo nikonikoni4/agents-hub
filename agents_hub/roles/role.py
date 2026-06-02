@@ -214,51 +214,6 @@ class Role:
         else:
             shutil.rmtree(skill_dir)
 
-    def get_permissions_config(self) -> dict[str, Any]:
-        """获取平台特定的权限配置。
-
-        对于 Claude 平台，读取 work_root/settings.json；
-        对于 Codex 平台，当前返回空字典（待实现）。
-
-        Returns:
-            权限配置字典，如果配置文件不存在则返回空字典。
-        """
-        data = self._read_role_json()
-        platform = AgentPlatform(data["platform"])
-
-        if platform == AgentPlatform.CLAUDE:
-            settings_path = self._work_root / "settings.json"
-        else:
-            settings_path = self._work_root / "config.toml"
-
-        if not settings_path.exists():
-            return {}
-
-        if platform == AgentPlatform.CLAUDE:
-            return json.loads(settings_path.read_text(encoding="utf-8"))
-        else:
-            return {}
-
-    def update_permissions_config(self, config: dict[str, Any]) -> None:
-        """更新平台特定的权限配置。
-
-        对于 Claude 平台，写入 work_root/settings.json；
-        对于 Codex 平台，当前为空操作（待实现）。
-
-        Args:
-            config: 新的权限配置字典。
-        """
-        data = self._read_role_json()
-        platform = AgentPlatform(data["platform"])
-
-        if platform == AgentPlatform.CLAUDE:
-            settings_path = self._work_root / "settings.json"
-            settings_path.write_text(
-                json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
-        else:
-            pass
-
     def get_role_config(self) -> RoleConfig:
         """构造给 agent_bridge 使用的 RoleConfig。
 

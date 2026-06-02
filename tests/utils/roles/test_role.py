@@ -224,39 +224,3 @@ def test_get_role_config(claude_role):
     assert config.platform == AgentPlatform.CLAUDE
     assert config.work_root == str(claude_role.role_dir / "work_root")
 
-
-def test_get_permissions_config(claude_role):
-    """测试获取权限配置"""
-    # 创建 settings.json
-    settings = {
-        "permissions": {
-            "allow": ["Read"],
-            "deny": ["Bash"],
-            "ask": ["Write"]
-        }
-    }
-    (claude_role.role_dir / "work_root" / "settings.json").write_text(
-        json.dumps(settings), encoding="utf-8"
-    )
-
-    config = claude_role.get_permissions_config()
-    assert "permissions" in config
-    assert config["permissions"]["allow"] == ["Read"]
-
-
-def test_update_permissions_config(claude_role):
-    """测试更新权限配置"""
-    # 创建初始 settings.json
-    settings = {"permissions": {"allow": ["Read"]}}
-    (claude_role.role_dir / "work_root" / "settings.json").write_text(
-        json.dumps(settings), encoding="utf-8"
-    )
-
-    # 更新配置
-    new_config = {"permissions": {"allow": ["Read", "Write"], "deny": ["Bash"]}}
-    claude_role.update_permissions_config(new_config)
-
-    # 验证更新
-    updated = json.loads((claude_role.role_dir / "work_root" / "settings.json").read_text(encoding="utf-8"))
-    assert updated["permissions"]["allow"] == ["Read", "Write"]
-    assert updated["permissions"]["deny"] == ["Bash"]
