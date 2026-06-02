@@ -7,6 +7,7 @@ GroupChatManager 群聊管理器
 import threading
 from pathlib import Path
 
+from agents_hub.config import config
 from agents_hub.core.communication import AgentCall
 from agents_hub.core.context import GroupMetadata
 from agents_hub.core.foundation import (
@@ -186,34 +187,44 @@ class GroupChatManager:
         return group_chats
 
     async def load_group_chat_from_disk(
-        self, group_chat_id: str, project_path: str, team: Team
+        self, group_chat_id: str, base_path: str | None = None
     ) -> GroupChat:
         """
         从磁盘加载群聊到内存
 
-        1. 读取 group_metadata.json 验证信息
-        2. 创建 GroupChat 实例
-        3. 调用 GroupChat.load()
-        4. 注册到 GroupChatManager
+        只需要 group_chat_id，其他信息从磁盘自动加载：
+        1. 扫描 base_path 找到 project_path
+        2. 读取 group_metadata.json 验证信息
+        3. 从 agent_session_state.json 读取 team members
+        4. 创建 GroupChat 实例
+        5. 调用 GroupChat.load()
+        6. 注册到 GroupChatManager
 
         Args:
             group_chat_id: 群聊 ID
-            project_path: 项目路径
-            team: 所属 Team 实例
+            base_path: 群聊数据根目录，默认 config.data_path / "teams"
 
         Returns:
             加载的 GroupChat 实例
 
         Raises:
-            FileNotFoundError: metadata 文件不存在
+            FileNotFoundError: 群聊不存在
             ValueError: metadata 验证失败
         """
-        # 1. 读取并验证 metadata
-        metadata_file = group_chat_paths.metadata_file(group_chat_id, project_path)
+        import json
+
+        if base_path is None:
+            base_path = str(config.data_path / "teams")
+
+        # 1. 查找 project_path
+        project_path = group_chat_paths.find_project_path_by_group_chat_id(group_chat_id, base_path)
+        if project_path is None:
+            raise FileNotFoundError(f"找不到群聊 {group_chat_id} 对应的项目路径")
+
+        # 2. 读取并验证 metadata
+        metadata_file = group_chat_paths.metadata_file(group_chat_id, project_path, base_path)
         if not metadata_file.exists():
             raise FileNotFoundError(f"群聊元数据文件不存在: {metadata_file}")
-
-        import json
 
         with open(metadata_file, encoding="utf-8") as f:
             data = json.load(f)
@@ -227,7 +238,21 @@ class GroupChatManager:
                 f"与参数不一致 ({group_chat_id})"
             )
 
-        # 2. 创建 GroupChat 实例
+        # 3. 从 agent_session_state.json 读取 team members
+        session_file = group_chat_paths.session_state_file(group_chat_id, project_path, base_path)
+        if not session_file.exists():
+            raise FileNotFoundError(f"agent session 状态文件不存在: {session_file}")
+
+        with open(session_file, encoding="utf-8") as f:
+            session_data = json.load(f)
+
+        team_members_name = list(session_data.keys())
+        if not team_members_name:
+            raise ValueError(f"群聊 {group_chat_id} 没有团队成员信息")
+
+        team = Team(team_members_name=team_members_name)
+
+        # 4. 创建 GroupChat 实例
         group_type = GroupChatType(metadata.group_type)
         group_chat = GroupChat(
             team=team,
@@ -236,10 +261,10 @@ class GroupChatManager:
             group_chat_id=group_chat_id,
         )
 
-        # 3. 加载群聊状态
+        # 5. 加载群聊状态
         await group_chat.load()
 
-        # 4. 注册到 GroupChatManager
+        # 6. 注册到 GroupChatManager
         self.register(group_chat_id, group_chat)
 
         return group_chat
