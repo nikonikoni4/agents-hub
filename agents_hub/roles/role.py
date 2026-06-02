@@ -197,7 +197,7 @@ class Role:
         """从角色中移除 skill。
 
         删除 work_root/skills/ 下的 skill 目录，
-        并更新 role.json 中的 skills 列表。
+        不影响全局 skill。
 
         Args:
             skill_id: skill 的唯一标识符。
@@ -206,10 +206,13 @@ class Role:
             SkillNotFoundError: skill 不存在于角色中。
         """
         skill_dir = self._work_root / "skills" / skill_id
-        if not skill_dir.exists():
+        if not skill_dir.exists() and not skill_dir.is_symlink():
             raise SkillNotFoundError(skill_id=skill_id)
 
-        shutil.rmtree(skill_dir)
+        if skill_dir.is_symlink():
+            skill_dir.unlink()
+        else:
+            shutil.rmtree(skill_dir)
 
     def get_permissions_config(self) -> dict[str, Any]:
         """获取平台特定的权限配置。

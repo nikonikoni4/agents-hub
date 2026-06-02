@@ -157,25 +157,55 @@ def test_add_skill_already_exists(claude_role):
         claude_role.add_skill("test_skill")
 
 
-def test_remove_skill(claude_role):
-    """测试移除 skill"""
-    # 先添加一个 skill
-    skill_dir = claude_role.role_dir / "work_root" / "skills" / "test_skill"
-    skill_dir.mkdir(parents=True)
-    (skill_dir / "skill.json").write_text(json.dumps({
-        "id": "test_skill",
-        "name": "Test Skill",
-        "description": "A test skill"
-    }), encoding="utf-8")
-
-    # 更新 role.json 中的 skills
-    role_json = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
-    role_json["skills"] = ["test_skill"]
-    (claude_role.role_dir / "role.json").write_text(json.dumps(role_json), encoding="utf-8")
+def test_remove_skill_deletes_role_entry_without_touching_global_skill(claude_role):
+    """移除 skill 只删除角色入口，不修改 role.json，不影响全局 skill"""
+    global_skill_dir = claude_role.role_dir.parent.parent / "skills" / "test_skill"
+    global_skill_dir.mkdir(parents=True)
+    (global_skill_dir / "skill.json").write_text(
+        json.dumps(
+            {
+                "id": "test_skill",
+                "name": "Test Skill",
+                "description": "A test skill",
+            }
+        ),
+        encoding="utf-8",
+    )
+    claude_role.add_skill("test_skill")
+    before = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
 
     claude_role.remove_skill("test_skill")
-    skills = claude_role.list_skills()
-    assert len(skills) == 0
+
+    role_skill_dir = claude_role.role_dir / "work_root" / "skills" / "test_skill"
+    assert not role_skill_dir.exists()
+    assert global_skill_dir.exists()
+    assert (global_skill_dir / "skill.json").exists()
+    after = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
+    assert after == before
+
+
+def test_remove_skill_deletes_copied_fallback_without_touching_global_skill(claude_role):
+    """移除复制 fallback 的 skill 时，也不能影响全局 skill"""
+    global_skill_dir = claude_role.role_dir.parent.parent / "skills" / "copy_skill"
+    global_skill_dir.mkdir(parents=True)
+    (global_skill_dir / "skill.json").write_text(
+        json.dumps(
+            {
+                "id": "copy_skill",
+                "name": "Copy Skill",
+                "description": "Copied when symlink fails",
+            }
+        ),
+        encoding="utf-8",
+    )
+    with patch("pathlib.Path.symlink_to", side_effect=OSError("symlink disabled")):
+        claude_role.add_skill("copy_skill")
+
+    claude_role.remove_skill("copy_skill")
+
+    assert not (claude_role.role_dir / "work_root" / "skills" / "copy_skill").exists()
+    assert global_skill_dir.exists()
+    assert (global_skill_dir / "skill.json").exists()
 
 
 def test_remove_skill_not_found(claude_role):
