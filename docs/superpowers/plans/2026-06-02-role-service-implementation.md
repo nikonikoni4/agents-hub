@@ -371,10 +371,11 @@ git commit -m "feat(api): add roles routes"
 
 ---
 
-## Task 4: 修改 routes/__init__.py - 注册 roles router
+## Task 4: 修改 routes/__init__.py 和 app.py - 注册 roles router
 
 **Files:**
 - Modify: `agents_hub/api/routes/__init__.py`
+- Modify: `agents_hub/api/app.py`
 
 - [ ] **Step 1: 修改 __init__.py**
 
@@ -387,15 +388,40 @@ from .skills import router as skills_router
 __all__ = ["roles_router", "skills_router"]
 ```
 
-- [ ] **Step 2: 验证修改成功**
+- [ ] **Step 2: 修改 app.py**
+
+将：
+```python
+from .routes import router
+```
+
+改为：
+```python
+from .routes import roles_router, skills_router
+```
+
+将：
+```python
+# 注册路由
+app.include_router(router)
+```
+
+改为：
+```python
+# 注册路由
+app.include_router(roles_router)
+app.include_router(skills_router)
+```
+
+- [ ] **Step 3: 验证修改成功**
 
 Run: `python -c "from agents_hub.api.routes import roles_router, skills_router; print('OK')"`
 Expected: OK
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add agents_hub/api/routes/__init__.py
+git add agents_hub/api/routes/__init__.py agents_hub/api/app.py
 git commit -m "feat(api): register roles router"
 ```
 
