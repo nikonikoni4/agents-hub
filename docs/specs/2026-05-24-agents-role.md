@@ -1,8 +1,8 @@
 ---
-version: 1.3
+version: 1.4
 created_at: 2026-05-24
-updated_at: 2026-06-01
-last_updated: 新增角色名称互为前缀冲突校验规则
+updated_at: 2026-06-02
+last_updated: 收窄 role.json 为角色元信息，Skill 改为 work_root/skills 目录状态，角色创建自动初始化固定 agents-hub MCP，权限和原生配置编辑暂不落地
 abstract: roles 角色配置模块的正式规格，定义角色生命周期管理、配置数据结构、头像引用机制和 Skill 管理
 id: spec-roles
 title: Roles 角色配置模块规格
@@ -28,6 +28,7 @@ contract_refs:
 | 1.1 | 模块路径从 agents 重命名为 roles |
 | 1.2 | RoleConfig 字段重构（统一 work_root，新增 description/role_type/bare）；RoleInfo 默认 role_type；contract_refs 更新 |
 | 1.3 | 新增角色名称互为前缀冲突校验规则，避免 @mention 歧义 |
+| 1.4 | role.json 不再保存 skills；Skill 以 work_root/skills 为启用状态；创建角色自动初始化固定 agents-hub MCP；权限和原生配置编辑暂不落地 |
 
 ---
 
@@ -36,8 +37,8 @@ contract_refs:
 roles 模块是 agents-hub 系统的**角色管理层**，负责 AI Agent 角色的全生命周期管理，包括创建、配置、查询和删除。
 
 模块定位：
-- **负责**：角色 CRUD、配置持久化、Skill 管理、头像引用管理、构造给 agent_bridge 的 RoleConfig
-- **不负责**：消息传递、prompt 构造、多 agent 协调、群聊管理、任务调度
+- **负责**：角色 CRUD、配置持久化、Skill 管理、头像引用管理、创建角色时初始化固定 agents-hub MCP、构造给 agent_bridge 的 RoleConfig
+- **不负责**：用户自定义 MCP 管理、权限策略落地、原生平台配置编辑、消息传递、prompt 构造、多 agent 协调、群聊管理、任务调度
 
 核心设计原则：
 - **SSOT**：`role.json` 是角色数据的唯一来源
@@ -63,6 +64,8 @@ roles 模块是 agents-hub 系统的**角色管理层**，负责 AI Agent 角色
 - scope 字段的群聊绑定逻辑
 - abilities 的匹配调度
 - 消息传递与会话管理
+- 权限配置语义化操作暂不落地，等待 Docker / 外部沙箱方案明确
+- 不提供 settings.json / config.toml 原生编辑接口
 
 ## Core Behavior
 
@@ -108,13 +111,14 @@ local_data/agents/
 
 ### Skill 管理机制
 
-Skill 采用**复制模式**：从全局 `local_data/skills/` 复制到角色的 `work_root/skills/` 目录。
+Skill 采用**引用优先模式**：全局 `local_data/skills/` 是 Skill 内容的 SSOT，角色的 `work_root/skills/<skill_id>` 是平台可见的启用入口。
 
 行为规则：
-- 添加 skill 时，从全局 skill 库复制整个 skill 目录到角色下
-- 移除 skill 时，删除角色下的 skill 目录
-- `role.json` 中的 `skills` 列表与 `work_root/skills/` 目录保持同步
-- 同一 skill 不能重复添加到同一角色
+- 添加 skill 时，优先在角色 `work_root/skills/` 下创建指向全局 skill 目录的 symlink
+- 如果 symlink 创建失败，降级复制整个 skill 目录
+- `role.json` 不保存 skills 字段
+- 列出 skill 时扫描 `work_root/skills/`
+- 移除 skill 时只删除角色下的入口，不影响全局 skill
 
 ### 角色创建初始化
 
@@ -246,4 +250,5 @@ Skill 采用**复制模式**：从全局 `local_data/skills/` 复制到角色的
 - scope 字段的群聊绑定逻辑
 - abilities 的匹配调度
 - 多 agent 协调与消息传递
-- 权限配置的语义化操作（如 add_allow、set_mode）
+- 权限配置语义化操作暂不落地，等待 Docker / 外部沙箱方案明确
+- 不提供 settings.json / config.toml 原生编辑接口

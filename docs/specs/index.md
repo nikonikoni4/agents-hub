@@ -5,10 +5,10 @@
  - 内容摘要：agent_bridge 模块的正式规格，定义其作为纯执行层的职责边界、统一事件契约（StreamEvent）、三接口设计（execute_stream/execute/bare_claude_call）和会话管理策略
 
 ## roles
- - updated_at : 2026-05-30
+ - updated_at : 2026-06-02
  - path: `docs/specs/2026-05-24-agents-role.md`
  - 触发规则：当设计、修改或扩展 roles 角色配置模块时阅读，包括角色 CRUD、头像管理、Skill 管理和权限配置
- - 内容摘要：roles 角色配置模块的正式规格，定义角色生命周期管理、配置数据结构（RoleConfig/RoleInfo）、头像引用机制和 Skill 管理
+ - 内容摘要：roles 角色配置模块的正式规格，定义角色生命周期管理、配置数据结构（RoleConfig/RoleInfo）、头像引用机制、Skill 引用优先管理、创建角色时固定 agents-hub MCP 初始化，以及权限/原生配置编辑暂不落地边界
 
 ## core-overview
  - updated_at : 2026-05-31
