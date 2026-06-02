@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from datetime import datetime
+from pathlib import Path
 
 from agents_hub.api.services.group_chat_service import GroupChatService
 from agents_hub.api.schemas.group_chats import GroupChatInfo
@@ -156,3 +157,107 @@ async def test_load_group_chat_not_found_raises_error(service, mock_group_chat_m
     with pytest.raises(ResourceNotFoundError) as exc_info:
         await service.load_group_chat("gc_nonexistent")
     assert "群聊不存在" in str(exc_info.value)
+
+
+# Task 5: delete_group_chat 测试
+
+async def test_delete_group_chat_keep_data(service, mock_group_chat_manager):
+    """测试删除群聊但保留数据"""
+    # Arrange
+    group_chat_id = "gc_to_delete"
+    mock_group_chat_manager.unregister = AsyncMock()
+
+    # Act
+    await service.delete_group_chat(group_chat_id, keep_data=True)
+
+    # Assert
+    mock_group_chat_manager.unregister.assert_called_once_with(group_chat_id)
+
+
+async def test_delete_group_chat_with_data(service, mock_group_chat_manager):
+    """测试完全删除群聊（内存+磁盘）"""
+    # Arrange
+    group_chat_id = "gc_to_delete_full"
+    project_path = "/path/to/project"
+
+    mock_group_chat = Mock()
+    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
+        return_value=Mock(project_path=project_path)
+    )
+    mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+    mock_group_chat_manager.unregister = AsyncMock()
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
+         patch("agents_hub.api.services.group_chat_service.Path") as MockPath, \
+         patch("shutil.rmtree") as mock_rmtree:
+        # Mock Path 对象
+        mock_dir = Mock()
+        mock_dir.exists.return_value = True
+        MockPath.return_value = mock_dir
+
+        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_to_delete_full"
+
+        # Act
+        await service.delete_group_chat(group_chat_id, keep_data=False)
+
+        # Assert
+        mock_group_chat_manager.get_group_chat.assert_called_once()
+        mock_group_chat_manager.unregister.assert_called_once_with(group_chat_id)
+        mock_paths.base_dir.assert_called_once_with(group_chat_id, project_path)
+        mock_rmtree.assert_called_once_with(mock_dir)
+
+
+async def test_delete_group_chat_from_disk_when_not_in_memory(service, mock_group_chat_manager):
+    """测试删除不在内存中的群聊（无法获取 project_path，不删除磁盘）"""
+    # Arrange
+    group_chat_id = "gc_disk_delete"
+    mock_group_chat_manager.get_group_chat.return_value = None  # 不在内存
+    mock_group_chat_manager.unregister = AsyncMock()
+
+    # Act
+    await service.delete_group_chat(group_chat_id, keep_data=False)
+
+    # Assert
+    mock_group_chat_manager.unregister.assert_called_once_with(group_chat_id)
+
+
+async def test_delete_group_chat_idempotent(service, mock_group_chat_manager):
+    """测试删除不存在的群聊是幂等的（不抛异常）"""
+    # Arrange
+    mock_group_chat_manager.get_group_chat.return_value = None
+    mock_group_chat_manager.unregister = AsyncMock()
+
+    # Act & Assert - 不应抛异常
+    await service.delete_group_chat("gc_nonexistent", keep_data=False)
+    mock_group_chat_manager.unregister.assert_called_once()
+
+
+async def test_delete_group_chat_file_deletion_fails(service, mock_group_chat_manager):
+    """测试文件删除失败抛出 ExternalServiceError"""
+    # Arrange
+    from agents_hub.exceptions import ExternalServiceError
+
+    group_chat_id = "gc_delete_fail"
+    project_path = "/path"
+
+    mock_group_chat = Mock()
+    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
+        return_value=Mock(project_path=project_path)
+    )
+    mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+    mock_group_chat_manager.unregister = AsyncMock()
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
+         patch("agents_hub.api.services.group_chat_service.Path") as MockPath, \
+         patch("shutil.rmtree", side_effect=PermissionError("权限不足")):
+        # Mock Path 对象
+        mock_dir = Mock()
+        mock_dir.exists.return_value = True
+        MockPath.return_value = mock_dir
+
+        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_delete_fail"
+
+        # Act & Assert
+        with pytest.raises(ExternalServiceError) as exc_info:
+            await service.delete_group_chat(group_chat_id, keep_data=False)
+        assert "文件删除失败" in str(exc_info.value)
