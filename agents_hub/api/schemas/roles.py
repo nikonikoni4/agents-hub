@@ -1,0 +1,75 @@
+"""API schemas for roles."""
+
+from typing import Literal
+
+from pydantic import BaseModel
+
+from agents_hub.roles.models import RoleInfo, SkillInfo
+
+
+class RoleCreateRequest(BaseModel):
+    """创建角色请求"""
+
+    name: str
+    platform: Literal["claude", "codex"]
+    avatar: str | None = None
+    abilities: list[str] = []
+    type: Literal["leader", "team_member"] | None = None
+    scope: list[str] | None = None
+    description: str | None = None
+
+
+class RoleUpdateRequest(BaseModel):
+    """更新角色请求"""
+
+    avatar: str | None = None
+    abilities: list[str] | None = None
+    description: str | None = None
+
+
+class RoleSkillRequest(BaseModel):
+    """添加角色 skill 请求"""
+
+    skill_id: str
+
+
+class RoleResponse(BaseModel):
+    """角色响应"""
+
+    name: str
+    platform: str
+    avatar: str | None = None
+    abilities: list[str] = []
+    type: str | None = None
+    scope: list[str] | None = None
+    description: str | None = None
+
+    @classmethod
+    def from_domain(cls, role_info: RoleInfo) -> "RoleResponse":
+        """从领域模型转换"""
+        return cls(
+            name=role_info.name,
+            platform=role_info.platform.value,
+            avatar=role_info.avatar,
+            abilities=role_info.abilities,
+            type=role_info.type.value if role_info.type else None,
+            scope=role_info.scope,
+            description=role_info.description,
+        )
+
+
+class SkillResponse(BaseModel):
+    """Skill 响应"""
+
+    id: str
+    name: str
+    description: str
+
+    @classmethod
+    def from_domain(cls, skill_info: SkillInfo) -> "SkillResponse":
+        """从领域模型转换"""
+        return cls(
+            id=skill_info.id,
+            name=skill_info.name,
+            description=skill_info.description,
+        )
