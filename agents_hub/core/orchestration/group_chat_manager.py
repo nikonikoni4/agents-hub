@@ -66,8 +66,8 @@ class GroupChatManager:
         # 2. 从磁盘加载
         try:
             return await self.load_group_chat_from_disk(group_chat_id)
-        except FileNotFoundError:
-            raise GroupChatNotFoundError(group_chat_id)
+        except FileNotFoundError as e:
+            raise GroupChatNotFoundError(group_chat_id) from e
 
     async def unregister(self, group_chat_id: str, timeout: float = 10.0):
         """
