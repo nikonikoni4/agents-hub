@@ -7,6 +7,7 @@ GroupChatService 业务编排层
 import json
 import shutil
 from pathlib import Path
+from uuid import uuid4
 
 from agents_hub.api.schemas.group_chats import (
     GroupChatInfo,
@@ -16,7 +17,6 @@ from agents_hub.api.schemas.group_chats import (
 from agents_hub.core.context.group_metadata import GroupMetadata
 from agents_hub.core.foundation import GroupChatType, group_chat_paths
 from agents_hub.core.orchestration import GroupChat, GroupChatManager, Team
-from agents_hub.core.utils.id_generator import generate_group_chat_id
 from agents_hub.exceptions import (
     ExternalServiceError,
     ResourceNotFoundError,
@@ -49,7 +49,7 @@ class GroupChatService:
         Args:
             team_members: 团队成员角色名列表
             project_path: 项目路径
-            group_chat_name: 群聊名称（待实现：当前 GroupChat 构造函数不支持此参数）
+            group_chat_name: 群聊名称（可选，默认使用 group_chat_id）
 
         Returns:
             GroupChatInfo: 群聊详细信息
@@ -58,10 +58,6 @@ class GroupChatService:
             ValidationError: team_members 为空
             ResourceNotFoundError: role 不存在或 project_path 不存在
             StateError: 启动失败
-
-        Note:
-            group_chat_name 参数保留用于未来实现，当前会被忽略，
-            使用 group_chat_id 作为群聊名称
         """
         # 1. 验证 team_members 非空
         if not team_members:
@@ -80,15 +76,15 @@ class GroupChatService:
             ) from e
 
         # 3. 生成 group_chat_id
-        group_chat_id = generate_group_chat_id()
+        group_chat_id = str(uuid4())
 
         # 4. 创建 GroupChat 实例
-        # TODO: 当 GroupChat 构造函数支持 group_chat_name 参数后，传入 group_chat_name
         group_chat = GroupChat(
             team=team,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path=project_path,
             group_chat_id=group_chat_id,
+            group_chat_name=group_chat_name,
         )
 
         # 5. 调用 GroupChat.start()

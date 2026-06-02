@@ -282,9 +282,8 @@ class GroupChatManager:
 
         统一的群聊创建入口，自动处理：
         1. 创建 GroupChat 实例
-        2. 调用 start() 启动
-        3. 保存 group_metadata.json
-        4. 自动注册到 GroupChatManager
+        2. 调用 start() 启动（自动保存 metadata）
+        3. 自动注册到 GroupChatManager
 
         Args:
             team: 所属 Team 实例
@@ -307,17 +306,11 @@ class GroupChatManager:
             group_type=group_type,
             project_path=project_path,
             group_chat_id=group_chat_id,
+            group_chat_name=group_chat_name,
         )
 
         # 2. 启动群聊（会自动保存 metadata）
         await group_chat.start()
-
-        # 3. 如果提供了自定义名称，更新 metadata
-        if group_chat_name is not None:
-            metadata = await group_chat.group_chat_context.repository.load_group_metadata()
-            if metadata:
-                metadata.group_chat_name = group_chat_name
-                await group_chat.group_chat_context.repository.save_group_metadata(metadata)
 
         # 4. 注册到 GroupChatManager
         self.register(group_chat_id, group_chat)
