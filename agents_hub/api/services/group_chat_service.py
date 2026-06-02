@@ -9,7 +9,9 @@ from pathlib import Path
 
 from agents_hub.api.schemas.group_chats import (
     GroupChatInfo,
+    GroupChatSummary,
 )
+from agents_hub.core.context.group_metadata import GroupMetadata
 from agents_hub.core.foundation import GroupChatType, group_chat_paths
 from agents_hub.core.orchestration import GroupChat, GroupChatManager, Team
 from agents_hub.core.utils.id_generator import generate_group_chat_id
@@ -189,6 +191,43 @@ class GroupChatService:
                         "group_chat_dir": str(group_chat_dir),
                     },
                 ) from e
+
+    async def list_group_chats(self, is_active_only: bool = False) -> list[GroupChatSummary]:
+        """列出所有群聊
+
+        Args:
+            is_active_only: True=只返回活跃群聊，False=返回所有群聊
+
+        Returns:
+            list[GroupChatSummary]: 群聊摘要列表
+        """
+        # 1. 调用 GroupChatManager.list_all_group_chats()
+        all_metadata = self.group_chat_manager.list_all_group_chats()
+
+        # 2. 转换为 GroupChatSummary 列表
+        summaries: list[GroupChatSummary] = []
+        for metadata_dict in all_metadata:
+            # 转换为 GroupMetadata 对象
+            metadata = GroupMetadata(**metadata_dict)
+
+            # 检查是否在内存中（活跃状态）
+            is_active = self.group_chat_manager.get_group_chat(metadata.group_chat_id) is not None
+
+            # 3. 如果 is_active_only=True，过滤出活跃的
+            if is_active_only and not is_active:
+                continue
+
+            summaries.append(
+                GroupChatSummary(
+                    group_chat_id=metadata.group_chat_id,
+                    group_chat_name=metadata.group_chat_name,
+                    project_path=metadata.project_path,
+                    is_active=is_active,
+                    created_at=metadata.created_at,
+                )
+            )
+
+        return summaries
 
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""

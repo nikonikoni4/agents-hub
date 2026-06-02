@@ -261,3 +261,86 @@ async def test_delete_group_chat_file_deletion_fails(service, mock_group_chat_ma
         with pytest.raises(ExternalServiceError) as exc_info:
             await service.delete_group_chat(group_chat_id, keep_data=False)
         assert "文件删除失败" in str(exc_info.value)
+
+
+# Task 6: list_group_chats 测试
+
+async def test_list_group_chats_returns_all(service, mock_group_chat_manager):
+    """测试列出所有群聊"""
+    # Arrange
+    from agents_hub.core.context.group_metadata import GroupMetadata
+    from agents_hub.api.schemas.group_chats import GroupChatSummary
+
+    mock_metadata_list = [
+        GroupMetadata(
+            group_chat_id="gc_1",
+            group_chat_name="Group 1",
+            project_path="/path/1",
+            created_at=datetime(2026, 6, 1, 10, 0, 0),
+            group_type="manager_orchestrate",
+        ),
+        GroupMetadata(
+            group_chat_id="gc_2",
+            group_chat_name="Group 2",
+            project_path="/path/2",
+            created_at=datetime(2026, 6, 2, 10, 0, 0),
+            group_type="manager_orchestrate",
+        ),
+    ]
+    mock_group_chat_manager.list_all_group_chats.return_value = mock_metadata_list
+    mock_group_chat_manager.get_group_chat.side_effect = [Mock(), None]  # gc_1 活跃，gc_2 非活跃
+
+    # Act
+    result = await service.list_group_chats(is_active_only=False)
+
+    # Assert
+    assert len(result) == 2
+    assert result[0].group_chat_id == "gc_1"
+    assert result[0].is_active is True
+    assert result[1].group_chat_id == "gc_2"
+    assert result[1].is_active is False
+
+
+async def test_list_group_chats_active_only(service, mock_group_chat_manager):
+    """测试只列出活跃群聊"""
+    # Arrange
+    from agents_hub.core.context.group_metadata import GroupMetadata
+
+    mock_metadata_list = [
+        GroupMetadata(
+            group_chat_id="gc_active",
+            group_chat_name="Active Group",
+            project_path="/path/active",
+            created_at=datetime(2026, 6, 1, 10, 0, 0),
+            group_type="manager_orchestrate",
+        ),
+        GroupMetadata(
+            group_chat_id="gc_inactive",
+            group_chat_name="Inactive Group",
+            project_path="/path/inactive",
+            created_at=datetime(2026, 6, 2, 10, 0, 0),
+            group_type="manager_orchestrate",
+        ),
+    ]
+    mock_group_chat_manager.list_all_group_chats.return_value = mock_metadata_list
+    mock_group_chat_manager.get_group_chat.side_effect = [Mock(), None]
+
+    # Act
+    result = await service.list_group_chats(is_active_only=True)
+
+    # Assert
+    assert len(result) == 1
+    assert result[0].group_chat_id == "gc_active"
+    assert result[0].is_active is True
+
+
+async def test_list_group_chats_empty(service, mock_group_chat_manager):
+    """测试没有群聊时返回空列表"""
+    # Arrange
+    mock_group_chat_manager.list_all_group_chats.return_value = []
+
+    # Act
+    result = await service.list_group_chats()
+
+    # Assert
+    assert result == []
