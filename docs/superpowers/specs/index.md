@@ -9,3 +9,11 @@
 - **路径**：`docs/superpowers/specs/2026-06-01-frontend-mvp-design.md`
 - **触发规则**：当设计、修改或扩展前端 MVP 界面时阅读
 - **内容摘要**：Agents Hub 前端 MVP 界面设计规格，定义核心组件（TopBar、SessionList、ChatWindow、ChatInfoPanel）、两栏布局结构、交互流程和数据流
+
+## 角色管理
+
+### role-management-design
+- **更新时间**：2026-06-02
+- **路径**：`docs/superpowers/specs/2026-06-02-role-management-design.md`
+- **触发规则**：当设计、修改或扩展 roles 角色管理、Skill 启用、角色 MCP 初始化或角色元信息边界时阅读
+- **内容摘要**：Role Management 设计规格，定义 role.json 仅保存角色元信息、Skill 以 work_root/skills 为启用状态、创建角色时自动添加固定 agents-hub MCP，并明确权限和原生配置编辑暂不落地

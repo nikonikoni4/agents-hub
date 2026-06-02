@@ -8,6 +8,7 @@ from .agent_context import AgentContext
 from .group_chat_context import GroupChatContext
 from .group_chat_repository import GroupChatRepository
 from .group_chat_session import AgentContextState, AgentSessionInfo, GroupChatSession
+from .group_metadata import GroupMetadata
 
 __all__ = [
     "GroupChatSession",
@@ -16,4 +17,5 @@ __all__ = [
     "GroupChatRepository",
     "GroupChatContext",
     "AgentContext",
+    "GroupMetadata",
 ]

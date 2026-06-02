@@ -148,9 +148,12 @@
 
 ### AgentSessionInfo（会话信息）
 - Agent 的会话信息
-- 属性：main_session、btw_session、context_state
+- 属性：main_session、btw_session、context_state、token、cwd
 - main_session：主会话 ID
 - btw_session：单聊会话 ID 列表
+- context_state：上下文加载状态
+- token：Agent 的身份验证令牌
+- cwd：CLI 命令启动的工作目录路径
 
 ### AgentContextState（上下文状态）
 - Agent 的上下文加载状态
@@ -314,10 +317,36 @@ local_data/
     └── <team_name>/
         └── <project_path>/
             └── <group_chat_id>/
-                ├── <group_chat_id>.jsonl          # 群聊消息历史
+                ├── group_metadata.json            # 群聊元数据（GroupChat.start() 时立即创建）
+                ├── <group_chat_id>.jsonl          # 群聊消息历史（首次消息时创建）
                 ├── agent_session_state.json       # Agent session 和上下文状态
                 └── memory/
                     └── compact_history.jsonl      # 压缩历史
+```
+
+## GroupMetadata（群聊元数据）
+
+保存在 `group_metadata.json` 中，独立于消息历史，在 GroupChat.start() 时立即创建。
+
+### 字段说明
+- **group_chat_id**：群聊唯一标识
+- **group_chat_name**：群聊名称（默认使用 group_chat_id）
+- **project_path**：项目路径，用于：
+  1. 计算群聊数据存储路径
+  2. 作为所有 agent 的默认 cwd（工作目录）
+- **created_at**：创建时间
+- **group_type**：群聊类型（如 MANAGER_ORCHESTRATE）
+
+### 设计动机
+- **立即创建**：metadata 在 GroupChat.start() 时立即创建，不依赖消息历史
+- **延迟创建消息**：group_chat_session.jsonl 在首次消息时才创建，避免空文件
+- **SSOT 原则**：project_path 只存储在 metadata 中，作为单一数据源
+
+### CWD 优先级规则
+```
+Agent 实际使用的 cwd = AgentSessionInfo.cwd (如果非空) 
+                      OR metadata.project_path 
+                      OR None (使用当前工作目录)
 ```
 
 ## role.json 格式

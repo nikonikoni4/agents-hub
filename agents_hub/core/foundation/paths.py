@@ -101,6 +101,26 @@ class GroupChatPaths:
         """
         return self.base_dir(group_chat_id, project_path) / "memory" / "compact_history.jsonl"
 
+    def metadata_file(self, group_chat_id: str, project_path: str) -> Path:
+        """
+        群聊元数据文件
+
+        存储内容：
+        - group_chat_id：群聊唯一标识
+        - group_chat_name：群聊名称
+        - project_path：项目路径（作为 agent 默认 cwd）
+        - created_at：创建时间
+        - group_type：群聊类型
+
+        为什么单独保存：
+        - 元数据在 GroupChat.start() 时立即创建，独立于消息历史
+        - 消息历史在首次消息时才创建，延迟创建避免空文件
+        - project_path 需要持久化，作为 agent 的默认工作目录
+
+        路径格式：local_data/teams/<project>/<id>/group_metadata.json
+        """
+        return self.base_dir(group_chat_id, project_path) / "group_metadata.json"
+
     def agent_calls_log(self, group_chat_id: str, project_path: str) -> Path:
         """
         Agent 调用日志文件

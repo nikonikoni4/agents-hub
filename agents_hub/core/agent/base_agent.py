@@ -49,9 +49,10 @@ class Agent:
         self.task_manager = task_manager
         self._run = True
 
-        # 从 group_chat_context 获取 agent_token
+        # 从 group_chat_context 获取 agent_token 和 cwd
         session_info = group_chat_context.agent_session_id.get(self.name)
         self.agent_token: str = session_info.token if session_info else ""
+        self.agent_cwd: str = session_info.cwd if session_info else ""
 
     def set_run(self, run: bool):
         """设置该agent是否工作"""
@@ -108,12 +109,16 @@ class Agent:
         Args:
             prompt: 渲染好的 LLM prompt 字符串
         """
-        return await agent_platform_client.execute(prompt, self.role_config, self.main_session_id)
+        cwd = self.agent_cwd if self.agent_cwd else None
+        return await agent_platform_client.execute(
+            prompt, self.role_config, self.main_session_id, cwd
+        )
 
     async def btw_execute(self, prompt, session: str | None = None) -> AgentResult:
         """执行单聊（by the way）"""
         print(f"Info : {self.name} 执行单聊 content:{prompt[:20]}")
-        return await agent_platform_client.execute(prompt, self.role_config, session)
+        cwd = self.agent_cwd if self.agent_cwd else None
+        return await agent_platform_client.execute(prompt, self.role_config, session, cwd)
 
     @property
     def main_session_id(self):

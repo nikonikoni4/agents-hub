@@ -27,11 +27,13 @@ class GroupChatRepository:
 
     def __init__(self, group_chat_id: str, project_path: str):
         self.group_chat_id = group_chat_id
+        self.project_path = project_path  # 保存 project_path 属性
 
         # 并发控制锁
         self._session_lock = asyncio.Lock()  # 保护 group_chat_session 文件读写
         self._agent_state_lock = asyncio.Lock()  # 保护 agent_session_state 文件读写
         self._compact_lock = asyncio.Lock()  # 保护 compact_history 文件读写
+        self._metadata_lock = asyncio.Lock()  # 保护 group_metadata 文件读写
 
         # 文件路径（集中管理）
         self.group_chat_session_path = str(group_chat_paths.base_dir(group_chat_id, project_path))
@@ -40,6 +42,7 @@ class GroupChatRepository:
         self.compact_history_file = str(
             group_chat_paths.compact_history_file(group_chat_id, project_path)
         )
+        self.metadata_file = str(group_chat_paths.metadata_file(group_chat_id, project_path))
 
     # ==================== GroupChatSession 持久化 ====================
 
@@ -164,6 +167,7 @@ class GroupChatRepository:
                     ),
                 ),
                 token=session_data.get("token", ""),  # 加载 token 字段
+                cwd=session_data.get("cwd", ""),  # 加载 cwd 字段
             )
         return result
 
@@ -189,6 +193,7 @@ class GroupChatRepository:
                         "last_loaded_message_index": session_info.context_state.last_loaded_message_index,
                     },
                     "token": session_info.token,  # 保存 token 字段
+                    "cwd": session_info.cwd,  # 保存 cwd 字段
                 }
 
             # 写入文件
@@ -246,6 +251,49 @@ class GroupChatRepository:
                 raise FileSystemError(
                     operation="write", path=self.compact_history_file, reason=str(e)
                 ) from e
+
+    # ==================== Group Metadata 持久化 ====================
+
+    async def save_group_metadata(self, metadata):
+        """
+        保存群聊元数据到 group_metadata.json（加锁）
+
+        Args:
+            metadata: GroupMetadata 对象
+        """
+        async with self._metadata_lock:
+            # 确保目录存在
+            os.makedirs(self.group_chat_session_path, exist_ok=True)
+
+            try:
+                async with aiofiles.open(self.metadata_file, "w", encoding="utf-8") as f:
+                    await f.write(json.dumps(metadata.to_dict(), ensure_ascii=False, indent=2))
+            except OSError as e:
+                raise FileSystemError(
+                    operation="write", path=self.metadata_file, reason=str(e)
+                ) from e
+
+    async def load_group_metadata(self):
+        """
+        从文件加载群聊元数据（无锁，读操作）
+
+        Returns:
+            GroupMetadata | None: 如果文件不存在返回 None
+        """
+        if not os.path.exists(self.metadata_file):
+            return None
+
+        try:
+            async with aiofiles.open(self.metadata_file, encoding="utf-8") as f:
+                content = await f.read()
+                data = json.loads(content)
+
+                # 动态导入避免循环依赖
+                from agents_hub.core.context.group_metadata import GroupMetadata
+
+                return GroupMetadata.from_dict(data)
+        except OSError as e:
+            raise FileSystemError(operation="read", path=self.metadata_file, reason=str(e)) from e
 
     # ==================== 资源清理 ====================
 
