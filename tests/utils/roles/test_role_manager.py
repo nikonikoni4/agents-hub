@@ -36,52 +36,68 @@ def test_list_roles_empty(role_manager):
 
 def test_create_claude_role(role_manager, agents_dir):
     """测试创建 Claude 平台角色"""
-    # 创建模拟的 ~/.claude 目录
     mock_home = Path(tempfile.mkdtemp())
     mock_claude = mock_home / ".claude"
     mock_claude.mkdir()
     (mock_claude / "settings.json").write_text('{"permissions": {}}', encoding="utf-8")
 
-    with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home):
+    with (
+        patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home),
+        patch.object(role_manager, "_init_agents_hub_mcp") as init_mcp,
+    ):
         role = role_manager.create_role("test_claude", AgentPlatform.CLAUDE)
 
-    # 验证目录结构
     role_dir = agents_dir / "test_claude"
+    assert role.role_dir == role_dir
     assert role_dir.exists()
     assert (role_dir / "role.json").exists()
     assert (role_dir / "work_root").exists()
     assert (role_dir / "work_root" / "skills").exists()
     assert (role_dir / "work_root" / "CLAUDE.md").exists()
     assert (role_dir / "work_root" / "settings.json").exists()
+    init_mcp.assert_called_once_with(AgentPlatform.CLAUDE, role_dir / "work_root")
 
-    # 验证 role.json 内容
     role_json = json.loads((role_dir / "role.json").read_text(encoding="utf-8"))
-    assert role_json["name"] == "test_claude"
-    assert role_json["platform"] == "claude"
-    assert "scope" in role_json
-    assert "type" in role_json
+    assert role_json == {
+        "name": "test_claude",
+        "platform": "claude",
+        "description": None,
+        "avatar": None,
+        "abilities": [],
+        "type": None,
+        "scope": None,
+    }
+    assert "skills" not in role_json
 
 
 def test_create_codex_role(role_manager, agents_dir):
     """测试创建 Codex 平台角色"""
-    # 创建模拟的 ~/.codex 目录
     mock_home = Path(tempfile.mkdtemp())
     mock_codex = mock_home / ".codex"
     mock_codex.mkdir()
-    (mock_codex / "auth.json").write_text('{}', encoding="utf-8")
-    (mock_codex / "config.toml").write_text('', encoding="utf-8")
+    (mock_codex / "auth.json").write_text("{}", encoding="utf-8")
+    (mock_codex / "config.toml").write_text("", encoding="utf-8")
     (mock_codex / "rules").mkdir()
 
-    with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home):
+    with (
+        patch("agents_hub.roles.role_manager.Path.home", return_value=mock_home),
+        patch.object(role_manager, "_init_agents_hub_mcp") as init_mcp,
+    ):
         role = role_manager.create_role("test_codex", AgentPlatform.CODEX)
 
-    # 验证目录结构
     role_dir = agents_dir / "test_codex"
+    assert role.role_dir == role_dir
     assert role_dir.exists()
     assert (role_dir / "work_root" / "auth.json").exists()
     assert (role_dir / "work_root" / "config.toml").exists()
     assert (role_dir / "work_root" / "rules").exists()
     assert (role_dir / "work_root" / "AGENTS.md").exists()
+    init_mcp.assert_called_once_with(AgentPlatform.CODEX, role_dir / "work_root")
+
+    role_json = json.loads((role_dir / "role.json").read_text(encoding="utf-8"))
+    assert role_json["name"] == "test_codex"
+    assert role_json["platform"] == "codex"
+    assert "skills" not in role_json
 
 
 def test_create_role_already_exists(role_manager, agents_dir):

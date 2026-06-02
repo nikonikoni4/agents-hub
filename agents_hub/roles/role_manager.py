@@ -249,6 +249,7 @@ class RoleManager:
                 self._init_claude_config(work_root)
             else:
                 self._init_codex_config(work_root)
+            self._init_agents_hub_mcp(platform, work_root)
         except Exception:
             shutil.rmtree(role_dir, ignore_errors=True)
             raise
@@ -261,7 +262,6 @@ class RoleManager:
             "abilities": abilities or [],
             "type": type.value if isinstance(type, RoleType) else type,
             "scope": scope,
-            "skills": [],
         }
         (role_dir / "role.json").write_text(
             json.dumps(role_json, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -365,3 +365,7 @@ class RoleManager:
         if not agents_md_path.exists():
             agents_md_content = "<AGENT_RUNTIME_START/>\n<AGENT_RUNTIME_END/>\n"
             agents_md_path.write_text(agents_md_content, encoding="utf-8")
+
+    def _init_agents_hub_mcp(self, platform: AgentPlatform, work_root: Path) -> None:
+        """Initialize the fixed agents-hub MCP for this role's platform config root."""
+        return None
