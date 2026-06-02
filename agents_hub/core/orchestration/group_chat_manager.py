@@ -5,15 +5,20 @@ GroupChatManager 群聊管理器
 """
 
 import threading
+from pathlib import Path
 
 from agents_hub.core.communication import AgentCall
+from agents_hub.core.context import GroupMetadata
 from agents_hub.core.foundation import (
     AgentMessage,
     GroupChatNotFoundError,
+    GroupChatType,
     MessageType,
 )
+from agents_hub.core.foundation.paths import group_chat_paths
 
 from .group_chat import GroupChat
+from .team import Team
 
 
 class GroupChatManager:
@@ -116,6 +121,183 @@ class GroupChatManager:
         """
         with self._token_lock:
             return self._tokens.get(token)
+
+    def list_all_group_chats(self, base_path: str = "local_data/teams") -> list[dict]:
+        """
+        列出所有群聊
+
+        扫描 teams/*/*/group_metadata.json 获取所有群聊信息。
+
+        Args:
+            base_path: 群聊数据根目录，默认 "local_data/teams"
+
+        Returns:
+            群聊信息列表，每项包含：
+            - group_chat_id: 群聊 ID
+            - group_chat_name: 群聊名称
+            - project_path: 项目路径
+            - created_at: 创建时间（ISO 格式字符串）
+            - group_type: 群聊类型
+            - is_active: 是否在内存中活跃
+        """
+        base = Path(base_path)
+        if not base.exists():
+            return []
+
+        group_chats = []
+
+        # 扫描 teams/*/*/group_metadata.json
+        for project_dir in base.iterdir():
+            if not project_dir.is_dir():
+                continue
+
+            for group_dir in project_dir.iterdir():
+                if not group_dir.is_dir():
+                    continue
+
+                metadata_file = group_dir / "group_metadata.json"
+                if not metadata_file.exists():
+                    continue
+
+                try:
+                    # 读取 metadata
+                    import json
+
+                    with open(metadata_file, encoding="utf-8") as f:
+                        data = json.load(f)
+
+                    metadata = GroupMetadata.from_dict(data)
+
+                    # 构造返回信息
+                    group_chats.append(
+                        {
+                            "group_chat_id": metadata.group_chat_id,
+                            "group_chat_name": metadata.group_chat_name,
+                            "project_path": metadata.project_path,
+                            "created_at": metadata.created_at.isoformat(),
+                            "group_type": metadata.group_type,
+                            "is_active": metadata.group_chat_id in self._group_chats,
+                        }
+                    )
+                except Exception:
+                    # 读取失败时跳过该群聊
+                    continue
+
+        return group_chats
+
+    async def load_group_chat_from_disk(
+        self, group_chat_id: str, project_path: str, team: Team
+    ) -> GroupChat:
+        """
+        从磁盘加载群聊到内存
+
+        1. 读取 group_metadata.json 验证信息
+        2. 创建 GroupChat 实例
+        3. 调用 GroupChat.load()
+        4. 注册到 GroupChatManager
+
+        Args:
+            group_chat_id: 群聊 ID
+            project_path: 项目路径
+            team: 所属 Team 实例
+
+        Returns:
+            加载的 GroupChat 实例
+
+        Raises:
+            FileNotFoundError: metadata 文件不存在
+            ValueError: metadata 验证失败
+        """
+        # 1. 读取并验证 metadata
+        metadata_file = group_chat_paths.metadata_file(group_chat_id, project_path)
+        if not metadata_file.exists():
+            raise FileNotFoundError(f"群聊元数据文件不存在: {metadata_file}")
+
+        import json
+
+        with open(metadata_file, encoding="utf-8") as f:
+            data = json.load(f)
+
+        metadata = GroupMetadata.from_dict(data)
+
+        # 验证 group_chat_id 一致性
+        if metadata.group_chat_id != group_chat_id:
+            raise ValueError(
+                f"metadata 中的 group_chat_id ({metadata.group_chat_id}) "
+                f"与参数不一致 ({group_chat_id})"
+            )
+
+        # 2. 创建 GroupChat 实例
+        group_type = GroupChatType(metadata.group_type)
+        group_chat = GroupChat(
+            team=team,
+            group_type=group_type,
+            project_path=project_path,
+            group_chat_id=group_chat_id,
+        )
+
+        # 3. 加载群聊状态
+        await group_chat.load()
+
+        # 4. 注册到 GroupChatManager
+        self.register(group_chat_id, group_chat)
+
+        return group_chat
+
+    async def create_group_chat(
+        self,
+        team: Team,
+        group_type: GroupChatType,
+        project_path: str,
+        group_chat_name: str | None = None,
+        group_chat_id: str | None = None,
+    ) -> GroupChat:
+        """
+        创建并启动新群聊
+
+        统一的群聊创建入口，自动处理：
+        1. 创建 GroupChat 实例
+        2. 调用 start() 启动
+        3. 保存 group_metadata.json
+        4. 自动注册到 GroupChatManager
+
+        Args:
+            team: 所属 Team 实例
+            group_type: 群聊类型
+            project_path: 项目路径
+            group_chat_name: 群聊名称（可选，默认使用 group_chat_id）
+            group_chat_id: 群聊 ID（可选，默认自动生成）
+
+        Returns:
+            创建的 GroupChat 实例
+        """
+        from uuid import uuid4
+
+        # 1. 创建 GroupChat 实例
+        if group_chat_id is None:
+            group_chat_id = str(uuid4())
+
+        group_chat = GroupChat(
+            team=team,
+            group_type=group_type,
+            project_path=project_path,
+            group_chat_id=group_chat_id,
+        )
+
+        # 2. 启动群聊（会自动保存 metadata）
+        await group_chat.start()
+
+        # 3. 如果提供了自定义名称，更新 metadata
+        if group_chat_name is not None:
+            metadata = await group_chat.group_chat_context.repository.load_group_metadata()
+            if metadata:
+                metadata.group_chat_name = group_chat_name
+                await group_chat.group_chat_context.repository.save_group_metadata(metadata)
+
+        # 4. 注册到 GroupChatManager
+        self.register(group_chat_id, group_chat)
+
+        return group_chat
 
 
 # 全局单例

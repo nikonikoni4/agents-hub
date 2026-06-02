@@ -47,14 +47,14 @@ GROUP_CHAT_ID = "e2e_demo_chat"
 
 # 团队成员配置
 TEAM_MEMBERS = {
-    "codex_test": {
-        "description": "团队领导，负责任务分配、进度跟踪和技术决策",
-        "type": "leader",
-    },
-    # "Leader": {
+    # "codex_test": {
     #     "description": "团队领导，负责任务分配、进度跟踪和技术决策",
     #     "type": "leader",
     # },
+    "Leader": {
+        "description": "团队领导，负责任务分配、进度跟踪和技术决策",
+        "type": "leader",
+    },
     "小李": {
         "description": "架构师，负责系统架构设计和技术方案",
         "type": "team_member",
