@@ -10,6 +10,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from agents_hub.core.orchestration import GroupChatManager
 from agents_hub.exceptions import (
     AgentsHubError,
     ExternalServiceError,
@@ -21,6 +22,19 @@ from agents_hub.exceptions import (
 from .routes import router
 
 logger = logging.getLogger(__name__)
+
+# 全局单例（模块级变量）
+_group_chat_manager_singleton = GroupChatManager()
+
+
+def get_group_chat_manager() -> GroupChatManager:
+    """获取全局 GroupChatManager 单例
+
+    Returns:
+        GroupChatManager: 全局唯一的 GroupChatManager 实例
+    """
+    return _group_chat_manager_singleton
+
 
 _STATUS_MAP: dict[type[AgentsHubError], int] = {
     ValidationError: 400,
