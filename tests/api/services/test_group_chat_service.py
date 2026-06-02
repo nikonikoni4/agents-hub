@@ -344,3 +344,68 @@ async def test_list_group_chats_empty(service, mock_group_chat_manager):
 
     # Assert
     assert result == []
+
+
+# Task 7: get_group_chat_info 测试
+
+async def test_get_group_chat_info_from_memory(service, mock_group_chat_manager):
+    """测试从内存获取群聊信息"""
+    # Arrange
+    group_chat_id = "gc_memory"
+    mock_group_chat = Mock()
+    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
+        return_value=Mock(
+            group_chat_id=group_chat_id,
+            group_chat_name="Memory Group",
+            project_path="/path/to/project",
+            created_at=datetime(2026, 6, 3, 10, 0, 0),
+            group_type="manager_orchestrate",
+        )
+    )
+    mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+
+    # Act
+    result = await service.get_group_chat_info(group_chat_id)
+
+    # Assert
+    assert result.group_chat_id == group_chat_id
+    assert result.is_active is True
+    mock_group_chat_manager.get_group_chat.assert_called_once_with(group_chat_id)
+
+
+async def test_get_group_chat_info_from_disk(service, mock_group_chat_manager):
+    """测试从磁盘获取群聊信息"""
+    # Arrange
+    group_chat_id = "gc_disk"
+    mock_group_chat_manager.get_group_chat.return_value = None  # 不在内存
+
+    mock_group_chat = Mock()
+    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
+        return_value=Mock(
+            group_chat_id=group_chat_id,
+            group_chat_name="Disk Group",
+            project_path="/path/to/project",
+            created_at=datetime(2026, 6, 3, 10, 0, 0),
+            group_type="manager_orchestrate",
+        )
+    )
+    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
+
+    # Act
+    result = await service.get_group_chat_info(group_chat_id)
+
+    # Assert
+    assert result.group_chat_id == group_chat_id
+    assert result.is_active is False  # 从磁盘加载，非活跃
+    mock_group_chat_manager.load_group_chat_from_disk.assert_called_once_with(group_chat_id)
+
+
+async def test_get_group_chat_info_not_found(service, mock_group_chat_manager):
+    """测试获取不存在的群聊信息"""
+    # Arrange
+    mock_group_chat_manager.get_group_chat.return_value = None
+    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(side_effect=FileNotFoundError("不存在"))
+
+    # Act & Assert
+    with pytest.raises(ResourceNotFoundError):
+        await service.get_group_chat_info("gc_nonexistent")

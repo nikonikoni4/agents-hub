@@ -229,6 +229,44 @@ class GroupChatService:
 
         return summaries
 
+    async def get_group_chat_info(self, group_chat_id: str) -> GroupChatInfo:
+        """获取群聊详细信息
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            GroupChatInfo: 群聊详细信息
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        # 1. 尝试从内存获取
+        group_chat = self.group_chat_manager.get_group_chat(group_chat_id)
+        if group_chat:
+            # 内存中存在，is_active=True
+            info = await self._build_group_chat_info_from_instance(group_chat)
+            return info
+
+        # 2. 从磁盘读取
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat_from_disk(group_chat_id)
+            # 从磁盘加载，is_active=False
+            metadata = await group_chat.group_chat_context.repository.load_group_metadata()
+            return GroupChatInfo(
+                group_chat_id=metadata.group_chat_id,
+                group_chat_name=metadata.group_chat_name,
+                project_path=metadata.project_path,
+                created_at=metadata.created_at,
+                group_type=metadata.group_type,
+                is_active=False,
+            )
+        except FileNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""
         metadata = await group_chat.group_chat_context.repository.load_group_metadata()
