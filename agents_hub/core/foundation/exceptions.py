@@ -4,6 +4,23 @@
 定义 agents-hub 中使用的所有异常类，提供统一的错误处理机制。
 """
 
+__all__ = [
+    "AgentsHubError",
+    "AgentNotFoundError",
+    "GroupChatNotFoundError",
+    "MessageDeliveryError",
+    "AgentExecutionError",
+    "AgentTimeoutError",
+    "ValidationError",
+    "ExternalServiceError",
+    "InvalidMessageError",
+    "FileSystemError",
+    "CompactionError",
+    "DockerConfigError",
+    "DockerNotAvailableError",
+    "DockerStartError",
+]
+
 
 class AgentsHubError(Exception):
     """所有 agents-hub 错误的基类"""
@@ -82,6 +99,21 @@ class AgentTimeoutError(AgentsHubError):
         )
 
 
+# ==================== 通用异常分类 ====================
+
+
+class ValidationError(AgentsHubError):
+    """验证错误：输入参数不符合要求"""
+
+    pass
+
+
+class ExternalServiceError(AgentsHubError):
+    """外部服务错误：外部服务调用失败"""
+
+    pass
+
+
 # ==================== 验证错误 ====================
 
 
@@ -118,4 +150,49 @@ class CompactionError(AgentsHubError):
             message=f"消息压缩失败: {reason}",
             error_code="COMPACTION_FAILED",
             details={"reason": reason},
+        )
+
+
+# ==================== Docker 异常 ====================
+
+
+class DockerConfigError(ValidationError):
+    """Docker 配置不合理"""
+
+    def __init__(self, agent_name: str, group_chat_id: str, reason: str):
+        self.agent_name = agent_name
+        self.group_chat_id = group_chat_id
+        self.reason = reason
+        message = (
+            f"Agent '{agent_name}' 在群聊 '{group_chat_id}' 中的 Docker 配置不合理：\n{reason}"
+        )
+        super().__init__(
+            message=message,
+            error_code="DOCKER_CONFIG_ERROR",
+            details={"agent_name": agent_name, "group_chat_id": group_chat_id, "reason": reason},
+        )
+
+
+class DockerNotAvailableError(ExternalServiceError):
+    """Docker Engine 不可用"""
+
+    def __init__(self, agent_name: str, group_chat_id: str, message: str):
+        self.agent_name = agent_name
+        self.group_chat_id = group_chat_id
+        super().__init__(
+            message=message,
+            error_code="DOCKER_NOT_AVAILABLE",
+            details={"agent_name": agent_name, "group_chat_id": group_chat_id},
+        )
+
+
+class DockerStartError(ExternalServiceError):
+    """Docker 容器启动失败"""
+
+    def __init__(self, container_name: str, reason: str):
+        self.container_name = container_name
+        super().__init__(
+            message=f"容器 '{container_name}' 启动失败：{reason}",
+            error_code="DOCKER_START_FAILED",
+            details={"container_name": container_name, "reason": reason},
         )
