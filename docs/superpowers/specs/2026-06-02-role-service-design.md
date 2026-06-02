@@ -172,7 +172,7 @@ class RoleService:
     def get_role(self, name: str) -> RoleInfo:
         """获取单个角色"""
         role = self.role_manager.get_role(name)
-        return role.to_role_info()
+        return role.get_info()
 
     def create_role(self, request: RoleCreateRequest) -> RoleInfo:
         """创建角色"""
@@ -185,7 +185,7 @@ class RoleService:
             scope=request.scope,
             description=request.description,
         )
-        return role.to_role_info()
+        return role.get_info()
 
     def delete_role(self, name: str) -> None:
         """删除角色"""
@@ -194,14 +194,14 @@ class RoleService:
     def update_role(self, name: str, request: RoleUpdateRequest) -> RoleInfo:
         """更新角色信息"""
         role = self.role_manager.get_role(name)
-        role.update_info(
-            avatar=request.avatar,
-            abilities=request.abilities,
-            type=request.type,
-            scope=request.scope,
-            description=request.description,
-        )
-        return role.to_role_info()
+        if request.avatar is not None:
+            role.update_avatar(request.avatar)
+        if request.abilities is not None:
+            role.update_abilities(request.abilities)
+        if request.description is not None:
+            role.update_description(request.description)
+        # type 和 scope 暂不支持更新，等待后续扩展
+        return role.get_info()
 
     def list_role_skills(self, name: str) -> list[SkillInfo]:
         """列出角色的 skills"""
@@ -211,7 +211,14 @@ class RoleService:
     def add_role_skill(self, name: str, skill_id: str) -> SkillInfo:
         """为角色添加 skill"""
         role = self.role_manager.get_role(name)
-        return role.add_skill(skill_id)
+        role.add_skill(skill_id)
+        # 添加后重新获取 skill 信息
+        skills = role.list_skills()
+        for skill in skills:
+            if skill.id == skill_id:
+                return skill
+        # 不应该到达这里，因为 add_skill 会抛出异常如果失败
+        raise SkillNotFoundError(skill_id=skill_id)
 
     def remove_role_skill(self, name: str, skill_id: str) -> None:
         """移除角色的 skill"""
