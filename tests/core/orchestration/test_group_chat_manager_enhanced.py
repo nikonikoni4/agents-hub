@@ -83,7 +83,7 @@ class TestListAllGroupChats:
             group_chat_name="测试群聊",
             project_path=project_path,
             created_at=datetime(2026, 6, 1, 10, 0, 0),
-            group_type="MANAGER_ORCHESTRATE",
+            group_type="manager_orchestrate",
         )
 
         metadata_file = test_base_path / "project1" / group_chat_id / "group_metadata.json"
@@ -99,7 +99,7 @@ class TestListAllGroupChats:
         assert result[0]["group_chat_name"] == "测试群聊"
         assert result[0]["project_path"] == project_path
         assert result[0]["created_at"] == "2026-06-01T10:00:00"
-        assert result[0]["group_type"] == "MANAGER_ORCHESTRATE"
+        assert result[0]["group_type"] == "manager_orchestrate"
         assert result[0]["is_active"] is False
 
     def test_multiple_group_chats(self, group_chat_manager, test_base_path):
@@ -111,14 +111,14 @@ class TestListAllGroupChats:
                 group_chat_name="群聊1",
                 project_path="/project1",
                 created_at=datetime(2026, 6, 1, 10, 0, 0),
-                group_type="MANAGER_ORCHESTRATE",
+                group_type="manager_orchestrate",
             ),
             GroupMetadata(
                 group_chat_id="gc-002",
                 group_chat_name="群聊2",
                 project_path="/project2",
                 created_at=datetime(2026, 6, 2, 11, 0, 0),
-                group_type="MANAGER_ORCHESTRATE",
+                group_type="manager_orchestrate",
             ),
         ]
 
@@ -145,7 +145,7 @@ class TestListAllGroupChats:
             group_chat_name="测试群聊",
             project_path="/test/project",
             created_at=datetime.now(),
-            group_type="MANAGER_ORCHESTRATE",
+            group_type="manager_orchestrate",
         )
 
         metadata_file = test_base_path / "project" / group_chat_id / "group_metadata.json"
@@ -177,7 +177,7 @@ class TestListAllGroupChats:
             group_chat_name="正常群聊",
             project_path="/project1",
             created_at=datetime.now(),
-            group_type="MANAGER_ORCHESTRATE",
+            group_type="manager_orchestrate",
         )
         metadata_file = test_base_path / "project1" / "gc-001" / "group_metadata.json"
         metadata_file.parent.mkdir(parents=True, exist_ok=True)
@@ -200,65 +200,94 @@ class TestLoadGroupChatFromDisk:
     """测试 load_group_chat_from_disk() 方法"""
 
     @pytest.mark.asyncio
-    async def test_metadata_not_found(self, group_chat_manager, sample_team):
-        """测试 metadata 文件不存在时抛出异常"""
-        with pytest.raises(FileNotFoundError, match="群聊元数据文件不存在"):
+    async def test_group_chat_not_found(self, group_chat_manager):
+        """测试群聊不存在时抛出异常"""
+        with pytest.raises(FileNotFoundError, match="找不到群聊"):
             await group_chat_manager.load_group_chat_from_disk(
                 group_chat_id="non-existent",
-                project_path="/test/project",
-                team=sample_team,
             )
 
     @pytest.mark.asyncio
-    async def test_group_chat_id_mismatch(self, group_chat_manager, sample_team, tmp_path):
+    async def test_group_chat_id_mismatch(self, group_chat_manager, sample_team, test_base_path):
         """测试 group_chat_id 不一致时抛出异常"""
+        from agents_hub.core.utils import sanitize_project_path
+
         # 创建 metadata（group_chat_id 不匹配）
-        project_path = str(tmp_path / "project")
+        # 使用简单的 project_path，避免 sanitize 后路径过长
+        project_path = "test_project"
         group_chat_id = "gc-001"
         wrong_id = "gc-999"
 
+        # 创建目录结构: base_path/<sanitized_project>/<group_chat_id>/
+        sanitized = sanitize_project_path(project_path)
+        group_dir = test_base_path / sanitized / group_chat_id
+        group_dir.mkdir(parents=True, exist_ok=True)
+
+        # metadata 中的 group_chat_id 使用 wrong_id（与目录名不匹配）
+        # 这会导致 find_project_path_by_group_chat_id 跳过这个目录
         metadata = GroupMetadata(
             group_chat_id=wrong_id,  # 故意不匹配
             group_chat_name="测试群聊",
             project_path=project_path,
             created_at=datetime.now(),
-            group_type="MANAGER_ORCHESTRATE",
+            group_type="manager_orchestrate",
         )
 
-        metadata_file = group_chat_paths.metadata_file(group_chat_id, project_path)
-        metadata_file.parent.mkdir(parents=True, exist_ok=True)
+        metadata_file = group_dir / "group_metadata.json"
         with open(metadata_file, "w", encoding="utf-8") as f:
             json.dump(metadata.to_dict(), f)
 
-        # 尝试加载
-        with pytest.raises(ValueError, match="metadata 中的 group_chat_id"):
+        # 尝试加载 - 直接传入 base_path
+        with pytest.raises(FileNotFoundError, match="找不到群聊"):
             await group_chat_manager.load_group_chat_from_disk(
                 group_chat_id=group_chat_id,
-                project_path=project_path,
-                team=sample_team,
+                base_path=str(test_base_path),
             )
 
     @pytest.mark.asyncio
-    async def test_load_success(self, group_chat_manager, sample_team, tmp_path):
+    async def test_load_success(self, group_chat_manager, sample_team, test_base_path):
         """测试成功加载群聊"""
-        # 1. 先创建并启动一个群聊
-        project_path = str(tmp_path / "project")
+        from agents_hub.core.utils import sanitize_project_path
+
+        # 1. 手动创建目录结构和文件
+        # 使用简单的 project_path，避免 sanitize 后路径过长
+        project_path = "test_project"
         group_chat_id = "gc-001"
 
-        group_chat = GroupChat(
-            team=sample_team,
-            group_type=GroupChatType.MANAGER_ORCHESTRATE,
-            project_path=project_path,
-            group_chat_id=group_chat_id,
-        )
-        await group_chat.start()
+        sanitized = sanitize_project_path(project_path)
+        group_dir = test_base_path / sanitized / group_chat_id
+        group_dir.mkdir(parents=True, exist_ok=True)
 
-        # 2. 从磁盘加载
-        loaded_chat = await group_chat_manager.load_group_chat_from_disk(
+        # 创建 metadata
+        metadata = GroupMetadata(
             group_chat_id=group_chat_id,
+            group_chat_name="测试群聊",
             project_path=project_path,
-            team=sample_team,
+            created_at=datetime.now(),
+            group_type="manager_orchestrate",
         )
+        metadata_file = group_dir / "group_metadata.json"
+        with open(metadata_file, "w", encoding="utf-8") as f:
+            json.dump(metadata.to_dict(), f)
+
+        # 创建 agent_session_state.json
+        session_state = {
+            "test_role_1": {"main_session": "sess-1", "btw_session": []},
+            "test_role_2": {"main_session": "sess-2", "btw_session": []},
+        }
+        session_file = group_dir / "agent_session_state.json"
+        with open(session_file, "w", encoding="utf-8") as f:
+            json.dump(session_state, f)
+
+        # 2. 从磁盘加载（需要 mock Team 构造和 GroupChat.load 以绕过角色验证）
+        with (
+            patch("agents_hub.core.orchestration.group_chat_manager.Team", return_value=sample_team),
+            patch.object(GroupChat, "load"),
+        ):
+            loaded_chat = await group_chat_manager.load_group_chat_from_disk(
+                group_chat_id=group_chat_id,
+                base_path=str(test_base_path),
+            )
 
         # 3. 验证
         assert loaded_chat.group_chat_id == group_chat_id
@@ -266,7 +295,6 @@ class TestLoadGroupChatFromDisk:
         assert group_chat_manager.get_group_chat(group_chat_id) == loaded_chat
 
         # 清理
-        await group_chat.cleanup()
         await loaded_chat.cleanup()
 
 
@@ -410,8 +438,6 @@ class TestIntegration:
         # 5. 从磁盘重新加载
         loaded_chat = await group_chat_manager.load_group_chat_from_disk(
             group_chat_id=group_chat_id,
-            project_path=project_path,
-            team=sample_team,
         )
 
         # 6. 验证重新激活

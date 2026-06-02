@@ -33,19 +33,22 @@ class GroupChatPaths:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def base_dir(self, group_chat_id: str, project_path: str) -> Path:
+    def base_dir(
+        self, group_chat_id: str, project_path: str, base_path: str = "local_data/teams"
+    ) -> Path:
         """
         群聊基础目录
 
         Args:
             group_chat_id: 群聊唯一标识
             project_path: 项目路径，会被 sanitize 为安全的目录名
+            base_path: 群聊数据根目录，默认 "local_data/teams"
 
         Returns:
-            local_data/teams/<sanitized_project>/<group_chat_id>/
+            <base_path>/<sanitized_project>/<group_chat_id>/
         """
         sanitized = sanitize_project_path(project_path)
-        return Path("local_data") / "teams" / sanitized / group_chat_id
+        return Path(base_path) / sanitized / group_chat_id
 
     def messages_file(self, group_chat_id: str, project_path: str) -> Path:
         """
@@ -64,7 +67,9 @@ class GroupChatPaths:
         """
         return self.base_dir(group_chat_id, project_path) / f"{group_chat_id}.jsonl"
 
-    def session_state_file(self, group_chat_id: str, project_path: str) -> Path:
+    def session_state_file(
+        self, group_chat_id: str, project_path: str, base_path: str = "local_data/teams"
+    ) -> Path:
         """
         Agent session 状态文件
 
@@ -79,9 +84,9 @@ class GroupChatPaths:
         - 需要支持 agent 重启后恢复状态
         - 与消息历史分离，避免单文件过大
 
-        路径格式：local_data/teams/<project>/<id>/agent_session_state.json
+        路径格式：<base_path>/<project>/<id>/agent_session_state.json
         """
-        return self.base_dir(group_chat_id, project_path) / "agent_session_state.json"
+        return self.base_dir(group_chat_id, project_path, base_path) / "agent_session_state.json"
 
     def compact_history_file(self, group_chat_id: str, project_path: str) -> Path:
         """
@@ -101,7 +106,9 @@ class GroupChatPaths:
         """
         return self.base_dir(group_chat_id, project_path) / "memory" / "compact_history.jsonl"
 
-    def metadata_file(self, group_chat_id: str, project_path: str) -> Path:
+    def metadata_file(
+        self, group_chat_id: str, project_path: str, base_path: str = "local_data/teams"
+    ) -> Path:
         """
         群聊元数据文件
 
@@ -117,9 +124,9 @@ class GroupChatPaths:
         - 消息历史在首次消息时才创建，延迟创建避免空文件
         - project_path 需要持久化，作为 agent 的默认工作目录
 
-        路径格式：local_data/teams/<project>/<id>/group_metadata.json
+        路径格式：<base_path>/<project>/<id>/group_metadata.json
         """
-        return self.base_dir(group_chat_id, project_path) / "group_metadata.json"
+        return self.base_dir(group_chat_id, project_path, base_path) / "group_metadata.json"
 
     def agent_calls_log(self, group_chat_id: str, project_path: str) -> Path:
         """
@@ -154,6 +161,52 @@ class GroupChatPaths:
         路径格式：local_data/teams/<project>/<id>/agent_calls.jsonl
         """
         return self.base_dir(group_chat_id, project_path) / "agent_calls.jsonl"
+
+    def find_project_path_by_group_chat_id(
+        self, group_chat_id: str, base_path: str = "local_data/teams"
+    ) -> str | None:
+        """
+        通过 group_chat_id 查找对应的 project_path
+
+        扫描 local_data/teams/ 目录结构，找到包含指定 group_chat_id 的项目路径。
+
+        Args:
+            group_chat_id: 群聊 ID
+            base_path: 群聊数据根目录，默认 "local_data/teams"
+
+        Returns:
+            找到的 project_path，未找到返回 None
+        """
+        import json
+
+        base = Path(base_path)
+        if not base.exists():
+            return None
+
+        # 扫描 teams/*/<group_chat_id>/group_metadata.json
+        for project_dir in base.iterdir():
+            if not project_dir.is_dir():
+                continue
+
+            group_dir = project_dir / group_chat_id
+            if not group_dir.is_dir():
+                continue
+
+            metadata_file = group_dir / "group_metadata.json"
+            if not metadata_file.exists():
+                continue
+
+            try:
+                with open(metadata_file, encoding="utf-8") as f:
+                    data = json.load(f)
+
+                # 验证 group_chat_id 一致性
+                if data.get("group_chat_id") == group_chat_id:
+                    return data.get("project_path")
+            except Exception:
+                continue
+
+        return None
 
     def tasks_log(self, group_chat_id: str, project_path: str) -> Path:
         """
