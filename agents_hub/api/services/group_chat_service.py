@@ -101,6 +101,48 @@ class GroupChatService:
         # 7. 返回 GroupChatInfo
         return await self._build_group_chat_info_from_instance(group_chat)
 
+    async def load_group_chat(self, group_chat_id: str) -> GroupChatInfo:
+        """加载群聊（从内存或磁盘）
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            GroupChatInfo: 群聊详细信息
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在或 role 已被删除
+            StateError: 加载失败
+        """
+        # 1. 检查是否已在内存中
+        group_chat = self.group_chat_manager.get_group_chat(group_chat_id)
+        if group_chat:
+            # 已在内存，直接返回（幂等性）
+            return await self._build_group_chat_info_from_instance(group_chat)
+
+        # 2. 从磁盘加载
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat_from_disk(group_chat_id)
+        except FileNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+        except ValueError as e:
+            # Team 验证失败（role 已被删除）
+            raise ResourceNotFoundError(
+                f"群聊加载失败，role 不存在: {e}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+        except Exception as e:
+            raise StateError(
+                f"群聊加载失败: {e}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 3. 返回 GroupChatInfo
+        return await self._build_group_chat_info_from_instance(group_chat)
+
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""
         metadata = await group_chat.group_chat_context.repository.load_group_metadata()
