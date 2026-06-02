@@ -1,13 +1,14 @@
 """Role 类的单元测试"""
 
 import json
-import pytest
-from pathlib import Path
-from agents_hub.roles.role import Role
-from agents_hub.roles.models import RoleInfo, SkillInfo, RoleType
 from unittest.mock import patch
-from agents_hub.roles.exceptions import SkillNotFoundError, SkillAlreadyExistsError
+
+import pytest
+
 from agents_hub.agent_bridge.models import AgentPlatform
+from agents_hub.roles.exceptions import SkillAlreadyExistsError, SkillNotFoundError
+from agents_hub.roles.models import RoleInfo
+from agents_hub.roles.role import Role
 
 
 @pytest.fixture
@@ -223,4 +224,3 @@ def test_get_role_config(claude_role):
     config = claude_role.get_role_config()
     assert config.platform == AgentPlatform.CLAUDE
     assert config.work_root == str(claude_role.role_dir / "work_root")
-

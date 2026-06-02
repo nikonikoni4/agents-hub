@@ -201,7 +201,6 @@ Skill 采用**引用优先模式**：全局 `local_data/skills/` 是 Skill 内�
 | abilities | list[str] | 否 | 能力标签列表 |
 | type | "leader" \| "team_member" \| null | 否 | 角色类型，默认 team_member |
 | scope | list[str] \| null | 否 | 所属群聊列表 |
-| skills | list[str] | 否 | 已选择的 skill 标识列表 |
 
 ### 异常类型
 

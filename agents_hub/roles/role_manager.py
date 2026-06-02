@@ -310,16 +310,6 @@ class RoleManager:
         if settings_src.exists():
             shutil.copy2(settings_src, work_root / "settings.json")
 
-        # 生成 .mcp.json（如果不存在）
-        mcp_json_path = work_root / ".mcp.json"
-        if not mcp_json_path.exists():
-            mcp_config = {
-                "mcpServers": {"agents-hub": {"type": "http", "url": "http://localhost:8001/mcp"}}
-            }
-            mcp_json_path.write_text(
-                json.dumps(mcp_config, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
-
         # 创建 CLAUDE.md 并预置 AGENT_RUNTIME 标记（如果不存在）
         claude_md_path = work_root / "CLAUDE.md"
         if not claude_md_path.exists():
@@ -351,16 +341,6 @@ class RoleManager:
         rules_src = home_codex / "rules"
         if rules_src.exists():
             shutil.copytree(rules_src, work_root / "rules")
-
-        # 生成 .mcp.json（如果不存在）
-        mcp_json_path = work_root / ".mcp.json"
-        if not mcp_json_path.exists():
-            mcp_config = {
-                "mcpServers": {"agents-hub": {"type": "http", "url": "http://localhost:8001/mcp"}}
-            }
-            mcp_json_path.write_text(
-                json.dumps(mcp_config, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
 
         # 创建 AGENTS.md 并预置 AGENT_RUNTIME 标记（如果不存在）
         agents_md_path = work_root / "AGENTS.md"

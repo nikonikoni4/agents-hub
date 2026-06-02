@@ -1,16 +1,21 @@
 """RoleManager 类的单元测试"""
 
 import json
+import shutil
 import subprocess
 import tempfile
-import pytest
-import shutil
 from pathlib import Path
 from unittest.mock import patch
-from agents_hub.roles.role_manager import RoleManager
-from agents_hub.roles.models import RoleInfo, RoleType
-from agents_hub.roles.exceptions import RoleNotFoundError, RoleAlreadyExistsError, PlatformConfigNotFoundError
+
+import pytest
+
 from agents_hub.agent_bridge.models import AgentPlatform
+from agents_hub.roles.exceptions import (
+    PlatformConfigNotFoundError,
+    RoleAlreadyExistsError,
+    RoleNotFoundError,
+)
+from agents_hub.roles.role_manager import RoleManager
 
 
 @pytest.fixture
@@ -192,12 +197,7 @@ def test_get_role(role_manager, agents_dir):
     # 创建测试角色
     role_dir = agents_dir / "test_role"
     role_dir.mkdir()
-    role_json = {
-        "name": "test_role",
-        "platform": "claude",
-        "avatar": None,
-        "abilities": []
-    }
+    role_json = {"name": "test_role", "platform": "claude", "avatar": None, "abilities": []}
     (role_dir / "role.json").write_text(json.dumps(role_json), encoding="utf-8")
 
     role = role_manager.get_role("test_role")
@@ -217,12 +217,7 @@ def test_list_roles(role_manager, agents_dir):
     for name in ["role1", "role2"]:
         role_dir = agents_dir / name
         role_dir.mkdir()
-        role_json = {
-            "name": name,
-            "platform": "claude",
-            "avatar": None,
-            "abilities": []
-        }
+        role_json = {"name": name, "platform": "claude", "avatar": None, "abilities": []}
         (role_dir / "role.json").write_text(json.dumps(role_json), encoding="utf-8")
 
     roles = role_manager.list_roles()
