@@ -6,9 +6,10 @@
 |------|-----|
 | 创建日期 | 2026-06-03 |
 | 作者 | Claude & Nico |
-| 状态 | 设计完成，待实现 |
+| 状态 | ✅ 已实现 |
 | 相关模块 | agents_hub/api/services/, agents_hub/api/schemas/ |
 | 最后审查 | 2026-06-03（Subagent 架构审查） |
+| 实现完成 | 2026-06-03 |
 
 ## 修订记录
 
@@ -16,6 +17,16 @@
 |------|------|---------|
 | 2026-06-03 | 1.0 | 初始设计完成 |
 | 2026-06-03 | 1.1 | 架构审查后修复严重问题和部分中等问题 |
+| 2026-06-03 | 2.0 | 所有方法实现完成，单元测试全部通过 |
+
+**v2.0 实现完成**：
+- ✅ Task 1-3: 创建 Schema、初始化单例、实现 create_group_chat
+- ✅ Task 4: 实现 load_group_chat（幂等性、异常转换）
+- ✅ Task 5: 实现 delete_group_chat（竞态安全、keep_data 参数）
+- ✅ Task 6: 实现 list_group_chats（is_active_only 过滤）
+- ✅ Task 7: 实现 get_group_chat_info（内存/磁盘双路径）
+- ✅ Task 8: 实现 get_group_chat_members（完整容错处理）
+- ✅ 所有单元测试通过（22 个测试用例）
 
 **v1.1 主要修改**：
 - 修复 delete_group_chat 的竞态条件（先读 metadata 再 unregister）
