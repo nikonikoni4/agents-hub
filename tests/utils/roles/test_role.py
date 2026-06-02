@@ -142,6 +142,7 @@ def test_add_skill_falls_back_to_copy_when_symlink_fails(claude_role):
     assert skill_dir.exists()
     assert not skill_dir.is_symlink()
     assert json.loads((skill_dir / "skill.json").read_text(encoding="utf-8"))["id"] == "copy_skill"
+    assert claude_role.list_skills()[0].id == "copy_skill"
     role_json = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
     assert "skills" not in role_json
 

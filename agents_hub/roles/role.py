@@ -211,11 +211,6 @@ class Role:
 
         shutil.rmtree(skill_dir)
 
-        data = self._read_role_json()
-        if "skills" in data and skill_id in data["skills"]:
-            data["skills"].remove(skill_id)
-            self._write_role_json(data)
-
     def get_permissions_config(self) -> dict[str, Any]:
         """获取平台特定的权限配置。
 
