@@ -172,9 +172,12 @@ class GroupChatService:
                 metadata = await group_chat.group_chat_context.repository.load_group_metadata()
                 project_path = metadata.project_path
             else:
-                # 从磁盘读取 - 需要枚举所有可能的项目路径
-                # 这里简化处理：如果不在内存中，只能从 GroupChatManager 的索引获取
-                pass
+                # 从磁盘读取 - 通过 list_all_group_chats 查找
+                all_chats = self.group_chat_manager.list_all_group_chats()
+                for metadata_dict in all_chats:
+                    if metadata_dict["group_chat_id"] == group_chat_id:
+                        project_path = metadata_dict["project_path"]
+                        break
 
         # 2. 从内存中移除
         await self.group_chat_manager.unregister(group_chat_id)

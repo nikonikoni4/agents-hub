@@ -208,23 +208,58 @@ async def test_delete_group_chat_with_data(service, mock_group_chat_manager):
 
 
 async def test_delete_group_chat_from_disk_when_not_in_memory(service, mock_group_chat_manager):
-    """测试删除不在内存中的群聊（无法获取 project_path，不删除磁盘）"""
+    """测试删除不在内存中的群聊（从 list_all_group_chats 获取 project_path）"""
     # Arrange
     group_chat_id = "gc_disk_delete"
+    project_path = "/path/to/disk/project"
+
     mock_group_chat_manager.get_group_chat.return_value = None  # 不在内存
     mock_group_chat_manager.unregister = AsyncMock()
 
-    # Act
-    await service.delete_group_chat(group_chat_id, keep_data=False)
+    # Mock list_all_group_chats 返回包含目标群聊的元数据
+    mock_group_chat_manager.list_all_group_chats.return_value = [
+        {
+            "group_chat_id": "gc_other",
+            "group_chat_name": "Other Group",
+            "project_path": "/path/to/other",
+            "created_at": datetime(2026, 6, 1, 10, 0, 0),
+            "group_type": "manager_orchestrate",
+        },
+        {
+            "group_chat_id": group_chat_id,
+            "group_chat_name": "Disk Group",
+            "project_path": project_path,
+            "created_at": datetime(2026, 6, 2, 10, 0, 0),
+            "group_type": "manager_orchestrate",
+        },
+    ]
 
-    # Assert
-    mock_group_chat_manager.unregister.assert_called_once_with(group_chat_id)
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
+         patch("agents_hub.api.services.group_chat_service.Path") as MockPath, \
+         patch("shutil.rmtree") as mock_rmtree:
+        # Mock Path 对象
+        mock_dir = Mock()
+        mock_dir.exists.return_value = True
+        MockPath.return_value = mock_dir
+
+        mock_paths.base_dir.return_value = f"/path/to/group_chats/{group_chat_id}"
+
+        # Act
+        await service.delete_group_chat(group_chat_id, keep_data=False)
+
+        # Assert
+        mock_group_chat_manager.get_group_chat.assert_called_once()
+        mock_group_chat_manager.list_all_group_chats.assert_called_once()
+        mock_group_chat_manager.unregister.assert_called_once_with(group_chat_id)
+        mock_paths.base_dir.assert_called_once_with(group_chat_id, project_path)
+        mock_rmtree.assert_called_once_with(mock_dir)
 
 
 async def test_delete_group_chat_idempotent(service, mock_group_chat_manager):
     """测试删除不存在的群聊是幂等的（不抛异常）"""
     # Arrange
     mock_group_chat_manager.get_group_chat.return_value = None
+    mock_group_chat_manager.list_all_group_chats.return_value = []  # 不存在于索引中
     mock_group_chat_manager.unregister = AsyncMock()
 
     # Act & Assert - 不应抛异常
