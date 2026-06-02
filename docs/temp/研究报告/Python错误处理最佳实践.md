@@ -12,6 +12,8 @@
 2. [异常层次结构设计](#异常层次结构设计)
 3. [错误分类策略](#错误分类策略)
 4. [异常处理模式](#异常处理模式)
+   - 模式 1：边界处理
+   - 模式 1b：FastAPI 全局异常处理器
 5. [日志记录最佳实践](#日志记录最佳实践)
 6. [错误处理反模式](#错误处理反模式)
 7. [针对 agents-hub 的建议](#针对-agents-hub-的建议)
@@ -473,6 +475,121 @@ def call_agent(group_chat_id: str, send_from: str, send_to: str, content: str) -
 2. **分类处理**：不同类型的错误返回不同的响应和建议
 3. **日志级别**：ValidationError 用 WARNING，SystemError 用 CRITICAL
 4. **隐藏细节**：SystemError 不暴露内部实现细节给调用者
+
+---
+
+### 模式 1b：FastAPI 全局异常处理器（Global Exception Handler）
+
+**核心思想**：将边界处理从"每个端点写 try/except"提升为"在 app 层统一注册"，消除路由层的重复代码。
+
+**适用场景**：FastAPI REST API 层
+
+#### 为什么不用路由层 try/except？
+
+```python
+# ❌ 每个端点都重复一遍 — 违反 DRY
+@router.get("/skills/{skill_name}")
+def get_skill(skill_name: str):
+    try:
+        ...
+    except InvalidSkillError as e:
+        raise HTTPException(status_code=400, detail=e.to_dict()) from e
+    except SkillNotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.to_dict()) from e
+
+@router.delete("/skills/{skill_name}")
+def delete_skill(skill_name: str):
+    try:
+        ...
+    except InvalidSkillError as e:       # 重复
+        raise HTTPException(status_code=400, detail=e.to_dict()) from e
+    except SkillNotFoundError as e:      # 重复
+        raise HTTPException(status_code=404, detail=e.to_dict()) from e
+```
+
+**问题**：
+- 同样的映射逻辑在每个端点重复
+- 新增端点容易忘记加 try/except
+- 新增异常类型时需要改所有端点
+
+#### 全局处理器方案
+
+```python
+# ✅ 在 app.py 注册一次，所有路由自动生效
+
+import logging
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from agents_hub.exceptions import (
+    AgentsHubError, ValidationError, ResourceNotFoundError,
+    StateError, ExternalServiceError
+)
+
+logger = logging.getLogger(__name__)
+
+# 异常类型 → HTTP 状态码映射
+_STATUS_MAP: dict[type[AgentsHubError], int] = {
+    ValidationError: 400,
+    ResourceNotFoundError: 404,
+    StateError: 409,
+    ExternalServiceError: 502,
+}
+
+def _resolve_status(exc: AgentsHubError) -> int:
+    """根据异常类型映射 HTTP 状态码（子类优先匹配）"""
+    for exc_cls, status in _STATUS_MAP.items():
+        if isinstance(exc, exc_cls):
+            return status
+    return 500
+
+app = FastAPI()
+
+@app.exception_handler(AgentsHubError)
+async def agents_hub_error_handler(request: Request, exc: AgentsHubError) -> JSONResponse:
+    """处理所有 agents-hub 领域异常"""
+    status = _resolve_status(exc)
+    return JSONResponse(status_code=status, content=exc.to_dict())
+
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """兜底：捕获所有未处理异常，防止内部信息泄露"""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"error_code": "INTERNAL_ERROR", "message": "服务器内部错误", "type": "InternalError"},
+    )
+```
+
+#### 路由层变得干净
+
+```python
+# ✅ 路由只关心业务逻辑，错误处理全部交给全局处理器
+@router.get("/skills/{skill_name}", response_model=SkillResponse)
+def get_skill(skill_name: str, service: SkillService = Depends(get_skill_service)):
+    skill = service.get_skill(skill_name)
+    return SkillResponse.from_domain(skill)
+```
+
+#### 关键设计点
+
+1. **`_STATUS_MAP` 状态码映射**：集中定义异常类型与 HTTP 状态码的对应关系，新增异常类型只需加一行映射
+2. **`isinstance` 匹配**：子类自动继承父类的映射（`SkillNotFoundError` 继承 `ResourceNotFoundError` → 404）
+3. **两层 handler**：
+   - `AgentsHubError` handler：处理所有已知业务异常，返回结构化错误（`to_dict()`）
+   - `Exception` handler：兜底捕获未知异常，记录日志，返回通用 500，不泄露内部信息
+4. **路由层零错误处理**：try/except、HTTPException、异常导入全部移除
+
+#### 与模式 1（边界处理）的关系
+
+| 对比项 | 模式 1（路由层 try/except） | 模式 1b（全局 handler） |
+|--------|---------------------------|----------------------|
+| 作用域 | 单个端点 | 所有路由 |
+| 代码重复 | 每个端点重复 | 注册一次 |
+| 新增端点 | 需要加 try/except | 自动生效 |
+| 定制能力 | 每个端点可定制 | 统一处理 |
+| 推荐场景 | MCP Tool 入口、需要特殊处理的端点 | REST API 层 |
+
+**实际项目中的组合**：REST API 用全局 handler，MCP Tool 入口用模式 1（因为 MCP 返回格式与 HTTP 不同）。
 
 ---
 
