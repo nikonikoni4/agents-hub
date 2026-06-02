@@ -41,7 +41,11 @@ class AgentBridge:
         self._bare_config = self._init_bare_config()
 
     async def execute_stream(
-        self, prompt: str, config: RoleConfig, session_id: str | None = None
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: str | None = None,
+        cwd: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """
         流式执行 Agent 调用
@@ -50,6 +54,7 @@ class AgentBridge:
             prompt: 用户输入
             config: 角色配置
             session_id: 会话 ID（可选，用于恢复之前的会话）
+            cwd: 项目目录路径（可选，设置 CLI 工作目录）
 
         Yields:
             StreamEvent: 统一格式的流式事件
@@ -71,7 +76,7 @@ class AgentBridge:
         parser = self._parsers[config.platform]
 
         try:
-            raw_stream = executor.execute(prompt, config, session_id)
+            raw_stream = executor.execute(prompt, config, session_id, cwd)
             async for raw_line in raw_stream:
                 if raw_line.strip():
                     try:
@@ -90,7 +95,11 @@ class AgentBridge:
             raise
 
     async def execute(
-        self, prompt: str, config: RoleConfig, session_id: str | None = None
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: str | None = None,
+        cwd: str | None = None,
     ) -> AgentResult:
         """
         非流式执行，返回完整结果
@@ -101,6 +110,7 @@ class AgentBridge:
             prompt: 用户输入
             config: 角色配置
             session_id: 会话 ID（可选）
+            cwd: 项目目录路径（可选）
 
         Returns:
             AgentResult: 完整结果
@@ -109,7 +119,7 @@ class AgentBridge:
         usage = None
         result_session_id = session_id or ""
 
-        async for event in self.execute_stream(prompt, config, session_id):
+        async for event in self.execute_stream(prompt, config, session_id, cwd):
             if event.type == AgentEventType.TEXT_DELTA:
                 full_text.append(event.content["text"])
             elif event.type == AgentEventType.TURN_COMPLETE:

@@ -1,6 +1,12 @@
 # mcp启动
 测试：uvicorn agents_hub.api.app:app --host localhost --port 8000
 # claude mcp添加方式
+前提：先设置好 Claude 的配置 root，让命令写入目标角色的配置目录：
+
+```bash
+CLAUDE_CONFIG_DIR=local_data/agents/<role_name>/work_root
+```
+
 1. 通过CLI添加claude mcp add --transport http agents-hub -- http://localhost:8001/mcp
 2. 直接在settings.json内添加:
 ```json
@@ -13,9 +19,19 @@
   }
 }
 ```
+## 删除指定 server
+claude mcp remove <server-name>
 
-# codex mcp添加方法
-测试来源：当前本机 `codex mcp --help`、`codex mcp add --help`、`codex mcp remove --help`。
+## 指定作用域删除
+claude mcp remove <server-name> -s local    # 本地配置
+claude mcp remove <server-name> -s project  # 项目配置
+claude mcp remove <server-name> -s global   # 全局配置
+
+前提：先设置好 Codex 的配置 root，让命令写入目标角色的配置目录：
+
+```bash
+CODEX_HOME=local_data/agents/<role_name>/work_root
+```
 
 ## 1. 通过 CLI 添加 HTTP MCP
 

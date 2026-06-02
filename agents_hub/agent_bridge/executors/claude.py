@@ -16,7 +16,11 @@ class ClaudeExecutor:
     """执行 Claude CLI 命令"""
 
     async def execute(
-        self, prompt: str, config: RoleConfig, session_id: str | None = None
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: str | None = None,
+        cwd: str | None = None,
     ) -> AsyncIterator[str]:
         """
         启动 Claude CLI 并返回原始输出流
@@ -25,6 +29,7 @@ class ClaudeExecutor:
             prompt: 用户输入
             config: 角色配置
             session_id: 会话 ID（可选，用于恢复会话）
+            cwd: 项目目录路径（可选，设置 CLI 工作目录）
 
         Returns:
             AsyncIterator[str]: 原始 JSON 字符串流
@@ -34,7 +39,11 @@ class ClaudeExecutor:
 
         try:
             process = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env,
+                cwd=cwd,
             )
         except FileNotFoundError as e:
             logger.error(f"Claude CLI not found: {CLAUDE_COMMAND}")

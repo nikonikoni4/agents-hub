@@ -16,7 +16,11 @@ class CodexExecutor:
     """执行 Codex CLI 命令"""
 
     async def execute(
-        self, prompt: str, config: RoleConfig, session_id: str | None = None
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: str | None = None,
+        cwd: str | None = None,
     ) -> AsyncIterator[str]:
         """
         启动 Codex CLI 并返回原始输出流
@@ -25,6 +29,7 @@ class CodexExecutor:
             prompt: 用户输入
             config: 角色配置
             session_id: 会话 ID（可选，用于恢复会话）
+            cwd: 项目目录路径（可选，通过 -C 参数指定工作目录）
 
         Returns:
             AsyncIterator[str]: 原始 JSON 字符串流
@@ -33,7 +38,7 @@ class CodexExecutor:
         # 参考: docs/history-bugs/2026-05-28-cli-system-prompt-blocks-simple-requests.md
         prompt = prompt.replace("\n", " ").replace("\r", " ")
 
-        cmd = self._build_command(prompt, config, session_id)
+        cmd = self._build_command(prompt, config, session_id, cwd)
         env = self._build_env(config)
 
         try:
@@ -61,7 +66,13 @@ class CodexExecutor:
                 platform="Codex", exit_code=process.returncode or 1, stderr=stderr_text
             )
 
-    def _build_command(self, prompt: str, config: RoleConfig, session_id: str | None) -> list:
+    def _build_command(
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: str | None,
+        cwd: str | None = None,
+    ) -> list:
         """构建 Codex CLI 命令"""
         if session_id:
             # 恢复已有会话
@@ -78,6 +89,9 @@ class CodexExecutor:
                 "exec",
                 "--json",
             ]
+
+        if cwd:
+            cmd.extend(["-C", cwd])
 
         cmd.append(prompt)
         return cmd
