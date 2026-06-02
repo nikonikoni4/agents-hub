@@ -12,7 +12,6 @@ def mock_group_chat_manager():
     """Mock GroupChatManager"""
     manager = Mock()
     manager.register = Mock()
-    manager.get_group_chat = Mock()
     return manager
 
 

@@ -15,7 +15,6 @@ from agents_hub.exceptions import (
     StateError,
     ValidationError,
 )
-from agents_hub.roles import RoleManager
 
 
 class GroupChatService:
@@ -30,7 +29,6 @@ class GroupChatService:
             group_chat_manager: 全局单例 GroupChatManager（依赖注入）
         """
         self.group_chat_manager = group_chat_manager
-        self.role_manager = RoleManager()
 
     async def create_group_chat(
         self,
@@ -43,7 +41,7 @@ class GroupChatService:
         Args:
             team_members: 团队成员角色名列表
             project_path: 项目路径
-            group_chat_name: 群聊名称，不提供则使用 group_chat_id
+            group_chat_name: 群聊名称（待实现：当前 GroupChat 构造函数不支持此参数）
 
         Returns:
             GroupChatInfo: 群聊详细信息
@@ -52,6 +50,10 @@ class GroupChatService:
             ValidationError: team_members 为空
             ResourceNotFoundError: role 不存在或 project_path 不存在
             StateError: 启动失败
+
+        Note:
+            group_chat_name 参数保留用于未来实现，当前会被忽略，
+            使用 group_chat_id 作为群聊名称
         """
         # 1. 验证 team_members 非空
         if not team_members:
@@ -73,8 +75,7 @@ class GroupChatService:
         group_chat_id = generate_group_chat_id()
 
         # 4. 创建 GroupChat 实例
-        # 注意：当前 GroupChat 构造函数参数顺序为 team, group_type, project_path, group_chat_id
-        # group_chat_name 暂时不支持，由 start() 方法保存到 metadata 时使用 group_chat_id
+        # TODO: 当 GroupChat 构造函数支持 group_chat_name 参数后，传入 group_chat_name
         group_chat = GroupChat(
             team=team,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
