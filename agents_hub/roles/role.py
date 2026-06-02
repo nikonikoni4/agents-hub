@@ -165,8 +165,8 @@ class Role:
     def add_skill(self, skill_id: str, global_skills_dir: Path | None = None) -> None:
         """添加 skill 到角色。
 
-        从全局 skill 库复制 skill 到角色的 work_root/skills/ 目录，
-        并更新 role.json 中的 skills 列表。
+        优先通过符号链接（symlink）将全局 skill 链接到角色的 work_root/skills/ 目录，
+        链接失败时降级为复制目录。不修改 role.json。
 
         Args:
             skill_id: skill 的唯一标识符。
@@ -177,7 +177,7 @@ class Role:
             SkillNotFoundError: skill 在全局库中不存在。
         """
         target_dir = self._work_root / "skills" / skill_id
-        if target_dir.exists():
+        if target_dir.exists() or target_dir.is_symlink():
             role_name = self._read_role_json()["name"]
             raise SkillAlreadyExistsError(skill_id=skill_id, role_name=role_name)
 
@@ -188,13 +188,10 @@ class Role:
         if not global_skill_dir.exists():
             raise SkillNotFoundError(skill_id=skill_id)
 
-        shutil.copytree(global_skill_dir, target_dir)
-
-        data = self._read_role_json()
-        if "skills" not in data:
-            data["skills"] = []
-        data["skills"].append(skill_id)
-        self._write_role_json(data)
+        try:
+            target_dir.symlink_to(global_skill_dir, target_is_directory=True)
+        except OSError:
+            shutil.copytree(global_skill_dir, target_dir)
 
     def remove_skill(self, skill_id: str) -> None:
         """从角色中移除 skill。
