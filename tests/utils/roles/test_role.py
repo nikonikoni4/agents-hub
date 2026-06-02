@@ -7,7 +7,7 @@ import pytest
 
 from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.roles.exceptions import SkillAlreadyExistsError, SkillNotFoundError
-from agents_hub.roles.models import RoleInfo
+from agents_hub.roles.models import RoleInfo, RoleType
 from agents_hub.roles.role import Role
 
 
@@ -46,7 +46,7 @@ def test_get_info(claude_role):
     assert info.platform == AgentPlatform.CLAUDE
     assert info.avatar is None
     assert info.abilities == ["coding", "review"]
-    assert info.type is None
+    assert info.type == RoleType.TEAM_MEMBER
     assert info.scope is None
 
 

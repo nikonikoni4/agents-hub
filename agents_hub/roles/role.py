@@ -79,7 +79,7 @@ class Role:
         """
         data = self._read_role_json()
         type_str = data.get("type")
-        role_type = RoleType(type_str) if type_str else None
+        role_type = RoleType(type_str) if type_str else RoleType.TEAM_MEMBER
         return RoleInfo(
             name=data["name"],
             platform=AgentPlatform(data["platform"]),
