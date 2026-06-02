@@ -37,6 +37,18 @@ class AgentBridge:
             AgentPlatform.CLAUDE: ClaudeParser(),
             AgentPlatform.CODEX: CodexParser(),
         }
+
+        # Docker manager 和 executors（延迟导入，避免循环依赖）
+        from agents_hub.agent_bridge.docker.manager import DockerManager
+        from agents_hub.agent_bridge.executors.docker_claude import DockerClaudeExecutor
+        from agents_hub.agent_bridge.executors.docker_codex import DockerCodexExecutor
+
+        self._docker_manager = DockerManager()
+        self._docker_executors: dict[AgentPlatform, DockerClaudeExecutor | DockerCodexExecutor] = {
+            AgentPlatform.CLAUDE: DockerClaudeExecutor(self._docker_manager),
+            AgentPlatform.CODEX: DockerCodexExecutor(self._docker_manager),
+        }
+
         self._role_manager = RoleManager()
         self._bare_config = self._init_bare_config()
 
@@ -100,17 +112,21 @@ class AgentBridge:
         config: RoleConfig,
         session_id: str | None = None,
         cwd: str | None = None,
+        use_docker: bool = False,
+        group_chat_id: str | None = None,
     ) -> AgentResult:
         """
         非流式执行，返回完整结果
 
-        内部复用 execute_stream()，拼接所有 text_delta 后返回完整结果。
+        根据 use_docker 选择本地或 Docker 执行器。
 
         Args:
             prompt: 用户输入
             config: 角色配置
             session_id: 会话 ID（可选）
             cwd: 项目目录路径（可选）
+            use_docker: 是否使用 Docker 沙箱执行
+            group_chat_id: 群聊 ID（Docker 模式下必填）
 
         Returns:
             AgentResult: 完整结果
@@ -119,14 +135,32 @@ class AgentBridge:
         usage = None
         result_session_id = session_id or ""
 
-        async for event in self.execute_stream(prompt, config, session_id, cwd):
-            if event.type == AgentEventType.TEXT_DELTA:
-                full_text.append(event.content["text"])
-            elif event.type == AgentEventType.TURN_COMPLETE:
-                usage = event.content.get("usage")
-            # 记录第一个返回的 session_id
-            if not result_session_id and event.session_id:
-                result_session_id = event.session_id
+        if use_docker:
+            # Docker 模式：直接使用 Docker executor
+            executor = self._docker_executors[config.platform]
+            async for raw_line in executor.execute(prompt, config, session_id, cwd, group_chat_id):
+                if raw_line.strip():
+                    try:
+                        parsed_event = self._parsers[config.platform].parse_event(raw_line)
+                        if parsed_event is not None:
+                            if parsed_event.type == AgentEventType.TEXT_DELTA:
+                                full_text.append(parsed_event.content["text"])
+                            elif parsed_event.type == AgentEventType.TURN_COMPLETE:
+                                usage = parsed_event.content.get("usage")
+                            if not result_session_id and parsed_event.session_id:
+                                result_session_id = parsed_event.session_id
+                    except ParseError:
+                        logger.warning(f"Skipping unparseable line from {config.platform.value}")
+                        continue
+        else:
+            # 本地模式：使用本地 executor
+            async for event in self.execute_stream(prompt, config, session_id, cwd):
+                if event.type == AgentEventType.TEXT_DELTA:
+                    full_text.append(event.content["text"])
+                elif event.type == AgentEventType.TURN_COMPLETE:
+                    usage = event.content.get("usage")
+                if not result_session_id and event.session_id:
+                    result_session_id = event.session_id
 
         return AgentResult(
             text="".join(full_text),

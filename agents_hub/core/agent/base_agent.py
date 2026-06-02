@@ -10,6 +10,7 @@ Agent 基类
 """
 
 import asyncio
+from pathlib import Path
 
 from agents_hub.agent_bridge import agent_platform_client
 from agents_hub.config import config
@@ -27,6 +28,7 @@ from agents_hub.core.foundation import (
     render_for_chat,
     render_for_llm,
 )
+from agents_hub.core.foundation.exceptions import DockerConfigError
 from agents_hub.core.foundation.token import redact_token
 
 
@@ -104,15 +106,24 @@ class Agent:
         )
         self.message_router.send_message(message)
 
-    async def execute(self, prompt) -> AgentResult:
+    async def execute(
+        self, prompt, use_docker: bool = False, group_chat_id: str | None = None
+    ) -> AgentResult:
         """执行主会话（群聊）
 
         Args:
             prompt: 渲染好的 LLM prompt 字符串
+            use_docker: 是否使用 Docker 沙箱执行
+            group_chat_id: 群聊 ID（Docker 模式下必填）
         """
         cwd = self.agent_cwd if self.agent_cwd else None
         return await agent_platform_client.execute(
-            prompt, self.role_config, self.main_session_id, cwd
+            prompt,
+            self.role_config,
+            self.main_session_id,
+            cwd,
+            use_docker=use_docker,
+            group_chat_id=group_chat_id,
         )
 
     async def btw_execute(self, prompt, session: str | None = None) -> AgentResult:
@@ -134,6 +145,38 @@ class Agent:
             )
         return None
 
+    def _validate_docker_config(self):
+        """校验 Docker 配置（在 _process_message 中调用）"""
+        session_info = self.group_chat_context.agent_session_id.get(self.name)
+        if not session_info:
+            return
+
+        use_docker = getattr(session_info, "use_docker", False)
+        if not use_docker:
+            return
+
+        agent_cwd = session_info.cwd
+        group_chat_path = self.group_chat_context.repository.project_path
+
+        if self._is_same_path(agent_cwd, group_chat_path):
+            raise DockerConfigError(
+                agent_name=self.name,
+                group_chat_id=self.group_chat_context.group_chat_id,
+                reason=(
+                    f"Docker 隔离不必要：Agent CWD 与群聊路径相同。\n"
+                    f"  Agent CWD: {agent_cwd}\n"
+                    f"  GroupChat Path: {group_chat_path}\n"
+                    f"建议：将 agent_session_state.json 中的 use_docker 改为 false"
+                ),
+            )
+
+    def _is_same_path(self, path1: str, path2: str) -> bool:
+        """判断两个路径是否指向同一位置"""
+        try:
+            return Path(path1).resolve() == Path(path2).resolve()
+        except Exception:
+            return False
+
     async def _process_message(self, msg: AgentMessage, prompt: str) -> AgentResult:
         """处理一条入站消息。
 
@@ -141,12 +184,23 @@ class Agent:
             msg: 原始 AgentMessage（content 不可变）
             prompt: 已通过 render_for_llm 渲染好的 LLM 输入字符串
         """
+        # 1. Docker 配置校验
+        self._validate_docker_config()
+
+        # 2. 读取 use_docker 配置
+        session_info = self.group_chat_context.agent_session_id.get(self.name)
+        use_docker = getattr(session_info, "use_docker", False) if session_info else False
+
         self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
         try:
             if msg.session_type == SessionType.MAIN:
                 history = await self.agent_context.get_context()
                 full_prompt = f"{history}\n{prompt}" if history else prompt
-                result = await self.execute(full_prompt)
+                result = await self.execute(
+                    full_prompt,
+                    use_docker=use_docker,
+                    group_chat_id=self.group_chat_context.group_chat_id,
+                )
             else:
                 result = await self.btw_execute(prompt)
             self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)

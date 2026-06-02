@@ -97,7 +97,7 @@ async def test_redact_single_token_in_output(agent, agent_call_manager, monkeypa
     result_text = f"Here is your token: {token}"
 
     # Mock execute 返回包含 token 的结果
-    async def mock_execute(prompt, role_config, session_id, cwd=None):
+    async def mock_execute(prompt, role_config, session_id, cwd=None, use_docker=False, group_chat_id=None):
         return AgentResult(
             text=result_text,
             session_id=session_id or "test_session",
@@ -161,7 +161,7 @@ async def test_no_token_in_output_unchanged(agent, agent_call_manager, monkeypat
     result_text = "This is a normal message without any token"
 
     # Mock execute 返回不包含 token 的结果
-    async def mock_execute(prompt, role_config, session_id, cwd=None):
+    async def mock_execute(prompt, role_config, session_id, cwd=None, use_docker=False, group_chat_id=None):
         return AgentResult(
             text=result_text,
             session_id=session_id or "test_session",
@@ -226,7 +226,7 @@ async def test_redact_multiple_tokens_in_output(agent, agent_call_manager, monke
     result_text = f"Token 1: {token1}, Token 2: {token2}"
 
     # Mock execute 返回包含多个 token 的结果
-    async def mock_execute(prompt, role_config, session_id, cwd=None):
+    async def mock_execute(prompt, role_config, session_id, cwd=None, use_docker=False, group_chat_id=None):
         return AgentResult(
             text=result_text,
             session_id=session_id or "test_session",
@@ -293,7 +293,7 @@ async def test_redact_token_called_at_exit_a(agent, agent_call_manager, monkeypa
     result_text = f"Token: {token}"
 
     # Mock execute
-    async def mock_execute(prompt, role_config, session_id, cwd=None):
+    async def mock_execute(prompt, role_config, session_id, cwd=None, use_docker=False, group_chat_id=None):
         return AgentResult(
             text=result_text,
             session_id=session_id or "test_session",
