@@ -7,6 +7,7 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatSummary,
     GroupChatMember,
 )
+from agents_hub.core.foundation.models import GroupChatType
 
 
 def test_group_chat_create_valid():
@@ -50,12 +51,49 @@ def test_group_chat_info_valid():
         "group_chat_name": "Test Group",
         "project_path": "/path/to/project",
         "created_at": datetime(2026, 6, 3, 10, 0, 0),
-        "group_type": "MANAGER_ORCHESTRATE",
+        "group_type": GroupChatType.MANAGER_ORCHESTRATE,
         "is_active": True,
     }
     schema = GroupChatInfo(**data)
     assert schema.group_chat_id == "gc_123"
     assert schema.is_active is True
+    assert schema.group_type == GroupChatType.MANAGER_ORCHESTRATE
+
+
+def test_group_chat_info_all_group_types():
+    """测试所有合法的 group_type 值"""
+    base_data = {
+        "group_chat_id": "gc_123",
+        "group_chat_name": "Test Group",
+        "project_path": "/path/to/project",
+        "created_at": datetime(2026, 6, 3, 10, 0, 0),
+        "is_active": True,
+    }
+
+    # 测试 SEQUENCE_EXECUTE
+    data_seq = {**base_data, "group_type": GroupChatType.SEQUENCE_EXECUTE}
+    schema_seq = GroupChatInfo(**data_seq)
+    assert schema_seq.group_type == GroupChatType.SEQUENCE_EXECUTE
+
+    # 测试 MANAGER_ORCHESTRATE
+    data_mgr = {**base_data, "group_type": GroupChatType.MANAGER_ORCHESTRATE}
+    schema_mgr = GroupChatInfo(**data_mgr)
+    assert schema_mgr.group_type == GroupChatType.MANAGER_ORCHESTRATE
+
+
+def test_group_chat_info_invalid_group_type():
+    """测试非法的 group_type 值应该失败"""
+    data = {
+        "group_chat_id": "gc_123",
+        "group_chat_name": "Test Group",
+        "project_path": "/path/to/project",
+        "created_at": datetime(2026, 6, 3, 10, 0, 0),
+        "group_type": "INVALID_TYPE",
+        "is_active": True,
+    }
+    with pytest.raises(ValidationError) as exc_info:
+        GroupChatInfo(**data)
+    assert "group_type" in str(exc_info.value).lower()
 
 
 def test_group_chat_summary_valid():

@@ -8,6 +8,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from agents_hub.core.foundation.models import GroupChatType
+
 
 class GroupChatCreate(BaseModel):
     """创建群聊请求"""
@@ -24,7 +26,7 @@ class GroupChatInfo(BaseModel):
     group_chat_name: str
     project_path: str
     created_at: datetime
-    group_type: str
+    group_type: GroupChatType
     is_active: bool
 
 
