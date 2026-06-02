@@ -9,6 +9,7 @@ status: unstable
 module: roles/api
 related_spec: docs/specs/2026-05-24-agents-role.md
 code_scope:
+  - agents_hub/api/routes/__init__.py
   - agents_hub/api/routes/roles.py
   - agents_hub/api/schemas/roles.py
   - agents_hub/api/services/role_service.py
@@ -107,8 +108,6 @@ class RoleUpdateRequest(BaseModel):
     """更新角色请求"""
     avatar: str | None = None
     abilities: list[str] | None = None
-    type: Literal["leader", "team_member"] | None = None
-    scope: list[str] | None = None
     description: str | None = None
 
 class RoleSkillRequest(BaseModel):
@@ -148,9 +147,15 @@ class SkillResponse(BaseModel):
     name: str
     description: str
 
-class AvatarResponse(BaseModel):
-    """头像列表响应"""
-    avatars: list[str]
+    @classmethod
+    def from_domain(cls, skill_info: SkillInfo) -> "SkillResponse":
+        """从领域模型转换"""
+        return cls(
+            id=skill_info.id,
+            name=skill_info.name,
+            description=skill_info.description,
+        )
+
 ```
 
 ### 服务层设计
@@ -162,8 +167,8 @@ class RoleService:
     协调 RoleManager，提供业务逻辑封装。
     """
 
-    def __init__(self):
-        self.role_manager = RoleManager()
+    def __init__(self, role_manager: RoleManager | None = None):
+        self.role_manager = role_manager or RoleManager()
 
     def list_roles(self) -> list[RoleInfo]:
         """获取所有角色"""
@@ -200,7 +205,6 @@ class RoleService:
             role.update_abilities(request.abilities)
         if request.description is not None:
             role.update_description(request.description)
-        # type 和 scope 暂不支持更新，等待后续扩展
         return role.get_info()
 
     def list_role_skills(self, name: str) -> list[SkillInfo]:
@@ -217,8 +221,12 @@ class RoleService:
         for skill in skills:
             if skill.id == skill_id:
                 return skill
-        # 不应该到达这里，因为 add_skill 会抛出异常如果失败
-        raise SkillNotFoundError(skill_id=skill_id)
+        # 如果添加成功但无法获取元数据，说明全局 skill 的 skill.json 可能损坏
+        raise ValidationError(
+            message=f"Skill '{skill_id}' 已添加但元数据无效",
+            error_code="SKILL_METADATA_INVALID",
+            details={"skill_id": skill_id, "role_name": name},
+        )
 
     def remove_role_skill(self, name: str, skill_id: str) -> None:
         """移除角色的 skill"""
@@ -259,10 +267,11 @@ def create_role(request: RoleCreateRequest, service: RoleService = Depends(get_r
     role = service.create_role(request)
     return RoleResponse.from_domain(role)
 
-@router.delete("/roles/{name}", status_code=204)
+@router.delete("/roles/{name}", response_model=dict[str, str])
 def delete_role(name: str, service: RoleService = Depends(get_role_service)):
     """删除角色"""
     service.delete_role(name)
+    return {"message": f"Role '{name}' 删除成功"}
 
 # ========== 更新角色信息 ==========
 
@@ -278,27 +287,35 @@ def update_role(name: str, request: RoleUpdateRequest, service: RoleService = De
 def list_role_skills(name: str, service: RoleService = Depends(get_role_service)):
     """列出角色的 skills"""
     skills = service.list_role_skills(name)
-    return [SkillResponse(id=s.id, name=s.name, description=s.description) for s in skills]
+    return [SkillResponse.from_domain(s) for s in skills]
 
 @router.post("/roles/{name}/skills", response_model=SkillResponse, status_code=201)
 def add_role_skill(name: str, request: RoleSkillRequest, service: RoleService = Depends(get_role_service)):
     """为角色添加 skill"""
     skill = service.add_role_skill(name, request.skill_id)
-    return SkillResponse(id=skill.id, name=skill.name, description=skill.description)
+    return SkillResponse.from_domain(skill)
 
-@router.delete("/roles/{name}/skills/{skill_id}", status_code=204)
+@router.delete("/roles/{name}/skills/{skill_id}", response_model=dict[str, str])
 def remove_role_skill(name: str, skill_id: str, service: RoleService = Depends(get_role_service)):
     """移除角色的 skill"""
     service.remove_role_skill(name, skill_id)
+    return {"message": f"Skill '{skill_id}' 从角色 '{name}' 移除成功"}
 
 # ========== 头像管理 ==========
 
-@router.get("/avatars", response_model=AvatarResponse)
+@router.get("/avatars", response_model=list[str])
 def list_avatars(service: RoleService = Depends(get_role_service)):
     """列出可用头像"""
-    avatars = service.list_avatars()
-    return AvatarResponse(avatars=avatars)
+    return service.list_avatars()
 ```
+
+### 已知问题
+
+**RoleInfo.type 默认值问题**：
+- `RoleInfo` 数据类定义 `type` 默认值为 `RoleType.TEAM_MEMBER`
+- 但 `Role.get_info()` 从磁盘加载时，如果 JSON 没有 `type` 字段，会返回 `None`
+- 这导致默认值永远不会生效，与 spec 不一致
+- **解决方案**：在实现时修复 `Role.get_info()`，将 `None` 改为 `RoleType.TEAM_MEMBER`
 
 ### 异常处理
 
