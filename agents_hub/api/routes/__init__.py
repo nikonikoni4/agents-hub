@@ -4,6 +4,7 @@ from .config import router as config_router
 from .group_chat import router as group_chats_router
 from .roles import router as roles_router
 from .skills import router as skills_router
+from .teams import router as teams_router
 from .websocket import router as websocket_router
 
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     "roles_router",
     "skills_router",
     "group_chats_router",
+    "teams_router",
     "websocket_router",
 ]
