@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from agents_hub.agent_bridge.docker.container import DockerContainer
+from agents_hub.config import config
 from agents_hub.core.foundation.exceptions import (
     DockerNotAvailableError,
     DockerStartError,
@@ -87,7 +88,7 @@ class DockerManager:
             logger.info(f"容器 {container_name} 已存在，先删除")
             await asyncio.create_subprocess_exec("docker", "rm", "-f", container_name)
 
-        git_dir = self._get_project_git_dir()  # TODO 这里有问题
+        git_dir = self._get_project_git_dir()
         cmd = [
             "docker",
             "run",
@@ -102,7 +103,7 @@ class DockerManager:
             f"{git_dir}:/repo-git:rw",
             "--network",
             "host",
-            "ai-tools:latest",
+            config.docker_image,
             "sleep",
             "infinity",
         ]

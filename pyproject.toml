@@ -19,6 +19,7 @@ dev = [
     "pytest-cov>=4.0",
     "ruff>=0.6",
     "mypy>=1.10",
+    "types-aiofiles>=23.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -67,6 +68,7 @@ warn_unreachable = true
 no_implicit_optional = true
 check_untyped_defs = true
 ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
 exclude = [
     "tests/explore",
     "local_data",

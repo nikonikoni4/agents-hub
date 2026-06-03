@@ -26,6 +26,7 @@ class SystemConfig:
         "mcp_port": 8765,  # MCP 服务器运行端口
         "default_manager_name": "manager",  # 默认 manager 角色名
         "default_user_name": "user",  # 默认用户身份名
+        "docker_image": "ai-tools:latest",  # Docker 沙箱镜像
     }
 
     def __new__(cls):
@@ -125,6 +126,11 @@ class SystemConfig:
         return self._config_data["default_user_name"]
 
     @property
+    def docker_image(self) -> str:
+        """Docker 沙箱镜像名称"""
+        return self._config_data["docker_image"]
+
+    @property
     def is_dev(self) -> bool:
         """是否为开发环境"""
         return self._is_dev
@@ -192,6 +198,11 @@ class Config:
     def default_user_name(self) -> str:
         """快捷访问：默认用户身份名"""
         return self.system.default_user_name
+
+    @property
+    def docker_image(self) -> str:
+        """快捷访问：Docker 沙箱镜像名称"""
+        return self.system.docker_image
 
 
 # ============ 全局单例 ============
