@@ -40,16 +40,26 @@
  - 触发规则：当设计、修改或扩展 Agent 执行模型、团队管理、群聊编排、token 生命周期或 MCP 工具入口时阅读
  - 内容摘要：core/agent 和 core/orchestration 层规格，定义 Agent 消息循环、Manager/Worker 角色、Team 验证（含 team_members 语义和初始化分离）、GroupChat 生命周期（含 token 管理和 user 伪 Agent 注册）、GroupChatManager token 索引和 MCP 工具入口
 
-<<<<<<< HEAD
 ## docker-executor
  - updated_at : 2026-06-03
  - path: `docs/specs/2026-06-03-docker-executor.md`
  - 触发规则：当设计、修改或扩展 Docker 沙箱执行器时阅读，包括容器生命周期、CLI 路径配置、卷挂载策略和 git worktree 路径修复
  - 内容摘要：Docker 沙箱执行器规格，定义容器创建/复用/销毁生命周期、CLI 路径映射（宿主机与容器）、卷挂载策略、git worktree 路径修复机制和不确定性事件清单
-=======
+
 ## websocket-backend
  - updated_at : 2026-06-03
  - path: `docs/specs/2026-06-03-websocket-backend.md`
  - 触发规则：当设计、修改或扩展 WebSocket 连接管理、房间机制、广播功能或异常体系时阅读
  - 内容摘要：WebSocket 后端模块规格，定义连接生命周期、房间模型（按 group_chat_id 隔离）、刷新信号广播机制、API 契约（WebSocket 端点和 HTTP 广播 API）、异常体系（双重继承设计）
->>>>>>> feat_websocket
+
+## group-chat-api
+ - updated_at : 2026-06-03
+ - path: `docs/specs/2026-06-03-group-chat-api.md`
+ - 触发规则：当设计、修改或扩展群聊 API 接口时阅读，包括群聊生命周期管理、成员管理、消息交互和 Docker 沙箱控制
+ - 内容摘要：Group Chat API 模块规格，定义 RESTful 接口（创建/查询/删除群聊、成员查询、消息历史、Docker 开关控制）、Schema 定义、异常处理和架构分层（Route → Service → Manager）
+
+## skills-api
+ - updated_at : 2026-06-03
+ - path: `docs/specs/2026-06-03-skills-api.md`
+ - 触发规则：当设计、修改或扩展全局 skill 库管理、skill API 接口或 SKILL.md 解析逻辑时阅读
+ - 内容摘要：skills API 模块规格，定义全局 skill 库管理、CRUD 操作、SKILL.md 解析规则、路径安全校验、API 契约（GET/DELETE/POST 端点）和异常处理
