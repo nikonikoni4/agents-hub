@@ -14,13 +14,48 @@ route → service → manager
 
 ## 路由层规则
 
+### ✅ Router 必须声明 prefix 和 tags
+
+每个 router 通过 `prefix` 声明统一前缀，通过 `tags` 声明文档分组。路由装饰器中不再重复前缀。
+
+```python
+# ❌ 错误 — 前缀写在每个路由上
+router = APIRouter()
+
+@router.get("/skills", response_model=list[SkillResponse])
+@router.get("/skills/{skill_name}", response_model=SkillResponse)
+
+# ✅ 正确 — 前缀统一在 router 声明
+router = APIRouter(prefix="/skills", tags=["skills"])
+
+@router.get("", response_model=list[SkillResponse])
+@router.get("/{skill_name}", response_model=SkillResponse)
+```
+
+### ❌ 禁止路由路径与前缀重复
+
+路由装饰器中的路径不能包含 `prefix` 已声明的前缀，避免出现 `/skills/skills` 这种重复路径。
+
+```python
+# ❌ 错误 — 最终路径变成 /skills/skills
+router = APIRouter(prefix="/skills")
+
+@router.get("/skills")
+
+# ❌ 错误 — 最终路径变成 /skills/skills/{name}
+@router.get("/skills/{skill_name}")
+
+# ✅ 正确 — 最终路径是 /skills/{name}
+@router.get("/{skill_name}")
+```
+
 ### ❌ 禁止在路由中写 try/except
 
 全局异常处理器已在 `app.py` 注册，路由层不需要任何错误处理。
 
 ```python
 # ❌ 错误
-@router.get("/skills/{skill_name}")
+@router.get("/{skill_name}")
 def get_skill(skill_name: str, service: SkillService = Depends(get_skill_service)):
     try:
         skill = service.get_skill(skill_name)
@@ -29,7 +64,7 @@ def get_skill(skill_name: str, service: SkillService = Depends(get_skill_service
         raise HTTPException(status_code=404, detail=e.to_dict()) from e
 
 # ✅ 正确
-@router.get("/skills/{skill_name}")
+@router.get("/{skill_name}")
 def get_skill(skill_name: str, service: SkillService = Depends(get_skill_service)):
     skill = service.get_skill(skill_name)
     return SkillResponse.from_domain(skill)
@@ -54,7 +89,7 @@ from agents_hub.api.services.skill_service import SkillService
 
 ```python
 # ❌ 错误
-@router.get("/skills")
+@router.get("")
 def list_skills():
     service = SkillService()  # 直接实例化
     ...
@@ -63,7 +98,7 @@ def list_skills():
 def get_skill_service() -> SkillService:
     return SkillService()
 
-@router.get("/skills")
+@router.get("")
 def list_skills(service: SkillService = Depends(get_skill_service)):
     ...
 ```
@@ -74,7 +109,7 @@ def list_skills(service: SkillService = Depends(get_skill_service)):
 
 ```python
 # ❌ 错误 — 业务逻辑写在路由里
-@router.delete("/skills/{skill_name}")
+@router.delete("/{skill_name}")
 def delete_skill(skill_name: str):
     skill_path = Path("skills") / skill_name
     if not skill_path.exists():
@@ -82,7 +117,7 @@ def delete_skill(skill_name: str):
     shutil.rmtree(skill_path)
 
 # ✅ 正确 — 委托给 service
-@router.delete("/skills/{skill_name}")
+@router.delete("/{skill_name}")
 def delete_skill(skill_name: str, service: SkillService = Depends(get_skill_service)):
     service.delete_skill(skill_name)
     return {"message": f"Skill '{skill_name}' 删除成功"}
@@ -94,12 +129,12 @@ def delete_skill(skill_name: str, service: SkillService = Depends(get_skill_serv
 
 ```python
 # ❌ 错误 — 返回领域模型
-@router.get("/skills/{skill_name}")
+@router.get("/{skill_name}")
 def get_skill(skill_name: str, service: SkillService = Depends(get_skill_service)):
     return service.get_skill(skill_name)  # 返回 SkillInfo
 
 # ✅ 正确 — 转换为 response schema
-@router.get("/skills/{skill_name}", response_model=SkillResponse)
+@router.get("/{skill_name}", response_model=SkillResponse)
 def get_skill(skill_name: str, service: SkillService = Depends(get_skill_service)):
     skill = service.get_skill(skill_name)
     return SkillResponse.from_domain(skill)
@@ -109,9 +144,9 @@ def get_skill(skill_name: str, service: SkillService = Depends(get_skill_service
 
 ```python
 # ✅ 正确
-@router.get("/skills", response_model=list[SkillResponse])
-@router.post("/skills", response_model=SkillResponse)
-@router.delete("/skills/{skill_name}", response_model=dict[str, str])
+@router.get("", response_model=list[SkillResponse])
+@router.post("", response_model=SkillResponse)
+@router.delete("/{skill_name}", response_model=dict[str, str])
 ```
 
 ## 文件组织
@@ -124,5 +159,5 @@ routes/
 ```
 
 - `__init__.py` 中汇总所有 router：`from .skills import router`
-- 每个文件一个 `router = APIRouter()`，对应一个领域
+- 每个文件一个 `router = APIRouter(prefix="/xxx", tags=["xxx"])`，对应一个领域
 - 新增路由文件后，在 `__init__.py` 中汇总

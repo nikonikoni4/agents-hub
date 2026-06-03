@@ -10,9 +10,10 @@ GroupChat 群聊管理
 import asyncio
 from uuid import uuid4
 
+from agents_hub.config import config
 from agents_hub.config.types import RoleType
 from agents_hub.core.agent import Agent, Manager, Worker
-from agents_hub.core.communication import AgentCallManager, MessageRouter
+from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
 from agents_hub.core.context import GroupChatContext
 from agents_hub.core.foundation import GroupChatType, StateError
 from agents_hub.core.foundation.token import generate_token
@@ -31,8 +32,9 @@ class GroupChat:
     3. 管理消息路由和 agent 生命周期
 
     启动方式：
-    - start(): 首次创建群聊
-    - load(): 加载已有群聊，验证 role 有效性
+    - start(): 首次创建群聊（立即激活 agent）
+    - load(): 加载已有群聊（只读，不启动 agent）
+    - activate(): 激活 agent.run() 任务（发消息前调用）
     """
 
     def __init__(
@@ -41,8 +43,10 @@ class GroupChat:
         group_type: GroupChatType,
         project_path: str,
         group_chat_id: str = str(uuid4()),
+        group_chat_name: str | None = None,
     ):
         self.group_chat_id = group_chat_id
+        self.group_chat_name = group_chat_name or group_chat_id
         self.team_members_name = team.team_members_name
         self.group_type = group_type
         self.workers: dict[str, Worker] = {}
@@ -56,9 +60,10 @@ class GroupChat:
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
 
         # 创建 TaskManager（用于 Agent Runtime 注入）
-        from agents_hub.core.communication import TaskManager
-
         self.task_manager = TaskManager(self.group_chat_id, project_path)
+
+        # 懒加载标记
+        self._activated = False
 
     async def start(self):
         """
@@ -82,7 +87,7 @@ class GroupChat:
 
         metadata = GroupMetadata(
             group_chat_id=self.group_chat_id,
-            group_chat_name=self.group_chat_id,  # 默认使用 group_chat_id
+            group_chat_name=self.group_chat_name,
             project_path=self.group_chat_context.repository.project_path,
             created_at=datetime.now(),
             group_type=self.group_type.value,
@@ -99,17 +104,16 @@ class GroupChat:
         await self._initialize_new_members()
 
         # 7. 启动所有 agent 的 run() 任务
-        if self.manager is None:
-            raise StateError("Manager 未初始化，请先调用 _init_agents()")
-        self.manager_task = asyncio.create_task(self.manager.run())
-        self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
+        self._start_agent_tasks()
+        self._activated = True
 
     async def load(self):
         """
-        加载已有的群聊
+        加载已有的群聊（只读，不启动 agent）
 
         从 agent_session_id.json 加载已有 session，恢复 manager 和 workers，
         并验证每个 role 是否存在。恢复并注册 token。对新增成员执行初始化（打招呼）。
+        不启动 agent.run() 任务，需要发消息时调用 activate()。
         """
         # 1. 加载上下文数据
         await self.group_chat_context.load()
@@ -123,7 +127,20 @@ class GroupChat:
         # 4. 初始化新成员（第一次会话的成员）
         await self._initialize_new_members()
 
-        # 5. 启动所有 agent 的 run() 任务
+    async def activate(self):
+        """
+        激活群聊：启动所有 agent 的 run() 任务
+
+        在 load() 之后调用，用于需要 agent 处理消息的场景（如发送消息）。
+        已激活时重复调用无副作用。
+        """
+        if self._activated:
+            return
+        self._start_agent_tasks()
+        self._activated = True
+
+    def _start_agent_tasks(self):
+        """启动所有 agent 的 run() 任务（内部方法）"""
         if self.manager is None:
             raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())
@@ -138,7 +155,7 @@ class GroupChat:
         role_manager = RoleManager()
 
         # 初始化 manager
-        manager_role = role_manager.get_role("Leader")
+        manager_role = role_manager.get_role(config.default_manager_name)
         self.manager = Manager(
             manager_role,
             self.group_chat_context,
@@ -153,6 +170,8 @@ class GroupChat:
             return
 
         for role_name in self.team_members_name:
+            if role_name == config.default_manager_name:
+                continue
             role = role_manager.get_role(role_name)
             self.workers[role_name] = Worker(
                 role,
@@ -166,6 +185,8 @@ class GroupChat:
         self.message_router.register(self.manager.name, self.manager.message_queue)
         for worker in self.workers.values():
             self.message_router.register(worker.name, worker.message_queue)
+        # 注册 user 伪 agent，支持用户通过 API 发送消息
+        self.message_router.register(config.default_user_name, asyncio.Queue())
 
     async def _initialize_new_members(self):
         """

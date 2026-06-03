@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from agents_hub.config import config
 from agents_hub.skills.exceptions import InvalidSkillError, SkillNotFoundError

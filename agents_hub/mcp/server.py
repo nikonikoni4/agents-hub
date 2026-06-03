@@ -54,7 +54,7 @@ mcp = FastMCP(
 # ============================================================================
 
 
-def call_agent(
+async def call_agent(
     agent_token: str,
     send_to: str,
     content: str,
@@ -88,7 +88,7 @@ def call_agent(
 
         # 2. 获取 GroupChat
         try:
-            group_chat = group_chat_manager.get_group_chat(group_chat_id)
+            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
@@ -143,7 +143,7 @@ def call_agent(
 # ============================================================================
 
 
-def assign_tasks_to_team(agent_token: str, tasks: list[dict]) -> dict:
+async def assign_tasks_to_team(agent_token: str, tasks: list[dict]) -> dict:
     """
     覆盖式更新任务列表（Leader-only）
 
@@ -168,7 +168,7 @@ def assign_tasks_to_team(agent_token: str, tasks: list[dict]) -> dict:
 
         # 2. 获取 GroupChat
         try:
-            group_chat = group_chat_manager.get_group_chat(group_chat_id)
+            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
@@ -207,7 +207,7 @@ def assign_tasks_to_team(agent_token: str, tasks: list[dict]) -> dict:
 # ============================================================================
 
 
-def archive_task_list(agent_token: str) -> dict:
+async def archive_task_list(agent_token: str) -> dict:
     """
     归档当前 ACTIVE 列表（Leader-only）
 
@@ -231,7 +231,7 @@ def archive_task_list(agent_token: str) -> dict:
 
         # 2. 获取 GroupChat
         try:
-            group_chat = group_chat_manager.get_group_chat(group_chat_id)
+            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
@@ -268,7 +268,7 @@ def archive_task_list(agent_token: str) -> dict:
 # ============================================================================
 
 
-def check_agent_call(agent_token: str, call_id: str) -> dict:
+async def check_agent_call(agent_token: str, call_id: str) -> dict:
     """
     查询 AgentCall 状态
 
@@ -302,7 +302,7 @@ def check_agent_call(agent_token: str, call_id: str) -> dict:
 
         # 2. 获取 GroupChat
         try:
-            group_chat = group_chat_manager.get_group_chat(group_chat_id)
+            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,

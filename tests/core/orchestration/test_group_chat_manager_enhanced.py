@@ -292,7 +292,7 @@ class TestLoadGroupChatFromDisk:
         # 3. 验证
         assert loaded_chat.group_chat_id == group_chat_id
         assert loaded_chat.group_type == GroupChatType.MANAGER_ORCHESTRATE
-        assert group_chat_manager.get_group_chat(group_chat_id) == loaded_chat
+        assert group_chat_manager._group_chats.get(group_chat_id) == loaded_chat
 
         # 清理
         await loaded_chat.cleanup()
@@ -314,7 +314,7 @@ class TestCreateGroupChat:
 
         # 验证
         assert group_chat.group_chat_id is not None
-        assert group_chat_manager.get_group_chat(group_chat.group_chat_id) == group_chat
+        assert group_chat_manager._group_chats.get(group_chat.group_chat_id) == group_chat
 
         # 验证 metadata 已保存
         metadata_file = group_chat_paths.metadata_file(group_chat.group_chat_id, project_path)
@@ -338,7 +338,7 @@ class TestCreateGroupChat:
 
         # 验证
         assert group_chat.group_chat_id == custom_id
-        assert group_chat_manager.get_group_chat(custom_id) == group_chat
+        assert group_chat_manager._group_chats.get(custom_id) == group_chat
 
         # 清理
         await group_chat.cleanup()

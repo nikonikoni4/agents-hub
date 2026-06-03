@@ -42,12 +42,48 @@ class GroupChatManager:
             raise ValueError("无效的 group_chat 类型")
         self._group_chats[group_chat_id] = group_chat
 
-    def get_group_chat(self, group_chat_id: str) -> GroupChat:
-        """获取 GroupChat，不存在时抛出 GroupChatNotFoundError"""
+    def is_active_group(self, group_chat_id: str) -> bool:
+        """检查群聊的 agent 是否已激活（run() 任务是否在运行）"""
         group_chat = self._group_chats.get(group_chat_id)
-        if not group_chat:
-            raise GroupChatNotFoundError(group_chat_id)
-        return group_chat
+        return group_chat is not None and group_chat._activated
+
+    async def load_group_chat(self, group_chat_id: str) -> GroupChat:
+        """获取 GroupChat，优先从内存加载，不存在时从磁盘加载
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            GroupChat 实例
+
+        Raises:
+            GroupChatNotFoundError: 群聊不存在（内存和磁盘都没有）
+        """
+        # 1. 优先从内存获取
+        group_chat = self._group_chats.get(group_chat_id)
+        if group_chat:
+            return group_chat
+
+        # 2. 从磁盘加载
+        try:
+            return await self.load_group_chat_from_disk(group_chat_id)
+        except FileNotFoundError as e:
+            raise GroupChatNotFoundError(group_chat_id) from e
+
+    async def activate_group_chat(self, group_chat_id: str) -> None:
+        """激活群聊：启动 agent.run() 任务
+
+        先从内存或磁盘加载 GroupChat，再调用 activate()。
+        已激活时重复调用无副作用。
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Raises:
+            GroupChatNotFoundError: 群聊不存在
+        """
+        group_chat = await self.load_group_chat(group_chat_id)
+        await group_chat.activate()
 
     async def unregister(self, group_chat_id: str, timeout: float = 10.0):
         """
@@ -177,7 +213,7 @@ class GroupChatManager:
                             "project_path": metadata.project_path,
                             "created_at": metadata.created_at.isoformat(),
                             "group_type": metadata.group_type,
-                            "is_active": metadata.group_chat_id in self._group_chats,
+                            "is_active": self.is_active_group(metadata.group_chat_id),
                         }
                     )
                 except Exception:
@@ -282,9 +318,8 @@ class GroupChatManager:
 
         统一的群聊创建入口，自动处理：
         1. 创建 GroupChat 实例
-        2. 调用 start() 启动
-        3. 保存 group_metadata.json
-        4. 自动注册到 GroupChatManager
+        2. 调用 start() 启动（自动保存 metadata）
+        3. 自动注册到 GroupChatManager
 
         Args:
             team: 所属 Team 实例
@@ -307,17 +342,11 @@ class GroupChatManager:
             group_type=group_type,
             project_path=project_path,
             group_chat_id=group_chat_id,
+            group_chat_name=group_chat_name,
         )
 
         # 2. 启动群聊（会自动保存 metadata）
         await group_chat.start()
-
-        # 3. 如果提供了自定义名称，更新 metadata
-        if group_chat_name is not None:
-            metadata = await group_chat.group_chat_context.repository.load_group_metadata()
-            if metadata:
-                metadata.group_chat_name = group_chat_name
-                await group_chat.group_chat_context.repository.save_group_metadata(metadata)
 
         # 4. 注册到 GroupChatManager
         self.register(group_chat_id, group_chat)
@@ -329,7 +358,7 @@ class GroupChatManager:
 group_chat_manager = GroupChatManager()
 
 
-def call_agent(
+async def call_agent(
     group_chat_id: str,
     send_from: str,
     send_to: str,
@@ -355,7 +384,7 @@ def call_agent(
     """
     try:
         # 1. 获取 group chat
-        group_chat = group_chat_manager.get_group_chat(group_chat_id)
+        group_chat = await group_chat_manager.load_group_chat(group_chat_id)
 
         # 2. 创建 AgentCall
         call: AgentCall = group_chat.agent_call_manager.create_call(

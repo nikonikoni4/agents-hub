@@ -6,10 +6,12 @@ FastAPI 应用
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from agents_hub.config.config import config
 from agents_hub.exceptions import (
     AgentsHubError,
     ExternalServiceError,
@@ -18,9 +20,10 @@ from agents_hub.exceptions import (
     ValidationError,
 )
 
-from .routes import router
+from .routes import group_chats_router, router
 
 logger = logging.getLogger(__name__)
+
 
 _STATUS_MAP: dict[type[AgentsHubError], int] = {
     ValidationError: 400,
@@ -38,10 +41,27 @@ def _resolve_status(exc: AgentsHubError) -> int:
     return 500
 
 
-app = FastAPI(title="Agents Hub API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    from agents_hub.mcp.server import mcp
+
+    mcp_task = asyncio.create_task(
+        mcp.run_async(
+            transport="http",
+            host="localhost",
+            port=config.mcp_port,
+        )
+    )
+    yield
+    mcp_task.cancel()
+
+
+app = FastAPI(title="Agents Hub API", version="0.1.0", lifespan=lifespan)
 
 # 注册路由
-app.include_router(router)
+app.include_router(router, prefix="/api/v1")
+app.include_router(group_chats_router, prefix="/api/v1")
 
 
 @app.exception_handler(AgentsHubError)
@@ -69,12 +89,3 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
 async def health_check():
     """健康检查端点"""
     return {"status": "ok"}
-
-
-@app.on_event("startup")
-async def startup_mcp():
-    """启动 MCP Server"""
-    from agents_hub.mcp.server import mcp
-
-    # FastMCP 使用 HTTP 传输，在独立任务中运行
-    asyncio.create_task(mcp.run_async(transport="http", host="localhost", port=8001))

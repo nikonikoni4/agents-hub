@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Core 模块架构与生命周期</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --ink: #1a1a1a;
+      --ink-light: #555;
+      --ink-muted: #888;
+      --bg: #f8f6f1;
+      --bg-card: #ffffff;
+      --accent-1: #c04a1a;
+      --accent-2: #2d6a4f;
+      --accent-3: #1d3557;
+      --accent-4: #7b2d8b;
+      --accent-5: #b5651d;
+      --border: #e0dcd4;
+      --shadow: 0 2px 20px rgba(0,0,0,0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.8;
+      padding: 2rem;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 3rem 2rem;
+      margin-bottom: 2rem;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: var(--accent-3);
+      color: white;
+      padding: 0.3rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.5rem;
+    }
+
+    .hero p {
+      color: var(--ink-light);
+      font-size: 1.1rem;
+    }
+
+    .section-nav {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .section-nav a {
+      display: inline-block;
+      padding: 0.5rem 1.2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--ink-light);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .section-nav a:hover {
+      background: var(--accent-3);
+      color: white;
+      border-color: var(--accent-3);
+    }
+
+    .content-section {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+      font-weight: 700;
+    }
+
+    .section-title-block h2 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .section-title-block .subtitle {
+      color: var(--ink-muted);
+      font-size: 0.9rem;
+    }
+
+    .section-body {
+      padding: 2rem;
+    }
+
+    .diagram-section {
+      background: #fafaf8;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+
+    .info-block {
+      border-left: 4px solid;
+      padding: 1rem 1.5rem;
+      margin: 1rem 0;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .info-block.blue {
+      border-color: var(--accent-3);
+      background: rgba(29, 53, 87, 0.05);
+    }
+
+    .info-block.green {
+      border-color: var(--accent-2);
+      background: rgba(45, 106, 79, 0.05);
+    }
+
+    .info-block.purple {
+      border-color: var(--accent-4);
+      background: rgba(123, 45, 139, 0.05);
+    }
+
+    .info-block.orange {
+      border-color: var(--accent-1);
+      background: rgba(192, 74, 26, 0.05);
+    }
+
+    .info-block h4 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      color: var(--ink);
+    }
+
+    .info-block p, .info-block ul {
+      font-size: 0.95rem;
+      color: var(--ink-light);
+    }
+
+    .info-block ul {
+      padding-left: 1.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .info-block li {
+      margin-bottom: 0.3rem;
+    }
+
+    .layer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .layer-item {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .layer-item h4 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent-3);
+      margin-bottom: 0.3rem;
+    }
+
+    .layer-item p {
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+    }
+
+    .arrow-down {
+      text-align: center;
+      font-size: 1.5rem;
+      color: var(--ink-muted);
+      margin: 0.5rem 0;
+    }
+
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+
+      .hero h1 {
+        font-size: 1.8rem;
+      }
+
+      .section-header {
+        padding: 1rem;
+      }
+
+      .section-body {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-badge">agents-hub/core</div>
+    <h1>Core 模块架构与生命周期</h1>
+    <p>五层分层架构 · 类关系图 · 对象创建生命周期</p>
+  </div>
+
+  <nav class="section-nav">
+    <a href="#architecture">整体架构</a>
+    <a href="#class-diagram">类关系图</a>
+    <a href="#lifecycle">创建生命周期</a>
+    <a href="#patterns">设计模式</a>
+  </nav>
+
+  <div class="content-section">
+
+    <!-- 整体架构 -->
+    <div class="section-card" id="architecture">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-3);">1</div>
+        <div class="section-title-block">
+          <h2>五层分层架构</h2>
+          <div class="subtitle">依赖方向严格单向，自底向上</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="layer-grid">
+          <div class="layer-item" style="border-color: var(--accent-4);">
+            <h4>orchestration</h4>
+            <p>编排层</p>
+          </div>
+          <div class="layer-item" style="border-color: var(--accent-1);">
+            <h4>agent</h4>
+            <p>Agent 层</p>
+          </div>
+          <div class="layer-item" style="border-color: var(--accent-5);">
+            <h4>communication</h4>
+            <p>通信层</p>
+          </div>
+          <div class="layer-item" style="border-color: var(--accent-2);">
+            <h4>context</h4>
+            <p>上下文层</p>
+          </div>
+          <div class="layer-item" style="border-color: var(--accent-3);">
+            <h4>foundation</h4>
+            <p>基础层</p>
+          </div>
+        </div>
+
+        <div class="info-block blue">
+          <h4>依赖规则</h4>
+          <ul>
+            <li><strong>foundation</strong> — 零依赖，提供枚举、数据模型、异常、渲染、路径管理</li>
+            <li><strong>context</strong> — 依赖 foundation，管理会话、消息持久化、上下文加载</li>
+            <li><strong>communication</strong> — 依赖 foundation，管理消息路由、Agent 调用、任务</li>
+            <li><strong>agent</strong> — 依赖 foundation + context + communication，Agent 执行逻辑</li>
+            <li><strong>orchestration</strong> — 依赖所有下层，协调组件生命周期</li>
+          </ul>
+        </div>
+
+        <div class="diagram-section">
+          <div class="mermaid">
+graph TB
+    subgraph orchestration["orchestration 编排层"]
+        GC[GroupChat]
+        GCM[GroupChatManager]
+        Team[Team]
+    end
+
+    subgraph agent["agent Agent 层"]
+        Agent[Agent]
+        Manager[Manager]
+        Worker[Worker]
+    end
+
+    subgraph communication["communication 通信层"]
+        ACM[AgentCallManager]
+        MR[MessageRouter]
+        TM[TaskManager]
+    end
+
+    subgraph context["context 上下文层"]
+        GCC[GroupChatContext]
+        GCR[GroupChatRepository]
+        AC[AgentContext]
+        GCS[GroupChatSession]
+    end
+
+    subgraph foundation["foundation 基础层"]
+        AM[AgentMessage]
+        Enums[枚举类]
+        Exc[Exceptions]
+        Paths[GroupChatPaths]
+        Renderer[Renderer]
+    end
+
+    GC --> GCC
+    GC --> MR
+    GC --> ACM
+    GC --> TM
+    GC --> Agent
+
+    Agent --> GCC
+    Agent --> ACM
+    Agent --> MR
+    Agent --> AC
+
+    Manager --> Agent
+    Worker --> Agent
+
+    GCC --> GCR
+    GCC --> GCS
+    AC --> GCC
+
+    ACM --> AM
+    MR --> AM
+    TM --> AM
+
+    GCR --> Paths
+    GCC --> Paths
+
+    style orchestration fill:#7b2d8b22,stroke:#7b2d8b
+    style agent fill:#c04a1a22,stroke:#c04a1a
+    style communication fill:#b5651d22,stroke:#b5651d
+    style context fill:#2d6a4f22,stroke:#2d6a4f
+    style foundation fill:#1d355722,stroke:#1d3557
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 类关系图 -->
+    <div class="section-card" id="class-diagram">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-2);">2</div>
+        <div class="section-title-block">
+          <h2>类关系图</h2>
+          <div class="subtitle">继承、组合、依赖关系</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="info-block green">
+          <h4>关系类型说明</h4>
+          <ul>
+            <li><strong>继承</strong>：Manager/Worker 继承 Agent，具体异常继承 AgentsHubError</li>
+            <li><strong>组合</strong>：GroupChat 持有 Context/Router/CallManager/TaskManager</li>
+            <li><strong>依赖注入</strong>：Agent 通过构造函数接收所有依赖</li>
+            <li><strong>单例</strong>：GroupChatPaths、GroupChatManager 全局唯一</li>
+          </ul>
+        </div>
+
+        <div class="diagram-section">
+          <div class="mermaid">
+classDiagram
+    class GroupChat {
+        -group_chat_id str
+        -group_chat_context GroupChatContext
+        -message_router MessageRouter
+        -agent_call_manager AgentCallManager
+        -task_manager TaskManager
+        +start()
+        +load()
+        -_init_agents()
+    }
+
+    class GroupChatManager {
+        -group_chats dict
+        -tokens dict
+        +create_group_chat()
+        +load_group_chat_from_disk()
+        +resolve_token()
+    }
+
+    class Agent {
+        #name str
+        #group_chat_context GroupChatContext
+        #agent_call_manager AgentCallManager
+        #message_router MessageRouter
+        #agent_context AgentContext
+        +run()
+        +stop()
+        #_process_message()
+    }
+
+    class Manager
+
+    class Worker
+
+    class GroupChatContext {
+        -group_chat_id str
+        -repository GroupChatRepository
+        -session GroupChatSession
+        +load()
+        +add_message()
+        +compact_messages()
+    }
+
+    class GroupChatRepository {
+        -project_path str
+        +read_messages()
+        +append_message()
+        +save_agent_session_state()
+    }
+
+    class AgentContext {
+        -agent_name str
+        -group_chat_context GroupChatContext
+        +get_context()
+    }
+
+    class MessageRouter {
+        -queues dict
+        +register()
+        +unregister()
+        +send_message()
+    }
+
+    class AgentCallManager {
+        -calls dict
+        +create_call()
+        +update_status()
+        +start_cleanup()
+    }
+
+    class TaskManager {
+        -task_lists dict
+        +create_task()
+        +update_task()
+        +get_active_task_list()
+    }
+
+    class AgentMessage {
+        +call_id str
+        +send_from str
+        +send_to str
+        +content str
+        +message_type MessageType
+    }
+
+    class GroupChatPaths {
+        +get_message_file()
+        +get_session_file()
+        +get_compact_history_file()
+    }
+
+    class GroupChatSession {
+        +messages list
+        +agent_sessions dict
+    }
+
+    Agent <|-- Manager
+    Agent <|-- Worker
+
+    GroupChat *-- GroupChatContext
+    GroupChat *-- MessageRouter
+    GroupChat *-- AgentCallManager
+    GroupChat *-- TaskManager
+    GroupChat *-- Agent
+
+    Agent *-- AgentContext
+    Agent ..> AgentMessage
+
+    GroupChatContext *-- GroupChatRepository
+    GroupChatContext *-- GroupChatSession
+    AgentContext ..> GroupChatContext
+
+    GroupChatRepository ..> GroupChatPaths
+
+    MessageRouter ..> AgentMessage
+    AgentCallManager ..> AgentMessage
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 创建生命周期 -->
+    <div class="section-card" id="lifecycle">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-1);">3</div>
+        <div class="section-title-block">
+          <h2>对象创建生命周期</h2>
+          <div class="subtitle">从 GroupChat 创建到 Agent 运行的完整流程</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="info-block orange">
+          <h4>GroupChat.start() — 首次创建流程</h4>
+          <p>从用户调用 call_agent() 到 Agent 开始处理消息的完整链路</p>
+        </div>
+
+        <div class="diagram-section">
+          <div class="mermaid">
+sequenceDiagram
+    participant User as 用户
+    participant GCM as GroupChatManager
+    participant GC as GroupChat
+    participant GCC as GroupChatContext
+    participant GCR as GroupChatRepository
+    participant MR as MessageRouter
+    participant ACM as AgentCallManager
+    participant TM as TaskManager
+    participant Agent as Agent(Manager/Worker)
+    participant AC as AgentContext
+
+    User->>GCM: create_group_chat()
+    GCM->>GC: GroupChat.__init__()
+
+    Note over GC: 创建所有依赖组件
+    GC->>GCC: GroupChatContext.__init__()
+    GCC->>GCR: GroupChatRepository.__init__()
+    GCR->>GCR: _init_locks()
+    GC->>MR: MessageRouter.__init__()
+    GC->>ACM: AgentCallManager.__init__()
+    ACM->>ACM: _load_from_persistence()
+    GC->>TM: TaskManager.__init__()
+    TM->>TM: _load_from_persistence()
+
+    GCM->>GC: start()
+    GC->>GCC: load()
+    GCC->>GCR: read_messages()
+    GCC->>GCR: read_agent_sessions()
+    GCC->>GCR: read_compact_history()
+
+    GC->>GC: _init_agents()
+    Note over GC: 通过 RoleManager 获取角色配置
+    GC->>Agent: Manager.__init__(deps)
+    Agent->>AC: AgentContext.__init__()
+    GC->>Agent: Worker.__init__(deps)
+    Agent->>AC: AgentContext.__init__()
+    GC->>MR: register(agent_name)
+
+    GC->>GC: _generate_and_register_tokens()
+    GC->>GCM: register_token(token, chat_info)
+
+    GC->>GC: _initialize_new_members()
+
+    loop 每个 Agent
+        GC->>Agent: asyncio.create_task(agent.run())
+    end
+
+    Note over Agent: Agent 开始消息处理循环
+          </div>
+        </div>
+
+        <div class="info-block purple">
+          <h4>Agent.run() — 消息处理循环</h4>
+          <p>Agent 持续从队列取消息，处理后写回群聊或投递回复</p>
+        </div>
+
+        <div class="diagram-section">
+          <div class="mermaid">
+flowchart TB
+    Start([Agent.run]) --> Queue[从 message_queue 获取消息]
+    Queue --> CheckStop{是 __STOP__ 哨兵?}
+    CheckStop -->|是| Exit([退出循环])
+    CheckStop -->|否| Inject[注入 runtime 信息到 CLAUDE.md]
+    Inject --> LoadContext[AgentContext.load_incremental]
+    LoadContext --> Render[render_for_llm 渲染 prompt]
+    Render --> Process[_process_message 执行 LLM 调用]
+    Process --> OutputA[出口A: token 脱敏后写回群聊]
+    OutputA --> CheckType{是 TASK 类型且<br>sender != user?}
+    CheckType -->|是| Reply[投递回复到 sender 队列]
+    CheckType -->|否| Queue
+    Reply --> Queue
+
+    style Start fill:#2d6a4f,stroke:#2d6a4f,color:#fff
+    style Exit fill:#c04a1a,stroke:#c04a1a,color:#fff
+    style OutputA fill:#1d3557,stroke:#1d3557,color:#fff
+    style Reply fill:#7b2d8b,stroke:#7b2d8b,color:#fff
+          </div>
+        </div>
+
+        <div class="info-block blue">
+          <h4>AgentCall 生命周期</h4>
+          <ul>
+            <li><strong>PENDING</strong> — 创建调用，立即持久化</li>
+            <li><strong>RUNNING</strong> — Agent 开始处理</li>
+            <li><strong>COMPLETED / FAILED / TIMEOUT</strong> — 终态</li>
+            <li><strong>自动清理</strong> — 后台 _cleanup_loop 定期检查并删除可回收记录</li>
+          </ul>
+        </div>
+
+        <div class="diagram-section">
+          <div class="mermaid">
+stateDiagram-v2
+    [*] --> PENDING: create_call()
+    PENDING --> RUNNING: Agent 开始处理
+    RUNNING --> COMPLETED: 成功完成
+    RUNNING --> FAILED: 执行失败
+    RUNNING --> TIMEOUT: 超时检测
+    COMPLETED --> [*]: 可删除
+    FAILED --> [*]: 可删除
+    TIMEOUT --> [*]: 可删除
+
+    note right of PENDING: 立即持久化到 JSONL
+    note right of COMPLETED: can_be_deleted() 判断
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设计模式 -->
+    <div class="section-card" id="patterns">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-4);">4</div>
+        <div class="section-title-block">
+          <h2>设计模式</h2>
+          <div class="subtitle">核心架构模式总结</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="layer-grid">
+          <div class="layer-item" style="border-color: var(--accent-4);">
+            <h4>单例模式</h4>
+            <p>GroupChatPaths<br>GroupChatManager</p>
+          </div>
+          <div class="layer-item" style="border-color: var(--accent-1);">
+            <h4>继承层次</h4>
+            <p>Agent → Manager/Worker<br>AgentsHubError → 8个子类</p>
+          </div>
+          <div class="layer-item" style="border-color: var(--accent-2);">
+            <h4>依赖注入</h4>
+            <p>Agent 构造函数<br>接收所有依赖</p>
+          </div>
+          <div class="layer-item" style="border-color: var(--accent-5);">
+            <h4>Repository</h4>
+            <p>GroupChatRepository<br>封装文件 I/O</p>
+          </div>
+        </div>
+
+        <div class="diagram-section">
+          <div class="mermaid">
+graph LR
+    subgraph 单例
+        Paths[GroupChatPaths<br>__new__ 实现]
+        GCM[GroupChatManager<br>模块级实例]
+    end
+
+    subgraph 继承
+        Agent[Agent 基类]
+        Manager[Manager]
+        Worker[Worker]
+        Agent --> Manager
+        Agent --> Worker
+    end
+
+    subgraph 依赖注入
+        GC[GroupChat] -->|创建| GCC[GroupChatContext]
+        GC -->|创建| MR[MessageRouter]
+        GC -->|创建| ACM[AgentCallManager]
+        GC -->|注入| Agent2[Agent]
+    end
+
+    subgraph Repository
+        GCR[GroupChatRepository]
+        JSONL[JSONL 文件]
+        Locks[asyncio.Lock x4]
+        GCR --> JSONL
+        GCR --> Locks
+    end
+
+    style 单例 fill:#7b2d8b22,stroke:#7b2d8b
+    style 继承 fill:#c04a1a22,stroke:#c04a1a
+    style 依赖注入 fill:#2d6a4f22,stroke:#2d6a4f
+    style Repository fill:#1d355722,stroke:#1d3557
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      sequence: {
+        useMaxWidth: true,
+        wrap: true
+      },
+      classDiagram: {
+        useMaxWidth: true
+      }
+    });
+  </script>
+</body>
+</html>

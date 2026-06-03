@@ -12,12 +12,21 @@
 - 继承自 Agent，角色类型为 LEADER
 - 职责：协调 Worker，任务分配和调度
 - **不变量**：一个 GroupChat / Team 有且仅有一个 Leader（即一个 Manager）
+- **默认加载**：每个 GroupChat 在 `_init_agents()` 时始终初始化 Manager，与 `team_members_name` 无关
 - 状态：设计中，尚未完全实现
 
 ### Worker（工作者）
 - 继承自 Agent，角色类型为 TEAM_MEMBER
 - 职责：执行具体任务
 - 状态：设计中，尚未完全实现
+
+### Team（团队）
+- 团队定义，包含 `team_members_name` 列表
+- **`team_members_name` 语义**：包含 manager + worker 的完整成员列表
+- **初始化分离**：虽然 `team_members_name` 包含所有成员，但在 `GroupChat._init_agents()` 中，manager 和 worker 是分开初始化的
+  - Manager：始终由系统默认加载（使用 `config.default_manager_name`），不依赖 `team_members_name` 中是否包含
+  - Worker：遍历 `team_members_name`，跳过与 `default_manager_name` 同名的成员后，逐一创建
+- **不变量**：每个 GroupChat 有且仅有一个 Manager，由系统自动注入，不需要显式列入 `team_members_name` 也不会导致异常
 
 ### GroupChatContext（群聊上下文）
 - 群聊业务逻辑的核心管理器
@@ -88,7 +97,7 @@
    - 不携带 token，身份由前端登录态保证
    - 仅服务 user，不服务 LLM
 
-**`"user"` 是保留发送者标识**：不在 `MessageRouter` 注册队列，不接收回执。Agent 处理 send_from=user 的消息时：
+**`"user"` 是保留发送者标识**（值来自 `config.default_user_name`）：在 `MessageRouter` 注册空队列，不接收回执。Agent 处理 send_from=user 的消息时：
 - 出口 A（写群聊）：照常执行，user 通过前端 WebSocket 看到 Agent 回复
 - 出口 B（自动回执）：跳过（user 没有队列）
 

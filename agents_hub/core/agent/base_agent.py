@@ -12,6 +12,7 @@ Agent 基类
 import asyncio
 
 from agents_hub.agent_bridge import agent_platform_client
+from agents_hub.config import config
 from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import AgentContext, GroupChatContext
 from agents_hub.core.foundation import (
@@ -281,7 +282,7 @@ class Agent:
 
             # 6. 出口 B：如果是 TASK 且发起者不是 user，投递回复
 
-            if msg.message_type == MessageType.TASK and msg.send_from != "user":
+            if msg.message_type == MessageType.TASK and msg.send_from != config.default_user_name:
                 # TODO ： 考虑这里是否真的需要发送全部信息？因为之前的对话记录中已经包含了result.text
                 send_message_content = result.text
                 # 暂时先不返回完整的内容，因为群聊中会有记录
