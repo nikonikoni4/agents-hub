@@ -10,6 +10,7 @@ from agents_hub.teams.exceptions import (
     TeamAlreadyExistsError,
     InvalidTeamMembersError,
     EmptyTeamMembersError,
+    TeamNotFoundError,
 )
 
 
@@ -98,3 +99,53 @@ def test_create_team_already_exists(team_manager, monkeypatch):
 
     with pytest.raises(TeamAlreadyExistsError):
         team_manager.create_team("test-team", ["bob"])
+
+
+def test_get_team_success(team_manager, monkeypatch):
+    """测试获取团队成功"""
+    def mock_list_role_names(self):
+        return ["alice", "bob"]
+
+    monkeypatch.setattr(
+        "agents_hub.teams.team_manager.RoleManager.list_role_names",
+        mock_list_role_names
+    )
+
+    team_manager.create_team("test-team", ["alice", "bob"])
+
+    team = team_manager.get_team("test-team")
+    assert team.name == "test-team"
+    assert team.members == ["alice", "bob"]
+
+
+def test_get_team_not_found(team_manager):
+    """测试获取不存在的团队"""
+    with pytest.raises(TeamNotFoundError) as exc_info:
+        team_manager.get_team("nonexistent")
+
+    assert exc_info.value.details["team_name"] == "nonexistent"
+
+
+def test_list_teams(team_manager, monkeypatch):
+    """测试列出所有团队"""
+    def mock_list_role_names(self):
+        return ["alice", "bob", "charlie"]
+
+    monkeypatch.setattr(
+        "agents_hub.teams.team_manager.RoleManager.list_role_names",
+        mock_list_role_names
+    )
+
+    team_manager.create_team("team1", ["alice"])
+    team_manager.create_team("team2", ["bob", "charlie"])
+
+    teams = team_manager.list_teams()
+    assert len(teams) == 2
+    assert teams[0].name == "team1"
+    assert teams[1].name == "team2"
+
+
+def test_list_teams_empty(team_manager):
+    """测试列出空团队列表"""
+    teams = team_manager.list_teams()
+    assert teams == []

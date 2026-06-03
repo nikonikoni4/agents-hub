@@ -9,6 +9,7 @@ from agents_hub.teams.exceptions import (
     EmptyTeamMembersError,
     InvalidTeamMembersError,
     TeamAlreadyExistsError,
+    TeamNotFoundError,
 )
 from agents_hub.teams.models import TeamInfo
 
@@ -64,6 +65,40 @@ class TeamManager:
             self._save_teams(teams)
 
             return TeamInfo(name=name, members=members)
+
+    def get_team(self, name: str) -> TeamInfo:
+        """获取团队
+
+        Args:
+            name: 团队名称
+
+        Returns:
+            团队信息
+
+        Raises:
+            TeamNotFoundError: 团队不存在
+        """
+        with self._lock:
+            self._ensure_teams_file()
+            teams = self._load_teams()
+
+            for team in teams:
+                if team["name"] == name:
+                    return TeamInfo(**team)
+
+            available_teams = [t["name"] for t in teams]
+            raise TeamNotFoundError(name, available_teams)
+
+    def list_teams(self) -> list[TeamInfo]:
+        """列出所有团队
+
+        Returns:
+            团队列表
+        """
+        with self._lock:
+            self._ensure_teams_file()
+            teams = self._load_teams()
+            return [TeamInfo(**t) for t in teams]
 
     def _validate_members(self, members: list[str]) -> None:
         """验证成员列表
