@@ -24,6 +24,8 @@ class SystemConfig:
     _default_config: dict = {
         "data_path": None,  # None 表示使用环境默认路径
         "mcp_port": 8765,  # MCP 服务器运行端口
+        "default_manager_name": "manager",  # 默认 manager 角色名
+        "default_user_name": "user",  # 默认用户身份名
     }
 
     def __new__(cls):
@@ -113,6 +115,16 @@ class SystemConfig:
         self._save_config()
 
     @property
+    def default_manager_name(self) -> str:
+        """默认 manager 角色名"""
+        return self._config_data["default_manager_name"]
+
+    @property
+    def default_user_name(self) -> str:
+        """默认用户身份名"""
+        return self._config_data["default_user_name"]
+
+    @property
     def is_dev(self) -> bool:
         """是否为开发环境"""
         return self._is_dev
@@ -170,6 +182,16 @@ class Config:
     def is_dev(self) -> bool:
         """快捷访问：是否开发环境"""
         return self.system.is_dev
+
+    @property
+    def default_manager_name(self) -> str:
+        """快捷访问：默认 Leader 角色名"""
+        return self.system.default_manager_name
+
+    @property
+    def default_user_name(self) -> str:
+        """快捷访问：默认用户身份名"""
+        return self.system.default_user_name
 
 
 # ============ 全局单例 ============

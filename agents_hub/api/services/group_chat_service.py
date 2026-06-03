@@ -20,8 +20,15 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatSummary,
     MessageInfo,
 )
+from agents_hub.config import config
 from agents_hub.core.context.group_metadata import GroupMetadata
-from agents_hub.core.foundation import GroupChatNotFoundError, GroupChatType, group_chat_paths
+from agents_hub.core.foundation import (
+    AgentMessage,
+    GroupChatNotFoundError,
+    GroupChatType,
+    MessageType,
+    group_chat_paths,
+)
 from agents_hub.core.orchestration import GroupChat, GroupChatManager, Team
 from agents_hub.exceptions import (
     ExternalServiceError,
@@ -406,8 +413,16 @@ class GroupChatService:
 
         Raises:
             ResourceNotFoundError: 群聊不存在
+            ValidationError: send_to 不是群成员，或 content 中包含 @
         """
-        # 确保 agent 已激活（懒加载：首次发消息时才启动 agent.run()）
+        # 1. content 中不能有 @
+        if "@" in content:
+            raise ValidationError(
+                "消息内容中不能包含 @ 符号",
+                details={"content": content},
+            )
+
+        # 2. 激活群聊（懒加载）
         try:
             await self.group_chat_manager.activate_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
@@ -416,8 +431,34 @@ class GroupChatService:
                 details={"group_chat_id": group_chat_id},
             ) from e
 
-        # TODO: 消息发送实现待定（需确定 user 消息注入方案）
-        pass
+        # 3. 获取 GroupChat 实例并校验 send_to 是群聊成员
+        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        members = list(group_chat.team_members_name)
+        if group_chat.manager:
+            members.append(group_chat.manager.name)
+        if send_to not in members:
+            raise ValidationError(
+                f"目标角色 '{send_to}' 不是群聊成员",
+                details={"send_to": send_to, "available_members": members},
+            )
+
+        # 4. 创建 AgentCall
+        call = group_chat.agent_call_manager.create_call(
+            send_from=config.default_user_name,
+            send_to=send_to,
+            content=content,
+            message_type=MessageType.TASK,
+        )
+
+        # 5. 构建并发送 AgentMessage
+        message = AgentMessage(
+            call_id=call.call_id,
+            content=content,
+            send_from=config.default_user_name,
+            send_to=send_to,
+            message_type=MessageType.TASK,
+        )
+        group_chat.message_router.send_message(message)
 
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""

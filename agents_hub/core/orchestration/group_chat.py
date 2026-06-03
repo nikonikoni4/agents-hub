@@ -10,6 +10,7 @@ GroupChat 群聊管理
 import asyncio
 from uuid import uuid4
 
+from agents_hub.config import config
 from agents_hub.config.types import RoleType
 from agents_hub.core.agent import Agent, Manager, Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
@@ -154,7 +155,7 @@ class GroupChat:
         role_manager = RoleManager()
 
         # 初始化 manager
-        manager_role = role_manager.get_role("Leader")
+        manager_role = role_manager.get_role(config.default_manager_name)
         self.manager = Manager(
             manager_role,
             self.group_chat_context,
@@ -169,6 +170,8 @@ class GroupChat:
             return
 
         for role_name in self.team_members_name:
+            if role_name == config.default_manager_name:
+                continue
             role = role_manager.get_role(role_name)
             self.workers[role_name] = Worker(
                 role,
@@ -182,6 +185,8 @@ class GroupChat:
         self.message_router.register(self.manager.name, self.manager.message_queue)
         for worker in self.workers.values():
             self.message_router.register(worker.name, worker.message_queue)
+        # 注册 user 伪 agent，支持用户通过 API 发送消息
+        self.message_router.register(config.default_user_name, asyncio.Queue())
 
     async def _initialize_new_members(self):
         """

@@ -35,7 +35,7 @@
  - 内容摘要：core/context 层规格，定义会话状态模型、Agent session 管理（含 token 字段）、上下文压缩策略、增量加载机制和持久化契约（路径管理改用 group_chat_paths）
 
 ## core-agent-orchestration
- - updated_at : 2026-06-01
+ - updated_at : 2026-06-03
  - path: `docs/specs/2026-05-31-core-agent-orchestration.md`
  - 触发规则：当设计、修改或扩展 Agent 执行模型、团队管理、群聊编排、token 生命周期或 MCP 工具入口时阅读
- - 内容摘要：core/agent 和 core/orchestration 层规格，定义 Agent 消息循环、Manager/Worker 角色、Team 验证、GroupChat 生命周期（含 token 管理）、GroupChatManager token 索引和 MCP 工具入口
+ - 内容摘要：core/agent 和 core/orchestration 层规格，定义 Agent 消息循环、Manager/Worker 角色、Team 验证（含 team_members 语义和初始化分离）、GroupChat 生命周期（含 token 管理和 user 伪 Agent 注册）、GroupChatManager token 索引和 MCP 工具入口
