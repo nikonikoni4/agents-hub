@@ -43,8 +43,9 @@ class GroupChatManager:
         self._group_chats[group_chat_id] = group_chat
 
     def is_active_group(self, group_chat_id: str) -> bool:
-        """检查群聊是否在内存中活跃"""
-        return group_chat_id in self._group_chats
+        """检查群聊的 agent 是否已激活（run() 任务是否在运行）"""
+        group_chat = self._group_chats.get(group_chat_id)
+        return group_chat is not None and group_chat._activated
 
     async def load_group_chat(self, group_chat_id: str) -> GroupChat:
         """获取 GroupChat，优先从内存加载，不存在时从磁盘加载
@@ -68,6 +69,21 @@ class GroupChatManager:
             return await self.load_group_chat_from_disk(group_chat_id)
         except FileNotFoundError as e:
             raise GroupChatNotFoundError(group_chat_id) from e
+
+    async def activate_group_chat(self, group_chat_id: str) -> None:
+        """激活群聊：启动 agent.run() 任务
+
+        先从内存或磁盘加载 GroupChat，再调用 activate()。
+        已激活时重复调用无副作用。
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Raises:
+            GroupChatNotFoundError: 群聊不存在
+        """
+        group_chat = await self.load_group_chat(group_chat_id)
+        await group_chat.activate()
 
     async def unregister(self, group_chat_id: str, timeout: float = 10.0):
         """
@@ -197,7 +213,7 @@ class GroupChatManager:
                             "project_path": metadata.project_path,
                             "created_at": metadata.created_at.isoformat(),
                             "group_type": metadata.group_type,
-                            "is_active": metadata.group_chat_id in self._group_chats,
+                            "is_active": self.is_active_group(metadata.group_chat_id),
                         }
                     )
                 except Exception:

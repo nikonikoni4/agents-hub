@@ -31,8 +31,9 @@ class GroupChat:
     3. 管理消息路由和 agent 生命周期
 
     启动方式：
-    - start(): 首次创建群聊
-    - load(): 加载已有群聊，验证 role 有效性
+    - start(): 首次创建群聊（立即激活 agent）
+    - load(): 加载已有群聊（只读，不启动 agent）
+    - activate(): 激活 agent.run() 任务（发消息前调用）
     """
 
     def __init__(
@@ -59,6 +60,9 @@ class GroupChat:
 
         # 创建 TaskManager（用于 Agent Runtime 注入）
         self.task_manager = TaskManager(self.group_chat_id, project_path)
+
+        # 懒加载标记
+        self._activated = False
 
     async def start(self):
         """
@@ -99,17 +103,16 @@ class GroupChat:
         await self._initialize_new_members()
 
         # 7. 启动所有 agent 的 run() 任务
-        if self.manager is None:
-            raise StateError("Manager 未初始化，请先调用 _init_agents()")
-        self.manager_task = asyncio.create_task(self.manager.run())
-        self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
+        self._start_agent_tasks()
+        self._activated = True
 
     async def load(self):
         """
-        加载已有的群聊
+        加载已有的群聊（只读，不启动 agent）
 
         从 agent_session_id.json 加载已有 session，恢复 manager 和 workers，
         并验证每个 role 是否存在。恢复并注册 token。对新增成员执行初始化（打招呼）。
+        不启动 agent.run() 任务，需要发消息时调用 activate()。
         """
         # 1. 加载上下文数据
         await self.group_chat_context.load()
@@ -123,7 +126,20 @@ class GroupChat:
         # 4. 初始化新成员（第一次会话的成员）
         await self._initialize_new_members()
 
-        # 5. 启动所有 agent 的 run() 任务
+    async def activate(self):
+        """
+        激活群聊：启动所有 agent 的 run() 任务
+
+        在 load() 之后调用，用于需要 agent 处理消息的场景（如发送消息）。
+        已激活时重复调用无副作用。
+        """
+        if self._activated:
+            return
+        self._start_agent_tasks()
+        self._activated = True
+
+    def _start_agent_tasks(self):
+        """启动所有 agent 的 run() 任务（内部方法）"""
         if self.manager is None:
             raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())

@@ -67,7 +67,7 @@ class GroupChatService:
                 - group_type: GroupChatType, 编排模式
                     · MANAGER_ORCHESTRATE — 管理者动态分配任务
                     · SEQUENCE_EXECUTE — 流水线顺序执行
-                - is_active: bool, 是否在内存中运行
+                - is_active: bool, agent 是否已激活（run() 任务是否在运行）
 
         Raises:
             ValidationError: team_members 为空
@@ -212,7 +212,7 @@ class GroupChatService:
                 - group_chat_id: str, 群聊唯一标识
                 - group_chat_name: str | None, 群聊显示名称
                 - project_path: str, 关联的项目路径
-                - is_active: bool, 是否在内存中运行
+                - is_active: bool, agent 是否已激活（run() 任务是否在运行）
                 - created_at: datetime, 创建时间
         """
         # 1. 调用 GroupChatManager.list_all_group_chats()
@@ -407,6 +407,15 @@ class GroupChatService:
         Raises:
             ResourceNotFoundError: 群聊不存在
         """
+        # 确保 agent 已激活（懒加载：首次发消息时才启动 agent.run()）
+        try:
+            await self.group_chat_manager.activate_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
         # TODO: 消息发送实现待定（需确定 user 消息注入方案）
         pass
 
@@ -419,5 +428,5 @@ class GroupChatService:
             project_path=metadata.project_path,
             created_at=metadata.created_at,
             group_type=metadata.group_type,
-            is_active=True,
+            is_active=group_chat._activated,
         )
