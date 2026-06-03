@@ -1,7 +1,12 @@
 """
 GroupChatService 业务编排层
 
-协调 GroupChatManager、Team、RoleManager，提供群聊生命周期管理和查询接口
+协调 GroupChatManager、Team、RoleManager，提供群聊生命周期管理和查询接口。
+
+职责边界：
+- 本层负责 参数校验 → 组装领域对象 → 调用核心层 → 转换为 API Schema 返回
+- 不持有任何运行时状态，所有状态由 GroupChatManager（内存）和磁盘（JSON 文件）管理
+- 异常统一转换为 exceptions 模块中的 API 异常，对上层屏蔽核心层细节
 """
 
 import json
@@ -13,6 +18,7 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatInfo,
     GroupChatMember,
     GroupChatSummary,
+    MessageInfo,
 )
 from agents_hub.core.context.group_metadata import GroupMetadata
 from agents_hub.core.foundation import GroupChatNotFoundError, GroupChatType, group_chat_paths
@@ -28,7 +34,8 @@ from agents_hub.exceptions import (
 class GroupChatService:
     """群聊应用服务层
 
-    轻量业务编排层，不持有状态，所有状态在 GroupChatManager 中
+    轻量业务编排层，不持有状态，所有状态在 GroupChatManager 中。
+    生命周期：create → (内存+磁盘) → get/list/load → (内存) → delete → (可选保留磁盘)
     """
 
     def __init__(self, group_chat_manager: GroupChatManager):
@@ -52,7 +59,15 @@ class GroupChatService:
             group_chat_name: 群聊名称（可选，默认使用 group_chat_id）
 
         Returns:
-            GroupChatInfo: 群聊详细信息
+            GroupChatInfo（群聊完整信息）:
+                - group_chat_id: str, 群聊唯一标识（UUID）
+                - group_chat_name: str | None, 群聊显示名称
+                - project_path: str, 关联的项目路径
+                - created_at: datetime, 创建时间
+                - group_type: GroupChatType, 编排模式
+                    · MANAGER_ORCHESTRATE — 管理者动态分配任务
+                    · SEQUENCE_EXECUTE — 流水线顺序执行
+                - is_active: bool, 是否在内存中运行
 
         Raises:
             ValidationError: team_members 为空
@@ -112,7 +127,8 @@ class GroupChatService:
             group_chat_id: 群聊 ID
 
         Returns:
-            GroupChatInfo: 群聊详细信息
+            GroupChatInfo: 字段同 create_group_chat（group_chat_id, group_chat_name,
+                project_path, created_at, group_type, is_active）
 
         Raises:
             ResourceNotFoundError: 群聊不存在或 role 已被删除
@@ -192,7 +208,12 @@ class GroupChatService:
             is_active_only: True=只返回活跃群聊，False=返回所有群聊
 
         Returns:
-            list[GroupChatSummary]: 群聊摘要列表
+            list[GroupChatSummary]（群聊摘要，用于列表页）:
+                - group_chat_id: str, 群聊唯一标识
+                - group_chat_name: str | None, 群聊显示名称
+                - project_path: str, 关联的项目路径
+                - is_active: bool, 是否在内存中运行
+                - created_at: datetime, 创建时间
         """
         # 1. 调用 GroupChatManager.list_all_group_chats()
         all_metadata = self.group_chat_manager.list_all_group_chats()
@@ -229,7 +250,8 @@ class GroupChatService:
             group_chat_id: 群聊 ID
 
         Returns:
-            GroupChatInfo: 群聊详细信息
+            GroupChatInfo: 字段同 create_group_chat（group_chat_id, group_chat_name,
+                project_path, created_at, group_type, is_active）
 
         Raises:
             ResourceNotFoundError: 群聊不存在
@@ -260,7 +282,12 @@ class GroupChatService:
             group_chat_id: 群聊 ID
 
         Returns:
-            list[GroupChatMember]: 成员列表
+            list[GroupChatMember]（群聊成员，从 agent_session_state.json 读取）:
+                - name: str, 角色名称（如 "pm", "architect"）
+                - main_session: str | None, 主会话 ID
+                - btw_session: list[str], 额外的临时会话 ID 列表
+                - cwd: str | None, 该成员的工作目录
+                - use_docker: bool, 是否使用 Docker 隔离运行（默认 False）
 
         Raises:
             ResourceNotFoundError: 群聊不存在或 session_state 文件不存在
@@ -317,6 +344,71 @@ class GroupChatService:
             members.append(member)
 
         return members
+
+    async def get_messages(
+        self,
+        group_chat_id: str,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[MessageInfo]:
+        """获取群聊消息历史
+
+        Args:
+            group_chat_id: 群聊 ID
+            limit: 返回消息数量上限（默认 50）
+            offset: 跳过前 N 条消息（默认 0）
+
+        Returns:
+            list[MessageInfo]（消息列表）:
+                - speaker: str, 发送者名称（agent 角色名或 "user"）
+                - content: str, 消息内容
+                - timestamp: str, 时间戳
+                - platform: str, 来源平台
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        session = group_chat.group_chat_context.group_chat_session
+        if session is None:
+            return []
+        raw_messages = session.messages[offset : offset + limit]
+
+        return [
+            MessageInfo(
+                speaker=msg["agent_name"],
+                content=msg["content"],
+                timestamp=msg["timestamp"],
+                platform=msg["platform"],
+            )
+            for msg in raw_messages
+        ]
+
+    async def send_message(
+        self,
+        group_chat_id: str,
+        content: str,
+        send_to: str,
+    ) -> None:
+        """向群聊发送消息
+
+        Args:
+            group_chat_id: 群聊 ID
+            content: 消息内容
+            send_to: 目标角色名
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        # TODO: 消息发送实现待定（需确定 user 消息注入方案）
+        pass
 
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""

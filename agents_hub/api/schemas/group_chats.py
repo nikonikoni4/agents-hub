@@ -48,3 +48,19 @@ class GroupChatMember(BaseModel):
     btw_session: list[str]
     cwd: str | None
     use_docker: bool = False
+
+
+class MessageCreate(BaseModel):
+    """发送消息请求"""
+
+    content: str = Field(..., min_length=1, description="消息内容")
+    send_to: str = Field(..., description="目标角色名（如 'manager' 或具体 worker）")
+
+
+class MessageInfo(BaseModel):
+    """消息信息"""
+
+    speaker: str = Field(..., description="发送者名称（agent 角色名或 'user'）")
+    content: str = Field(..., description="消息内容")
+    timestamp: str = Field(..., description="时间戳")
+    platform: str = Field(..., description="来源平台")
