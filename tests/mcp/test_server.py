@@ -12,7 +12,7 @@ MCP Server 和 4 个工具测试
 - 错误场景（INVALID_TOKEN, PERMISSION_DENIED, ...）
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -35,6 +35,7 @@ from agents_hub.mcp import (
 def mock_group_chat_manager():
     """Mock GroupChatManager"""
     with patch("agents_hub.mcp.server.group_chat_manager") as mock:
+        mock.load_group_chat = AsyncMock()
         yield mock
 
 
@@ -57,13 +58,14 @@ def mock_group_chat():
 class TestCallAgent:
     """测试 call_agent 工具"""
 
-    def test_call_agent_success(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_call_agent_success(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：正常调用返回 {"call_id": "..."}
 
         验证方式：
         1. Mock resolve_token 返回有效身份
-        2. Mock get_group_chat 返回 GroupChat
+        2. Mock load_group_chat 返回 GroupChat
         3. Mock create_call 返回 call_id
         4. 调用 call_agent()
         5. 验证返回 {"call_id": "call_456"}
@@ -79,13 +81,13 @@ class TestCallAgent:
         content = "请帮我完成任务 A"
 
         mock_group_chat_manager.resolve_token.return_value = (agent_name, group_chat_id)
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_call = MagicMock()
         mock_call.call_id = "call_456"
         mock_group_chat.agent_call_manager.create_call.return_value = mock_call
 
-        result = call_agent(
+        result = await call_agent(
             agent_token=token,
             send_to=send_to,
             content=content,
@@ -95,11 +97,12 @@ class TestCallAgent:
 
         assert result == {"call_id": "call_456"}
         mock_group_chat_manager.resolve_token.assert_called_once_with(token)
-        mock_group_chat_manager.get_group_chat.assert_called_once_with(group_chat_id)
+        mock_group_chat_manager.load_group_chat.assert_called_once_with(group_chat_id)
         mock_group_chat.agent_call_manager.create_call.assert_called_once()
         mock_group_chat.message_router.send_message.assert_called_once()
 
-    def test_call_agent_invalid_token(self, mock_group_chat_manager):
+    @pytest.mark.asyncio
+    async def test_call_agent_invalid_token(self, mock_group_chat_manager):
         """
         契约：无效 token 返回 INVALID_TOKEN 错误
 
@@ -114,7 +117,7 @@ class TestCallAgent:
 
         mock_group_chat_manager.resolve_token.return_value = None
 
-        result = call_agent(
+        result = await call_agent(
             agent_token="invalid_token",
             send_to="worker2",
             content="test",
@@ -124,13 +127,14 @@ class TestCallAgent:
         assert "error" in result
         assert result["error"]["code"] == INVALID_TOKEN
 
-    def test_call_agent_group_chat_not_found(self, mock_group_chat_manager):
+    @pytest.mark.asyncio
+    async def test_call_agent_group_chat_not_found(self, mock_group_chat_manager):
         """
         契约：群聊不存在返回 GROUP_CHAT_NOT_FOUND 错误
 
         验证方式：
         1. Mock resolve_token 返回有效身份
-        2. Mock get_group_chat 抛出 GroupChatNotFoundError
+        2. Mock load_group_chat 抛出 GroupChatNotFoundError
         3. 调用 call_agent()
         4. 验证返回 {"error": {"code": "GROUP_CHAT_NOT_FOUND", ...}}
 
@@ -140,9 +144,9 @@ class TestCallAgent:
         from agents_hub.mcp.server import call_agent
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
-        mock_group_chat_manager.get_group_chat.side_effect = GroupChatNotFoundError("group_123")
+        mock_group_chat_manager.load_group_chat.side_effect = GroupChatNotFoundError("group_123")
 
-        result = call_agent(
+        result = await call_agent(
             agent_token="test_token",
             send_to="worker2",
             content="test",
@@ -152,7 +156,8 @@ class TestCallAgent:
         assert "error" in result
         assert result["error"]["code"] == GROUP_CHAT_NOT_FOUND
 
-    def test_call_agent_agent_not_found(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_call_agent_agent_not_found(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：Agent 不存在返回 AGENT_NOT_FOUND 错误
 
@@ -168,10 +173,10 @@ class TestCallAgent:
         from agents_hub.mcp.server import call_agent
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
         mock_group_chat.message_router.send_message.side_effect = AgentNotFoundError("worker2")
 
-        result = call_agent(
+        result = await call_agent(
             agent_token="test_token",
             send_to="worker2",
             content="test",
@@ -181,7 +186,8 @@ class TestCallAgent:
         assert "error" in result
         assert result["error"]["code"] == AGENT_NOT_FOUND
 
-    def test_call_agent_notification_type(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_call_agent_notification_type(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：need_response=False 时使用 NOTIFICATION 类型
 
@@ -195,13 +201,13 @@ class TestCallAgent:
         from agents_hub.mcp.server import call_agent
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_call = MagicMock()
         mock_call.call_id = "call_789"
         mock_group_chat.agent_call_manager.create_call.return_value = mock_call
 
-        result = call_agent(
+        result = await call_agent(
             agent_token="test_token",
             send_to="worker2",
             content="test",
@@ -221,7 +227,8 @@ class TestCallAgent:
 class TestAssignTasksToTeam:
     """测试 assign_tasks_to_team 工具"""
 
-    def test_assign_tasks_success(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_assign_tasks_success(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：Leader 调用返回 {created, updated, unchanged}
 
@@ -245,7 +252,7 @@ class TestAssignTasksToTeam:
         ]
 
         mock_group_chat_manager.resolve_token.return_value = (agent_name, group_chat_id)
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_manager = MagicMock()
         mock_manager.name = agent_name
@@ -257,7 +264,7 @@ class TestAssignTasksToTeam:
             "unchanged": 0,
         }
 
-        result = assign_tasks_to_team(agent_token=token, tasks=tasks)
+        result = await assign_tasks_to_team(agent_token=token, tasks=tasks)
 
         assert result == {"created": 2, "updated": 0, "unchanged": 0}
         mock_group_chat.task_manager.assign_tasks.assert_called_once_with(
@@ -266,48 +273,35 @@ class TestAssignTasksToTeam:
             created_by=agent_name,
         )
 
-    def test_assign_tasks_invalid_token(self, mock_group_chat_manager):
+    @pytest.mark.asyncio
+    async def test_assign_tasks_invalid_token(self, mock_group_chat_manager):
         """
         契约：无效 token 返回 INVALID_TOKEN 错误
-
-        验证方式：
-        1. Mock resolve_token 返回 None
-        2. 调用 assign_tasks_to_team()
-        3. 验证返回 INVALID_TOKEN 错误
-
-        如果失败，说明：token 校验逻辑错误
         """
         from agents_hub.mcp.server import assign_tasks_to_team
 
         mock_group_chat_manager.resolve_token.return_value = None
 
-        result = assign_tasks_to_team(agent_token="invalid_token", tasks=[])
+        result = await assign_tasks_to_team(agent_token="invalid_token", tasks=[])
 
         assert "error" in result
         assert result["error"]["code"] == INVALID_TOKEN
 
-    def test_assign_tasks_permission_denied(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_assign_tasks_permission_denied(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：非 Leader 调用返回 PERMISSION_DENIED 错误
-
-        验证方式：
-        1. Mock resolve_token 返回非 Leader 身份
-        2. Mock manager.name 不匹配 agent_name
-        3. 调用 assign_tasks_to_team()
-        4. 验证返回 PERMISSION_DENIED 错误
-
-        如果失败，说明：权限校验逻辑错误
         """
         from agents_hub.mcp.server import assign_tasks_to_team
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_manager = MagicMock()
         mock_manager.name = "leader"
         mock_group_chat.manager = mock_manager
 
-        result = assign_tasks_to_team(agent_token="worker_token", tasks=[])
+        result = await assign_tasks_to_team(agent_token="worker_token", tasks=[])
 
         assert "error" in result
         assert result["error"]["code"] == PERMISSION_DENIED
@@ -321,18 +315,10 @@ class TestAssignTasksToTeam:
 class TestArchiveTaskList:
     """测试 archive_task_list 工具"""
 
-    def test_archive_task_list_success(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_archive_task_list_success(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：Leader 调用返回归档结果
-
-        验证方式：
-        1. Mock resolve_token 返回 Leader 身份
-        2. Mock manager.name 匹配 agent_name
-        3. Mock archive_task_list 返回归档结果
-        4. 调用 archive_task_list()
-        5. 验证返回正确的归档结果
-
-        如果失败，说明：Leader 权限校验或归档逻辑错误
         """
         from agents_hub.mcp.server import archive_task_list
 
@@ -341,7 +327,7 @@ class TestArchiveTaskList:
         group_chat_id = "group_123"
 
         mock_group_chat_manager.resolve_token.return_value = (agent_name, group_chat_id)
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_manager = MagicMock()
         mock_manager.name = agent_name
@@ -352,55 +338,42 @@ class TestArchiveTaskList:
             "archived_tasks_count": 5,
         }
 
-        result = archive_task_list(agent_token=token)
+        result = await archive_task_list(agent_token=token)
 
         assert result == {"archived_list_id": "list_123", "archived_tasks_count": 5}
         mock_group_chat.task_manager.archive_task_list.assert_called_once_with(
             group_chat_id=group_chat_id,
         )
 
-    def test_archive_task_list_invalid_token(self, mock_group_chat_manager):
+    @pytest.mark.asyncio
+    async def test_archive_task_list_invalid_token(self, mock_group_chat_manager):
         """
         契约：无效 token 返回 INVALID_TOKEN 错误
-
-        验证方式：
-        1. Mock resolve_token 返回 None
-        2. 调用 archive_task_list()
-        3. 验证返回 INVALID_TOKEN 错误
-
-        如果失败，说明：token 校验逻辑错误
         """
         from agents_hub.mcp.server import archive_task_list
 
         mock_group_chat_manager.resolve_token.return_value = None
 
-        result = archive_task_list(agent_token="invalid_token")
+        result = await archive_task_list(agent_token="invalid_token")
 
         assert "error" in result
         assert result["error"]["code"] == INVALID_TOKEN
 
-    def test_archive_task_list_permission_denied(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_archive_task_list_permission_denied(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：非 Leader 调用返回 PERMISSION_DENIED 错误
-
-        验证方式：
-        1. Mock resolve_token 返回非 Leader 身份
-        2. Mock manager.name 不匹配 agent_name
-        3. 调用 archive_task_list()
-        4. 验证返回 PERMISSION_DENIED 错误
-
-        如果失败，说明：权限校验逻辑错误
         """
         from agents_hub.mcp.server import archive_task_list
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_manager = MagicMock()
         mock_manager.name = "leader"
         mock_group_chat.manager = mock_manager
 
-        result = archive_task_list(agent_token="worker_token")
+        result = await archive_task_list(agent_token="worker_token")
 
         assert "error" in result
         assert result["error"]["code"] == PERMISSION_DENIED
@@ -414,17 +387,10 @@ class TestArchiveTaskList:
 class TestCheckAgentCall:
     """测试 check_agent_call 工具"""
 
-    def test_check_agent_call_success(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_check_agent_call_success(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：正常查询返回 call 状态信息
-
-        验证方式：
-        1. Mock resolve_token 返回有效身份
-        2. Mock get_call 返回 Call 对象
-        3. 调用 check_agent_call()
-        4. 验证返回完整的状态信息
-
-        如果失败，说明：查询逻辑错误
         """
         from agents_hub.mcp.server import check_agent_call
 
@@ -434,7 +400,7 @@ class TestCheckAgentCall:
         call_id = "call_456"
 
         mock_group_chat_manager.resolve_token.return_value = (agent_name, group_chat_id)
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_call = MagicMock()
         mock_call.call_id = call_id
@@ -448,7 +414,7 @@ class TestCheckAgentCall:
         mock_call.error = None
         mock_group_chat.agent_call_manager.get_call.return_value = mock_call
 
-        result = check_agent_call(agent_token=token, call_id=call_id)
+        result = await check_agent_call(agent_token=token, call_id=call_id)
 
         assert result["call_id"] == call_id
         assert result["status"] == CallStatus.COMPLETED.value
@@ -456,45 +422,32 @@ class TestCheckAgentCall:
         assert result["send_to"] == "worker2"
         mock_group_chat.agent_call_manager.get_call.assert_called_once_with(call_id)
 
-    def test_check_agent_call_invalid_token(self, mock_group_chat_manager):
+    @pytest.mark.asyncio
+    async def test_check_agent_call_invalid_token(self, mock_group_chat_manager):
         """
         契约：无效 token 返回 INVALID_TOKEN 错误
-
-        验证方式：
-        1. Mock resolve_token 返回 None
-        2. 调用 check_agent_call()
-        3. 验证返回 INVALID_TOKEN 错误
-
-        如果失败，说明：token 校验逻辑错误
         """
         from agents_hub.mcp.server import check_agent_call
 
         mock_group_chat_manager.resolve_token.return_value = None
 
-        result = check_agent_call(agent_token="invalid_token", call_id="call_456")
+        result = await check_agent_call(agent_token="invalid_token", call_id="call_456")
 
         assert "error" in result
         assert result["error"]["code"] == INVALID_TOKEN
 
-    def test_check_agent_call_not_found(self, mock_group_chat_manager, mock_group_chat):
+    @pytest.mark.asyncio
+    async def test_check_agent_call_not_found(self, mock_group_chat_manager, mock_group_chat):
         """
         契约：call 不存在返回 AGENT_CALL_NOT_FOUND 错误
-
-        验证方式：
-        1. Mock resolve_token 返回有效身份
-        2. Mock get_call 返回 None
-        3. 调用 check_agent_call()
-        4. 验证返回 AGENT_CALL_NOT_FOUND 错误
-
-        如果失败，说明：call 存在性校验逻辑错误
         """
         from agents_hub.mcp.server import check_agent_call
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
         mock_group_chat.agent_call_manager.get_call.return_value = None
 
-        result = check_agent_call(agent_token="test_token", call_id="call_456")
+        result = await check_agent_call(agent_token="test_token", call_id="call_456")
 
         assert "error" in result
         assert result["error"]["code"] == AGENT_CALL_NOT_FOUND

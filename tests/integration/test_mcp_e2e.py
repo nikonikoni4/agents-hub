@@ -123,7 +123,7 @@ class TestScenario2CallAgent:
         manager_token = group_chat.group_chat_context.agent_session_id["Leader"].token
 
         # Manager 派活给小王
-        result = call_agent(
+        result = await call_agent(
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 A",
@@ -153,7 +153,7 @@ class TestScenario2CallAgent:
         manager_token = group_chat.group_chat_context.agent_session_id["Leader"].token
 
         # Manager 派活给小王
-        result = call_agent(
+        result = await call_agent(
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 B",
@@ -190,7 +190,7 @@ class TestScenario3WorkerResponse:
         manager_token = group_chat.group_chat_context.agent_session_id["Leader"].token
 
         # Manager 派活给小王
-        result = call_agent(
+        result = await call_agent(
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 C",
@@ -241,7 +241,7 @@ class TestScenario4CheckAgentCall:
         manager_token = group_chat.group_chat_context.agent_session_id["Leader"].token
 
         # Manager 派活给小王
-        call_result = call_agent(
+        call_result = await call_agent(
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 D",
@@ -251,7 +251,7 @@ class TestScenario4CheckAgentCall:
         call_id = call_result["call_id"]
 
         # Manager 查询状态
-        status_result = check_agent_call(
+        status_result = await check_agent_call(
             agent_token=manager_token,
             call_id=call_id,
         )
@@ -272,7 +272,7 @@ class TestScenario4CheckAgentCall:
         manager_token = group_chat.group_chat_context.agent_session_id["Leader"].token
 
         # 查询不存在的 call_id
-        result = check_agent_call(
+        result = await check_agent_call(
             agent_token=manager_token,
             call_id="nonexistent_call_id",
         )
@@ -302,7 +302,7 @@ class TestScenario5AssignTasks:
             {"task_id": "task_2", "owner": "小李", "content": "任务 2", "status": "pending"},
         ]
 
-        result = assign_tasks_to_team(
+        result = await assign_tasks_to_team(
             agent_token=manager_token,
             tasks=tasks,
         )
@@ -327,7 +327,7 @@ class TestScenario5AssignTasks:
             {"task_id": "task_3", "owner": "小李", "content": "任务 3", "status": "pending"},
         ]
 
-        result = assign_tasks_to_team(
+        result = await assign_tasks_to_team(
             agent_token=worker_token,
             tasks=tasks,
         )
@@ -347,7 +347,7 @@ class TestScenario5AssignTasks:
             {"task_id": "task_4", "owner": "小王", "content": "任务 4", "status": "pending"},
         ]
 
-        result1 = assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
+        result1 = await assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
         assert result1["created"] == 1, "第一次应该创建 1 个任务"
 
         # 第二次更新任务（需要等待一下，确保第一次操作完成）
@@ -357,7 +357,7 @@ class TestScenario5AssignTasks:
             {"task_id": "task_4", "owner": "小王", "content": "任务 4（已更新）", "status": "running"},
         ]
 
-        result2 = assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
+        result2 = await assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
         # 注意：第二次调用时，由于已经有 ACTIVE 列表，会调用 _update_existing_task_list
         # 但如果 TaskManager 在第一次调用后创建了新列表，第二次可能会创建新的 ACTIVE 列表
         # 让我们检查实际返回的内容
@@ -392,11 +392,11 @@ class TestScenario6ArchiveTaskList:
             {"task_id": "task_6", "owner": "小李", "content": "任务 6", "status": "pending"},
         ]
 
-        assign_result = assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
+        assign_result = await assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
         assert assign_result["created"] == 2, "应该创建 2 个任务"
 
         # Manager 归档任务列表
-        result = archive_task_list(agent_token=manager_token)
+        result = await archive_task_list(agent_token=manager_token)
 
         # 验证返回归档信息
         assert "error" not in result, "不应该有错误"
@@ -411,7 +411,7 @@ class TestScenario6ArchiveTaskList:
         worker_token = group_chat.group_chat_context.agent_session_id["小王"].token
 
         # Worker 尝试归档任务
-        result = archive_task_list(agent_token=worker_token)
+        result = await archive_task_list(agent_token=worker_token)
 
         # 验证返回权限错误
         assert "error" in result, "应该返回错误"
@@ -433,7 +433,7 @@ class TestCompleteWorkflow:
         manager_token = group_chat.group_chat_context.agent_session_id["Leader"].token
 
         # 1. Manager 派活给小王
-        call_result = call_agent(
+        call_result = await call_agent(
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 E",
@@ -443,7 +443,7 @@ class TestCompleteWorkflow:
         call_id = call_result["call_id"]
 
         # 2. Manager 查询状态
-        status_result = check_agent_call(agent_token=manager_token, call_id=call_id)
+        status_result = await check_agent_call(agent_token=manager_token, call_id=call_id)
         assert status_result["status"] == CallStatus.PENDING.value, "初始状态应该是 PENDING"
 
         # 3. Manager 分配任务
@@ -451,7 +451,7 @@ class TestCompleteWorkflow:
             {"task_id": "task_7", "owner": "小王", "content": "任务 7", "status": "pending"},
             {"task_id": "task_8", "owner": "小李", "content": "任务 8", "status": "pending"},
         ]
-        assign_result = assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
+        assign_result = await assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
         assert assign_result["created"] == 2, "应该创建 2 个任务"
 
         # 4. Manager 更新任务状态
@@ -459,12 +459,12 @@ class TestCompleteWorkflow:
             {"task_id": "task_7", "owner": "小王", "content": "任务 7", "status": "completed"},
             {"task_id": "task_8", "owner": "小李", "content": "任务 8", "status": "running"},
         ]
-        update_result = assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
+        update_result = await assign_tasks_to_team(agent_token=manager_token, tasks=tasks)
         # 验证更新结果（可能是 updated 或 created，取决于实现）
         assert "updated" in update_result or "created" in update_result, "应该有更新或创建字段"
 
         # 5. Manager 归档任务列表
-        archive_result = archive_task_list(agent_token=manager_token)
+        archive_result = await archive_task_list(agent_token=manager_token)
         assert archive_result["archived_count"] == 2, "应该归档 2 个任务"
 
         # 6. 验证完整流程成功

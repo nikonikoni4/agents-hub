@@ -143,7 +143,7 @@ def test_init_agents_hub_mcp_claude_sets_config_root(role_manager, agents_dir):
         "http",
         "agents-hub",
         "--",
-        "http://localhost:8001/mcp",
+        "http://localhost:8765/mcp",
     ]
     assert kwargs["check"] is True
     assert kwargs["env"]["CLAUDE_CONFIG_DIR"] == str(work_root)
@@ -165,7 +165,7 @@ def test_init_agents_hub_mcp_codex_sets_config_root(role_manager, agents_dir):
         "add",
         "agents-hub",
         "--url",
-        "http://localhost:8001/mcp",
+        "http://localhost:8765/mcp",
     ]
     assert kwargs["check"] is True
     assert kwargs["env"]["CODEX_HOME"] == str(work_root)

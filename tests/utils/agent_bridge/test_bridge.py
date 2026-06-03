@@ -3,7 +3,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from agents_hub.agent_bridge.bridge import AgentBridge
-from agents_hub.agent_bridge.models import AgentPlatform, AgentEventType, StreamEvent
+from agents_hub.agent_bridge.models import AgentPlatform, AgentEventType, StreamEvent, AgentResult
+from agents_hub.config.types import RoleType
 from agents_hub.roles.models import RoleConfig
 
 
@@ -29,21 +30,24 @@ class TestAgentBridge:
         )
 
         # Mock executor - execute() is an async generator
-        async def mock_raw_stream(prompt, config, session_id):
+        async def mock_raw_stream(prompt, config, session_id, cwd=None):
             yield '{"type":"system","subtype":"init","session_id":"123"}'
 
         mock_executor = MagicMock()
         mock_executor.execute = mock_raw_stream
         self.bridge._executors[AgentPlatform.CLAUDE] = mock_executor
 
-        # Mock parser
+        # Mock parser - returns StreamEvent dataclass, not dict
         mock_parser = MagicMock()
-        mock_parser.parse_event.return_value = {
-            "type": AgentEventType.INIT,
-            "content": {},
-            "session_id": "123",
-            "timestamp": ""
-        }
+        mock_parser.parse_event.return_value = StreamEvent(
+            type=AgentEventType.INIT,
+            content={},
+            session_id="123",
+            timestamp="",
+            agent_name="",
+            platform=AgentPlatform.CLAUDE,
+            role_type=RoleType.TEAM_MEMBER,
+        )
         self.bridge._parsers[AgentPlatform.CLAUDE] = mock_parser
 
         # 调用
@@ -52,7 +56,7 @@ class TestAgentBridge:
             events.append(event)
 
         assert len(events) == 1
-        assert events[0]["type"] == AgentEventType.INIT
+        assert events[0].type == AgentEventType.INIT
 
     @pytest.mark.asyncio
     async def test_execute_returns_result(self):
@@ -62,25 +66,32 @@ class TestAgentBridge:
             platform=AgentPlatform.CLAUDE,
         )
 
-        # Mock execute_stream
-        async def mock_stream(prompt, config, session_id=None):
-            yield {
-                "type": AgentEventType.TEXT_DELTA,
-                "content": {"text": "你好"},
-                "session_id": "123",
-                "timestamp": ""
-            }
-            yield {
-                "type": AgentEventType.TURN_COMPLETE,
-                "content": {"usage": {"input_tokens": 100}},
-                "session_id": "123",
-                "timestamp": ""
-            }
+        # Mock execute_stream - yields StreamEvent dataclass instances
+        async def mock_stream(prompt, config, session_id=None, cwd=None):
+            yield StreamEvent(
+                type=AgentEventType.TEXT_DELTA,
+                content={"text": "你好"},
+                session_id="123",
+                timestamp="",
+                agent_name="test-agent",
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
+            yield StreamEvent(
+                type=AgentEventType.TURN_COMPLETE,
+                content={"usage": {"input_tokens": 100}},
+                session_id="123",
+                timestamp="",
+                agent_name="test-agent",
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
 
         self.bridge.execute_stream = mock_stream
 
         result = await self.bridge.execute("测试", config)
 
-        assert result["text"] == "你好"
-        assert result["usage"]["input_tokens"] == 100
-        assert result["session_id"] == "123"
+        assert isinstance(result, AgentResult)
+        assert result.text == "你好"
+        assert result.usage["input_tokens"] == 100
+        assert result.session_id == "123"

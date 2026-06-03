@@ -164,6 +164,7 @@ class TestListAllGroupChats:
             project_path="/test/project",
             group_chat_id=group_chat_id,
         )
+        mock_group_chat._activated = True
         group_chat_manager.register(group_chat_id, mock_group_chat)
 
         result = group_chat_manager.list_all_group_chats(str(test_base_path))
@@ -283,6 +284,7 @@ class TestLoadGroupChatFromDisk:
         with (
             patch("agents_hub.core.orchestration.group_chat_manager.Team", return_value=sample_team),
             patch.object(GroupChat, "load"),
+            patch.object(GroupChat, "activate"),
         ):
             loaded_chat = await group_chat_manager.load_group_chat_from_disk(
                 group_chat_id=group_chat_id,

@@ -2,7 +2,7 @@
 Orchestration 层单元测试
 
 契约：
-1. GroupChatManager: register, get_group_chat, unregister 幂等性
+1. GroupChatManager: register, load_group_chat, unregister 幂等性
 2. Team: 空成员列表抛 ValueError
 """
 
@@ -22,13 +22,14 @@ from agents_hub.core.orchestration.team import Team
 class TestGroupChatManagerRegister:
     """测试 GroupChatManager.register()"""
 
-    def test_register_then_get(self):
-        """契约：register() 后 get_group_chat() 返回正确实例"""
+    @pytest.mark.asyncio
+    async def test_register_then_get(self):
+        """契约：register() 后 load_group_chat() 返回正确实例"""
         mgr = GroupChatManager()
         mock_gc = MagicMock(spec=GroupChat)
         mgr.register("gc_1", mock_gc)
 
-        result = mgr.get_group_chat("gc_1")
+        result = await mgr.load_group_chat("gc_1")
         assert result is mock_gc
 
     def test_register_invalid_id_raises(self):
@@ -51,13 +52,14 @@ class TestGroupChatManagerRegister:
 
 
 class TestGroupChatManagerGet:
-    """测试 GroupChatManager.get_group_chat()"""
+    """测试 GroupChatManager.load_group_chat()"""
 
-    def test_get_nonexistent_raises(self):
+    @pytest.mark.asyncio
+    async def test_get_nonexistent_raises(self):
         """契约：获取不存在的 GroupChat 抛 GroupChatNotFoundError"""
         mgr = GroupChatManager()
         with pytest.raises(GroupChatNotFoundError):
-            mgr.get_group_chat("nonexistent")
+            await mgr.load_group_chat("nonexistent")
 
 
 class TestGroupChatManagerUnregister:
@@ -71,7 +73,7 @@ class TestGroupChatManagerUnregister:
 
     @pytest.mark.asyncio
     async def test_unregister_removes_from_registry(self):
-        """契约：unregister 后 get_group_chat 失败"""
+        """契约：unregister 后 load_group_chat 失败"""
         mgr = GroupChatManager()
         mock_gc = MagicMock(spec=GroupChat)
         mock_gc.cleanup = AsyncMock()
@@ -80,7 +82,7 @@ class TestGroupChatManagerUnregister:
         await mgr.unregister("gc_1")
 
         with pytest.raises(GroupChatNotFoundError):
-            mgr.get_group_chat("gc_1")
+            await mgr.load_group_chat("gc_1")
 
     @pytest.mark.asyncio
     async def test_unregister_calls_cleanup(self):

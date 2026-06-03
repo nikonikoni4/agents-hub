@@ -300,7 +300,10 @@ class GroupChatManager:
         # 5. 加载群聊状态
         await group_chat.load()
 
-        # 6. 注册到 GroupChatManager
+        # 6. 激活群聊（启动 agent 任务，标记为活跃）
+        await group_chat.activate()
+
+        # 7. 注册到 GroupChatManager
         self.register(group_chat_id, group_chat)
 
         return group_chat

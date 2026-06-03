@@ -2,7 +2,7 @@
 
 契约：
 1. create_role() 生成 work_root/.mcp.json 文件
-2. .mcp.json 内容指向 localhost:8001/mcp
+2. .mcp.json 内容指向 localhost:{config.mcp_port}/mcp
 3. CLAUDE.md 预置 AGENT_RUNTIME 标记
 4. AGENTS.md 预置 AGENT_RUNTIME 标记
 5. 文件已存在时不覆盖
@@ -16,8 +16,26 @@ from unittest.mock import patch
 
 import pytest
 
+from agents_hub.config import config
 from agents_hub.config.types import AgentPlatform
 from agents_hub.roles.role_manager import RoleManager
+
+
+def _mock_subprocess_creates_mcp_json(cmd, **kwargs):
+    """模拟 CLI 命令创建 .mcp.json 文件。
+
+    _init_agents_hub_mcp 通过 subprocess 调用 claude/codex CLI 生成 .mcp.json，
+    测试中需要模拟这一行为。
+    """
+    env = kwargs.get("env", {})
+    config_dir = env.get("CLAUDE_CONFIG_DIR") or env.get("CODEX_HOME")
+    if config_dir:
+        mcp_url = cmd[-1]
+        mcp_json = Path(config_dir) / ".mcp.json"
+        mcp_json.write_text(
+            json.dumps({"mcpServers": {"agents-hub": {"type": "http", "url": mcp_url}}}),
+            encoding="utf-8",
+        )
 
 
 @pytest.fixture
@@ -68,13 +86,16 @@ class TestMcpConfigGeneration:
         契约：create_role() 为 Claude 平台生成 work_root/.mcp.json 文件
 
         验证方式：
-        1. 创建 Claude 角色
+        1. 创建 Claude 角色（mock subprocess 模拟 CLI 创建 .mcp.json）
         2. 检查 .mcp.json 文件存在
         3. 验证文件内容格式正确
 
         如果失败，说明：.mcp.json 文件未生成或路径错误
         """
-        with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_claude_home):
+        with (
+            patch("agents_hub.roles.role_manager.Path.home", return_value=mock_claude_home),
+            patch("agents_hub.roles.role_manager.subprocess.run", side_effect=_mock_subprocess_creates_mcp_json),
+        ):
             role_manager.create_role("test_claude", AgentPlatform.CLAUDE)
 
         mcp_json_path = agents_dir / "test_claude" / "work_root" / ".mcp.json"
@@ -85,13 +106,16 @@ class TestMcpConfigGeneration:
         契约：create_role() 为 Codex 平台生成 work_root/.mcp.json 文件
 
         验证方式：
-        1. 创建 Codex 角色
+        1. 创建 Codex 角色（mock subprocess 模拟 CLI 创建 .mcp.json）
         2. 检查 .mcp.json 文件存在
         3. 验证文件内容格式正确
 
         如果失败，说明：.mcp.json 文件未生成或路径错误
         """
-        with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_codex_home):
+        with (
+            patch("agents_hub.roles.role_manager.Path.home", return_value=mock_codex_home),
+            patch("agents_hub.roles.role_manager.subprocess.run", side_effect=_mock_subprocess_creates_mcp_json),
+        ):
             role_manager.create_role("test_codex", AgentPlatform.CODEX)
 
         mcp_json_path = agents_dir / "test_codex" / "work_root" / ".mcp.json"
@@ -99,26 +123,30 @@ class TestMcpConfigGeneration:
 
     def test_mcp_json_content_correct(self, role_manager, agents_dir, mock_claude_home):
         """
-        契约：.mcp.json 内容指向 localhost:8001/mcp
+        契约：.mcp.json 内容指向 localhost:{config.mcp_port}/mcp
 
         验证方式：
-        1. 创建角色
+        1. 创建角色（mock subprocess 模拟 CLI 创建 .mcp.json）
         2. 读取 .mcp.json 文件
         3. 验证 JSON 结构和 URL 正确
 
         如果失败，说明：.mcp.json 内容格式错误或 URL 不正确
         """
-        with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_claude_home):
+        with (
+            patch("agents_hub.roles.role_manager.Path.home", return_value=mock_claude_home),
+            patch("agents_hub.roles.role_manager.subprocess.run", side_effect=_mock_subprocess_creates_mcp_json),
+        ):
             role_manager.create_role("test_role", AgentPlatform.CLAUDE)
 
         mcp_json_path = agents_dir / "test_role" / "work_root" / ".mcp.json"
         content = json.loads(mcp_json_path.read_text(encoding="utf-8"))
 
+        expected_url = f"http://localhost:{config.mcp_port}/mcp"
         assert "mcpServers" in content, "缺少 mcpServers 字段"
         assert "agents-hub" in content["mcpServers"], "缺少 agents-hub 服务器配置"
         server_config = content["mcpServers"]["agents-hub"]
         assert server_config["type"] == "http", "MCP Server type 应为 http"
-        assert server_config["url"] == "http://localhost:8001/mcp", "MCP Server URL 不正确"
+        assert server_config["url"] == expected_url, f"MCP Server URL 不正确，期望 {expected_url}"
 
     def test_claude_md_has_runtime_markers(self, role_manager, agents_dir, mock_claude_home):
         """
@@ -131,7 +159,10 @@ class TestMcpConfigGeneration:
 
         如果失败，说明：CLAUDE.md 未预置 AGENT_RUNTIME 标记
         """
-        with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_claude_home):
+        with (
+            patch("agents_hub.roles.role_manager.Path.home", return_value=mock_claude_home),
+            patch("agents_hub.roles.role_manager.subprocess.run"),
+        ):
             role_manager.create_role("test_claude", AgentPlatform.CLAUDE)
 
         claude_md_path = agents_dir / "test_claude" / "work_root" / "CLAUDE.md"
@@ -151,7 +182,10 @@ class TestMcpConfigGeneration:
 
         如果失败，说明：AGENTS.md 未预置 AGENT_RUNTIME 标记
         """
-        with patch("agents_hub.roles.role_manager.Path.home", return_value=mock_codex_home):
+        with (
+            patch("agents_hub.roles.role_manager.Path.home", return_value=mock_codex_home),
+            patch("agents_hub.roles.role_manager.subprocess.run"),
+        ):
             role_manager.create_role("test_codex", AgentPlatform.CODEX)
 
         agents_md_path = agents_dir / "test_codex" / "work_root" / "AGENTS.md"

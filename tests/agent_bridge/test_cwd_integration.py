@@ -96,6 +96,7 @@ class TestClaudeCwd:
 
 
 @pytest.mark.integration
+@pytest.mark.skip(reason="Codex API key 有问题，暂时跳过")
 class TestCodexCwd:
     """测试 Codex 执行器的 cwd 参数"""
 

@@ -4,6 +4,7 @@ import json
 import pytest
 from agents_hub.agent_bridge.parsers.codex import CodexParser
 from agents_hub.agent_bridge.models import AgentEventType
+from agents_hub.agent_bridge.exceptions import ParseError
 
 
 class TestCodexParser:
@@ -26,9 +27,9 @@ class TestCodexParser:
         result = self.parser.parse_event(raw_line)
 
         assert result is not None
-        assert result["type"] == AgentEventType.TEXT_DELTA
-        assert result["content"]["text"] == "我会帮你审查代码"
-        assert result["session_id"] == "thread-123"
+        assert result.type == AgentEventType.TEXT_DELTA
+        assert result.content["text"] == "我会帮你审查代码"
+        assert result.session_id == "thread-123"
 
     def test_parse_command_execution(self):
         """测试解析命令执行事件"""
@@ -47,10 +48,10 @@ class TestCodexParser:
         result = self.parser.parse_event(raw_line)
 
         assert result is not None
-        assert result["type"] == AgentEventType.TOOL_USE
-        assert result["content"]["command"] == "ls -la"
-        assert result["content"]["exit_code"] == 0
-        assert result["session_id"] == "thread-123"
+        assert result.type == AgentEventType.TOOL_USE
+        assert result.content["command"] == "ls -la"
+        assert result.content["exit_code"] == 0
+        assert result.session_id == "thread-123"
 
     def test_parse_turn_completed(self):
         """测试解析回合完成事件"""
@@ -66,9 +67,9 @@ class TestCodexParser:
         result = self.parser.parse_event(raw_line)
 
         assert result is not None
-        assert result["type"] == AgentEventType.TURN_COMPLETE
-        assert result["content"]["usage"]["input_tokens"] == 100
-        assert result["session_id"] == "thread-123"
+        assert result.type == AgentEventType.TURN_COMPLETE
+        assert result.content["usage"]["input_tokens"] == 100
+        assert result.session_id == "thread-123"
 
     def test_parse_unknown_event_returns_none(self):
         """测试解析未知事件返回 None"""
@@ -79,8 +80,7 @@ class TestCodexParser:
 
         assert result is None
 
-    def test_parse_invalid_json_returns_none(self):
-        """测试解析无效 JSON 返回 None"""
-        result = self.parser.parse_event("invalid json")
-
-        assert result is None
+    def test_parse_invalid_json_raises_parse_error(self):
+        """测试解析无效 JSON 抛出 ParseError"""
+        with pytest.raises(ParseError):
+            self.parser.parse_event("invalid json")
