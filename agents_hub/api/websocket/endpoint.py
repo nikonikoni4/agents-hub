@@ -45,10 +45,12 @@ async def websocket_endpoint(
             data = await websocket.receive_text()
             logger.debug(f"Received from {group_chat_id}: {data}")
     except WebSocketDisconnect:
-        await manager.disconnect(websocket, group_chat_id)
+        pass  # Normal disconnect, cleanup below
     except WebSocketError as e:
-        await handle_websocket_error(websocket, e)
-        await manager.disconnect(websocket, group_chat_id)
+        try:
+            await handle_websocket_error(websocket, e)
+        except Exception:
+            logger.exception("Failed to send error message to client")
     except Exception as e:
         logger.exception(f"WebSocket error in room {group_chat_id}")
         ws_error = WebSocketError(
@@ -56,5 +58,9 @@ async def websocket_endpoint(
             error_code="UNKNOWN_ERROR",
             cause=e,
         )
-        await handle_websocket_error(websocket, ws_error)
+        try:
+            await handle_websocket_error(websocket, ws_error)
+        except Exception:
+            logger.exception("Failed to send error message to client")
+    finally:
         await manager.disconnect(websocket, group_chat_id)
