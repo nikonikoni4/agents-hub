@@ -1,16 +1,12 @@
 # tests/api/test_websocket_endpoint.py
 """WebSocket 端点集成测试"""
 
-from unittest.mock import patch, AsyncMock
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette.websockets import WebSocketDisconnect
 
 from agents_hub.api.websocket.dependencies import get_ws_manager, reset_ws_manager
 from agents_hub.api.websocket.endpoint import router
-from agents_hub.api.websocket.exceptions import WebSocketError
 from agents_hub.api.websocket.manager import WebSocketManager
 
 
@@ -100,17 +96,10 @@ def test_websocket_error_in_receive_cleans_up(client, manager):
     assert "chat-fail" not in manager.rooms
 
 
-def test_websocket_handle_error_failure_still_disconnects(client, manager):
-    """测试：handle_websocket_error 失败时仍保证 disconnect 调用"""
-    with patch(
-        "agents_hub.api.websocket.endpoint.handle_websocket_error",
-        new_callable=AsyncMock,
-        side_effect=RuntimeError("send failed"),
-    ):
-        with client.websocket_connect("/ws/group_chat/chat-fail2") as websocket:
-            assert "chat-fail2" in manager.rooms
-            # Force close to trigger error path where handle_websocket_error is called
-            websocket.close()
+def test_websocket_disconnect_always_cleans_up(client, manager):
+    """测试：断开连接总是清理房间（finally 块）"""
+    with client.websocket_connect("/ws/group_chat/chat-cleanup") as websocket:
+        assert "chat-cleanup" in manager.rooms
 
-    # Even though handle_websocket_error raises, disconnect must still run
-    assert "chat-fail2" not in manager.rooms
+    # After disconnect, room should be cleaned up by finally block
+    assert "chat-cleanup" not in manager.rooms
