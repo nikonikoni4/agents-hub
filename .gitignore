@@ -233,3 +233,4 @@ local_data
 explore/docker-experiment/
 explore\docker-experiment
 worktrees
+.codex

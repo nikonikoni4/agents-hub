@@ -17,3 +17,11 @@
 - **路径**：`docs/superpowers/specs/2026-06-02-role-management-design.md`
 - **触发规则**：当设计、修改或扩展 roles 角色管理、Skill 启用、角色 MCP 初始化或角色元信息边界时阅读
 - **内容摘要**：Role Management 设计规格，定义 role.json 仅保存角色元信息、Skill 以 work_root/skills 为启用状态、创建角色时自动添加固定 agents-hub MCP，并明确权限和原生配置编辑暂不落地
+
+## WebSocket 后端
+
+### websocket-backend-design
+- **更新时间**：2026-06-03
+- **路径**：`docs/superpowers/specs/2026-06-03-websocket-backend-design.md`
+- **触发规则**：当设计、修改或扩展 WebSocket 后端功能、消息推送机制或实时通信时阅读
+- **内容摘要**：WebSocket 后端设计规格，定义多房间模式、刷新信号推送、FastAPI 原生 WebSocket 实现、错误处理机制和测试方案
