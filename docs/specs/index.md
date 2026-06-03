@@ -63,3 +63,9 @@
  - path: `docs/specs/2026-06-03-skills-api.md`
  - 触发规则：当设计、修改或扩展全局 skill 库管理、skill API 接口或 SKILL.md 解析逻辑时阅读
  - 内容摘要：skills API 模块规格，定义全局 skill 库管理、CRUD 操作、SKILL.md 解析规则、路径安全校验、API 契约（GET/DELETE/POST 端点）和异常处理
+
+## teams
+ - updated_at : 2026-06-03
+ - path: `docs/superpowers/specs/2026-06-03-team-management-design.md`
+ - 触发规则：当设计、修改或扩展 teams 团队管理模块时阅读
+ - 内容摘要：teams 团队管理模块规格，定义团队 CRUD、成员验证机制、持久化策略和 HTTP API 契约
