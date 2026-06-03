@@ -39,3 +39,9 @@
  - path: `docs/specs/2026-05-31-core-agent-orchestration.md`
  - 触发规则：当设计、修改或扩展 Agent 执行模型、团队管理、群聊编排、token 生命周期或 MCP 工具入口时阅读
  - 内容摘要：core/agent 和 core/orchestration 层规格，定义 Agent 消息循环、Manager/Worker 角色、Team 验证（含 team_members 语义和初始化分离）、GroupChat 生命周期（含 token 管理和 user 伪 Agent 注册）、GroupChatManager token 索引和 MCP 工具入口
+
+## websocket-backend
+ - updated_at : 2026-06-03
+ - path: `docs/specs/2026-06-03-websocket-backend.md`
+ - 触发规则：当设计、修改或扩展 WebSocket 连接管理、房间机制、广播功能或异常体系时阅读
+ - 内容摘要：WebSocket 后端模块规格，定义连接生命周期、房间模型（按 group_chat_id 隔离）、刷新信号广播机制、API 契约（WebSocket 端点和 HTTP 广播 API）、异常体系（双重继承设计）
