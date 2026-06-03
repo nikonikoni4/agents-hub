@@ -39,7 +39,7 @@ def _resolve_status(exc: AgentsHubError) -> int:
 def client():
     """创建测试客户端（含全局异常处理器）"""
     app = FastAPI()
-    app.include_router(router, prefix="/api")
+    app.include_router(router, prefix="/api/v1")
 
     @app.exception_handler(AgentsHubError)
     async def agents_hub_error_handler(request: Request, exc: AgentsHubError):
@@ -82,7 +82,7 @@ def test_list_roles_success(client, mock_role_service):
         ),
     ]
 
-    response = client.get("/api/roles")
+    response = client.get("/api/v1/roles")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -97,7 +97,7 @@ def test_list_roles_success(client, mock_role_service):
 
 def test_list_roles_empty(client, mock_role_service):
     """测试：列出空角色列表"""
-    response = client.get("/api/roles")
+    response = client.get("/api/v1/roles")
     assert response.status_code == 200
     assert response.json() == []
 
@@ -115,7 +115,7 @@ def test_get_role_success(client, mock_role_service):
         type=RoleType.TEAM_MEMBER,
     )
 
-    response = client.get("/api/roles/test-role")
+    response = client.get("/api/v1/roles/test-role")
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "test-role"
@@ -127,7 +127,7 @@ def test_get_role_not_found(client, mock_role_service):
     """测试：获取不存在的角色 -> 404"""
     mock_role_service.get_role.side_effect = RoleNotFoundError(role_name="nonexistent")
 
-    response = client.get("/api/roles/nonexistent")
+    response = client.get("/api/v1/roles/nonexistent")
     assert response.status_code == 404
     data = response.json()
     assert data["error_code"] == "ROLE_NOT_FOUND"
@@ -147,7 +147,7 @@ def test_create_role_success(client, mock_role_service):
     )
 
     response = client.post(
-        "/api/roles",
+        "/api/v1/roles",
         json={"name": "new-role", "platform": "claude"},
     )
     assert response.status_code == 201
@@ -163,7 +163,7 @@ def test_create_role_already_exists(client, mock_role_service):
     )
 
     response = client.post(
-        "/api/roles",
+        "/api/v1/roles",
         json={"name": "existing-role", "platform": "claude"},
     )
     assert response.status_code == 400
@@ -176,7 +176,7 @@ def test_create_role_already_exists(client, mock_role_service):
 
 def test_delete_role_success(client, mock_role_service):
     """测试：成功删除角色"""
-    response = client.delete("/api/roles/test-role")
+    response = client.delete("/api/v1/roles/test-role")
     assert response.status_code == 200
     data = response.json()
     assert "删除成功" in data["message"]
@@ -188,7 +188,7 @@ def test_delete_role_not_found(client, mock_role_service):
         role_name="nonexistent"
     )
 
-    response = client.delete("/api/roles/nonexistent")
+    response = client.delete("/api/v1/roles/nonexistent")
     assert response.status_code == 404
     data = response.json()
     assert data["error_code"] == "ROLE_NOT_FOUND"
@@ -208,7 +208,7 @@ def test_update_role_success(client, mock_role_service):
     )
 
     response = client.patch(
-        "/api/roles/test-role",
+        "/api/v1/roles/test-role",
         json={"avatar": "new-avatar.png", "abilities": ["coding"]},
     )
     assert response.status_code == 200
@@ -224,7 +224,7 @@ def test_update_role_not_found(client, mock_role_service):
     )
 
     response = client.patch(
-        "/api/roles/nonexistent",
+        "/api/v1/roles/nonexistent",
         json={"avatar": "new-avatar.png"},
     )
     assert response.status_code == 404
@@ -242,7 +242,7 @@ def test_list_role_skills_success(client, mock_role_service):
         SkillInfo(id="skill-2", name="Skill 2", description="Description 2"),
     ]
 
-    response = client.get("/api/roles/test-role/skills")
+    response = client.get("/api/v1/roles/test-role/skills")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -257,7 +257,7 @@ def test_list_role_skills_role_not_found(client, mock_role_service):
         role_name="nonexistent"
     )
 
-    response = client.get("/api/roles/nonexistent/skills")
+    response = client.get("/api/v1/roles/nonexistent/skills")
     assert response.status_code == 404
     data = response.json()
     assert data["error_code"] == "ROLE_NOT_FOUND"
@@ -273,7 +273,7 @@ def test_add_role_skill_success(client, mock_role_service):
     )
 
     response = client.post(
-        "/api/roles/test-role/skills",
+        "/api/v1/roles/test-role/skills",
         json={"skill_id": "skill-1"},
     )
     assert response.status_code == 201
@@ -289,7 +289,7 @@ def test_add_role_skill_not_found(client, mock_role_service):
     )
 
     response = client.post(
-        "/api/roles/test-role/skills",
+        "/api/v1/roles/test-role/skills",
         json={"skill_id": "nonexistent"},
     )
     assert response.status_code == 404
@@ -304,7 +304,7 @@ def test_add_role_skill_already_exists(client, mock_role_service):
     )
 
     response = client.post(
-        "/api/roles/test-role/skills",
+        "/api/v1/roles/test-role/skills",
         json={"skill_id": "skill-1"},
     )
     assert response.status_code == 400
@@ -317,7 +317,7 @@ def test_add_role_skill_already_exists(client, mock_role_service):
 
 def test_remove_role_skill_success(client, mock_role_service):
     """测试：成功移除角色 skill"""
-    response = client.delete("/api/roles/test-role/skills/skill-1")
+    response = client.delete("/api/v1/roles/test-role/skills/skill-1")
     assert response.status_code == 200
     data = response.json()
     assert "移除成功" in data["message"]
@@ -329,7 +329,7 @@ def test_remove_role_skill_not_found(client, mock_role_service):
         skill_id="nonexistent"
     )
 
-    response = client.delete("/api/roles/test-role/skills/nonexistent")
+    response = client.delete("/api/v1/roles/test-role/skills/nonexistent")
     assert response.status_code == 404
     data = response.json()
     assert data["error_code"] == "SKILL_NOT_FOUND"
@@ -345,7 +345,7 @@ def test_list_avatars_success(client, mock_role_service):
         "avatar2.png",
     ]
 
-    response = client.get("/api/avatars")
+    response = client.get("/api/v1/roles/avatars")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -355,6 +355,6 @@ def test_list_avatars_success(client, mock_role_service):
 
 def test_list_avatars_empty(client, mock_role_service):
     """测试：列出空头像列表"""
-    response = client.get("/api/avatars")
+    response = client.get("/api/v1/roles/avatars")
     assert response.status_code == 200
     assert response.json() == []

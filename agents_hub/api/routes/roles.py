@@ -11,7 +11,7 @@ from agents_hub.api.schemas.roles import (
 )
 from agents_hub.api.services.role_service import RoleService
 
-router = APIRouter()
+router = APIRouter(prefix="/roles", tags=["roles"])
 
 
 def get_role_service() -> RoleService:
@@ -22,28 +22,34 @@ def get_role_service() -> RoleService:
 # ========== 角色 CRUD ==========
 
 
-@router.get("/roles", response_model=list[RoleResponse])
+@router.get("", response_model=list[RoleResponse])
 def list_roles(service: RoleService = Depends(get_role_service)):
     """获取所有角色"""
     roles = service.list_roles()
     return [RoleResponse.from_domain(r) for r in roles]
 
 
-@router.get("/roles/{name}", response_model=RoleResponse)
+@router.get("/avatars", response_model=list[str])
+def list_avatars(service: RoleService = Depends(get_role_service)):
+    """列出可用头像"""
+    return service.list_avatars()
+
+
+@router.get("/{name}", response_model=RoleResponse)
 def get_role(name: str, service: RoleService = Depends(get_role_service)):
     """获取单个角色"""
     role = service.get_role(name)
     return RoleResponse.from_domain(role)
 
 
-@router.post("/roles", response_model=RoleResponse, status_code=201)
+@router.post("", response_model=RoleResponse, status_code=201)
 def create_role(request: RoleCreateRequest, service: RoleService = Depends(get_role_service)):
     """创建角色"""
     role = service.create_role(request)
     return RoleResponse.from_domain(role)
 
 
-@router.delete("/roles/{name}", response_model=dict[str, str])
+@router.delete("/{name}", response_model=dict[str, str])
 def delete_role(name: str, service: RoleService = Depends(get_role_service)):
     """删除角色"""
     service.delete_role(name)
@@ -53,7 +59,7 @@ def delete_role(name: str, service: RoleService = Depends(get_role_service)):
 # ========== 更新角色信息 ==========
 
 
-@router.patch("/roles/{name}", response_model=RoleResponse)
+@router.patch("/{name}", response_model=RoleResponse)
 def update_role(
     name: str,
     request: RoleUpdateRequest,
@@ -67,14 +73,14 @@ def update_role(
 # ========== 角色 Skill 管理 ==========
 
 
-@router.get("/roles/{name}/skills", response_model=list[RoleSkillResponse])
+@router.get("/{name}/skills", response_model=list[RoleSkillResponse])
 def list_role_skills(name: str, service: RoleService = Depends(get_role_service)):
     """列出角色的 skills"""
     skills = service.list_role_skills(name)
     return [RoleSkillResponse.from_domain(s) for s in skills]
 
 
-@router.post("/roles/{name}/skills", response_model=RoleSkillResponse, status_code=201)
+@router.post("/{name}/skills", response_model=RoleSkillResponse, status_code=201)
 def add_role_skill(
     name: str,
     request: RoleSkillRequest,
@@ -85,17 +91,8 @@ def add_role_skill(
     return RoleSkillResponse.from_domain(skill)
 
 
-@router.delete("/roles/{name}/skills/{skill_id}", response_model=dict[str, str])
+@router.delete("/{name}/skills/{skill_id}", response_model=dict[str, str])
 def remove_role_skill(name: str, skill_id: str, service: RoleService = Depends(get_role_service)):
     """移除角色的 skill"""
     service.remove_role_skill(name, skill_id)
     return {"message": f"Skill '{skill_id}' 从角色 '{name}' 移除成功"}
-
-
-# ========== 头像管理 ==========
-
-
-@router.get("/avatars", response_model=list[str])
-def list_avatars(service: RoleService = Depends(get_role_service)):
-    """列出可用头像"""
-    return service.list_avatars()

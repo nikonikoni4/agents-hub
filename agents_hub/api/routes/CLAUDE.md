@@ -49,6 +49,26 @@ router = APIRouter(prefix="/skills")
 @router.get("/{skill_name}")
 ```
 
+### ❌ 禁止动态路径在静态路径之前定义
+
+FastAPI 按注册顺序匹配路由。如果 `/{name}` 在 `/avatars` 之前定义，请求 `/avatars` 会被 `/{name}` 捕获，导致参数值为 `"avatars"` 而非命中静态路由。
+
+```python
+# ❌ 错误 — /avatars 永远不会被匹配到
+@router.get("/{name}", response_model=RoleResponse)
+def get_role(name: str): ...
+
+@router.get("/avatars", response_model=list[str])
+def list_avatars(): ...
+
+# ✅ 正确 — 静态路径在前，动态路径在后
+@router.get("/avatars", response_model=list[str])
+def list_avatars(): ...
+
+@router.get("/{name}", response_model=RoleResponse)
+def get_role(name: str): ...
+```
+
 ### ❌ 禁止在路由中写 try/except
 
 全局异常处理器已在 `app.py` 注册，路由层不需要任何错误处理。
