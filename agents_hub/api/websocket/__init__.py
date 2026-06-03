@@ -8,11 +8,13 @@ from agents_hub.api.websocket.exceptions import (
     WebSocketRoomNotFoundError,
     WebSocketValidationError,
 )
+from agents_hub.api.websocket.manager import WebSocketManager
 
 __all__ = [
     "WebSocketBroadcastError",
     "WebSocketConnectionError",
     "WebSocketError",
+    "WebSocketManager",
     "WebSocketRoomNotFoundError",
     "WebSocketValidationError",
 ]
