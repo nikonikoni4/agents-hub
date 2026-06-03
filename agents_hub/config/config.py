@@ -8,7 +8,6 @@
 优先级：数据迁移路径 > 打包环境默认路径 > 开发环境路径
 """
 
-import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -21,6 +20,12 @@ class SystemConfig:
 
     _instance: Optional["SystemConfig"] = None
 
+    # 默认配置
+    _default_config: dict = {
+        "data_path": None,  # None 表示使用环境默认路径
+        "mcp_port": 8765,  # MCP 服务器运行端口
+    }
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -31,39 +36,35 @@ class SystemConfig:
         """初始化配置"""
         self._is_dev = not getattr(sys, "frozen", False)
         self._config_file = self._get_config_file_path()
-        self._user_data_path: Path | None = None
+        self._config_data: dict = self._default_config.copy()
         self._load_config()
 
     def _get_config_file_path(self) -> Path:
         """获取配置文件路径（配置文件本身不迁移）"""
         if self._is_dev:
             # 开发环境：项目根目录/config/config.yaml
-            return Path("config/config.yaml")
+            return Path("local_data/config/config.yaml")
         else:
             # 打包环境：%LOCALAPPDATA%/AgentsHub/config/config.yaml
-            local_app_data = os.environ.get("LOCALAPPDATA", "")
-            if not local_app_data:
-                raise RuntimeError("无法获取 LOCALAPPDATA 环境变量")
-            return Path(local_app_data) / "AgentsHub" / "config" / "config.yaml"
+            return Path.home() / "AppData" / "Local" / "AgentsHub" / "config" / "config.yaml"
 
     def _load_config(self):
-        """加载配置文件"""
+        """加载配置文件，从 yaml 覆盖默认值"""
         if self._config_file.exists():
             with open(self._config_file, encoding="utf-8") as f:
-                config_data = yaml.safe_load(f) or {}
-                user_path = config_data.get("data_path")
-                if user_path:
-                    self._user_data_path = Path(user_path)
+                saved_config = yaml.safe_load(f) or {}
+                # 用保存的值覆盖默认值
+                for key in self._config_data:
+                    if key in saved_config and saved_config[key] is not None:
+                        self._config_data[key] = saved_config[key]
 
     def _save_config(self):
         """保存配置文件"""
         self._config_file.parent.mkdir(parents=True, exist_ok=True)
-        config_data = {}
-        if self._user_data_path:
-            config_data["data_path"] = str(self._user_data_path)
-
+        # 过滤掉 None 值，只保存用户明确设置的配置
+        data_to_save = {k: v for k, v in self._config_data.items() if v is not None}
         with open(self._config_file, "w", encoding="utf-8") as f:
-            yaml.dump(config_data, f, allow_unicode=True)
+            yaml.dump(data_to_save, f, allow_unicode=True)
 
     @property
     def data_path(self) -> Path:
@@ -79,14 +80,13 @@ class SystemConfig:
             Path: 数据存储路径
         """
         # 1. 用户配置的迁移路径
-        if self._user_data_path:
-            return self._user_data_path
+        user_path = self._config_data.get("data_path")
+        if user_path:
+            return Path(user_path)
 
         # 2. 打包环境默认路径
         if not self._is_dev:
-            local_app_data = os.environ.get("LOCALAPPDATA", "")
-            if local_app_data:
-                return Path(local_app_data) / "AgentsHub" / "data"
+            return Path.home() / "AppData" / "Local" / "AgentsHub" / "data"
 
         # 3. 开发环境路径
         return Path("local_data")
@@ -98,7 +98,18 @@ class SystemConfig:
         Args:
             new_path: 新的数据存储路径
         """
-        self._user_data_path = new_path
+        self._config_data["data_path"] = str(new_path)
+        self._save_config()
+
+    @property
+    def mcp_port(self) -> int:
+        """获取 MCP 服务器运行端口"""
+        return self._config_data["mcp_port"]
+
+    @mcp_port.setter
+    def mcp_port(self, port: int):
+        """设置 MCP 服务器运行端口"""
+        self._config_data["mcp_port"] = port
         self._save_config()
 
     @property
@@ -144,6 +155,16 @@ class Config:
     def set_data_path(self, new_path: Path):
         """快捷访问：设置数据迁移路径"""
         self.system.set_data_path(new_path)
+
+    @property
+    def mcp_port(self) -> int:
+        """快捷访问：MCP 服务器运行端口"""
+        return self.system.mcp_port
+
+    @mcp_port.setter
+    def mcp_port(self, port: int):
+        """快捷访问：设置 MCP 服务器运行端口"""
+        self.system.mcp_port = port
 
     @property
     def is_dev(self) -> bool:
