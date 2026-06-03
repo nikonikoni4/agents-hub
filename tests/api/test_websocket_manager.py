@@ -2,7 +2,7 @@
 """WebSocketManager 单元测试"""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from agents_hub.api.websocket.manager import WebSocketManager
 
@@ -100,3 +100,32 @@ async def test_broadcast_failed_connection(manager, mock_websocket):
 
     # 失败的连接被清理
     assert "chat-123" not in manager.rooms
+
+
+@pytest.mark.asyncio
+async def test_broadcast_partial_failure(manager, mock_websocket):
+    """测试：广播部分失败时继续发送给其他连接"""
+    ws2 = AsyncMock()
+    ws3 = AsyncMock()
+
+    # ws1 和 ws3 成功，ws2 失败
+    mock_websocket.send_json = AsyncMock()
+    ws2.send_json = AsyncMock(side_effect=Exception("Connection closed"))
+    ws3.send_json = AsyncMock()
+
+    await manager.connect(mock_websocket, "chat-123")
+    await manager.connect(ws2, "chat-123")
+    await manager.connect(ws3, "chat-123")
+
+    message = {"type": "refresh", "group_chat_id": "chat-123"}
+    await manager.broadcast("chat-123", message)
+
+    # ws1 和 ws3 收到消息
+    mock_websocket.send_json.assert_called_once_with(message)
+    ws3.send_json.assert_called_once_with(message)
+
+    # ws2 被清理，但房间仍存在（还有 ws1 和 ws3）
+    assert "chat-123" in manager.rooms
+    assert ws2 not in manager.rooms["chat-123"]
+    assert mock_websocket in manager.rooms["chat-123"]
+    assert ws3 in manager.rooms["chat-123"]

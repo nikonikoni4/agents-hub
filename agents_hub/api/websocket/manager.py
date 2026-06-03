@@ -5,6 +5,7 @@
 全局单例，通过依赖注入共享。
 """
 
+import contextlib
 import logging
 
 from fastapi import WebSocket
@@ -62,7 +63,8 @@ class WebSocketManager:
 
         # 清理失败的连接
         for conn in failed_connections:
-            self.rooms[group_chat_id].remove(conn)
+            with contextlib.suppress(ValueError):
+                self.rooms[group_chat_id].remove(conn)
 
         # 清理空房间
         if not self.rooms[group_chat_id]:
