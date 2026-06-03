@@ -2,7 +2,14 @@
 """团队服务层"""
 
 from agents_hub.api.schemas.teams import TeamCreateRequest, TeamUpdateRequest
+from agents_hub.exceptions import ResourceNotFoundError, ValidationError
 from agents_hub.teams import TeamManager
+from agents_hub.teams.exceptions import (
+    EmptyTeamMembersError,
+    InvalidTeamMembersError,
+    TeamAlreadyExistsError,
+    TeamNotFoundError,
+)
 from agents_hub.teams.models import TeamInfo
 
 
@@ -20,11 +27,29 @@ class TeamService:
 
     def create_team(self, request: TeamCreateRequest) -> TeamInfo:
         """创建团队"""
-        return self.team_manager.create_team(request.name, request.members)
+        try:
+            return self.team_manager.create_team(request.name, request.members)
+        except (
+            EmptyTeamMembersError,
+            InvalidTeamMembersError,
+            TeamAlreadyExistsError,
+        ) as e:
+            raise ValidationError(
+                message=e.message,
+                error_code=e.error_code,
+                details=e.details,
+            ) from e
 
     def get_team(self, name: str) -> TeamInfo:
         """获取团队"""
-        return self.team_manager.get_team(name)
+        try:
+            return self.team_manager.get_team(name)
+        except TeamNotFoundError as e:
+            raise ResourceNotFoundError(
+                message=e.message,
+                error_code=e.error_code,
+                details=e.details,
+            ) from e
 
     def list_teams(self) -> list[TeamInfo]:
         """列出所有团队"""
@@ -32,8 +57,32 @@ class TeamService:
 
     def update_team(self, name: str, request: TeamUpdateRequest) -> TeamInfo:
         """更新团队"""
-        return self.team_manager.update_team(name, request.name, request.members)
+        try:
+            return self.team_manager.update_team(name, request.name, request.members)
+        except TeamNotFoundError as e:
+            raise ResourceNotFoundError(
+                message=e.message,
+                error_code=e.error_code,
+                details=e.details,
+            ) from e
+        except (
+            EmptyTeamMembersError,
+            InvalidTeamMembersError,
+            TeamAlreadyExistsError,
+        ) as e:
+            raise ValidationError(
+                message=e.message,
+                error_code=e.error_code,
+                details=e.details,
+            ) from e
 
     def delete_team(self, name: str) -> None:
         """删除团队"""
-        self.team_manager.delete_team(name)
+        try:
+            self.team_manager.delete_team(name)
+        except TeamNotFoundError as e:
+            raise ResourceNotFoundError(
+                message=e.message,
+                error_code=e.error_code,
+                details=e.details,
+            ) from e
