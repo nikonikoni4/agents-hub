@@ -351,6 +351,7 @@ class RoleManager:
     def _init_agents_hub_mcp(self, platform: AgentPlatform, work_root: Path) -> None:
         """Initialize the fixed agents-hub MCP for this role's platform config root."""
         env = os.environ.copy()
+        mcp_url = f"http://localhost:{config.mcp_port}/mcp"
         if platform == AgentPlatform.CLAUDE:
             env["CLAUDE_CONFIG_DIR"] = str(work_root)
             cmd = [
@@ -361,7 +362,7 @@ class RoleManager:
                 "http",
                 "agents-hub",
                 "--",
-                "http://localhost:8001/mcp",
+                mcp_url,
             ]
         else:
             env["CODEX_HOME"] = str(work_root)
@@ -371,6 +372,6 @@ class RoleManager:
                 "add",
                 "agents-hub",
                 "--url",
-                "http://localhost:8001/mcp",
+                mcp_url,
             ]
         subprocess.run(cmd, check=True, env=env)
