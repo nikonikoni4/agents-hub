@@ -13,9 +13,15 @@
 ### 技术选择
 - **技术栈**：FastAPI 原生 WebSocket
 - **房间模式**：多房间（每个 group_chat_id 一个房间）
-- **推送内容**：刷新信号
-- **认证机制**：无认证（MVP 阶段）
-- **断线重连**：自动重连（前端负责）
+- **推送内容**：刷新信号（通知前端有新消息，前端调用 API 拉取最新列表）
+- **认证机制**：无认证（MVP 阶段，仅本地开发测试）
+- **断线重连**：自动重连（前端负责，后端不感知）
+
+### 刷新信号定义
+刷新信号是一种通知机制，告知前端有新数据可拉取：
+- **信号格式**：固定结构 `{"type": "refresh", "group_chat_id": "...", "timestamp": "..."}`
+- **前端响应**：收到信号后调用 `GET /api/v1/group_chats/{group_chat_id}/messages` 拉取最新消息
+- **信号类型**：MVP 阶段只有 `refresh` 类型，未来可扩展 `status_change`、`agent_typing` 等
 
 ---
 
@@ -66,10 +72,21 @@
 
 **位置**：`agents_hub/api/websocket/manager.py`
 
+**设计要点**：
+- 全局单例，通过依赖注入共享
+- 房间按需创建（有连接时创建，无连接时销毁）
+- 内存存储，服务器重启后丢失所有连接（MVP 阶段限制）
+
 **接口设计**：
 ```python
+import logging
+from fastapi import WebSocket
+
+logger = logging.getLogger(__name__)
+
+
 class WebSocketManager:
-    """WebSocket 连接管理器"""
+    """WebSocket 连接管理器（全局单例）"""
 
     def __init__(self):
         # 房间映射：group_chat_id -> [WebSocket, ...]
@@ -79,25 +96,59 @@ class WebSocketManager:
         """接受连接并加入房间"""
         await websocket.accept()
         self.rooms.setdefault(group_chat_id, []).append(websocket)
+        logger.info(f"WebSocket connected to room {group_chat_id}, total connections: {len(self.rooms[group_chat_id])}")
 
     async def disconnect(self, websocket: WebSocket, group_chat_id: str):
         """断开连接并从房间移除"""
-        self.rooms[group_chat_id].remove(websocket)
-        if not self.rooms[group_chat_id]:
-            del self.rooms[group_chat_id]
+        if group_chat_id in self.rooms and websocket in self.rooms[group_chat_id]:
+            self.rooms[group_chat_id].remove(websocket)
+            logger.info(f"WebSocket disconnected from room {group_chat_id}, remaining: {len(self.rooms[group_chat_id])}")
+            if not self.rooms[group_chat_id]:
+                del self.rooms[group_chat_id]
+                logger.info(f"Room {group_chat_id} removed (empty)")
 
     async def broadcast(self, group_chat_id: str, message: dict):
         """向房间内所有连接广播消息"""
+        connections = self.rooms.get(group_chat_id, [])
+        if not connections:
+            logger.warning(f"Broadcast to empty room {group_chat_id}")
+            return
+
         failed_connections = []
-        for connection in self.rooms.get(group_chat_id, []):
+        for connection in connections:
             try:
                 await connection.send_json(message)
-            except Exception:
+            except Exception as e:
+                logger.error(f"Failed to send to connection in room {group_chat_id}: {e}")
                 failed_connections.append(connection)
 
         # 清理失败的连接
         for conn in failed_connections:
             self.rooms[group_chat_id].remove(conn)
+```
+
+### 2. 依赖注入
+
+**位置**：`agents_hub/api/websocket/dependencies.py`
+
+**设计要点**：
+- `WebSocketManager` 作为全局单例
+- 通过 FastAPI 的依赖注入系统共享
+
+**接口设计**：
+```python
+from agents_hub.api.websocket.manager import WebSocketManager
+
+# 全局单例
+_ws_manager: WebSocketManager | None = None
+
+
+def get_ws_manager() -> WebSocketManager:
+    """获取 WebSocketManager 单例"""
+    global _ws_manager
+    if _ws_manager is None:
+        _ws_manager = WebSocketManager()
+    return _ws_manager
 ```
 
 ### 2. WebSocket Endpoint
@@ -137,23 +188,70 @@ async def websocket_endpoint(
         await manager.disconnect(websocket, group_chat_id)
 ```
 
-### 3. API 接口
+### 3. Pydantic Schemas
+
+**位置**：`agents_hub/api/schemas/websocket.py`
+
+**接口设计**：
+```python
+from datetime import datetime
+from pydantic import BaseModel, Field
+
+
+class RefreshSignal(BaseModel):
+    """刷新信号请求体"""
+    type: str = Field(default="refresh", description="信号类型")
+    group_chat_id: str = Field(..., description="群聊 ID")
+    timestamp: datetime = Field(default_factory=datetime.now, description="信号时间戳")
+
+
+class BroadcastResponse(BaseModel):
+    """广播 API 响应体"""
+    status: str = Field(default="ok", description="状态")
+    message: str = Field(default="Broadcast sent", description="描述")
+```
+
+### 4. API 接口
 
 **职责**：供 Agent 调用，触发广播
 
 **位置**：`agents_hub/api/routes/websocket.py`
 
+**触发时机**：
+- Agent 执行完成并产生新消息后，由 `GroupChatManager` 或 `MessageRouter` 调用
+- 当前 MVP 阶段：手动调用 API 测试，不集成到 core 层
+
 **接口设计**：
 ```python
-@router.post("/api/v1/ws/broadcast/{group_chat_id}")
+from fastapi import APIRouter, Depends
+from agents_hub.api.websocket.dependencies import get_ws_manager
+from agents_hub.api.websocket.manager import WebSocketManager
+from agents_hub.api.schemas.websocket import RefreshSignal, BroadcastResponse
+
+router = APIRouter(tags=["websocket"])
+
+
+@router.post(
+    "/ws/broadcast/{group_chat_id}",
+    response_model=BroadcastResponse,
+    summary="广播刷新信号到指定房间",
+)
 async def broadcast_message(
     group_chat_id: str,
-    message: dict,
-    manager: WebSocketManager = Depends(get_ws_manager)
+    signal: RefreshSignal,
+    manager: WebSocketManager = Depends(get_ws_manager),
 ):
-    """广播消息到指定房间"""
-    await manager.broadcast(group_chat_id, message)
-    return {"status": "ok"}
+    """广播刷新信号到指定房间
+
+    - **group_chat_id**: 群聊 ID
+    - **signal**: 刷新信号内容
+
+    前端收到信号后应调用 GET /api/v1/group_chats/{group_chat_id}/messages 拉取最新消息
+    """
+    # 确保 signal 中的 group_chat_id 与路径参数一致
+    signal.group_chat_id = group_chat_id
+    await manager.broadcast(group_chat_id, signal.model_dump())
+    return BroadcastResponse()
 ```
 
 ---
@@ -165,18 +263,20 @@ async def broadcast_message(
 **场景 1：Agent 产生消息，推送前端**
 
 ```
-1. Agent 执行完成，产生消息
+1. Agent 执行完成，产生消息，写入消息存储
    ↓
 2. 调用 API: POST /api/v1/ws/broadcast/{group_chat_id}
-   请求体: {"type": "new_message", "group_chat_id": "abc123"}
+   请求体: {"type": "refresh", "group_chat_id": "abc123", "timestamp": "..."}
    ↓
-3. API 调用 WebSocketManager.broadcast()
+3. API 验证请求体（Pydantic schema）
    ↓
-4. 遍历 rooms["abc123"] 中的所有连接
+4. API 调用 WebSocketManager.broadcast()
    ↓
-5. 向每个连接发送 JSON: {"type": "new_message"}
+5. 遍历 rooms["abc123"] 中的所有连接
    ↓
-6. 前端收到消息，调用 GET /api/v1/messages/{group_chat_id} 拉取最新列表
+6. 向每个连接发送 JSON: {"type": "refresh", "group_chat_id": "abc123", "timestamp": "..."}
+   ↓
+7. 前端收到刷新信号，调用 GET /api/v1/group_chats/abc123/messages 拉取最新列表
 ```
 
 **场景 2：前端连接 WebSocket**
@@ -209,10 +309,10 @@ async def broadcast_message(
 
 ### 消息格式
 
-**推送消息（后端 → 前端）**：
+**刷新信号（后端 → 前端）**：
 ```json
 {
-    "type": "new_message",
+    "type": "refresh",
     "group_chat_id": "abc123",
     "timestamp": "2026-06-03T10:30:00Z"
 }
@@ -222,16 +322,9 @@ async def broadcast_message(
 ```json
 {
     "type": "error",
-    "error_code": "ROOM_NOT_FOUND",
+    "error_code": "WebSocketRoomNotFoundError",
     "message": "房间不存在",
     "details": {}
-}
-```
-
-**前端响应（可选）**：
-```json
-{
-    "type": "heartbeat"
 }
 ```
 
@@ -241,28 +334,49 @@ async def broadcast_message(
 
 ### 异常体系
 
-**WebSocket 专用异常类**：
+WebSocket 异常继承现有 `agents_hub/exceptions.py` 分类体系，按"谁应该处理"分类：
+
 ```python
 # agents_hub/api/websocket/exceptions.py
 
-from agents_hub.exceptions import AgentsHubError
+from agents_hub.exceptions import (
+    AgentsHubError,
+    ExternalServiceError,
+    ResourceNotFoundError,
+    StateError,
+    ValidationError,
+)
+
 
 class WebSocketError(AgentsHubError):
     """WebSocket 错误基类"""
     pass
 
-class ConnectionError(WebSocketError):
-    """连接错误"""
+
+class WebSocketConnectionError(WebSocketError, ExternalServiceError):
+    """WebSocket 连接错误（网络层问题）"""
     pass
 
-class RoomNotFoundError(WebSocketError):
+
+class WebSocketRoomNotFoundError(WebSocketError, ResourceNotFoundError):
     """房间不存在错误"""
     pass
 
-class BroadcastError(WebSocketError):
-    """广播错误"""
+
+class WebSocketBroadcastError(WebSocketError, ExternalServiceError):
+    """广播错误（发送失败）"""
+    pass
+
+
+class WebSocketValidationError(WebSocketError, ValidationError):
+    """WebSocket 消息验证错误"""
     pass
 ```
+
+**设计原则**：
+- `WebSocketError` 作为 WebSocket 模块的基类
+- 具体异常同时继承 `WebSocketError` 和对应的通用异常分类
+- 这样既保持模块内聚，又与全局异常体系一致
 
 ### 错误处理机制
 
@@ -288,55 +402,17 @@ async def handle_websocket_error(websocket: WebSocket, error: WebSocketError):
 
 ### 断线重连机制（前端负责）
 
-**重连策略**：
-```javascript
-// 前端伪代码
-class WebSocketClient {
-    constructor() {
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
-        this.reconnectDelay = 1000; // 初始延迟 1 秒
-    }
+> **注意**：以下为前端实现参考，不属于后端设计范围。详见前端设计文档。
 
-    connect(groupChatId) {
-        this.ws = new WebSocket(`ws://localhost:8000/ws/group_chat/${groupChatId}`);
+**重连策略**（前端参考）：
+- 指数退避：1s → 2s → 4s → 8s → 16s
+- 最大重试次数：5 次
+- 重连成功后重置计数器
 
-        this.ws.onclose = () => {
-            if (this.reconnectAttempts < this.maxReconnectAttempts) {
-                setTimeout(() => {
-                    this.reconnectAttempts++;
-                    this.reconnectDelay *= 2; // 指数退避
-                    this.connect(groupChatId);
-                }, this.reconnectDelay);
-            }
-        };
-
-        this.ws.onopen = () => {
-            this.reconnectAttempts = 0;
-            this.reconnectDelay = 1000;
-        };
-    }
-}
-```
-
-**重连流程**：
-```
-连接断开
-    ↓
-等待 1 秒
-    ↓
-尝试重连
-    ↓
-成功？ → 重置计数器
-    ↓ 失败
-等待 2 秒
-    ↓
-尝试重连
-    ↓
-... 最多重试 5 次
-    ↓
-放弃，提示用户刷新页面
-```
+**后端行为**：
+- 后端不感知前端重连
+- 每次连接都是新连接，加入房间
+- 无需补发离线消息（MVP 阶段）
 
 ---
 
@@ -433,6 +509,9 @@ agents_hub/api/websocket/
 agents_hub/api/routes/
 └── websocket.py        # WebSocket API 路由
 
+agents_hub/api/schemas/
+└── websocket.py        # WebSocket Pydantic schemas
+
 tests/
 └── test_websocket.py   # WebSocket 测试
 ```
@@ -440,8 +519,52 @@ tests/
 ### 修改文件
 
 ```
-agents_hub/api/app.py   # 注册 WebSocket 路由
+agents_hub/api/app.py           # 注册 WebSocket 路由
+agents_hub/api/routes/__init__.py  # 导出 websocket_router
 ```
+
+---
+
+## 与现有架构集成
+
+### 路由注册
+
+在 `agents_hub/api/app.py` 中注册 WebSocket 路由：
+
+```python
+from agents_hub.api.routes import websocket_router
+
+app.include_router(websocket_router, prefix="/api/v1")
+```
+
+在 `agents_hub/api/routes/__init__.py` 中导出：
+
+```python
+from .websocket import router as websocket_router
+
+__all__ = ["websocket_router", ...]
+```
+
+### 与 GroupChat 生命周期的关系
+
+- **房间创建**：前端连接时自动创建，无需与 GroupChat 同步
+- **房间销毁**：最后一个连接断开时自动销毁
+- **GroupChat 删除**：不影响 WebSocket 房间（房间会因无连接自然销毁）
+- **设计原则**：WebSocket 房间是前端连接的抽象，与 GroupChat 生命周期解耦
+
+### 与 core 层的关系（未来集成）
+
+当前 MVP 阶段不集成到 core 层，未来集成点：
+- `MessageRouter.send_message()` 完成后调用广播 API
+- `GroupChatManager` 管理群聊生命周期时通知 WebSocket
+
+### 日志规范
+
+使用 Python 标准 `logging` 模块：
+- 连接建立：`logger.info`
+- 连接断开：`logger.info`
+- 广播失败：`logger.error`
+- 房间创建/销毁：`logger.info`
 
 ---
 
@@ -453,11 +576,12 @@ agents_hub/api/app.py   # 注册 WebSocket 路由
 - 测试验证
 
 ### 阶段 2：功能增强
-- 推送完整消息内容
-- 消息确认机制
-- 离线消息补发
+- **推送完整消息内容**：扩展 `RefreshSignal` 为 `WebSocketMessage`，支持 `refresh`、`new_message`、`status_change` 等类型
+- **消息确认机制**：前端收到消息后发送 ACK，后端确认送达
+- **离线消息补发**：前端重连时携带 `last_message_id`，后端补发缺失消息
+- **集成到 core 层**：在 `MessageRouter.send_message()` 完成后自动调用广播
 
 ### 阶段 3：多端支持
-- 多端同步
-- 设备配对
-- 权限控制
+- **多端同步**：一个 group_chat_id 支持多个客户端连接
+- **设备配对**：移动端通过 QR 码配对，获取桌面端 IP 和端口
+- **权限控制**：基于 group_chat_id 的连接权限验证
