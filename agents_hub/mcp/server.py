@@ -1,11 +1,13 @@
 """
-MCP Server 和 4 个工具
+MCP Server 和 6 个工具
 
 提供 Manager 编排团队协作的能力：
 1. call_agent: 派活给团队成员
 2. assign_tasks_to_team: 覆盖式更新任务列表
 3. archive_task_list: 归档当前 ACTIVE 列表
 4. check_agent_call: 查询 AgentCall 状态
+5. speak_in_group_chat: 在群聊中公开发言
+6. finish_agent_call: 结束一个需要回复的 AgentCall
 
 维护说明：
 - 当前 tool 数量少，且共享同一套 token 解析、GroupChat 获取和错误响应约定，
@@ -20,20 +22,28 @@ MCP Server 和 4 个工具
   自身包含复杂 schema、辅助函数或测试夹具时，才升级为独立文件夹。
 """
 
+from datetime import datetime
+
 from fastmcp import FastMCP
 
+from agents_hub.agent_bridge.models import AgentResult
+from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.core.foundation import (
     AgentMessage,
     AgentNotFoundError,
+    CallStatus,
     GroupChatNotFoundError,
     MessageType,
+    render_for_chat,
 )
+from agents_hub.core.foundation.token import redact_token
 from agents_hub.core.orchestration import group_chat_manager
 from agents_hub.mcp.errors import (
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
     GROUP_CHAT_NOT_FOUND,
     INTERNAL_ERROR,
+    INVALID_AGENT_CALL_STATE,
     INVALID_TOKEN,
     PERMISSION_DENIED,
     make_error_response,
@@ -48,6 +58,34 @@ mcp = FastMCP(
     instructions="提供 Manager 编排团队协作的能力",
     version="0.1.0",
 )
+
+
+def _find_agent(group_chat, agent_name: str):
+    """从 GroupChat 中按名称找到 Agent 实例。"""
+    manager = getattr(group_chat, "manager", None)
+    if manager is not None and getattr(manager, "name", None) == agent_name:
+        return manager
+
+    workers = getattr(group_chat, "workers", {})
+    if isinstance(workers, dict):
+        return workers.get(agent_name)
+    return None
+
+
+def _make_chat_result(group_chat, agent_name: str, content: str) -> AgentResult:
+    agent = _find_agent(group_chat, agent_name)
+    platform = getattr(getattr(agent, "role_config", None), "platform", AgentPlatform.CLAUDE)
+    role_type = getattr(agent, "role_type", RoleType.TEAM_MEMBER)
+
+    return AgentResult(
+        text=content,
+        session_id="",
+        timestamp=datetime.now().isoformat(),
+        agent_name=agent_name,
+        platform=platform,
+        role_type=role_type,
+    )
+
 
 # ============================================================================
 # Tool 1: call_agent
@@ -332,9 +370,159 @@ async def check_agent_call(agent_token: str, call_id: str) -> dict:
             "send_to": call.send_to,
             "content": call.content,
             "message_type": call.message_type.value,
+            "has_agent_response": call.has_agent_response,
             "result": result_content,
             "error": call.error,
         }
+
+    except Exception as e:
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+# ============================================================================
+# Tool 5: speak_in_group_chat
+# ============================================================================
+
+
+async def speak_in_group_chat(agent_token: str, content: str, send_to: str | None = None) -> dict:
+    """
+    在群聊中公开发言。
+
+    Args:
+        agent_token: 调用者的身份令牌
+        content: 公开发言内容
+        send_to: 可选的 @ 对象；为空时表示普通群聊发言
+
+    Returns:
+        成功: {"ok": True}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    try:
+        identity = group_chat_manager.resolve_token(agent_token)
+        if identity is None:
+            return make_error_response(
+                INVALID_TOKEN,
+                "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
+            )
+
+        agent_name, group_chat_id = identity
+        try:
+            group_chat = group_chat_manager.get_group_chat(group_chat_id)
+        except GroupChatNotFoundError:
+            return make_error_response(
+                GROUP_CHAT_NOT_FOUND,
+                f"群聊 {group_chat_id} 不存在",
+                details={"group_chat_id": group_chat_id},
+            )
+
+        safe_content = redact_token(content)
+        chat_content = (
+            render_for_chat(agent_name, send_to, safe_content) if send_to else safe_content
+        )
+        await group_chat.group_chat_context.add_message(
+            _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)
+        )
+        return {"ok": True}
+
+    except Exception as e:
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+# ============================================================================
+# Tool 6: finish_agent_call
+# ============================================================================
+
+
+async def finish_agent_call(
+    agent_token: str,
+    call_id: str,
+    content: str,
+    success: bool = True,
+) -> dict:
+    """
+    结束一个需要回复的 AgentCall，并把最终回复写入群聊。
+
+    Args:
+        agent_token: 调用者的身份令牌
+        call_id: 要结束的 AgentCall ID
+        content: 最终回复内容
+        success: True 表示完成，False 表示失败或无法继续
+
+    Returns:
+        成功: {"call_id": "...", "status": "completed|failed"}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    try:
+        identity = group_chat_manager.resolve_token(agent_token)
+        if identity is None:
+            return make_error_response(
+                INVALID_TOKEN,
+                "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
+            )
+
+        agent_name, group_chat_id = identity
+        try:
+            group_chat = group_chat_manager.get_group_chat(group_chat_id)
+        except GroupChatNotFoundError:
+            return make_error_response(
+                GROUP_CHAT_NOT_FOUND,
+                f"群聊 {group_chat_id} 不存在",
+                details={"group_chat_id": group_chat_id},
+            )
+
+        call = group_chat.agent_call_manager.get_call(call_id)
+        if call is None:
+            return make_error_response(
+                AGENT_CALL_NOT_FOUND,
+                f"AgentCall {call_id} 不存在，可能已被清理或系统重启导致数据丢失",
+                details={"call_id": call_id},
+            )
+
+        if call.send_to != agent_name:
+            return make_error_response(
+                PERMISSION_DENIED,
+                f"权限不足：只有调用接收者 {call.send_to} 可以结束该调用",
+                details={"call_id": call_id, "agent_name": agent_name},
+            )
+
+        if call.message_type != MessageType.TASK:
+            return make_error_response(
+                INVALID_AGENT_CALL_STATE,
+                "该 AgentCall 是 notification，不需要回复，不能调用 finish_agent_call",
+                details={"call_id": call_id, "message_type": call.message_type.value},
+            )
+
+        if call.has_agent_response:
+            return make_error_response(
+                INVALID_AGENT_CALL_STATE,
+                "该 AgentCall 已经通过 finish_agent_call 闭环，不能重复结束",
+                details={"call_id": call_id},
+            )
+
+        safe_content = redact_token(content)
+        group_chat.agent_call_manager.mark_agent_response(
+            call_id=call_id,
+            content=safe_content,
+            success=success,
+        )
+        await group_chat.group_chat_context.add_message(
+            _make_chat_result(
+                group_chat=group_chat,
+                agent_name=agent_name,
+                content=render_for_chat(agent_name, call.send_from, safe_content),
+            )
+        )
+
+        status = CallStatus.COMPLETED if success else CallStatus.FAILED
+        return {"call_id": call_id, "status": status.value}
 
     except Exception as e:
         return make_error_response(
@@ -352,3 +540,5 @@ mcp.tool()(call_agent)
 mcp.tool()(assign_tasks_to_team)
 mcp.tool()(archive_task_list)
 mcp.tool()(check_agent_call)
+mcp.tool()(speak_in_group_chat)
+mcp.tool()(finish_agent_call)

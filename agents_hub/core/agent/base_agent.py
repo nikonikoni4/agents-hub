@@ -5,8 +5,8 @@ Agent 基类
 
 渲染分工（参见 foundation/renderer.py）：
 - 入站 LLM prompt：render_for_llm（msg.content 始终为原始内容，不被改写）
-- 出口 A 写群聊：render_for_chat
-- 出口 B 投递回复：传 result.text 原文，不预渲染
+- 对外公开发言：通过 MCP 工具显式写入群聊
+- 任务闭环回复：通过 finish_agent_call 显式完成调用
 """
 
 import asyncio
@@ -25,11 +25,9 @@ from agents_hub.core.foundation import (
     Role,
     RoleConfig,
     SessionType,
-    render_for_chat,
     render_for_llm,
 )
 from agents_hub.core.foundation.exceptions import DockerConfigError
-from agents_hub.core.foundation.token import redact_token
 
 
 class Agent:
@@ -203,7 +201,8 @@ class Agent:
                 )
             else:
                 result = await self.btw_execute(prompt)
-            self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)
+            if msg.message_type != MessageType.TASK:
+                self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)
             return result
         except Exception as e:
             self.agent_call_manager.update_status(msg.call_id, CallStatus.FAILED)
@@ -296,6 +295,29 @@ class Agent:
         if agents_md.exists():
             replace_marked_section(agents_md, "AGENT_RUNTIME", runtime_content)
 
+    def _enqueue_finish_agent_call_reminder(self, msg: AgentMessage):
+        """提醒 Agent 使用 finish_agent_call 显式闭环当前任务调用。"""
+        reminder = AgentMessage(
+            call_id=msg.call_id,
+            send_from="__SYSTEM__",
+            send_to=self.name,
+            content=(
+                "系统提醒：你刚刚处理的是一个需要回复的 TASK 调用，但该调用尚未闭环。"
+                f"请调用 finish_agent_call，传入 call_id={msg.call_id}，"
+                "并用 content 说明任务完成、失败或无法继续的结果。"
+            ),
+            session_type=SessionType.MAIN,
+            message_type=MessageType.TASK,
+        )
+        self.message_queue.put_nowait(reminder)
+
+    def _needs_finish_agent_call_reminder(self, msg: AgentMessage) -> bool:
+        """判断当前消息处理后是否仍需要显式 finish_agent_call。"""
+        if msg.message_type != MessageType.TASK:
+            return False
+        call = self.agent_call_manager.get_call(msg.call_id)
+        return call is not None and not call.has_agent_response
+
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
         while self._run:
@@ -315,38 +337,7 @@ class Agent:
 
             # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
-            result = await self._process_message(msg, prompt)
-
-            # 5. 出口 A：写回群聊（@发起者 result.text）
-            # Token 剥离：防止 token 泄漏到群聊消息中
-            safe_text = redact_token(result.text)
-            # 创建一个新的 AgentResult，替换 text 为剥离后的版本
-            from agents_hub.agent_bridge.models import AgentResult as AgentResultModel
-
-            safe_result = AgentResultModel(
-                text=render_for_chat(self.name, msg.send_from, safe_text),
-                session_id=result.session_id,
-                timestamp=result.timestamp,
-                agent_name=result.agent_name,
-                platform=result.platform,
-                role_type=result.role_type,
-                usage=result.usage,
-            )
-            await self.group_chat_context.add_message(safe_result)
-
-            # 6. 出口 B：如果是 TASK 且发起者不是 user，投递回复
-
-            if msg.message_type == MessageType.TASK and msg.send_from != config.default_user_name:
-                # TODO ： 考虑这里是否真的需要发送全部信息？因为之前的对话记录中已经包含了result.text
-                send_message_content = result.text
-                # 暂时先不返回完整的内容，因为群聊中会有记录
-                send_message_content = f"提示 : 消息回复见上文聊天记录中speaker为[{self.name}] @[{msg.send_from}]的最新一条"
-                response_call = self.agent_call_manager.create_call(
-                    send_from=self.name,
-                    send_to=msg.send_from,
-                    content=send_message_content,
-                    message_type=MessageType.NOTIFICATION,
-                )
-                self.send_message_to_agent(
-                    response_call.call_id, msg.send_from, send_message_content
-                )
+            await self._process_message(msg, prompt)
+            # 5. TASK 必须由 finish_agent_call 显式闭环；普通执行文本默认私下保留。
+            if self._needs_finish_agent_call_reminder(msg):
+                self._enqueue_finish_agent_call_reminder(msg)

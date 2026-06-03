@@ -10,6 +10,7 @@ from agents_hub.mcp.errors import (
     AGENT_OFFLINE,
     GROUP_CHAT_NOT_FOUND,
     INTERNAL_ERROR,
+    INVALID_AGENT_CALL_STATE,
     INVALID_TASK_FORMAT,
     # 错误码常量
     INVALID_TOKEN,
@@ -23,6 +24,8 @@ from agents_hub.mcp.server import (
     assign_tasks_to_team,
     call_agent,
     check_agent_call,
+    finish_agent_call,
+    speak_in_group_chat,
 )
 
 __all__ = [
@@ -33,6 +36,7 @@ __all__ = [
     "AGENT_NOT_FOUND",
     "TASK_LIST_NOT_FOUND",
     "AGENT_CALL_NOT_FOUND",
+    "INVALID_AGENT_CALL_STATE",
     "INVALID_TASK_FORMAT",
     "AGENT_OFFLINE",
     "INTERNAL_ERROR",
@@ -43,4 +47,6 @@ __all__ = [
     "assign_tasks_to_team",
     "archive_task_list",
     "check_agent_call",
+    "finish_agent_call",
+    "speak_in_group_chat",
 ]

@@ -170,6 +170,30 @@ class AgentCallManager:
             # 更新持久化
             self._persist_call(call)
 
+    def mark_agent_response(self, call_id: str, content: str, success: bool = True):
+        """
+        标记调用已被接收方 Agent 显式回复闭环。
+
+        Args:
+            call_id: 调用 ID
+            content: Agent 对调用方的最终回复内容
+            success: True 表示任务完成，False 表示任务失败或无法继续
+        """
+        if call := self._calls.get(call_id):
+            call.has_agent_response = True
+            if success:
+                call.result = content
+                call.status = CallStatus.COMPLETED
+                call.error = None
+            else:
+                call.error = content
+                call.status = CallStatus.FAILED
+            call.completed_at = datetime.now()
+            self.logger.info(
+                f"调用 {call_id} 已显式回复闭环: status={call.status.value}, success={success}"
+            )
+            self._persist_call(call)
+
     def _load_from_persistence(self):
         """从持久化文件加载历史调用记录"""
         if not self._persistence_path.exists():
@@ -217,6 +241,7 @@ class AgentCallManager:
                 datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None
             ),
             error=data.get("error"),
+            has_agent_response=data.get("has_agent_response", False),
             business_task_id=data.get("business_task_id"),
             timeout_seconds=data.get("timeout_seconds"),
             # result 不持久化，重启后为 None
@@ -237,6 +262,7 @@ class AgentCallManager:
                 "started_at": call.started_at.isoformat() if call.started_at else None,
                 "completed_at": (call.completed_at.isoformat() if call.completed_at else None),
                 "error": call.error,
+                "has_agent_response": call.has_agent_response,
                 "business_task_id": call.business_task_id,
                 "timeout_seconds": call.timeout_seconds,
                 # result 不持久化（可能很大，且重启后无法恢复）
@@ -343,6 +369,7 @@ class AgentCallManager:
                             call.completed_at.isoformat() if call.completed_at else None
                         ),
                         "error": call.error,
+                        "has_agent_response": call.has_agent_response,
                         "business_task_id": call.business_task_id,
                         "timeout_seconds": call.timeout_seconds,
                     }

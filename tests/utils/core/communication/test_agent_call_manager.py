@@ -8,7 +8,8 @@ AgentCallManager 单元测试
 4. update_status() 更新状态并设置 started_at/completed_at
 5. set_result() 设置结果并标记 COMPLETED
 6. set_error() 设置错误并标记 FAILED
-7. get_stats() 返回正确统计
+7. mark_agent_response() 标记 TASK 已被 Agent 显式回复闭环
+8. get_stats() 返回正确统计
 """
 
 import logging
@@ -146,6 +147,36 @@ class TestAgentCallManagerResultSet:
         manager.set_error(call.call_id, "something broke")
 
         assert call.error == "something broke"
+        assert call.status == CallStatus.FAILED
+        assert call.completed_at is not None
+
+
+class TestAgentCallManagerAgentResponse:
+    """测试 AgentCall 显式回复闭环标志"""
+
+    def test_mark_agent_response_success_marks_completed(self, manager):
+        """契约：成功回复会标记 has_agent_response 并完成调用"""
+        call = manager.create_call(
+            send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
+        )
+
+        manager.mark_agent_response(call.call_id, content="done", success=True)
+
+        assert call.has_agent_response is True
+        assert call.result == "done"
+        assert call.status == CallStatus.COMPLETED
+        assert call.completed_at is not None
+
+    def test_mark_agent_response_failure_marks_failed(self, manager):
+        """契约：失败回复会标记 has_agent_response 并失败调用"""
+        call = manager.create_call(
+            send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
+        )
+
+        manager.mark_agent_response(call.call_id, content="blocked", success=False)
+
+        assert call.has_agent_response is True
+        assert call.error == "blocked"
         assert call.status == CallStatus.FAILED
         assert call.completed_at is not None
 

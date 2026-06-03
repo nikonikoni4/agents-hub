@@ -43,6 +43,7 @@ class AgentCall:
     completed_at: datetime | None = None
     result: object | None = None  # 执行结果（AgentResult，避免循环依赖暂用 object）
     error: str | None = None  # 错误信息
+    has_agent_response: bool = False  # Agent 是否已通过显式工具回复并闭环
     business_task_id: str | None = None  # 关联的业务任务 ID（可选）
     timeout_seconds: int | None = None  # 超时阈值（秒），None 表示无超时限制
 

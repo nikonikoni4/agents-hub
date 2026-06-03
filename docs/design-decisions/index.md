@@ -31,9 +31,9 @@
 ## explicit-group-chat-speech
 - updated_at: 2026-05-31
 - path: `docs/design-decisions/0006-explicit-group-chat-speech.md`
-- 状态：deferred（方向已定，等 MCP 主流程跑通后实施）
+- 状态：decided
 - 触发规则：当修改 Agent.run() 的出口 A/B 写入逻辑、新增/调整对外发言相关工具、或 LLM 中间过程污染群聊历史的问题再次浮现时阅读
-- 内容摘要：群聊发言从隐式自动写入（出口 A/B）改为显式 MCP 工具调用（speak_in_group_chat）。目的是分离 LLM 的私下思考与对外公开发言，避免工具调用细节污染群聊历史和下游 agent 上下文。本次仅记录决策方向，实施延后
+- 内容摘要：群聊发言从隐式自动写入（出口 A/B）改为显式 MCP 工具调用。普通公开发言使用 speak_in_group_chat；需要回复的 AgentCall 使用 finish_agent_call 闭环。目的是分离 LLM 私下执行文本、公开群聊发言和调用状态闭环
 
 ## agent-token-identity-model
 - updated_at: 2026-05-31

@@ -4,7 +4,7 @@ MCP 工具端到端集成测试
 测试完整的 MCP 工具系统流程：
 1. 创建 GroupChat，验证 token 生成
 2. Manager 调用 call_agent 派活给 Worker
-3. Worker 完成任务，出口 B 自动回执
+3. Worker 完成任务，通过 finish_agent_call 显式闭环
 4. Manager 调用 check_agent_call 查询状态
 5. Manager 调用 assign_tasks_to_team 分配任务
 6. Manager 调用 archive_task_list 归档任务
@@ -21,9 +21,9 @@ from agents_hub.mcp.server import (
     assign_tasks_to_team,
     call_agent,
     check_agent_call,
+    finish_agent_call,
 )
 from agents_hub.utils.logger import setup_logging
-
 
 # ============================================================================
 # Fixtures
@@ -162,23 +162,24 @@ class TestScenario2CallAgent:
         # 验证 AgentCall 状态已变更（说明 Worker 收到并处理了消息）
         call = group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
-        # Worker 的 run() 任务会将状态从 PENDING -> RUNNING -> COMPLETED
-        assert call.status in [CallStatus.RUNNING, CallStatus.COMPLETED], (
-            f"Worker 应该已收到并处理消息，状态应该是 RUNNING 或 COMPLETED，实际: {call.status}"
+        # Worker 的 run() 任务会将 TASK 从 PENDING -> RUNNING；
+        # COMPLETED 只能由 finish_agent_call 显式闭环产生。
+        assert call.status == CallStatus.RUNNING, (
+            f"Worker 应该已收到并处理消息，状态应该是 RUNNING，实际: {call.status}"
         )
 
 
 # ============================================================================
-# 场景 3：Worker 完成任务，出口 B 自动回执
+# 场景 3：Worker 完成任务，显式闭环
 # ============================================================================
 
 
 class TestScenario3WorkerResponse:
-    """场景 3：Worker 完成任务，出口 B 自动回执"""
+    """场景 3：Worker 完成任务，显式闭环"""
 
     @pytest.mark.asyncio
     async def test_worker_completes_and_responds(self, group_chat):
-        """测试 Worker 完成任务后自动回执"""
+        """测试 Worker 完成任务后显式闭环"""
         # 获取 manager 的 token
         manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
 
@@ -192,7 +193,16 @@ class TestScenario3WorkerResponse:
 
         call_id = result["call_id"]
 
-        # 轮询等待 Worker 处理完成（最多等待 15 秒）
+        worker_token = group_chat.group_chat_context.agent_session_id["小王"].token
+        finish_result = await finish_agent_call(
+            agent_token=worker_token,
+            call_id=call_id,
+            content="任务 C 已完成",
+            success=True,
+        )
+        assert "error" not in finish_result, "finish_agent_call 不应该有错误"
+
+        # 轮询等待显式闭环写入（最多等待 15 秒）
         max_wait = 15
         for i in range(max_wait):
             await asyncio.sleep(1)
@@ -204,19 +214,8 @@ class TestScenario3WorkerResponse:
         call = group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
         assert call.status == CallStatus.COMPLETED, f"AgentCall 状态应该是 COMPLETED，实际: {call.status}"
-        # 注意：result 可能为 None，因为 Worker 可能没有设置 result
-        # 只要状态是 COMPLETED 就说明 Worker 处理完成了
-
-        # 验证 Manager 收到了回执（出口 B）
-        # Manager 的消息队列应该有来自 Worker 的回执消息
-        # 注意：Manager 的 run() 任务也会处理消息，所以我们检查 AgentCallManager 中的记录
-        # 查找从小王到 Leader 的 NOTIFICATION 类型消息
-        manager_calls = [
-            c
-            for c in group_chat.agent_call_manager._calls.values()
-            if c.send_from == "小王" and c.send_to == "Leader" and c.message_type == MessageType.NOTIFICATION
-        ]
-        assert len(manager_calls) > 0, "Manager 应该收到来自小王的回执"
+        assert call.has_agent_response is True, "AgentCall 应该已显式回复闭环"
+        assert call.result == "任务 C 已完成", "完成内容应该记录在 AgentCall result 中"
 
 
 # ============================================================================

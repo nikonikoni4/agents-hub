@@ -6,7 +6,6 @@ MCP 错误响应工具测试
 - 9 个错误码常量
 """
 
-import pytest
 
 from agents_hub.mcp.errors import (
     AGENT_CALL_NOT_FOUND,
@@ -14,13 +13,13 @@ from agents_hub.mcp.errors import (
     AGENT_OFFLINE,
     GROUP_CHAT_NOT_FOUND,
     INTERNAL_ERROR,
+    INVALID_AGENT_CALL_STATE,
     INVALID_TASK_FORMAT,
     INVALID_TOKEN,
     PERMISSION_DENIED,
     TASK_LIST_NOT_FOUND,
     make_error_response,
 )
-
 
 # ============================================================================
 # 错误码常量测试
@@ -29,7 +28,7 @@ from agents_hub.mcp.errors import (
 
 def test_all_error_codes_exist() -> None:
     """
-    契约：所有 9 个错误码常量存在且值正确
+    契约：所有 10 个错误码常量存在且值正确
 
     验证方式：
     1. 验证每个错误码常量的值
@@ -42,6 +41,7 @@ def test_all_error_codes_exist() -> None:
     assert AGENT_NOT_FOUND == "AGENT_NOT_FOUND"
     assert TASK_LIST_NOT_FOUND == "TASK_LIST_NOT_FOUND"
     assert AGENT_CALL_NOT_FOUND == "AGENT_CALL_NOT_FOUND"
+    assert INVALID_AGENT_CALL_STATE == "INVALID_AGENT_CALL_STATE"
     assert INVALID_TASK_FORMAT == "INVALID_TASK_FORMAT"
     assert AGENT_OFFLINE == "AGENT_OFFLINE"
     assert INTERNAL_ERROR == "INTERNAL_ERROR"
@@ -49,7 +49,7 @@ def test_all_error_codes_exist() -> None:
 
 def test_error_codes_count() -> None:
     """
-    契约：恰好有 9 个错误码常量
+    契约：恰好有 10 个错误码常量
 
     验证方式：
     1. 导入所有错误码
@@ -64,11 +64,12 @@ def test_error_codes_count() -> None:
         AGENT_NOT_FOUND,
         TASK_LIST_NOT_FOUND,
         AGENT_CALL_NOT_FOUND,
+        INVALID_AGENT_CALL_STATE,
         INVALID_TASK_FORMAT,
         AGENT_OFFLINE,
         INTERNAL_ERROR,
     ]
-    assert len(error_codes) == 9, f"应有 9 个错误码，实际: {len(error_codes)}"
+    assert len(error_codes) == 10, f"应有 10 个错误码，实际: {len(error_codes)}"
 
 
 # ============================================================================
@@ -205,6 +206,7 @@ def test_all_error_codes_can_be_used() -> None:
         AGENT_NOT_FOUND,
         TASK_LIST_NOT_FOUND,
         AGENT_CALL_NOT_FOUND,
+        INVALID_AGENT_CALL_STATE,
         INVALID_TASK_FORMAT,
         AGENT_OFFLINE,
         INTERNAL_ERROR,

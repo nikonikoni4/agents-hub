@@ -1,9 +1,17 @@
 ---
+<<<<<<< HEAD
 version: 1.3
 created_at: 2026-05-31
 updated_at: 2026-06-04
 last_updated: 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问
 abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制和 MCP 工具入口
+=======
+version: 1.2
+created_at: 2026-05-31
+updated_at: 2026-06-03
+last_updated: Agent.run 改为显式公开发言和显式 AgentCall 闭环，新增 speak/finish MCP 工具契约
+abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制、显式群聊发言和 MCP 工具入口
+>>>>>>> 40ec740 (feat(mcp): 新增显式群聊发言和任务闭环工具)
 id: spec-core-agent-orchestration
 title: Core Agent & Orchestration 层规格
 status: draft
@@ -32,14 +40,18 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | 新增 token 生命周期、token 索引、runtime 注入、task_manager、MCP 工具入口更新 |
+<<<<<<< HEAD
 | 1.2 | Team 语义明确（team_members 包含 manager+worker）、初始化分离机制、user 伪 Agent 注册、config.default_manager_name / default_user_name 替代硬编码 |
 | 1.3 | 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问 |
+=======
+| 1.2 | Agent.run 改为显式公开发言和显式 AgentCall 闭环 |
+>>>>>>> 40ec740 (feat(mcp): 新增显式群聊发言和任务闭环工具)
 
 ## Overview
 
 agent 和 orchestration 是 core 的**上层**，共同实现多 Agent 协作的完整流程：
 
-- **agent 层**：定义 Agent 的执行模型——消息循环、上下文加载、LLM 调用、回复投递
+- **agent 层**：定义 Agent 的执行模型——消息循环、上下文加载、LLM 调用、显式闭环提醒
 - **orchestration 层**：定义群聊的编排机制——团队组建、群聊生命周期、成员管理、MCP 工具入口
 
 两者合为一个 spec，因为 orchestration 直接创建和管理 Agent 实例，Agent 的行为只有在群聊上下文中才有意义。
@@ -72,10 +84,9 @@ while _run:
     msg = await message_queue.get()     ← 从 MessageRouter 投递的队列取消息
     if msg 是停止信号: break
     prompt = render_for_llm(msg)         ← 渲染为 LLM prompt
-    result = await _process_message(msg, prompt)  ← 执行
-    写回群聊记录                           ← 出口 A
-    如果是 TASK 且发送者不是 user:         ← 出口 B
-        投递通知给发送者
+    await _process_message(msg, prompt)  ← 执行，普通 text 默认私下保留
+    如果 TASK 仍未通过 finish_agent_call 闭环:
+        向当前 Agent 私有队列追加系统提醒
 ```
 
 **消息处理流程**（_process_message）：
@@ -83,14 +94,21 @@ while _run:
 2. 更新调用状态为 RUNNING
 3. 如果是 MAIN 会话：加载增量上下文 + 拼接 prompt → execute()
 4. 如果是 BTW 会话：直接 btw_execute()
-5. 更新调用状态为 COMPLETED 或 FAILED
+5. 对非 TASK 调用，执行完成后更新为 COMPLETED；对 TASK 调用，只有显式回复闭环后才进入终态
+
+**显式公开与闭环**：
+- Agent 的普通 LLM text 输出默认不进入群聊历史
+- 公开群聊发言必须通过 `speak_in_group_chat`
+- 需要回复的 TASK 调用必须通过 `finish_agent_call` 闭环
+- `speak_in_group_chat` 不创建、不关闭 AgentCall
+- `finish_agent_call` 会更新 AgentCall，并把最终回复写入群聊
 
 **Runtime 注入**：每次处理消息前，通过 `markdown_injector` 将身份信息（token、团队成员、任务看板）动态注入到 work_root 下的 CLAUDE.md/AGENTS.md 的 `<AGENT_RUNTIME_START/>` 和 `<AGENT_RUNTIME_END/>` 标记之间。详见 `2026-05-31-mcp-tools-design.md` §5。
 
 **渲染分工**：
 - 入站 prompt：render_for_llm（msg.content 不被改写）
-- 出口 A 写群聊：render_for_chat（写入前调用 `redact_token()` 剥离 token）
-- 出口 B 投递回复：传递 result.text 原文
+- 群聊公开发言：显式工具写入群聊，写入前剥离 token
+- TASK 最终回复：显式工具关闭 AgentCall，并同步写入群聊
 
 **停止机制**：双重保险——设置 _run=False 标志 + 发送哨兵消息（call_id="__STOP__"）唤醒阻塞的 get()。
 
@@ -177,7 +195,7 @@ GroupChatManager 是全局单例，管理所有 GroupChat 实例和 Token 索引
 
 ### MCP 工具入口
 
-MCP Server 提供 4 个工具，Agent 通过 token 身份调用（设计详见 `2026-05-31-mcp-tools-design.md` §3）：
+MCP Server 提供 6 个工具，Agent 通过 token 身份调用：
 
 | 工具 | 权限 | 用途 |
 |------|------|------|
@@ -185,6 +203,8 @@ MCP Server 提供 4 个工具，Agent 通过 token 身份调用（设计详见 `
 | `assign_tasks_to_team` | Leader | 覆盖式更新任务列表 |
 | `archive_task_list` | Leader | 归档当前 ACTIVE 任务列表 |
 | `check_agent_call` | 任意 agent | 查询自己发起的调用状态 |
+| `speak_in_group_chat` | 任意 agent | 在群聊中公开发言，不改变 AgentCall 生命周期 |
+| `finish_agent_call` | 调用接收者 | 结束需要回复的 TASK 调用，并写入最终群聊回复 |
 
 **身份验证流程**：
 1. 解析 `agent_token` → `(agent_name, group_chat_id)`
@@ -209,7 +229,7 @@ orchestration → agent → communication → foundation
 
 ### MCP Tool 契约
 
-call_agent 返回 call_id（字符串），调用方可通过此 ID 查询调用状态。错误时返回 MCP 响应格式的错误信息。
+`call_agent` 返回 call_id，调用方可通过此 ID 查询调用状态。`finish_agent_call` 只能用于需要回复的 TASK 调用；如果用于 notification 调用、非接收者调用或重复闭环，返回 MCP 错误响应。
 
 ### 与 agent_bridge 的协作
 

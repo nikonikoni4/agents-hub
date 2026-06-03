@@ -1,11 +1,13 @@
 """
-MCP Server 和 4 个工具测试
+MCP Server 和 6 个工具测试
 
 契约驱动测试：
 - call_agent(): 派活给团队成员
 - assign_tasks_to_team(): 覆盖式更新任务列表
 - archive_task_list(): 归档当前 ACTIVE 列表
 - check_agent_call(): 查询 AgentCall 状态
+- speak_in_group_chat(): 在群聊中公开发言
+- finish_agent_call(): 结束需要回复的 AgentCall
 
 每个工具测试：
 - 正常流程
@@ -21,10 +23,10 @@ from agents_hub.mcp import (
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
     GROUP_CHAT_NOT_FOUND,
+    INVALID_AGENT_CALL_STATE,
     INVALID_TOKEN,
     PERMISSION_DENIED,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -47,6 +49,7 @@ def mock_group_chat():
     mock.task_manager = MagicMock()
     mock.agent_call_manager = MagicMock()
     mock.team = MagicMock()
+    mock.group_chat_context.add_message = AsyncMock()
     return mock
 
 
@@ -409,6 +412,7 @@ class TestCheckAgentCall:
         mock_call.send_to = "worker2"
         mock_call.content = "test content"
         mock_call.message_type = MessageType.TASK
+        mock_call.has_agent_response = True
         mock_call.result = MagicMock()
         mock_call.result.content = "result content"
         mock_call.error = None
@@ -420,6 +424,7 @@ class TestCheckAgentCall:
         assert result["status"] == CallStatus.COMPLETED.value
         assert result["send_from"] == "worker1"
         assert result["send_to"] == "worker2"
+        assert result["has_agent_response"] is True
         mock_group_chat.agent_call_manager.get_call.assert_called_once_with(call_id)
 
     @pytest.mark.asyncio
@@ -451,3 +456,135 @@ class TestCheckAgentCall:
 
         assert "error" in result
         assert result["error"]["code"] == AGENT_CALL_NOT_FOUND
+
+
+# ============================================================================
+# finish_agent_call() 测试
+# ============================================================================
+
+
+class TestFinishAgentCall:
+    """测试 finish_agent_call 工具"""
+
+    @pytest.mark.asyncio
+    async def test_finish_agent_call_success(self, mock_group_chat_manager, mock_group_chat):
+        """契约：TASK 接收者可通过 finish_agent_call 结束调用并写入群聊"""
+        from agents_hub.mcp.server import finish_agent_call
+
+        token = "worker_token"
+        worker_name = "worker1"
+        group_chat_id = "group_123"
+        call_id = "call_456"
+
+        mock_group_chat_manager.resolve_token.return_value = (worker_name, group_chat_id)
+        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+
+        mock_call = MagicMock()
+        mock_call.call_id = call_id
+        mock_call.send_from = "Leader"
+        mock_call.send_to = worker_name
+        mock_call.message_type = MessageType.TASK
+        mock_call.has_agent_response = False
+        mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+
+        result = await finish_agent_call(
+            agent_token=token,
+            call_id=call_id,
+            content="任务已完成",
+            success=True,
+        )
+
+        assert result == {"call_id": call_id, "status": CallStatus.COMPLETED.value}
+        mock_group_chat.agent_call_manager.mark_agent_response.assert_called_once_with(
+            call_id=call_id,
+            content="任务已完成",
+            success=True,
+        )
+        mock_group_chat.group_chat_context.add_message.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_finish_agent_call_rejects_notification(
+        self, mock_group_chat_manager, mock_group_chat
+    ):
+        """契约：NOTIFICATION 不需要回复，调用 finish_agent_call 返回状态错误"""
+        from agents_hub.mcp.server import finish_agent_call
+
+        mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
+        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+
+        mock_call = MagicMock()
+        mock_call.call_id = "call_456"
+        mock_call.send_from = "Leader"
+        mock_call.send_to = "worker1"
+        mock_call.message_type = MessageType.NOTIFICATION
+        mock_call.has_agent_response = False
+        mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+
+        result = await finish_agent_call(
+            agent_token="worker_token",
+            call_id="call_456",
+            content="不应该回复",
+            success=True,
+        )
+
+        assert "error" in result
+        assert result["error"]["code"] == INVALID_AGENT_CALL_STATE
+        mock_group_chat.agent_call_manager.mark_agent_response.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_finish_agent_call_rejects_non_receiver(
+        self, mock_group_chat_manager, mock_group_chat
+    ):
+        """契约：只有 call 的接收者可以结束该调用"""
+        from agents_hub.mcp.server import finish_agent_call
+
+        mock_group_chat_manager.resolve_token.return_value = ("other_worker", "group_123")
+        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+
+        mock_call = MagicMock()
+        mock_call.call_id = "call_456"
+        mock_call.send_from = "Leader"
+        mock_call.send_to = "worker1"
+        mock_call.message_type = MessageType.TASK
+        mock_call.has_agent_response = False
+        mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+
+        result = await finish_agent_call(
+            agent_token="other_token",
+            call_id="call_456",
+            content="越权回复",
+            success=True,
+        )
+
+        assert "error" in result
+        assert result["error"]["code"] == PERMISSION_DENIED
+        mock_group_chat.agent_call_manager.mark_agent_response.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_finish_agent_call_rejects_already_finished(
+        self, mock_group_chat_manager, mock_group_chat
+    ):
+        """契约：已经显式回复闭环的 call 不能重复 finish"""
+        from agents_hub.mcp.server import finish_agent_call
+
+        mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
+        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+
+        mock_call = MagicMock()
+        mock_call.call_id = "call_456"
+        mock_call.send_from = "Leader"
+        mock_call.send_to = "worker1"
+        mock_call.message_type = MessageType.TASK
+        mock_call.has_agent_response = True
+        mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+
+        result = await finish_agent_call(
+            agent_token="worker_token",
+            call_id="call_456",
+            content="重复回复",
+            success=True,
+        )
+
+        assert "error" in result
+        assert result["error"]["code"] == INVALID_AGENT_CALL_STATE
+        mock_group_chat.agent_call_manager.mark_agent_response.assert_not_called()

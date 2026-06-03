@@ -1,10 +1,10 @@
 ---
-version: 0.1
+version: 1.0
 created_at: 2026-05-31
-updated_at: 2026-05-31
-last_updated: 创建草案，决策延后至 MCP 主流程跑通后再实施
-abstract: 将群聊发言从 Agent.run() 出口 A/B 的隐式自动写入，改为显式 MCP 工具调用（speak_in_group_chat），目的是分离 LLM 的"私下思考过程"与"对外公开发言"，避免中间工具调用细节污染群聊历史与下游 agent 上下文
-status: deferred
+updated_at: 2026-06-03
+last_updated: 采纳显式发言与显式调用闭环方案，区分 speak_in_group_chat 和 finish_agent_call
+abstract: 将群聊发言从 Agent.run() 出口 A/B 的隐式自动写入，改为显式 MCP 工具调用；普通公开发言使用 speak_in_group_chat，需要回复的 AgentCall 使用 finish_agent_call 闭环
+status: decided
 ---
 
 # 群聊发言：从隐式自动写入改为显式工具调用
@@ -14,14 +14,16 @@ status: deferred
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 0.1  | 创建草案，捕获讨论结论，等待 MCP 主流程跑通后实施 |
+| 1.0  | 采纳显式发言与显式调用闭环方案，明确 speak_in_group_chat 不负责关闭 AgentCall |
 
 ## 状态说明
 
-本 ADR 状态为 `deferred`：方向已基本确定（改成显式工具调用），但**实施时机延后**至 MCP Server 主流程跑通、整体流程可端到端验证之后。原因：
+本 ADR 状态为 `decided`：已采纳显式工具方案，并进一步拆分为两个语义不同的工具：
 
-- 当前阶段是 MCP 工具集首版交付，引入此重构会让 MCP 设计与 Agent 层重构相互纠缠，复杂度暴增
-- 该问题属于"非阻塞性的体验和质量问题"，不影响 MCP 的功能正确性
-- 等 MCP 流程完整运行后再回头改，能拿到真实的对话样本，更好评估"哪些内容应该进群聊"
+- `speak_in_group_chat`：公开发言，只写入群聊，不创建、不关闭 AgentCall
+- `finish_agent_call`：结束一次需要回复的 AgentCall，并把最终回复写入群聊
+
+核心原则：**调用/指令是控制面事实，群聊消息是公开协作记录**。群聊消息不反向驱动 Agent 调用状态。
 
 ## 问题界定
 
@@ -54,6 +56,7 @@ status: deferred
 - Agent 输出哪些内容应当进群聊
 - 出口 A 和出口 B 的存废与重构
 - 新增 `speak_in_group_chat` MCP 工具的定位和职责
+- 新增 `finish_agent_call` MCP 工具的定位和职责
 - LLM 遗忘调用工具的兜底机制
 
 ### 非讨论范围
@@ -76,7 +79,7 @@ status: deferred
 - 上述四类问题持续存在
 - 长期看，对话质量随 token 累积而劣化
 
-### 方案 B：显式工具调用（本方案）
+### 方案 B：显式发言工具，并由 speak 自动回执
 
 **做法**：
 
@@ -98,6 +101,7 @@ status: deferred
 - LLM 可能忘记调用 `speak_in_group_chat`，导致信息丢失
 - 对 system prompt 的依赖加强，prompt 工程成本上升
 - Agent 层重构涉及 base_agent.run() 的核心结构
+- `speak_in_group_chat` 同时表示"公开说话"和"完成调用"，语义过载
 
 ### 方案 C：保留出口但只写"最终段"
 
@@ -111,9 +115,30 @@ status: deferred
 - 标记被 prompt injection 攻击的可能性（虽然在内部场景下不现实）
 - 不如显式工具调用清晰
 
-## 最终决策（草案）
+### 方案 D：显式发言 + 显式调用闭环（本方案）
 
-倾向**方案 B：显式工具调用**。等 MCP 主流程跑通后正式立项实施。
+**做法**：
+
+1. 取消 `Agent.run()` 出口 A、出口 B 的自动写入
+2. 新增 `speak_in_group_chat`，只负责在群聊公开发言
+3. 新增 `finish_agent_call`，只负责结束需要回复的 AgentCall
+4. AgentCall 增加"是否已被 Agent 显式回复"的闭环标志
+5. 当 TASK 执行一轮后仍未闭环，系统给该 Agent 发送提醒消息，要求调用 `finish_agent_call`
+6. LLM 普通 text 输出默认私下保留，不进入群聊，也不作为回执
+
+**优势**：
+- 公开发言和任务回执语义清晰，不再互相覆盖
+- `call_id` 只由调用闭环工具消费，便于 AgentCall 状态机维护
+- Worker 可以先用 `speak_in_group_chat` 说"收到/处理中"，不提前关闭任务
+- 任务完成、失败或无法继续时，必须通过 `finish_agent_call` 明确结束调用
+
+**劣势**：
+- MCP tool 数量增加到 6 个，prompt 指引需要更清楚
+- LLM 可能忘记 `finish_agent_call`，需要系统提醒兜底
+
+## 最终决策
+
+选择**方案 D：显式发言 + 显式调用闭环**。
 
 ## 决策原因
 
@@ -127,32 +152,36 @@ ADR 0005 已确立"按需提供上下文""避免越权访问"为多 agent 通信
 
 ### 原因 3：tool 数量增长可控
 
-测试阶段的 MCP 工具集已经有 `call_agent` `assign_tasks_to_team` `archive_task_list` `check_agent_call`，加一个 `speak_in_group_chat` 后总共 5 个，对 LLM 的 tool selection 复杂度影响很小，且每个工具职责非常清晰。
+测试阶段的 MCP 工具集已有 `call_agent` `assign_tasks_to_team` `archive_task_list` `check_agent_call`。新增 `speak_in_group_chat` 和 `finish_agent_call` 后总共 6 个，数量仍可控；更重要的是每个工具职责边界更清晰。
 
-## 实施细节（待真正立项时填充）
+### 原因 4：回复闭环必须绑定 AgentCall，而不是绑定群聊发言
 
-以下条目在 deferred 期间只做记录，不展开：
+`call_agent` 创建的是一次控制面调用，`call_id` 是这次调用的回执凭证。完成任务时传回 `call_id`，系统才能准确更新 AgentCall 状态、停止等待、保留可查询记录。`speak_in_group_chat` 是公开说话动作，不应该因为携带一个 ID 就改变调用生命周期。
 
-- `speak_in_group_chat` 的具体签名和返回值
+## 实施细节
+
+- `speak_in_group_chat`：用于普通群聊公开发言，可选 @ 某个对象；写入前执行 token 剥离
+- `finish_agent_call`：只能用于需要回复的 TASK 调用；只有调用接收者可以结束该 call；notification 调用使用该工具会报错
+- `AgentCall` 增加显式回复闭环标志，用于判断 TASK 是否已经由 Agent 主动结束
+- TASK 执行一轮后如果仍未闭环，Agent.run() 给该 Agent 私有队列追加系统提醒，要求调用 `finish_agent_call`
+- `Agent.run()` 不再把 `result.text` 自动写入群聊，也不再自动给发送者投递回执
+
 - 取消出口 A 后，前端如何感知"Manager 还没说话但 turn 已结束"（涉及流式输出问题，与 9d 联动）
-- LLM 遗忘调用工具的兜底机制：候选 (a) 强 prompt 教育、(b) Agent.run() 检查并补提示、(c) 不缓解
-- worker 完成 task 时如何回执 manager（speak_in_group_chat 自动联动 vs 单独工具）
 - role 的 CLAUDE.md 模板更新
 
 ## 后续影响
 
 ### 对当前 MCP 工具设计的影响
 
-本 ADR `deferred` 期间，**首版 MCP 工具集仍假设"出口 A/B 自动写入"在跑**。即：
-- `call_agent`、`assign_tasks_to_team`、`check_agent_call`、`archive_task_list` 这四个工具的设计**不依赖** speak_in_group_chat 是否存在
-- 一旦本 ADR 立项实施，会**新增** `speak_in_group_chat`，并**修改** `Agent.run()` 的出口逻辑——但前四个工具的语义和签名不受影响
+MCP 工具集新增两个明确的群聊协作工具：
+- `speak_in_group_chat`：公开发言
+- `finish_agent_call`：结束需要回复的调用
+
+`call_agent` 仍负责创建调用；`check_agent_call` 仍负责查询调用状态；二者不承担公开发言职责。
 
 ### 对未来 spec 的影响
 
-本 ADR 立项实施时需要：
-- 撰写 `speak_in_group_chat` 的工具 spec
-- 修订 `core-agent-orchestration` spec 中的 Agent 消息循环段落
-- 检查 ADR 0005 的"消息流转"描述是否需要同步更新
+需要同步修订 `core-agent-orchestration` 和 `core-communication` spec 中关于 Agent 消息循环、AgentCall 生命周期、MCP 工具入口的描述。
 
 ## 与其他决策的关联
 

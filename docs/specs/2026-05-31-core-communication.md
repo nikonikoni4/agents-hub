@@ -1,9 +1,9 @@
 ---
-version: 1.2
+version: 1.3
 created_at: 2026-05-31
-updated_at: 2026-06-02
-last_updated: 路径管理改用 group_chat_paths 集中管理
-abstract: core/communication 层的正式规格，定义消息路由机制和 Agent 调用生命周期管理
+updated_at: 2026-06-03
+last_updated: AgentCall 增加显式回复闭环语义
+abstract: core/communication 层的正式规格，定义消息路由机制、Agent 调用生命周期管理和显式回复闭环语义
 id: spec-core-communication
 title: Core Communication 层规格
 status: draft
@@ -32,6 +32,7 @@ contract_refs:
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | 新增 Task/TaskList 数据模型和 TaskManager |
 | 1.2 | 路径管理改用 group_chat_paths 集中管理 |
+| 1.3 | AgentCall 增加显式回复闭环语义 |
 
 ## Overview
 
@@ -84,6 +85,12 @@ MessageRouter 实现基于**私有 asyncio.Queue** 的点对点消息投递：
 
 每次跨 Agent 调用（无论是 MCP Tool 调用还是群聊中 @Agent）都会创建一个 AgentCall 记录，跟踪完整生命周期。
 
+AgentCall 同时记录"调用是否已被接收方显式回复闭环"。该闭环标志与状态不同：
+- 状态表示调用生命周期（PENDING / RUNNING / COMPLETED / FAILED / TIMEOUT）
+- 闭环标志表示接收方是否已经通过显式工具给出最终回复
+- TASK 调用只有显式回复闭环后，才应进入 COMPLETED 或 FAILED 终态
+- NOTIFICATION 调用不需要显式回复闭环
+
 **状态转换**：
 
 ```
@@ -99,7 +106,7 @@ MessageRouter 实现基于**私有 asyncio.Queue** 的点对点消息投递：
 **触发场景**：
 - MCP Tool `call_agent` 调用时创建
 - User 在群聊中 @Agent 时创建
-- MessageType 为 TASK 时，完成后系统自动向发送者返回通知
+- MessageType 为 TASK 时，接收方需要通过显式回复工具结束调用
 
 **超时判断**：
 - 基于 elapsed > timeout_seconds
@@ -181,8 +188,8 @@ Agent.run() 循环：
   2. render_for_llm(msg)        ← 渲染为 LLM prompt
   3. agent_call_manager.update_status(RUNNING)
   4. execute(prompt)             ← 调用 agent_bridge
-  5. agent_call_manager.update_status(COMPLETED)
-  6. 写回群聊 / 投递回复
+  5. 非 TASK 调用执行完成后可进入 COMPLETED
+  6. TASK 调用等待显式回复闭环后进入 COMPLETED / FAILED
 ```
 
 ## Out of Spec

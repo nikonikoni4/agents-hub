@@ -16,8 +16,6 @@ AgentCall 单元测试
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-import pytest
-
 from agents_hub.core.communication.agent_call import AgentCall
 from agents_hub.core.foundation import CallStatus, MessageType
 
@@ -71,6 +69,13 @@ class TestAgentCallDefaults:
         )
         assert call.started_at is None
         assert call.completed_at is None
+
+    def test_default_has_agent_response_false(self):
+        """契约：创建时默认尚未被 Agent 显式回复闭环"""
+        call = AgentCall(
+            send_from="a", send_to="b", content="c", message_type=MessageType.TASK
+        )
+        assert call.has_agent_response is False
 
 
 class TestAgentCallIsTimeout:
