@@ -4,6 +4,8 @@
 定义 agents-hub 中使用的所有异常类，提供统一的错误处理机制。
 """
 
+from agents_hub.exceptions import AgentsHubError as _TopLevelAgentsHubError
+
 __all__ = [
     "AgentsHubError",
     "AgentNotFoundError",
@@ -22,14 +24,15 @@ __all__ = [
 ]
 
 
-class AgentsHubError(Exception):
-    """所有 agents-hub 错误的基类"""
+class AgentsHubError(_TopLevelAgentsHubError):
+    """所有 agents-hub 错误的基类（继承顶层 AgentsHubError，统一异常层级）"""
 
     def __init__(self, message: str, error_code: str, details: dict | None = None):
-        self.message = message
-        self.error_code = error_code  # 用于 MCP Tool 返回
-        self.details = details or {}
-        super().__init__(message)
+        super().__init__(
+            message=message,
+            error_code=error_code,
+            details=details,
+        )
 
     def to_mcp_response(self) -> dict:
         """转换为 MCP Tool 的错误响应格式"""

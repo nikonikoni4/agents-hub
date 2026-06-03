@@ -12,7 +12,7 @@ from agents_hub.core.foundation.exceptions import (
     DockerNotAvailableError,
     DockerStartError,
 )
-from agents_hub.exceptions import StateError
+from agents_hub.exceptions import ExternalServiceError, StateError
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,6 @@ class DockerManager:
         self._cleanup_timeout = cleanup_timeout  # 容器空闲销毁等待时间（秒）
         # git 路径修复状态：key → (cwd, worktree_name, orig_git_content, orig_gitdir_content)
         self._git_fix_state: dict[tuple[str, str], tuple[str, str, str, str]] = {}
-        # TODO 需要检测docker 镜像是否存在
 
     def _is_docker_running(self) -> bool:
         """检查 Docker Engine 是否运行（带缓存）"""
@@ -51,6 +50,70 @@ class DockerManager:
 
         self._docker_status_cache = (status, now)
         return status
+
+    async def ensure_image_ready(self) -> None:
+        """确保 Docker 可用且镜像已安装。
+
+        检查流程：
+        1. Docker Engine 是否运行
+        2. 镜像是否存在，不存在则从 Dockerfile 构建
+
+        Raises:
+            DockerNotAvailableError: Docker Engine 未运行
+            ExternalServiceError: 镜像构建失败
+        """
+        # 1. 检查 Docker Engine
+        if not self._is_docker_running():
+            raise DockerNotAvailableError(
+                agent_name="config",
+                group_chat_id="",
+                message="Docker Engine 未运行，请先启动 Docker Desktop",
+            )
+
+        # 2. 检查镜像是否存在
+        image = config.docker_image
+        process = await asyncio.create_subprocess_exec(
+            "docker",
+            "image",
+            "inspect",
+            image,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await process.wait()
+        if process.returncode == 0:
+            return  # 镜像已存在
+
+        # 3. 镜像不存在，从 Dockerfile 构建
+        dockerfile_path = Path(config.data_path) / "Dockerfile"
+        if not dockerfile_path.exists():
+            raise ExternalServiceError(
+                f"Docker 镜像 '{image}' 不存在且 Dockerfile 未找到: {dockerfile_path}",
+                details={"image": image, "dockerfile": str(dockerfile_path)},
+            )
+
+        logger.info(f"镜像 '{image}' 不存在，开始构建...")
+        build_dir = str(dockerfile_path.parent)
+        build_process = await asyncio.create_subprocess_exec(
+            "docker",
+            "build",
+            "-t",
+            image,
+            "-f",
+            str(dockerfile_path),
+            build_dir,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await build_process.communicate()
+
+        if build_process.returncode != 0:
+            raise ExternalServiceError(
+                f"Docker 镜像构建失败: {stderr.decode().strip()}",
+                details={"image": image, "stdout": stdout.decode().strip()},
+            )
+
+        logger.info(f"镜像 '{image}' 构建成功")
 
     async def _container_exists(self, container_name: str) -> bool:
         """检查容器是否已存在"""

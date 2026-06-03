@@ -50,6 +50,12 @@ class GroupChatMember(BaseModel):
     use_docker: bool = False
 
 
+class UseDockerUpdate(BaseModel):
+    """切换成员 Docker 沙箱开关请求"""
+
+    use_docker: bool = Field(..., description="是否启用 Docker 沙箱执行")
+
+
 class MessageCreate(BaseModel):
     """发送消息请求"""
 

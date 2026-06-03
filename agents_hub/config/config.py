@@ -27,6 +27,7 @@ class SystemConfig:
         "default_manager_name": "manager",  # 默认 manager 角色名
         "default_user_name": "user",  # 默认用户身份名
         "docker_image": "ai-tools:latest",  # Docker 沙箱镜像
+        "use_docker": False,  # 是否默认使用 Docker 沙箱执行
     }
 
     def __new__(cls):
@@ -125,10 +126,27 @@ class SystemConfig:
         """默认用户身份名"""
         return self._config_data["default_user_name"]
 
+    @default_user_name.setter
+    def default_user_name(self, value: str):
+        """设置默认用户身份名"""
+        self._config_data["default_user_name"] = value
+        self._save_config()
+
     @property
     def docker_image(self) -> str:
         """Docker 沙箱镜像名称"""
         return self._config_data["docker_image"]
+
+    @property
+    def use_docker(self) -> bool:
+        """是否默认使用 Docker 沙箱执行"""
+        return self._config_data["use_docker"]
+
+    @use_docker.setter
+    def use_docker(self, value: bool):
+        """设置是否默认使用 Docker 沙箱执行"""
+        self._config_data["use_docker"] = value
+        self._save_config()
 
     @property
     def is_dev(self) -> bool:
@@ -199,10 +217,25 @@ class Config:
         """快捷访问：默认用户身份名"""
         return self.system.default_user_name
 
+    @default_user_name.setter
+    def default_user_name(self, value: str):
+        """快捷访问：设置默认用户身份名"""
+        self.system.default_user_name = value
+
     @property
     def docker_image(self) -> str:
         """快捷访问：Docker 沙箱镜像名称"""
         return self.system.docker_image
+
+    @property
+    def use_docker(self) -> bool:
+        """快捷访问：是否默认使用 Docker 沙箱执行"""
+        return self.system.use_docker
+
+    @use_docker.setter
+    def use_docker(self, value: bool):
+        """快捷访问：设置是否默认使用 Docker 沙箱执行"""
+        self.system.use_docker = value
 
 
 # ============ 全局单例 ============

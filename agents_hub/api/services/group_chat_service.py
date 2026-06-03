@@ -29,6 +29,7 @@ from agents_hub.core.foundation import (
     MessageType,
     group_chat_paths,
 )
+from agents_hub.core.foundation.exceptions import DockerNotAvailableError
 from agents_hub.core.orchestration import GroupChat, GroupChatManager, Team
 from agents_hub.exceptions import (
     ExternalServiceError,
@@ -459,6 +460,95 @@ class GroupChatService:
             message_type=MessageType.TASK,
         )
         group_chat.message_router.send_message(message)
+
+    async def toggle_use_docker(
+        self,
+        group_chat_id: str,
+        role_name: str,
+        use_docker: bool,
+    ) -> GroupChatMember:
+        """切换指定成员的 Docker 沙箱开关
+
+        流程：验证 role_name 存在 → 检查 Docker+镜像 → 更新内存 → 持久化
+
+        Args:
+            group_chat_id: 群聊 ID
+            role_name: 角色名称
+            use_docker: 是否启用 Docker 沙箱
+
+        Returns:
+            GroupChatMember: 更新后的成员信息
+
+        Raises:
+            ResourceNotFoundError: 群聊或角色不存在
+            DockerNotAvailableError: Docker 未运行或镜像不存在
+            ExternalServiceError: 镜像构建失败
+        """
+        # 1. 加载群聊，获取 group_chat 实例
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 2. 验证 role_name 是群聊成员
+        all_members = list(group_chat.team_members_name)
+        if group_chat.manager:
+            all_members.append(group_chat.manager.name)
+        if role_name not in all_members:
+            raise ResourceNotFoundError(
+                f"角色 '{role_name}' 不是群聊 '{group_chat_id}' 的成员",
+                details={
+                    "role_name": role_name,
+                    "available_members": all_members,
+                },
+            )
+
+        # 3. 如果开启 Docker，先检查全局开关
+        if use_docker and not config.use_docker:
+            raise ValidationError(
+                "全局 Docker 功能已禁用，请先在系统配置中启用 use_docker",
+                details={"config_use_docker": config.use_docker},
+            )
+
+        # 4. 如果开启 Docker，检查 Docker Desktop 和镜像
+        if use_docker:
+            from agents_hub.agent_bridge.docker.manager import DockerManager
+
+            docker_manager = DockerManager()
+            try:
+                await docker_manager.ensure_image_ready()
+            except DockerNotAvailableError as e:
+                raise DockerNotAvailableError(
+                    agent_name=role_name,
+                    group_chat_id=group_chat_id,
+                    message="Docker 未启动，请先打开 Docker Desktop 并确保镜像已安装",
+                ) from e
+
+        # 5. 更新内存中的 use_docker
+        context = group_chat.group_chat_context
+        session_info = context.agent_session_id.get(role_name)
+        if session_info:
+            session_info.use_docker = use_docker
+        else:
+            from agents_hub.core.context.group_chat_session import AgentSessionInfo
+
+            context.agent_session_id[role_name] = AgentSessionInfo(use_docker=use_docker)
+
+        # 6. 持久化到 agent_session_state.json
+        await context.repository.save_agent_session_state(context.agent_session_id)
+
+        # 7. 构建返回的 member 信息
+        updated_info = context.agent_session_id[role_name]
+        return GroupChatMember(
+            name=role_name,
+            main_session=updated_info.main_session or None,
+            btw_session=updated_info.btw_session,
+            cwd=updated_info.cwd or None,
+            use_docker=updated_info.use_docker,
+        )
 
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""

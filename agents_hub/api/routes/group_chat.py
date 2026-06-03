@@ -9,6 +9,7 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatSummary,
     MessageCreate,
     MessageInfo,
+    UseDockerUpdate,
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
 from agents_hub.core.orchestration import GroupChatManager
@@ -99,3 +100,14 @@ async def send_message(
         send_to=request.send_to,
     )
     return {"message": "消息已发送"}
+
+
+@router.put("/{group_chat_id}/{role_name}/use-docker", response_model=GroupChatMember)
+async def toggle_use_docker(
+    group_chat_id: str,
+    role_name: str,
+    request: UseDockerUpdate,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """切换指定成员的 Docker 沙箱开关"""
+    return await service.toggle_use_docker(group_chat_id, role_name, request.use_docker)

@@ -168,6 +168,7 @@ class GroupChatRepository:
                 ),
                 token=session_data.get("token", ""),  # 加载 token 字段
                 cwd=session_data.get("cwd", ""),  # 加载 cwd 字段
+                use_docker=session_data.get("use_docker", False),  # 加载 use_docker 字段
             )
         return result
 
@@ -194,6 +195,7 @@ class GroupChatRepository:
                     },
                     "token": session_info.token,  # 保存 token 字段
                     "cwd": session_info.cwd,  # 保存 cwd 字段
+                    "use_docker": session_info.use_docker,  # 保存 use_docker 字段
                 }
 
             # 写入文件
