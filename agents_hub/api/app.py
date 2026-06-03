@@ -44,7 +44,10 @@ def _resolve_status(exc: AgentsHubError) -> int:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
+    from agents_hub.bootstrap import initialize_resources
     from agents_hub.mcp.server import mcp
+
+    initialize_resources()
 
     mcp_task = asyncio.create_task(
         mcp.run_async(
