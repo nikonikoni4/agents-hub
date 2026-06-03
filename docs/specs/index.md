@@ -39,3 +39,9 @@
  - path: `docs/specs/2026-05-31-core-agent-orchestration.md`
  - 触发规则：当设计、修改或扩展 Agent 执行模型、团队管理、群聊编排、token 生命周期或 MCP 工具入口时阅读
  - 内容摘要：core/agent 和 core/orchestration 层规格，定义 Agent 消息循环、Manager/Worker 角色、Team 验证（含 team_members 语义和初始化分离）、GroupChat 生命周期（含 token 管理和 user 伪 Agent 注册）、GroupChatManager token 索引和 MCP 工具入口
+
+## docker-executor
+ - updated_at : 2026-06-03
+ - path: `docs/specs/2026-06-03-docker-executor.md`
+ - 触发规则：当设计、修改或扩展 Docker 沙箱执行器时阅读，包括容器生命周期、CLI 路径配置、卷挂载策略和 git worktree 路径修复
+ - 内容摘要：Docker 沙箱执行器规格，定义容器创建/复用/销毁生命周期、CLI 路径映射（宿主机与容器）、卷挂载策略、git worktree 路径修复机制和不确定性事件清单
