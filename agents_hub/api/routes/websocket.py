@@ -31,5 +31,5 @@ async def broadcast_message(
     """
     # 确保 signal 中的 group_chat_id 与路径参数一致
     signal.group_chat_id = group_chat_id
-    await manager.broadcast(group_chat_id, signal.model_dump())
+    await manager.broadcast(group_chat_id, signal.model_dump(mode="json"))
     return BroadcastResponse()
