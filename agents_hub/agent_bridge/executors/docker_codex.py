@@ -3,7 +3,7 @@
 import logging
 
 from agents_hub.agent_bridge.executors.docker_base import DockerExecutor
-from agents_hub.config.types import CODEX_COMMAND
+from agents_hub.config.types import DOCKER_CODEX_COMMAND
 from agents_hub.roles.models import RoleConfig
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class DockerCodexExecutor(DockerExecutor):
     ) -> list[str]:
         """构建 Codex CLI 命令（强制跳过审批和沙箱）"""
         cmd = [
-            CODEX_COMMAND,
+            DOCKER_CODEX_COMMAND,
             "--dangerously-bypass-approvals-and-sandbox",
             "--print",
             "--output-format",

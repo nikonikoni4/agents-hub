@@ -12,6 +12,7 @@ from agents_hub.core.foundation.exceptions import (
     DockerNotAvailableError,
     DockerStartError,
 )
+from agents_hub.exceptions import StateError
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +20,14 @@ logger = logging.getLogger(__name__)
 class DockerManager:
     """Docker 容器池管理器"""
 
-    def __init__(self):
+    def __init__(self, cleanup_timeout: float = 10 * 60):
         self._containers: dict[tuple[str, str], DockerContainer] = {}
         self._cleanup_tasks: dict[tuple[str, str], asyncio.Task] = {}
         self._docker_status_cache: tuple[bool, float] = (False, 0)
         self._cache_ttl = 60  # 缓存 30 秒
+        self._cleanup_timeout = cleanup_timeout  # 容器空闲销毁等待时间（秒）
+        # git 路径修复状态：key → (cwd, worktree_name, orig_git_content, orig_gitdir_content)
+        self._git_fix_state: dict[tuple[str, str], tuple[str, str, str, str]] = {}
         # TODO 需要检测docker 镜像是否存在
 
     def _is_docker_running(self) -> bool:
@@ -63,16 +67,67 @@ class DockerManager:
         stdout, _ = await process.communicate()
         return bool(stdout.strip())
 
-    def _get_project_git_dir(self) -> str:
-        """获取主仓库的 .git 目录（兼容 worktree）"""
-        result = subprocess.run(
-            ["git", "rev-parse", "--git-common-dir"],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            raise RuntimeError("不在 git 仓库中")
-        return str(Path(result.stdout.strip()).resolve())
+    def _get_project_git_dir(self) -> str | None:
+        """获取主仓库的 .git 目录（兼容 worktree），无仓库时返回 None"""
+        current = Path.cwd()
+        for parent in [current, *current.parents]:
+            git_path = parent / ".git"
+            if git_path.is_file():
+                # worktree：读取 gitdir，再从 worktree 元数据找 commondir
+                gitdir = Path(git_path.read_text(encoding="utf-8").strip().removeprefix("gitdir: "))
+                commondir_file = gitdir / "commondir"
+                if commondir_file.is_file():
+                    return str(
+                        (gitdir / commondir_file.read_text(encoding="utf-8").strip()).resolve()
+                    )
+            elif git_path.is_dir():
+                return str(git_path.resolve())
+        return None
+
+    def _fix_git_paths(self, cwd: str, worktree_name: str, container: DockerContainer) -> None:
+        """修复 git worktree 路径引用（volume 共享，直接在宿主机操作）。
+
+        Args:
+            cwd: 宿主机 worktree 目录路径，挂载到容器 /workspace，
+            比如 D:/desktop/软件开发/agents-hub/.claude/worktrees/feat_group_chat_service
+            worktree_name: worktree 名称（目录名），对应 /repo-git/worktrees/<name>
+            container: 容器实例，用于关联修复状态
+        """
+        git_file = Path(cwd) / ".git"
+        git_dir = self._get_project_git_dir()
+        if git_dir is None:
+            raise StateError("worktree 模式下 git_dir 不应为 None")
+        gitdir_file = Path(git_dir) / "worktrees" / worktree_name / "gitdir"
+
+        # 存储原始内容
+        orig_git = git_file.read_text(encoding="utf-8")
+        orig_gitdir = gitdir_file.read_text(encoding="utf-8")
+
+        # 写入容器内路径（volume 同步到容器）
+        git_file.write_text(f"gitdir: /repo-git/worktrees/{worktree_name}\n", encoding="utf-8")
+        gitdir_file.write_text("/workspace/.git\n", encoding="utf-8")
+
+        key = (container.agent_name, container.group_chat_id)
+        self._git_fix_state[key] = (cwd, worktree_name, orig_git, orig_gitdir)
+        logger.info(f"已修复 git 路径 (worktree: {worktree_name})")
+
+    def _revert_git_paths(self, container: DockerContainer) -> None:
+        """回退 git 路径到原始宿主机路径"""
+        key = (container.agent_name, container.group_chat_id)
+        state = self._git_fix_state.pop(key, None)
+        if not state:
+            return
+
+        cwd, worktree_name, orig_git, orig_gitdir = state
+        git_file = Path(cwd) / ".git"
+        git_dir = self._get_project_git_dir()
+        if git_dir is None:
+            raise StateError("worktree 模式下 git_dir 不应为 None")
+        gitdir_file = Path(git_dir) / "worktrees" / worktree_name / "gitdir"
+
+        git_file.write_text(orig_git, encoding="utf-8")
+        gitdir_file.write_text(orig_gitdir, encoding="utf-8")
+        logger.info(f"已回退 git 路径 (worktree: {worktree_name})")
 
     async def _create_container(
         self,
@@ -81,14 +136,26 @@ class DockerManager:
         work_root: str,
         cwd: str,
     ) -> DockerContainer:
-        """创建新容器"""
+        """创建新容器。
+
+        Args:
+            cwd: 宿主机 worktree 目录路径，挂载到容器 /workspace
+        """
         container_name = f"container-{agent_name}-{group_chat_id}"
 
         if await self._container_exists(container_name):
             logger.info(f"容器 {container_name} 已存在，先删除")
             await asyncio.create_subprocess_exec("docker", "rm", "-f", container_name)
 
+        # 检测 git 仓库（降级：无仓库时不挂载）
         git_dir = self._get_project_git_dir()
+
+        # 检测是否为 worktree（.git 是文件而非目录）
+        worktree_name = None
+        if git_dir and (Path(cwd) / ".git").is_file():
+            worktree_name = Path(cwd).name
+
+        # 构建 docker run 命令
         cmd = [
             "docker",
             "run",
@@ -99,14 +166,12 @@ class DockerManager:
             f"{work_root}:/home/ai-user/.claude:rw",
             "-v",
             f"{cwd}:/workspace:rw",
-            "-v",
-            f"{git_dir}:/repo-git:rw",
-            "--network",
-            "host",
-            config.docker_image,
-            "sleep",
-            "infinity",
         ]
+
+        if git_dir:
+            cmd += ["-v", f"{git_dir}:/repo-git:rw"]
+
+        cmd += ["--network", "host", config.docker_image, "sleep", "infinity"]
 
         logger.info(f"创建容器: {container_name}")
 
@@ -122,8 +187,14 @@ class DockerManager:
             stderr = await process.stderr.read()
             raise DockerStartError(container_name=container_name, reason=stderr.decode())
 
+        container = DockerContainer(container_name, agent_name, group_chat_id, worktree_name)
+
+        # worktree 模式：修复 git 路径
+        if worktree_name:
+            self._fix_git_paths(cwd, worktree_name, container)
+
         logger.info(f"容器 {container_name} 创建成功")
-        return DockerContainer(container_name, agent_name, group_chat_id)
+        return container
 
     async def get_or_create_container(
         self,
@@ -169,11 +240,17 @@ class DockerManager:
         key = (agent_name, group_chat_id)
 
         async def cleanup():
-            await asyncio.sleep(10 * 60)  # 等待 10 分钟
+            await asyncio.sleep(self._cleanup_timeout)
 
             if key in self._containers:
                 container = self._containers[key]
                 logger.info(f"开始销毁容器: {container.name}")
+
+                # 回退 git 路径到宿主机原始状态
+                try:
+                    self._revert_git_paths(container)
+                except Exception as e:
+                    logger.warning(f"回退 git 路径失败（容器可能已停止）: {e}")
 
                 await asyncio.create_subprocess_exec("docker", "stop", container.name)
                 await asyncio.create_subprocess_exec("docker", "rm", container.name)

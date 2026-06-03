@@ -230,6 +230,6 @@ class Role:
             name=data["name"],
             platform=platform,
             description=data.get("description"),
-            work_root=str(self._work_root),
+            work_root=str(self._work_root.resolve()),
             role_type=role_type,
         )

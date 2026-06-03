@@ -3,7 +3,7 @@
 import logging
 
 from agents_hub.agent_bridge.executors.docker_base import DockerExecutor
-from agents_hub.config.types import CLAUDE_COMMAND
+from agents_hub.config.types import DOCKER_CLAUDE_COMMAND
 from agents_hub.roles.models import RoleConfig
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class DockerClaudeExecutor(DockerExecutor):
     ) -> list[str]:
         """构建 Claude CLI 命令（强制跳过权限检查）"""
         cmd = [
-            CLAUDE_COMMAND,
+            DOCKER_CLAUDE_COMMAND,
             "--dangerously-skip-permissions",
             "--print",
             "--verbose",

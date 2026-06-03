@@ -108,8 +108,15 @@ def test_create_codex_role(role_manager, agents_dir):
 
 def test_create_role_already_exists(role_manager, agents_dir):
     """测试创建已存在的角色"""
-    # 创建第一个角色
-    (agents_dir / "existing_role").mkdir()
+    # 创建一个完整的角色目录（role.json + work_root/ + 平台配置文件）
+    role_dir = agents_dir / "existing_role"
+    role_dir.mkdir()
+    work_root = role_dir / "work_root"
+    work_root.mkdir()
+    (work_root / "settings.json").write_text("{}", encoding="utf-8")
+    (role_dir / "role.json").write_text(
+        '{"name": "existing_role", "platform": "claude"}', encoding="utf-8"
+    )
 
     with pytest.raises(RoleAlreadyExistsError):
         role_manager.create_role("existing_role", AgentPlatform.CLAUDE)

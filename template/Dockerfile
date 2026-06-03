@@ -10,9 +10,14 @@ RUN apt-get update && apt-get install -y \
     python3 \
     && rm -rf /var/lib/apt/lists/*
 
+ENV LANG=C.UTF-8
+
 RUN git config --global user.name "AI User" && \
     git config --global user.email "ai@local" && \
-    git config --global init.defaultBranch main
+    git config --global init.defaultBranch main && \
+    git config --global core.quotepath false && \
+    git config --global i18n.commitEncoding utf-8 && \
+    git config --global i18n.logOutputEncoding utf-8
 
 # Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource.sh && \

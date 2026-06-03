@@ -1,6 +1,7 @@
 """RoleManager 类 - 角色生命周期管理。"""
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -16,6 +17,8 @@ from agents_hub.roles.exceptions import (
 )
 from agents_hub.roles.models import RoleInfo, RoleType
 from agents_hub.roles.role import Role
+
+logger = logging.getLogger(__name__)
 
 
 class RoleManager:
@@ -202,6 +205,28 @@ class RoleManager:
 
         return Role(role_dir)
 
+    def _is_role_incomplete(self, role_dir: Path, platform: AgentPlatform) -> bool:
+        """检查角色目录是否存在但配置不完整。
+
+        完整角色需要：role.json + work_root/ + 平台配置文件。
+        - Claude: settings.json
+        - Codex: auth.json + config.toml
+
+        Returns:
+            True 表示目录存在但配置不完整，需要重建。
+        """
+        role_json = role_dir / "role.json"
+        work_root = role_dir / "work_root"
+        if not role_json.exists() or not work_root.exists():
+            return True
+
+        if platform == AgentPlatform.CLAUDE:
+            return not (work_root / "settings.json").exists()
+        else:
+            return (
+                not (work_root / "auth.json").exists() or not (work_root / "config.toml").exists()
+            )
+
     def create_role(
         self,
         name: str,
@@ -239,7 +264,11 @@ class RoleManager:
 
         role_dir = self.agents_dir / name
         if role_dir.exists():
-            raise RoleAlreadyExistsError(role_name=name)
+            if self._is_role_incomplete(role_dir, platform):
+                logger.info(f"角色 {name} 目录存在但配置不完整，重新创建")
+                shutil.rmtree(role_dir)
+            else:
+                raise RoleAlreadyExistsError(role_name=name)
 
         role_dir.mkdir(parents=True)
         work_root = role_dir / "work_root"

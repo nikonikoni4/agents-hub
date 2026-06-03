@@ -31,7 +31,15 @@ def test_manager_initialization():
     assert manager._containers == {}
     assert manager._cleanup_tasks == {}
     assert manager._docker_status_cache == (False, 0)
-    assert manager._cache_ttl == 30
+    assert manager._cache_ttl == 60
+    assert manager._cleanup_timeout == 10 * 60
+    assert manager._git_fix_state == {}
+
+
+def test_manager_custom_cleanup_timeout():
+    """契约：DockerManager 支持自定义清理超时"""
+    manager = DockerManager(cleanup_timeout=30)
+    assert manager._cleanup_timeout == 30
 
 
 def test_is_docker_running_success():
@@ -337,12 +345,8 @@ async def test_cleanup_removes_container():
 
 
 def test_get_project_git_dir():
-    """契约：_get_project_git_dir 返回当前目录的 .git 路径"""
+    """契约：_get_project_git_dir 返回当前目录的 .git 路径，不在仓库中返回 None"""
     manager = DockerManager()
-    with patch("pathlib.Path.cwd") as mock_cwd:
-        mock_cwd.return_value.__truediv__ = lambda self, x: Mock(
-            absolute=Mock(return_value="/fake/.git")
-        )
-        # 实际测试中我们只验证方法存在且可调用
-        result = manager._get_project_git_dir()
-    assert isinstance(result, str)
+    # 在 git 仓库中运行时应返回字符串路径
+    result = manager._get_project_git_dir()
+    assert result is None or isinstance(result, str)

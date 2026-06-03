@@ -10,10 +10,13 @@ logger = logging.getLogger(__name__)
 class DockerContainer:
     """Docker 容器抽象"""
 
-    def __init__(self, name: str, agent_name: str, group_chat_id: str):
+    def __init__(
+        self, name: str, agent_name: str, group_chat_id: str, worktree_name: str | None = None
+    ):
         self.name = name
         self.agent_name = agent_name
         self.group_chat_id = group_chat_id
+        self.worktree_name = worktree_name
 
     def build_exec_command(
         self,
