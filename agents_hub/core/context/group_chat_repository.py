@@ -9,7 +9,7 @@ import json
 import os
 from datetime import datetime
 
-import aiofiles  # type: ignore[import-untyped]
+import aiofiles
 
 from agents_hub.core.foundation import FileSystemError, group_chat_paths
 

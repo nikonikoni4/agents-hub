@@ -166,7 +166,7 @@ class Agent:
                     f"Docker 隔离不必要：Agent CWD 与群聊路径相同。\n"
                     f"  Agent CWD: {agent_cwd}\n"
                     f"  GroupChat Path: {group_chat_path}\n"
-                    f"建议：将 agent_session_state.json 中的 use_docker 改为 false"
+                    f"建议：建议创建git worktree，分配给Agent"
                 ),
             )
 

@@ -22,7 +22,8 @@ class DockerManager:
         self._containers: dict[tuple[str, str], DockerContainer] = {}
         self._cleanup_tasks: dict[tuple[str, str], asyncio.Task] = {}
         self._docker_status_cache: tuple[bool, float] = (False, 0)
-        self._cache_ttl = 30  # 缓存 30 秒
+        self._cache_ttl = 60  # 缓存 30 秒
+        # TODO 需要检测docker 镜像是否存在
 
     def _is_docker_running(self) -> bool:
         """检查 Docker Engine 是否运行（带缓存）"""
@@ -62,10 +63,15 @@ class DockerManager:
         return bool(stdout.strip())
 
     def _get_project_git_dir(self) -> str:
-        """获取项目 .git 目录"""
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        return str(git_dir.absolute())
+        """获取主仓库的 .git 目录（兼容 worktree）"""
+        result = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError("不在 git 仓库中")
+        return str(Path(result.stdout.strip()).resolve())
 
     async def _create_container(
         self,
@@ -81,7 +87,7 @@ class DockerManager:
             logger.info(f"容器 {container_name} 已存在，先删除")
             await asyncio.create_subprocess_exec("docker", "rm", "-f", container_name)
 
-        git_dir = self._get_project_git_dir()
+        git_dir = self._get_project_git_dir()  # TODO 这里有问题
         cmd = [
             "docker",
             "run",
