@@ -1,9 +1,9 @@
 # Agents Hub 设计系统文档
 
-> **创建日期**：2026-06-01  
-> **版本**：v1.0  
-> **参考风格**：Claude Code Desktop  
-> **目标**：为 agents-hub 项目建立统一、可扩展、AI 可理解的视觉设计系统
+> **创建日期**：2026-06-03  
+> **版本**：v2.0  
+> **参考风格**：Cursor / Windsurf 风格  
+> **目标**：建立简洁、现代、双主题的设计系统
 
 ---
 
@@ -11,94 +11,100 @@
 
 ### 核心原则
 
-1. **专业克制**：开发者工具的专业感，避免过度装饰
-2. **层级清晰**：通过阴影、边框、背景色建立视觉层级
-3. **状态明确**：每个交互元素都有清晰的状态反馈
-4. **一致性优先**：所有元素遵循统一的设计语言
+1. **极简主义**：去除一切不必要的线条和装饰
+2. **双主题优先**：浅色和深色主题同等重要
+3. **圆角层级**：通过左侧圆角建立主内容区的视觉层级
+4. **无边界感**：减少分隔线，通过背景色区分区域
 
 ### 设计目标
 
-- **统一性**：所有界面元素遵循相同的设计语言
-- **可扩展性**：新增元素时能自动匹配现有风格
-- **AI 可理解性**：规则清晰、语义化、有明确的使用场景说明
+- **现代感**：符合 2026 年主流开发工具审美
+- **高效性**：减少视觉噪音，聚焦内容
+- **舒适性**：长时间使用不疲劳
 
 ---
 
 ## 二、色彩系统 ⭐⭐⭐⭐⭐
 
-### 基础色板
+### 双主题色板
 
-#### 背景层级色（从深到浅）
-
-| 变量名 | 色值 | RGB | 用途 | 何时使用 |
-|--------|------|-----|------|---------|
-| `bg-base` | `#1f1f1e` | rgb(31, 31, 30) | 主背景 | 页面主体背景、内容区域 |
-| `bg-elevated` | `#262626` | rgb(38, 38, 38) | 提升背景 | 侧边栏、导航栏、固定区域 |
-| `bg-surface` | `#2a2a2a` | rgb(42, 42, 42) | 表面背景 | 卡片、消息气泡、输入框 |
-| `bg-surface-hover` | `#2d2d2d` | rgb(45, 45, 45) | 表面悬停 | 卡片/输入框悬停态 |
-| `bg-overlay` | `#1a1a1a` | rgb(26, 26, 26) | 遮罩背景 | 底部输入区、模态框背景 |
-
-#### 边框色
+#### 浅色主题（Light Theme）
 
 | 变量名 | 色值 | RGB | 用途 |
 |--------|------|-----|------|
-| `border-subtle` | `#2a2a2a` | rgb(42, 42, 42) | 微妙分隔 |
-| `border-default` | `#353535` | rgb(53, 53, 53) | 默认边框 |
-| `border-strong` | `#3a3a3a` | rgb(58, 58, 58) | 强调边框 |
-| `border-hover` | `#404040` | rgb(64, 64, 64) | 悬停边框 |
+| `bg-sidebar` | `rgb(246, 246, 246)` | 246, 246, 246 | 顶栏、左侧栏背景 |
+| `bg-shadow` | `rgb(234, 234, 234)` | 234, 234, 234 | 悬停态背景 |
+| `bg-main` | `rgb(255, 255, 255)` | 255, 255, 255 | 主对话区背景 |
+| `bg-bubble` | `rgb(246, 246, 246)` | 246, 246, 246 | 消息气泡背景 |
+| `bg-right-base` | `rgb(255, 255, 255)` | 255, 255, 255 | 右侧栏背景 |
+| `bg-right-module` | `rgb(246, 246, 246)` | 246, 246, 246 | 右侧栏模块背景 |
+| `bg-right-shadow` | `rgb(233, 234, 234)` | 233, 234, 234 | 右侧栏模块阴影 |
+| `bg-input` | `rgb(255, 255, 255)` | 255, 255, 255 | 输入框背景 |
 
-#### 文字色
+| 变量名 | 色值 | RGB | 用途 |
+|--------|------|-----|------|
+| `text-primary` | `rgb(30, 30, 30)` | 30, 30, 30 | 主要文字 |
+| `text-secondary` | `rgb(100, 100, 100)` | 100, 100, 100 | 次要文字 |
+| `text-tertiary` | `rgb(150, 150, 150)` | 150, 150, 150 | 辅助文字 |
+| `border-color` | `rgb(220, 220, 220)` | 220, 220, 220 | 边框颜色 |
+| `accent-color` | `rgb(74, 158, 255)` | 74, 158, 255 | 强调色 |
 
-| 变量名 | 色值 | RGB | 对比度 | 用途 |
-|--------|------|-----|--------|------|
-| `text-primary` | `#ffffff` | rgb(255, 255, 255) | 最高 | 标题、重要文字 |
-| `text-secondary` | `#e0e0e0` | rgb(224, 224, 224) | 高 | 正文、主要内容 |
-| `text-tertiary` | `#b0b0b0` | rgb(176, 176, 176) | 中 | 次要信息、辅助文字 |
-| `text-quaternary` | `#888888` | rgb(136, 136, 136) | 低 | 占位符、禁用文字 |
-| `text-disabled` | `#666666` | rgb(102, 102, 102) | 最低 | 禁用状态 |
+#### 深色主题（Dark Theme）
 
-#### 主色调（Accent）
+| 变量名 | 浅色值 | 深色值 | RGB (深色) |
+|--------|--------|--------|-----------|
+| `bg-sidebar` | 246, 246, 246 | **20, 20, 20** | rgb(20, 20, 20) |
+| `bg-shadow` | 234, 234, 234 | **38, 38, 38** | rgb(38, 38, 38) |
+| `bg-main` | 255, 255, 255 | **24, 24, 24** | rgb(24, 24, 24) |
+| `bg-bubble` | 246, 246, 246 | **20, 20, 20** | rgb(20, 20, 20) |
+| `bg-right-base` | 255, 255, 255 | **24, 24, 24** | rgb(24, 24, 24) |
+| `bg-right-module` | 246, 246, 246 | **20, 20, 20** | rgb(20, 20, 20) |
+| `bg-right-shadow` | 233, 234, 234 | **36, 36, 36** | rgb(36, 36, 36) |
+| `bg-input` | 255, 255, 255 | **45, 45, 45** | rgb(45, 45, 45) |
 
-| 变量名 | 色值 | RGB | 用途 | 何时使用 |
-|--------|------|-----|------|---------|
-| `accent-primary` | `#4a9eff` | rgb(74, 158, 255) | 主操作 | 主要按钮、链接、选中状态 |
-| `accent-primary-hover` | `#357abd` | rgb(53, 122, 189) | 主操作悬停 | 按钮悬停态 |
-| `accent-secondary` | `#ff6b6b` | rgb(255, 107, 107) | 次要强调 | 图标、装饰元素 |
+| 变量名 | 浅色值 | 深色值 | RGB (深色) |
+|--------|--------|--------|-----------|
+| `text-primary` | 30, 30, 30 | **230, 230, 230** | rgb(230, 230, 230) |
+| `text-secondary` | 100, 100, 100 | **180, 180, 180** | rgb(180, 180, 180) |
+| `text-tertiary` | 150, 150, 150 | **120, 120, 120** | rgb(120, 120, 120) |
+| `border-color` | 220, 220, 220 | **60, 60, 60** | rgb(60, 60, 60) |
+| `accent-color` | 74, 158, 255 | **74, 158, 255** | rgb(74, 158, 255) |
 
-#### 语义色
+### 色彩映射规则
 
-| 变量名 | 色值 | 用途 | 何时使用 |
-|--------|------|------|---------|
-| `semantic-success` | `#4ade80` | 成功状态 | 操作成功提示、完成状态 |
-| `semantic-warning` | `#fbbf24` | 警告状态 | 需要注意的信息 |
-| `semantic-error` | `#f87171` | 错误状态 | 错误提示、失败状态 |
-| `semantic-info` | `#60a5fa` | 信息状态 | 一般信息提示 |
+**从浅色到深色的映射逻辑**：
+- 浅灰 (246) → 深黑 (20)
+- 浅灰阴影 (234) → 深灰 (38)
+- 纯白 (255) → 深灰主体 (24)
+- 浅灰模块阴影 (233) → 深灰阴影 (36)
+- **特殊**：输入框从纯白 (255) → 深灰偏亮 (45)
 
 ### 色彩使用规则
 
-#### ✅ 允许的组合
+#### 层级关系
 
-- `bg-base` + `text-secondary`（主内容区）
-- `bg-elevated` + `text-secondary`（侧边栏）
-- `bg-surface` + `text-secondary`（卡片内容）
-- `accent-primary` + `#ffffff`（按钮文字）
-- `bg-surface` + `border-default`（卡片边框）
+```
+主背景 (sidebar bg) 
+  └── 主对话区 (main bg) - 通过左侧圆角突出
+      └── 消息气泡 (bubble bg)
+      └── 输入框 (input bg)
+```
 
-#### ❌ 禁止的组合
+#### ✅ 正确使用
 
-- `bg-base` + `text-quaternary`（对比度不足 < 4.5:1）
-- `accent-primary` + `accent-secondary`（色彩冲突）
-- 任何中灰背景 + 浅灰文字（可读性差）
+- 顶栏和左侧栏：使用 `bg-sidebar`
+- 主对话区：使用 `bg-main` + 左侧圆角
+- 右侧栏：底色 `bg-right-base`，模块 `bg-right-module`
 
-#### 对比度要求
+#### ❌ 避免
 
-- **正文文字**：对比度 ≥ 4.5:1（WCAG AA 标准）
-- **大号文字**（≥18px）：对比度 ≥ 3:1
-- **装饰元素**：对比度 ≥ 3:1
+- 不要在同一层级混用不同背景色
+- 不要使用未定义的中间色值
+- 不要破坏颜色映射关系
 
 ---
 
-## 三、字体系统 ⭐⭐⭐⭐
+## 三、字体系统 ⭐⭐⭐
 
 ### 字体族
 
@@ -106,612 +112,493 @@
 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 ```
 
-**选择理由**：
-- 使用系统字体栈，保持原生感
-- 跨平台一致性好
-- 性能优秀（无需加载外部字体）
-
 ### 字号阶梯
 
-| 级别 | 字号 | 行高 | 字重 | 用途 | 何时使用 |
-|------|------|------|------|------|---------|
-| `text-2xl` | 22px | 1.3 | 700 | 页面标题 | 主内容区标题（更重的字重） |
-| `text-xl` | 18px | 1.4 | 600 | 区块标题 | 卡片标题、章节标题 |
-| `text-lg` | 16px | 1.5 | 500 | 强调文字 | 重要信息、子标题 |
-| `text-base` | 15px | 1.6 | 400 | 正文 | 消息内容、输入框文字 |
-| `text-sm` | 14px | 1.5 | 400 | 辅助文字 | 侧边栏列表项 |
-| `text-xs` | 11px | 1.4 | 600 | 标签文字 | 分类标签、状态标签 |
+| 级别 | 字号 | 行高 | 字重 | 用途 |
+|------|------|------|------|------|
+| `text-base` | 14px | 1.6 | 400 | 正文、消息 |
+| `text-sm` | 13px | 1.5 | 400/500 | 侧边栏列表、按钮 |
+| `text-xs` | 11px | 1.4 | 600 | 标签、小标注 |
 
 ### 字重规则
 
 | 字重 | 数值 | 用途 |
 |------|------|------|
-| Regular | 400 | 正文、列表项（默认） |
-| Medium | 500 | 按钮、强调文字、激活的列表项 |
-| Semibold | 600 | 区块标题、标签 |
-| Bold | 700 | 页面主标题 |
-
-### 字体使用规则
-
-#### ✅ 正确使用
-
-- 标题使用 Bold（700）+ 较大字号（22px）
-- 正文使用 Regular（400）+ 15px
-- 侧边栏列表项使用 Regular（400）+ 14px，激活时 Medium（500）
-- 标签使用 Semibold（600）+ 11px + 大写 + 字间距
-
-#### ❌ 避免
-
-- 正文字号 < 14px（可读性差）
-- 标题使用 Regular（层级不明显）
-- 过多字重变化（视觉混乱）
+| Regular | 400 | 正文、列表项 |
+| Medium | 500 | 按钮、强调 |
+| Semibold | 600 | 标题、标签 |
 
 ---
 
 ## 四、间距系统 ⭐⭐⭐⭐
 
-### 基础单位
-
-**8px 基础单位**（4px 作为半单位）
+### 基础单位：4px
 
 ### 间距阶梯
 
-| 变量名 | 数值 | 用途 | 何时使用 |
-|--------|------|------|---------|
-| `spacing-1` | 4px | 极小间距 | 图标与文字、紧密元素 |
-| `spacing-2` | 8px | 小间距 | 组件内边距、相关元素 |
-| `spacing-3` | 12px | 中小间距 | 输入框内边距、按钮内边距 |
-| `spacing-4` | 16px | 中等间距 | 组件间距、卡片内边距 |
-| `spacing-5` | 20px | 中大间距 | 侧边栏内边距、区块内边距 |
-| `spacing-6` | 24px | 大间距 | 区块间距、页面内边距 |
-| `spacing-8` | 32px | 超大间距 | 页面边距、大区块间距 |
-| `spacing-12` | 48px | 巨大间距 | 页面顶部/底部留白 |
+| 变量名 | 数值 | 用途 |
+|--------|------|------|
+| `spacing-1` | 4px | 极小间距 |
+| `spacing-2` | 8px | 小间距、列表项间距 |
+| `spacing-3` | 12px | 按钮内边距、小模块 |
+| `spacing-4` | 16px | 模块内边距、区块间距 |
+| `spacing-6` | 24px | 大区块间距 |
 
-### 间距使用规则
+### 关键间距
 
-#### 格式塔原理
-
-- **相关元素间距 < 无关元素间距**
-- 同一组内的元素：8-12px
-- 不同组之间：16-24px
-- 不同区块之间：32-48px
-
-#### ✅ 正确使用
-
-- 消息气泡内边距：18-20px（上下更方正）
-- 消息之间间距：20-24px
-- 侧边栏内边距：20px（更宽松的呼吸空间）
-- 侧边栏顶部 logo 区域：margin-bottom 24px
-- 页面主内容边距：24-32px
-- 输入框内边距：14-18px（更松弛）
-- 主内容区顶部间距：32px（更多空气感）
-
-#### ❌ 避免
-
-- 使用 5px、7px、13px 等不规则数值
-- 相关元素间距过大（破坏视觉分组）
-- 间距不一致（同类元素使用不同间距）
+- 顶栏高度：`40px`
+- 左侧栏宽度：`280px`
+- 右侧栏宽度：`320px`
+- 聊天头部高度：`56px`
+- 主内容区左右 padding：`24px`
 
 ---
 
-## 五、圆角系统 ⭐⭐⭐
+## 五、圆角系统 ⭐⭐⭐⭐⭐
 
 ### 圆角阶梯
 
-| 变量名 | 数值 | 用途 | 何时使用 |
-|--------|------|------|---------|
-| `radius-sm` | 6px | 小元素 | 按钮、标签、小图标 |
-| `radius-md` | 8px | 中等元素 | 卡片、输入框、头像 |
-| `radius-lg` | 12px | 大元素 | 消息气泡、大卡片 |
-| `radius-full` | 9999px | 圆形 | 圆形头像、圆形按钮 |
+| 变量名 | 数值 | 用途 |
+|--------|------|------|
+| `radius-sm` | 4px | 小按钮 |
+| `radius-md` | 6px | 普通按钮、列表项 |
+| `radius-lg` | 8px | 模块卡片 |
+| `radius-xl` | 12px | **主对话区左侧圆角**、大圆角 |
+| `radius-2xl` | 16px | **消息气泡、输入框** |
 
-### 圆角使用规则
+### 关键圆角设计
 
-#### 嵌套规则
-
-- **内层圆角 < 外层圆角**
-- 例：卡片 12px，内部按钮 8px
-
-#### ✅ 正确使用
-
-- 消息气泡：12px
-- 输入框：12px
-- 按钮：7-8px
-- 头像：8px
-- Logo：6px
-
-#### ❌ 避免
-
-- 同一层级使用不同圆角
-- 内层圆角 ≥ 外层圆角
-- 使用 5px、9px、13px 等不规则数值
-
----
-
-## 六、阴影/层级系统 ⭐⭐⭐⭐⭐
-
-### 阴影等级
-
-| 等级 | CSS 值 | 用途 | 何时使用 |
-|------|--------|------|---------|
-| `shadow-none` | `none` | 无阴影 | 平面元素、列表项 |
-| `shadow-xs` | `0 1px 2px rgba(0,0,0,0.1)` | 极轻微 | 按钮默认态、小卡片 |
-| `shadow-sm` | `0 1px 3px rgba(0,0,0,0.08)` | 轻微 | 消息气泡默认态 |
-| `shadow-md` | `0 2px 6px rgba(0,0,0,0.12)` | 中等 | 消息气泡悬停态 |
-| `shadow-lg` | `0 4px 16px rgba(0,0,0,0.25)` | 明显 | 输入框浮动感（关键） |
-| `shadow-xl` | `0 8px 24px rgba(0,0,0,0.25)` | 强烈 | 模态框、抽屉 |
-
-**v4 关键改进**：所有阴影都更柔和，减少视觉重量，避免"廉价感"。
-
-### 特殊阴影
-
-| 类型 | CSS 值 | 用途 |
-|------|--------|------|
-| `shadow-accent` | `0 2px 8px rgba(74,158,255,0.3)` | Accent 元素 |
-| `shadow-accent-hover` | `0 4px 12px rgba(74,158,255,0.4)` | Accent 悬停 |
-
-### 层级使用规则
-
-#### Z-index 层级
-
-| 层级 | Z-index | 用途 |
-|------|---------|------|
-| Base | 0 | 基础内容 |
-| Elevated | 10 | 卡片、消息 |
-| Sticky | 100 | 固定导航、侧边栏 |
-| Dropdown | 1000 | 下拉菜单 |
-| Modal | 10000 | 模态框、抽屉 |
-
-#### ✅ 正确使用
-
-- 消息气泡：`shadow-sm` (0 1px 3px rgba(0,0,0,0.08)) + hover 时 `shadow-md` (0 2px 6px rgba(0,0,0,0.12))
-- 按钮：`shadow-xs` (0 1px 2px rgba(0,0,0,0.1)) + hover 时 `shadow-md`
-- **输入框（浮动感）**：`shadow-lg` (0 4px 16px rgba(0,0,0,0.25)) + focus 时增强
-- Logo/头像：`shadow-accent` (0 2px 6px rgba(74,158,255,0.25))
-- 侧边栏右侧：`2px 0 8px rgba(0,0,0,0.1)`（微妙的右侧阴影）
-
-#### ❌ 避免
-
-- 使用纯黑色阴影（`rgba(0,0,0,1)`）
-- 阴影过重（破坏层级感）
-- 所有元素都加阴影（视觉噪音）
-
----
-
-## 七、组件状态 ⭐⭐⭐⭐⭐
-
-### 交互状态定义
-
-每个可交互组件必须定义以下 5 种状态：
-
-| 状态 | 视觉变化 | 何时触发 |
-|------|---------|---------|
-| **默认态** | 基础样式 | 初始状态 |
-| **悬停态** | 背景加深 + 阴影增强 | 鼠标悬停 |
-| **激活态** | 背景更深 + 阴影减弱 + 轻微下移 | 点击按下 |
-| **聚焦态** | 边框变为 accent 色 + accent 阴影 | 键盘聚焦 |
-| **禁用态** | 透明度 50% + 鼠标禁用 | 不可操作 |
-
-### 按钮状态示例
+#### 主对话区圆角（核心设计）
 
 ```css
-/* 默认态 */
-.button {
-  background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
-  box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
-  transition: all 0.2s ease;
-}
-
-/* 悬停态 */
-.button:hover {
-  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
-  transform: translateY(-1px);
-}
-
-/* 激活态 */
-.button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
-}
-
-/* 聚焦态 */
-.button:focus-visible {
-  outline: 2px solid #4a9eff;
-  outline-offset: 2px;
-}
-
-/* 禁用态 */
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.chat-area {
+  border-radius: 12px 0 0 12px; /* 左上、右上、右下、左下 */
 }
 ```
 
-### 输入框状态示例
+**设计理念**：
+- 左侧圆角让主对话区像"卡片"一样浮在背景上
+- 主背景使用 `bg-sidebar` 色，主对话区使用 `bg-main` 色
+- 圆角清晰可见，建立视觉层级
+
+#### 消息气泡和输入框
 
 ```css
-/* 默认态 */
-.input {
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-/* 聚焦态 */
-.input:focus-within {
-  border-color: #4a9eff;
-  box-shadow: 0 2px 12px rgba(74, 158, 255, 0.2);
-  background: #2d2d2d;
-}
-
-/* 禁用态 */
-.input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.message-bubble,
+.chat-input-wrapper {
+  border-radius: 16px;
 }
 ```
 
 ---
 
-## 八、布局规则 ⭐⭐⭐
+## 六、布局系统 ⭐⭐⭐⭐⭐
 
-### 整体布局
+### 整体结构
 
 ```
-┌─────────────────────────────────────┐
-│  Sidebar (280px)  │  Main Content   │
-│                   │                 │
-│  - Logo           │  - Header       │
-│  - New Session    │  - Content Body │
-│  - Session List   │  - Input Area   │
-└─────────────────────────────────────┘
+app-container (flex column, 100vh)
+├── top-bar (40px, bg-sidebar)
+│   └── 左侧按钮组 + 搜索
+└── main-container (flex row, flex: 1, bg-sidebar, padding: 8px 0)
+    ├── left-sidebar (280px, bg-sidebar)
+    │   ├── sidebar-buttons (按钮区)
+    │   ├── sidebar-projects (flex: 1, 项目区)
+    │   ├── sidebar-chats (对话区)
+    │   └── sidebar-footer (设置)
+    ├── chat-area (flex: 1, bg-main, border-radius: 12px 0 0 12px)
+    │   ├── chat-header (56px)
+    │   ├── chat-messages (flex: 1)
+    │   └── chat-input-container
+    └── right-sidebar (320px, bg-right-base)
+        ├── right-header (收起按钮)
+        └── right-module × N (模块)
 ```
 
-### 侧边栏规则
+### 层级关系说明
 
-- **宽度**：280px（固定）
-- **背景**：`bg-elevated` (#262626)
-- **内边距**：20px（v4 优化：更宽松的呼吸空间）
-- **右侧圆角**：`border-radius: 0 12px 12px 0`（关键：让侧边栏像"卡片"浮在主界面上）
-- **右侧阴影**：`box-shadow: 2px 0 8px rgba(0,0,0,0.1)`（微妙的右侧阴影）
+1. **主背景层**：`main-container` 使用 `bg-sidebar` (246/20)
+2. **内容卡片层**：`chat-area` 使用 `bg-main` (255/24) + 左侧圆角
+3. **嵌套内容层**：消息气泡、输入框使用对应背景色
 
-### 主内容区规则
-
-- **背景**：`bg-base` (#1f1f1e)
-- **左侧间距**：8px（v4 优化：与侧边栏留出间距，不贴边）
-- **内边距**：顶部 32px，左右 32px（更多空气感）
-- **最大宽度**：消息内容 720px（提高可读性）
-
-### 响应式断点
-
-| 设备 | 宽度范围 | 布局调整 |
-|------|---------|---------|
-| 桌面端 | > 1024px | 侧边栏 + 主内容 |
-| 平板 | 768-1024px | 侧边栏可折叠 |
-| 移动端 | < 768px | 侧边栏抽屉式 |
+**关键**：主对话区必须有左侧圆角，才能在主背景上形成"浮起"的视觉效果
 
 ---
 
-## 九、核心组件规范
+## 七、核心组件规范
 
-### 1. 按钮（Button）
-
-#### 主要按钮
+### 1. 顶部栏（Top Bar）
 
 ```css
-background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
-border: none;
-color: #ffffff;
-padding: 8px 18px;
-border-radius: 7px;
-font-size: 14px;
-font-weight: 500;
-box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+height: 40px;
+background: var(--bg-sidebar);
+padding: 0 12px;
+gap: 16px;
 ```
 
-#### 次要按钮
+**内容**：
+- 左侧：切换按钮、前进后退、搜索
+- 无：文件、编辑等菜单（已移除）
+
+### 2. 左侧栏（Left Sidebar）
 
 ```css
-background: #2f2f2f;
-border: 1px solid #404040;
-color: #e0e0e0;
-padding: 10px 16px;
-border-radius: 8px;
-font-size: 14px;
-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+width: 280px;
+background: var(--bg-sidebar);
+border-right: 1px solid var(--border-color);
 ```
 
-### 2. 输入框（Input）
+**分区**：
+1. **按钮区** (sidebar-buttons)
+   - 新对话
+   - 角色管理
+   - 技能广场
 
-#### 底部输入框（浮动感设计）
+2. **项目区** (sidebar-projects, flex: 1)
+   - 项目文件夹列表
+   - 对话列表（嵌套在项目下）
+
+3. **对话区** (sidebar-chats)
+   - 历史对话列表
+
+4. **设置** (sidebar-footer)
+   - 设置按钮
+
+### 3. 主对话区（Chat Area）
 
 ```css
-/* 容器：不贴底部，留出间距 */
-.input-container {
-  padding: 16px 32px 20px;
+flex: 1;
+background: var(--bg-main);
+border-radius: 12px 0 0 12px; /* 关键 */
+display: flex;
+flex-direction: column;
+```
+
+**分区**：
+1. **头部** (chat-header, 56px)
+   - 对话标题
+   - 操作按钮
+
+2. **消息区** (chat-messages, flex: 1)
+   - 消息列表，可滚动
+
+3. **输入区** (chat-input-container)
+   - 输入框 (border-radius: 16px)
+
+### 4. 右侧栏（Right Sidebar）
+
+```css
+width: 320px;
+background: var(--bg-right-base);
+border-left: 1px solid var(--border-color);
+```
+
+**内容**：
+- 收起按钮（顶部）
+- 成员列表模块
+- 预览模块
+- Diff 模块
+
+**模块样式**：
+```css
+.right-module {
+  margin: 12px;
+  padding: 16px;
+  background: var(--bg-right-module);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--bg-right-shadow);
+}
+```
+
+### 5. 按钮（Button）
+
+#### 顶栏按钮
+
+```css
+.top-bar-btn {
+  width: 32px;
+  height: 28px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  transition: background 0.15s;
+}
+
+.top-bar-btn:hover {
+  background: var(--bg-shadow);
+}
+```
+
+#### 侧边栏按钮
+
+```css
+.sidebar-btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  gap: 10px;
+  transition: background 0.15s;
+}
+
+.sidebar-btn:hover {
+  background: var(--bg-shadow);
+}
+```
+
+### 6. 列表项（List Item）
+
+#### 项目列表项
+
+```css
+.project-item {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.project-item:hover {
+  background: var(--bg-shadow);
+}
+```
+
+#### 对话列表项
+
+```css
+.chat-item {
+  padding: 6px 12px 6px 24px; /* 左侧缩进 */
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+```
+
+### 7. 消息气泡（Message Bubble）
+
+```css
+.message-bubble {
+  background: var(--bg-bubble);
+  padding: 16px;
+  border-radius: 16px; /* 大圆角 */
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 80%;
+}
+```
+
+### 8. 输入框（Input）
+
+```css
+.chat-input-wrapper {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 16px; /* 大圆角 */
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+```
+
+---
+
+## 八、主题切换
+
+### 实现方式
+
+```javascript
+// HTML 根元素添加 data-theme 属性
+document.documentElement.setAttribute('data-theme', 'dark');
+```
+
+### CSS 变量定义
+
+```css
+:root {
+  /* 浅色主题变量 */
+  --bg-sidebar: rgb(246, 246, 246);
+  /* ... */
+}
+
+html[data-theme="dark"] {
+  /* 深色主题变量 */
+  --bg-sidebar: rgb(20, 20, 20);
+  /* ... */
+}
+```
+
+### 主题切换按钮
+
+```css
+.theme-toggle {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  background: var(--accent-color);
+  border-radius: 8px;
+  z-index: 1000;
+}
+```
+
+---
+
+## 九、侧边栏收起
+
+### 左侧栏收起
+
+```css
+.left-sidebar.collapsed {
+  width: 0;
+  margin-left: -280px;
+}
+```
+
+### 右侧栏收起
+
+```css
+.right-sidebar.collapsed {
+  width: 0;
+  margin-right: -320px;
+}
+```
+
+### 过渡动画
+
+```css
+transition: width 0.3s, margin-left 0.3s;
+/* 或 */
+transition: width 0.3s, margin-right 0.3s;
+```
+
+---
+
+## 十、图标系统
+
+### 图标样式
+
+所有图标使用 SVG，统一样式：
+
+```css
+svg {
+  width: 18px; /* 或 24px */
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+```
+
+### 常用图标
+
+| 功能 | SVG Path |
+|------|----------|
+| 新对话 | `<path d="M12 5v14m7-7H5"/>` (加号) |
+| 角色管理 | `<circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>` (人形) |
+| 技能广场 | `<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>` (闪电) |
+| 搜索 | `<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>` (放大镜) |
+| 侧边栏切换 | `<rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/>` (双竖条) |
+| 后退 | `<path d="M15 18l-6-6 6-6"/>` (左箭头) |
+| 前进 | `<path d="M9 18l6-6-6-6"/>` (右箭头) |
+
+---
+
+## 十一、滚动条样式
+
+```css
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* 输入框包装器：强烈的浮动阴影 */
-.input-wrapper {
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 12px;
-  padding: 14px 18px;  /* v4 优化：更松弛 */
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);  /* 关键：浮动感 */
-  transition: all 0.2s ease;
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
 }
 
-/* 聚焦态：阴影更强 */
-.input-wrapper:focus-within {
-  border-color: #4a9eff;
-  box-shadow: 0 6px 20px rgba(74, 158, 255, 0.15), 0 4px 16px rgba(0, 0, 0, 0.25);
-  background: #2d2d2d;
-}
-
-/* 输入框文字 */
-.input-field {
-  font-size: 15px;  /* v4 优化：更大的字号 */
-  color: #e0e0e0;
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 ```
 
-### 3. 消息气泡（Message Bubble）
+---
 
-#### 助手消息
+## 十二、设计决策
 
+### 为什么选择这套设计？
+
+1. **简洁性**：移除不必要的线条和装饰，聚焦内容
+2. **现代感**：符合 2026 年主流开发工具审美（Cursor、Windsurf）
+3. **双主题**：浅色和深色主题同等重要，色值精确映射
+4. **层级清晰**：通过圆角和背景色建立视觉层级
+5. **高效性**：减少视觉噪音，提高工作效率
+
+### 与 v1.0 的主要变化
+
+| 维度 | v1.0 (Claude Code 风格) | v2.0 (Cursor 风格) |
+|------|------------------------|-------------------|
+| **色彩** | 深色单主题 | 双主题（浅色/深色） |
+| **线条** | 较多分隔线 | 极少分隔线 |
+| **圆角** | 主要在组件 | 主对话区左侧圆角 |
+| **顶栏** | 有菜单栏 | 只有按钮 |
+| **左侧栏** | 4个按钮 | 3个按钮（精简） |
+| **布局** | 平面式 | 卡片式（圆角浮起） |
+
+---
+
+## 十三、AI 使用指南
+
+### 何时使用这套设计系统
+
+- ✅ 修改前端 UI/UX 时
+- ✅ 新增页面或组件时
+- ✅ 调整色彩、间距、圆角时
+
+### 关键检查点
+
+1. **是否使用了 CSS 变量**（不要硬编码颜色）
+2. **是否支持双主题**（浅色和深色）
+3. **主对话区是否有左侧圆角**（12px）
+4. **消息气泡和输入框圆角是否为 16px**
+5. **间距是否为 4 的倍数**
+
+### 快速参考
+
+**核心 CSS 变量**：
 ```css
-background: #2a2a2a;
-border: 1px solid #333333;
-border-radius: 12px;
-padding: 18px 20px;  /* v4 优化：上下增大，更方正 */
-font-size: 15px;  /* v4 优化：更大的字号 */
-line-height: 1.6;
-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);  /* v4 优化：更柔和 */
-transition: all 0.2s ease;
-```
-
-**悬停态**：
-```css
-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-border-color: #3a3a3a;
-```
-
-#### 用户消息
-
-```css
-background: #1e2936;
-border: 1px solid #2a3a4a;
-border-radius: 12px;
-padding: 18px 20px;
-font-size: 15px;
-line-height: 1.6;
-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-```
-
-### 4. 会话列表项（Session Item）
-
-```css
-padding: 10px 12px;
-border-radius: 6px;
-font-size: 14px;
-font-weight: 400;  /* v4 优化：更轻的字重 */
-color: #b0b0b0;
-transition: all 0.15s ease;
-```
-
-#### 激活态
-
-```css
-background: #2f2f2f;
-color: #ffffff;
-font-weight: 500;  /* v4 优化：激活时稍重 */
-box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);  /* v4 优化：更柔和 */
-/* 左侧 accent 条 */
-position: relative;
-```
-
-```css
-/* 左侧指示条 */
-.session-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 16px;
-  background: #4a9eff;
-  border-radius: 0 2px 2px 0;
-}
-```
-
-### 5. 头像（Avatar）
-
-```css
-width: 32px;
-height: 32px;
-border-radius: 8px;
-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+var(--bg-sidebar)      /* 顶栏、左侧栏 */
+var(--bg-main)         /* 主对话区 */
+var(--bg-bubble)       /* 消息气泡 */
+var(--bg-input)        /* 输入框 */
+var(--text-primary)    /* 主要文字 */
+var(--text-secondary)  /* 次要文字 */
+var(--border-color)    /* 边框 */
+var(--accent-color)    /* 强调色 */
 ```
 
 ---
 
-## 十、动画与过渡
+## 十四、参考原型
 
-### 过渡时长
-
-| 类型 | 时长 | 用途 |
-|------|------|------|
-| 快速 | 0.15s | 悬停态、小元素 |
-| 标准 | 0.2s | 按钮、输入框 |
-| 慢速 | 0.3s | 页面切换、大元素 |
-
-### 缓动函数
-
-```css
-transition-timing-function: ease; /* 默认 */
-```
-
-### 常用过渡
-
-```css
-transition: all 0.2s ease;
-```
-
----
-
-## 十一、可访问性（Accessibility）
-
-### 对比度要求
-
-- **正文文字**：≥ 4.5:1（WCAG AA）
-- **大号文字**：≥ 3:1
-- **交互元素**：≥ 3:1
-
-### 键盘导航
-
-- 所有交互元素必须支持键盘操作
-- 聚焦态必须有明显视觉反馈
-- Tab 顺序符合逻辑
-
-### 屏幕阅读器
-
-- 使用语义化 HTML 标签
-- 重要元素添加 `aria-label`
-- 状态变化提供反馈
-
----
-
-## 十二、AI 使用指南
-
-### 命名规范
-
-#### ✅ 好的命名（语义化）
-
-```
-bg-base              // 基础背景
-text-primary         // 主要文字
-accent-primary       // 主色调
-spacing-4            // 中等间距（16px）
-shadow-md            // 中等阴影
-```
-
-#### ❌ 差的命名（无意义）
-
-```
-color-1              // 不知道用在哪里
-blue                 // 不知道是什么蓝
-margin-20            // 不知道何时使用
-```
-
-### 使用场景说明模板
-
-```markdown
-## [变量名]
-
-- **何时使用**：[具体场景]
-- **何时不用**：[避免场景]
-- **示例**：[代码示例]
-- **对比度**：[如果是颜色，说明对比度]
-```
-
-### 组合规则
-
-#### ✅ 允许的组合
-
-- `bg-base` + `text-secondary`
-- `bg-surface` + `border-default`
-- `accent-primary` + `#ffffff`
-
-#### ❌ 禁止的组合
-
-- `bg-base` + `text-quaternary`（对比度不足）
-- `accent-primary` + `accent-secondary`（色彩冲突）
-
----
-
-## 十三、设计决策优先级
-
-当规则冲突时的决策顺序：
-
-1. **可访问性** > 美观性（确保所有人能用）
-2. **一致性** > 创新性（保持风格统一）
-3. **功能性** > 装饰性（先满足功能需求）
-4. **简洁性** > 复杂性（能简单就不复杂）
-
----
-
-## 十四、常见陷阱
-
-### ❌ 避免的错误
-
-1. **颜色过多**：超过 10 种颜色会导致混乱
-2. **间距随意**：不遵循 8px 倍数关系
-3. **状态缺失**：忘记定义禁用态、聚焦态
-4. **对比度不足**：文字看不清
-5. **命名混乱**：使用无意义命名
-6. **过度设计**：为了"好看"牺牲可用性
-
-### ✅ 成功的标志
-
-1. **新增元素时不需要思考**：自动匹配现有风格
-2. **AI 能理解规则**：命名清晰、场景明确
-3. **用户感觉统一**：所有页面像同一个产品
-4. **易于维护**：修改一处，全局生效
-
----
-
-## 十五、设计资源
-
-### 参考原型
-
-- **v1 原型**：`_temp/agents-hub-prototype.html`
-- **v2 原型**（修正版）：`_temp/agents-hub-prototype-v2.html`
-- **v3 原型**（圆角+浮动感）：`_temp/agents-hub-prototype-v3.html`
-- **v4 原型**（最终版，精细化调整）：`_temp/agents-hub-prototype-v4.html` ⭐
-
-### 色值提取工具
-
-- 使用浏览器开发者工具的取色器
-- 参考 Claude Code Desktop 实际色值
-
-### 设计检查清单
-
-- [ ] 所有颜色对比度 ≥ 4.5:1
-- [ ] 所有间距是 4 的倍数
-- [ ] 所有交互元素有 5 种状态
-- [ ] 所有变量使用语义化命名
-- [ ] 所有组件有使用场景说明
-
----
-
-## 十六、版本历史
-
-### v1.1（2026-06-01）
-
-**基于 v4 原型的精细化更新**
-
-- **侧边栏圆角**：右侧圆角 `border-radius: 0 12px 12px 0`，让侧边栏像"卡片"浮在主界面上
-- **输入框浮动感**：强阴影 `0 4px 16px rgba(0,0,0,0.25)` + 与底部留出间距
-- **更柔和的阴影**：所有阴影减轻视觉重量，避免"廉价感"
-- **增加空气感**：
-  - 侧边栏内边距从 16px → 20px
-  - 主内容区左侧留出 8px 间距
-  - 消息气泡内边距从 16px 20px → 18px 20px（更方正）
-- **字体大小调整**：
-  - 消息正文和输入框从 14px → 15px
-  - 页面标题字重从 600 → 700
-  - 侧边栏列表项字重优化（默认 400，激活 500）
-
-### v1.0（2026-06-01）
-
-- 初始版本
-- 基于 Claude Code Desktop 风格
-- 定义核心色彩、字体、间距、圆角、阴影系统
-- 定义核心组件规范
-- 建立 AI 使用指南
+- **最新原型**：`_temp/agents-hub-new-style.html` ⭐⭐⭐
+- 完整实现了 v2.0 设计系统
+- 支持双主题切换
+- 支持侧边栏收起
 
 ---
 
