@@ -1,8 +1,8 @@
 ---
-version: 1.0
+version: 1.3
 created_at: 2026-05-31
-updated_at: 2026-06-03
-last_updated: Team 语义明确、初始化分离、user 伪 Agent 注册、config 替代硬编码
+updated_at: 2026-06-04
+last_updated: 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问
 abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制和 MCP 工具入口
 id: spec-core-agent-orchestration
 title: Core Agent & Orchestration 层规格
@@ -33,6 +33,7 @@ contract_refs:
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | 新增 token 生命周期、token 索引、runtime 注入、task_manager、MCP 工具入口更新 |
 | 1.2 | Team 语义明确（team_members 包含 manager+worker）、初始化分离机制、user 伪 Agent 注册、config.default_manager_name / default_user_name 替代硬编码 |
+| 1.3 | 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问 |
 
 ## Overview
 
@@ -129,13 +130,16 @@ Team 是一个 Pydantic 模型，定义团队成员列表：
 
 GroupChat 是核心编排单元，协调 Agent、消息路由和上下文管理。
 
+当前实现中，GroupChat 在初始化时创建并持有 `GroupChatContext`、`MessageRouter`、`AgentCallManager` 和 `TaskManager`。`GroupChatContext` 内部创建并持有 `GroupChatRepository`；部分编排逻辑会通过 `group_chat_context.repository` 读取 `project_path`、保存群聊元数据或保存 Agent session 状态。
+
 **启动流程**（start / load）：
 1. 加载上下文数据（GroupChatContext.load()）
-2. 初始化 Manager 和 Workers（通过 RoleManager 获取角色配置，Worker 跳过与 `config.default_manager_name` 同名的成员）
-3. 生成或恢复 Agent Token 并注册到 GroupChatManager 索引
-4. 注册所有 Agent 到 MessageRouter，并注册 `config.default_user_name` 伪 Agent（空队列，支持用户 API 发消息）
-5. 初始化新成员（首次进入群聊的 Agent 执行打招呼）
-6. 启动所有 Agent 的 run() 任务
+2. 首次创建时保存群聊元数据
+3. 初始化 Manager 和 Workers（通过 RoleManager 获取角色配置，Worker 跳过与 `config.default_manager_name` 同名的成员）
+4. 生成或恢复 Agent Token 并注册到 GroupChatManager 索引
+5. 注册所有 Agent 到 MessageRouter，并注册 `config.default_user_name` 伪 Agent（空队列，支持用户 API 发消息）
+6. 初始化新成员（首次进入群聊的 Agent 执行打招呼）
+7. 首次创建或激活群聊时启动所有 Agent 的 run() 任务
 
 **新成员初始化**：
 - 检查哪些成员没有 session_id
@@ -200,7 +204,8 @@ orchestration → agent → communication → foundation
 
 - agent 层依赖 communication（MessageRouter、AgentCallManager）和 context（GroupChatContext、AgentContext）
 - orchestration 层依赖 agent（Agent、Manager、Worker）和 context（GroupChatContext）
-- orchestration 层的 GroupChat 是唯一同时持有 communication 和 context 实例的组件
+- orchestration 层的 GroupChat 是当前实现中唯一同时持有 communication、context 和 task/call 管理组件的编排单元
+- 当前实现中，GroupChat 不直接创建 Repository；Repository 由 GroupChatContext 创建并暴露给 GroupChat 的部分生命周期逻辑使用
 
 ### MCP Tool 契约
 

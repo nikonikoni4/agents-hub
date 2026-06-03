@@ -1,8 +1,8 @@
 ---
-version: 1.2
+version: 1.3
 created_at: 2026-05-31
-updated_at: 2026-06-02
-last_updated: 新增 paths.py 路径集中管理模块
+updated_at: 2026-06-04
+last_updated: 对齐现有路径集中管理中的 metadata 文件和 session 状态字段
 abstract: core/foundation 层的正式规格，定义系统共享的基础数据模型、消息格式、渲染契约和异常体系
 id: spec-core-foundation
 title: Core Foundation 层规格
@@ -31,6 +31,7 @@ contract_refs:
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | 新增 TaskStatus/TaskListStatus 枚举、token.py 工具函数 |
 | 1.2 | 新增 paths.py 路径集中管理模块 |
+| 1.3 | 对齐现有路径集中管理中的 metadata 文件和 session 状态字段 |
 
 ## Overview
 
@@ -157,8 +158,9 @@ msg_file = group_chat_paths.messages_file("gc123", "D:/projects/agents-hub")
 |------|---------|---------|
 | `base_dir()` | `local_data/teams/<project>/<id>/` | 群聊基础目录 |
 | `messages_file()` | `local_data/teams/<project>/<id>/<id>.jsonl` | 群聊消息历史 |
-| `session_state_file()` | `local_data/teams/<project>/<id>/agent_session_state.json` | Agent session 状态 |
+| `session_state_file()` | `local_data/teams/<project>/<id>/agent_session_state.json` | Agent session 状态、上下文加载状态、token、cwd、Docker 开关 |
 | `compact_history_file()` | `local_data/teams/<project>/<id>/memory/compact_history.jsonl` | 压缩历史 |
+| `metadata_file()` | `local_data/teams/<project>/<id>/group_metadata.json` | 群聊元数据 |
 | `agent_calls_log()` | `local_data/teams/<project>/<id>/agent_calls.log` | Agent 调用日志 |
 | `agent_calls_data()` | `local_data/teams/<project>/<id>/agent_calls.jsonl` | Agent 调用数据 |
 | `tasks_log()` | `local_data/teams/<project>/<id>/tasks.log` | 任务管理日志 |
@@ -178,8 +180,9 @@ msg_file = group_chat_paths.messages_file("gc123", "D:/projects/agents-hub")
 
 持久化文件格式定义（详见 constants.py 注释）：
 - `<group_chat_id>.jsonl`：群聊消息历史，首行为 meta_data
-- `agent_session_state.json`：Agent session 映射 + 上下文加载状态
+- `agent_session_state.json`：Agent session 映射、上下文加载状态、token、cwd、Docker 开关
 - `compact_history.jsonl`：压缩历史，每条包含 summary 和 per-agent 关键信息
+- `group_metadata.json`：群聊元数据，包含群聊 ID、名称、项目路径、创建时间和群聊类型
 
 ## Technical Contract
 

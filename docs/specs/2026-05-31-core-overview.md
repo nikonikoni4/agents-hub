@@ -1,8 +1,8 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-05-31
-updated_at: 2026-05-31
-last_updated: 初稿
+updated_at: 2026-06-04
+last_updated: 对齐现有实现中的 agent-context 依赖和 GroupChat 持有关系
 abstract: core 层的总体概览规格，描述分层架构、依赖方向、跨层协作模式和子 spec 索引
 id: spec-core-overview
 title: Core 层总体概览
@@ -22,6 +22,7 @@ contract_refs: []
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
+| 1.1 | 对齐现有实现中的 agent-context 依赖和 GroupChat 持有关系 |
 
 ## Overview
 
@@ -61,10 +62,10 @@ orchestration → agent → communication → foundation
               context ────────┘
 ```
 
-**关键约束**：
+**当前实现约束**：
 - `communication/` 和 `context/` 是**同层**，互不依赖
-- `agent/` 依赖 `communication/`，但不依赖 `context/`（通过 AgentContext 间接使用）
-- `orchestration/` 是唯一可以同时依赖 `agent/` 和 `context/` 的层
+- `agent/` 依赖 `communication/`，并通过 `GroupChatContext` / `AgentContext` 使用 `context/`
+- `orchestration/` 同时依赖 `agent`、`communication` 和 `context`，由 `GroupChat` 创建并持有本群聊运行组件
 - 所有层都可以依赖 `foundation/`
 
 ## 跨层协作流程
