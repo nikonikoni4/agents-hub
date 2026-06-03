@@ -100,6 +100,93 @@ class TeamManager:
             teams = self._load_teams()
             return [TeamInfo(**t) for t in teams]
 
+    def update_team(
+        self, name: str, new_name: str | None, new_members: list[str] | None
+    ) -> TeamInfo:
+        """更新团队
+
+        Args:
+            name: 团队名称
+            new_name: 新的团队名称，为 None 时保持原名称
+            new_members: 新的成员列表，为 None 时保持原成员列表
+
+        Returns:
+            更新后的团队信息
+
+        Raises:
+            TeamNotFoundError: 团队不存在
+            TeamAlreadyExistsError: 新名称与其他团队冲突
+            InvalidTeamMembersError: 成员包含不存在的角色
+            EmptyTeamMembersError: 成员列表为空
+        """
+        # 如果要更新成员，先验证
+        if new_members is not None:
+            self._validate_members(new_members)
+
+        with self._lock:
+            self._ensure_teams_file()
+            teams = self._load_teams()
+
+            # 查找目标团队
+            target_index = None
+            for i, team in enumerate(teams):
+                if team["name"] == name:
+                    target_index = i
+                    break
+
+            if target_index is None:
+                available_teams = [t["name"] for t in teams]
+                raise TeamNotFoundError(name, available_teams)
+
+            # 如果要更新名称，检查冲突
+            if new_name is not None and new_name != name:
+                for i, team in enumerate(teams):
+                    if i != target_index and team["name"] == new_name:
+                        raise TeamAlreadyExistsError(new_name)
+
+            # 更新团队数据
+            updated_name = new_name if new_name is not None else name
+            updated_members = (
+                new_members if new_members is not None else teams[target_index]["members"]
+            )
+
+            teams[target_index] = {"name": updated_name, "members": updated_members}
+
+            # 保存
+            self._save_teams(teams)
+
+            return TeamInfo(name=updated_name, members=updated_members)
+
+    def delete_team(self, name: str) -> None:
+        """删除团队
+
+        Args:
+            name: 团队名称
+
+        Raises:
+            TeamNotFoundError: 团队不存在
+        """
+        with self._lock:
+            self._ensure_teams_file()
+            teams = self._load_teams()
+
+            # 查找目标团队
+            target_index = None
+            for i, team in enumerate(teams):
+                if team["name"] == name:
+                    target_index = i
+                    break
+
+            if target_index is None:
+                available_teams = [t["name"] for t in teams]
+                raise TeamNotFoundError(name, available_teams)
+
+            # 删除团队
+            teams.pop(target_index)
+
+            # 保存
+            self._save_teams(teams)
+
     def _validate_members(self, members: list[str]) -> None:
         """验证成员列表
 

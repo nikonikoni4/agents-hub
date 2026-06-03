@@ -149,3 +149,111 @@ def test_list_teams_empty(team_manager):
     """测试列出空团队列表"""
     teams = team_manager.list_teams()
     assert teams == []
+
+
+def test_update_team_name(team_manager, monkeypatch):
+    """测试更新团队名称"""
+    def mock_list_role_names(self):
+        return ["alice", "bob"]
+
+    monkeypatch.setattr(
+        "agents_hub.teams.team_manager.RoleManager.list_role_names",
+        mock_list_role_names
+    )
+
+    team_manager.create_team("old-name", ["alice"])
+
+    updated = team_manager.update_team("old-name", new_name="new-name", new_members=None)
+    assert updated.name == "new-name"
+    assert updated.members == ["alice"]
+
+    # 验证旧名称不存在
+    with pytest.raises(TeamNotFoundError):
+        team_manager.get_team("old-name")
+
+
+def test_update_team_members(team_manager, monkeypatch):
+    """测试更新团队成员"""
+    def mock_list_role_names(self):
+        return ["alice", "bob", "charlie"]
+
+    monkeypatch.setattr(
+        "agents_hub.teams.team_manager.RoleManager.list_role_names",
+        mock_list_role_names
+    )
+
+    team_manager.create_team("test-team", ["alice"])
+
+    updated = team_manager.update_team("test-team", new_name=None, new_members=["bob", "charlie"])
+    assert updated.name == "test-team"
+    assert updated.members == ["bob", "charlie"]
+
+
+def test_update_team_both(team_manager, monkeypatch):
+    """测试同时更新名称和成员"""
+    def mock_list_role_names(self):
+        return ["alice", "bob"]
+
+    monkeypatch.setattr(
+        "agents_hub.teams.team_manager.RoleManager.list_role_names",
+        mock_list_role_names
+    )
+
+    team_manager.create_team("old", ["alice"])
+
+    updated = team_manager.update_team("old", new_name="new", new_members=["bob"])
+    assert updated.name == "new"
+    assert updated.members == ["bob"]
+
+
+def test_update_team_not_found(team_manager):
+    """测试更新不存在的团队"""
+    with pytest.raises(TeamNotFoundError):
+        team_manager.update_team("nonexistent", new_name="new", new_members=None)
+
+
+def test_update_team_name_conflict(team_manager, monkeypatch):
+    """测试更新名称时与其他团队冲突"""
+    def mock_list_role_names(self):
+        return ["alice", "bob"]
+
+    monkeypatch.setattr(
+        "agents_hub.teams.team_manager.RoleManager.list_role_names",
+        mock_list_role_names
+    )
+
+    team_manager.create_team("team1", ["alice"])
+    team_manager.create_team("team2", ["bob"])
+
+    with pytest.raises(TeamAlreadyExistsError):
+        team_manager.update_team("team1", new_name="team2", new_members=None)
+
+
+def test_delete_team_success(team_manager, monkeypatch):
+    """测试删除团队成功"""
+    def mock_list_role_names(self):
+        return ["alice", "bob"]
+
+    monkeypatch.setattr(
+        "agents_hub.teams.team_manager.RoleManager.list_role_names",
+        mock_list_role_names
+    )
+
+    team_manager.create_team("team1", ["alice"])
+    team_manager.create_team("team2", ["bob"])
+
+    team_manager.delete_team("team1")
+
+    # 验证团队已删除
+    with pytest.raises(TeamNotFoundError):
+        team_manager.get_team("team1")
+
+    # 验证其他团队还在
+    team2 = team_manager.get_team("team2")
+    assert team2.name == "team2"
+
+
+def test_delete_team_not_found(team_manager):
+    """测试删除不存在的团队"""
+    with pytest.raises(TeamNotFoundError):
+        team_manager.delete_team("nonexistent")
