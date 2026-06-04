@@ -21,6 +21,7 @@ from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskM
 from agents_hub.core.context import GroupChatContext
 from agents_hub.core.foundation import (
     AgentMessage,
+    CallStatus,
     MessageType,
     Role,
     RoleConfig,
@@ -207,6 +208,97 @@ class TestAgentRuntimeContentGeneration:
         # 验证不包含 team_workboard（Worker 不应该有）
         assert "<team_workboard>" not in content
         assert "当前任务列表：" not in content
+
+    def test_worker_runtime_includes_active_agent_calls(
+        self, worker_agent, mock_group_chat_context, mock_task_manager
+    ):
+        """测试 Worker runtime 包含所有当前需要处理的 AgentCall"""
+        task_call = MagicMock()
+        task_call.call_id = "call_task_1"
+        task_call.send_from = "Manager"
+        task_call.content = "实现登录页面"
+        task_call.message_type = MessageType.TASK
+        task_call.status = CallStatus.RUNNING
+
+        notification_call = MagicMock()
+        notification_call.call_id = "call_notice_1"
+        notification_call.send_from = "user"
+        notification_call.content = "FYI: API 文档已更新"
+        notification_call.message_type = MessageType.NOTIFICATION
+        notification_call.status = CallStatus.PENDING
+
+        worker_agent.agent_call_manager.get_runtime_calls_for_agent.return_value = [
+            task_call,
+            notification_call,
+        ]
+
+        content = worker_agent._generate_runtime_content(mock_task_manager)
+
+        assert "<active_agent_calls>" in content
+        assert "call_id=call_task_1" in content
+        assert "from=Manager" in content
+        assert "type=task" in content
+        assert "status=running" in content
+        assert "request=实现登录页面" in content
+        assert "需要回复：请在完成时调用 finish_agent_call" in content
+        assert "call_id=call_notice_1" in content
+        assert "from=user" in content
+        assert "type=notification" in content
+        assert "status=pending" in content
+        assert "request=FYI: API 文档已更新" in content
+        assert "无需 finish_agent_call" in content
+        assert "</active_agent_calls>" in content
+
+    def test_runtime_call_instructions_grouped_by_type(
+        self, worker_agent, mock_group_chat_context, mock_task_manager
+    ):
+        """测试同类型多个 call 时，提示信息只出现一次"""
+        task_call_1 = MagicMock()
+        task_call_1.call_id = "call_task_1"
+        task_call_1.send_from = "Manager"
+        task_call_1.content = "实现登录页面"
+        task_call_1.message_type = MessageType.TASK
+        task_call_1.status = CallStatus.RUNNING
+
+        task_call_2 = MagicMock()
+        task_call_2.call_id = "call_task_2"
+        task_call_2.send_from = "Manager"
+        task_call_2.content = "修复样式问题"
+        task_call_2.message_type = MessageType.TASK
+        task_call_2.status = CallStatus.PENDING
+
+        notification_call = MagicMock()
+        notification_call.call_id = "call_notice_1"
+        notification_call.send_from = "user"
+        notification_call.content = "API 文档已更新"
+        notification_call.message_type = MessageType.NOTIFICATION
+        notification_call.status = CallStatus.PENDING
+
+        worker_agent.agent_call_manager.get_runtime_calls_for_agent.return_value = [
+            task_call_1,
+            task_call_2,
+            notification_call,
+        ]
+
+        content = worker_agent._generate_runtime_content(mock_task_manager)
+
+        # 每种类型的提示只出现一次
+        assert content.count("需要回复：请在完成时调用 finish_agent_call") == 1
+        assert content.count("无需 finish_agent_call") == 1
+        # 两个 TASK call 都应出现
+        assert "call_id=call_task_1" in content
+        assert "call_id=call_task_2" in content
+        assert "call_id=call_notice_1" in content
+
+    def test_worker_runtime_omits_active_agent_calls_when_empty(
+        self, worker_agent, mock_group_chat_context, mock_task_manager
+    ):
+        """测试没有待处理 AgentCall 时不输出 active_agent_calls 区块"""
+        worker_agent.agent_call_manager.get_runtime_calls_for_agent.return_value = []
+
+        content = worker_agent._generate_runtime_content(mock_task_manager)
+
+        assert "<active_agent_calls>" not in content
 
 
 class TestAgentRuntimeInjection:

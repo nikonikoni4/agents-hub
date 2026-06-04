@@ -6,8 +6,8 @@
 from fastapi import APIRouter, Depends
 
 from agents_hub.api.schemas.websocket import BroadcastResponse, RefreshSignal
-from agents_hub.api.websocket.dependencies import get_ws_manager
-from agents_hub.api.websocket.manager import WebSocketManager
+from agents_hub.realtime.dependencies import get_realtime_manager
+from agents_hub.realtime.manager import WebSocketManager
 
 router = APIRouter(prefix="/ws", tags=["websocket"])
 
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/ws", tags=["websocket"])
 async def broadcast_message(
     group_chat_id: str,
     signal: RefreshSignal,
-    manager: WebSocketManager = Depends(get_ws_manager),
+    manager: WebSocketManager = Depends(get_realtime_manager),
 ) -> BroadcastResponse:
     """广播刷新信号到指定房间
 

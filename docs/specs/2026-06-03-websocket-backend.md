@@ -1,20 +1,23 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-03
-updated_at: 2026-06-03
-last_updated: 从 sourc_spec 过滤生成正式 spec
-abstract: WebSocket 后端模块的正式规格，定义连接管理、房间模型、广播机制和异常体系
+updated_at: 2026-06-04
+last_updated: 对齐 realtime 边界迁移，明确 API 负责 endpoint，realtime 负责连接管理和广播
+abstract: WebSocket 后端模块的正式规格，定义 API endpoint、realtime 连接管理、房间模型、广播机制和异常体系
 id: websocket-backend
 title: WebSocket 后端模块
 status: draft
-module: api/websocket
+module: api/websocket, realtime
 sourc_spec: docs/superpowers/specs/2026-06-03-websocket-backend-design.md
 related_plan: docs/superpowers/plans/2026-06-03-websocket-backend-implementation.md
 code_scope:
+  - agents_hub/realtime/
   - agents_hub/api/websocket/
   - agents_hub/api/routes/websocket.py
   - agents_hub/api/schemas/websocket.py
 contract_refs:
+  - agents_hub/realtime/events.py
+  - agents_hub/realtime/exceptions.py
   - agents_hub/api/schemas/websocket.py
   - agents_hub/api/websocket/exceptions.py
 ---
@@ -26,10 +29,13 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
+| 1.1 | WebSocket 连接管理与广播能力迁移到 realtime 边界，API 保留 endpoint 和 HTTP route |
 
 ## Overview
 
 WebSocket 后端模块为 Agent 与前端之间提供实时消息推送能力。当 Agent 产生新消息时，通过 WebSocket 向前端推送刷新信号，前端收到信号后主动拉取最新数据。
+
+当前实现将实时连接管理和广播能力归属到 `realtime` 边界。API 侧只负责暴露 WebSocket endpoint 与 HTTP broadcast route；MCP 等非 API 入口可以直接依赖 realtime 广播刷新信号，避免依赖 API 内部模块。
 
 **技术选择**：
 - 技术栈：FastAPI 原生 WebSocket
@@ -43,12 +49,14 @@ WebSocket 后端模块为 Agent 与前端之间提供实时消息推送能力。
 **当前阶段（MVP）**：
 - 实现 WebSocket 连接管理和房间机制
 - 实现刷新信号广播
-- 不集成到 core 层（手动调用 API 测试）
+- API route 和 MCP tool 均可触发刷新信号
+- 不让 core 层直接依赖 realtime
 
 **不在范围内**：
 - 认证与授权机制
 - 消息确认与离线补发
 - 与 core 层的自动集成
+- 直接推送完整 message payload
 
 ## Core Behavior
 
@@ -69,7 +77,7 @@ WebSocket 后端模块为 Agent 与前端之间提供实时消息推送能力。
 
 ### 广播机制
 
-- Agent 通过 HTTP POST 调用广播 API，触发向指定房间推送消息
+- API 或 MCP 等入口通过 realtime 广播能力，触发向指定房间推送消息
 - 广播遍历房间内所有连接，逐个发送 JSON 消息
 - 单个连接发送失败不影响其他连接，失败连接在广播后自动清理
 - 空房间广播时静默返回，不报错
@@ -77,9 +85,10 @@ WebSocket 后端模块为 Agent 与前端之间提供实时消息推送能力。
 ### 刷新信号流
 
 ```
-Agent 产生消息
-  → 调用 POST /api/v1/ws/broadcast/{group_chat_id}
-  → 后端验证请求体，广播到房间内所有连接
+Agent/MCP/API 入口产生群聊变更
+  → 写入群聊状态或验证 HTTP 请求体
+  → 调用 realtime 广播 refresh signal
+  → realtime 广播到房间内所有连接
   → 前端收到刷新信号
   → 前端调用 GET /api/v1/group_chats/{group_chat_id}/messages 拉取最新消息
 ```

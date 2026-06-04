@@ -35,6 +35,7 @@ class AgentCallManager:
             retention_config: 自定义保留时间配置（秒），格式见 AgentCall.can_be_deleted()
         """
         self._calls: dict[str, AgentCall] = {}  # call_id -> AgentCall
+        self._calls_by_receiver: dict[str, list[str]] = {}  # agent_name -> call_id list
         self._cleanup_task: asyncio.Task | None = None
         self._running = False
         self._cleanup_interval = cleanup_interval
@@ -88,6 +89,7 @@ class AgentCallManager:
             business_task_id=business_task_id,
         )
         self._calls[call.call_id] = call
+        self._index_call(call)
         self.logger.info(
             f"创建调用 {call.call_id}: {send_from} -> {send_to}, "
             f"类型={message_type.value}, 超时={timeout_seconds}s"
@@ -114,6 +116,21 @@ class AgentCallManager:
         # 查询不到，记录警告日志
         self.logger.warning(f"调用 {call_id} 不存在，可能已被清理或系统重启导致数据丢失")
         return None
+
+    def get_runtime_calls_for_agent(self, agent_name: str) -> list[AgentCall]:
+        """
+        获取需要注入到指定接收方 runtime 的调用列表。
+
+        TASK 调用在接收方显式回复闭环前持续暴露；NOTIFICATION 调用只在完成前暴露。
+        """
+        calls: list[AgentCall] = []
+        for call_id in self._calls_by_receiver.get(agent_name, []):
+            call = self._calls.get(call_id)
+            if call is None:
+                continue
+            if self._should_include_in_runtime(call):
+                calls.append(call)
+        return calls
 
     def update_status(self, call_id: str, status: CallStatus):
         """
@@ -218,6 +235,7 @@ class AgentCallManager:
             for call_id, data in call_records.items():
                 call = self._deserialize_call(data)
                 self._calls[call_id] = call
+                self._index_call(call)
 
             self.logger.info(f"从持久化文件加载了 {len(call_records)} 个历史调用记录")
 
@@ -335,6 +353,7 @@ class AgentCallManager:
                     f"状态={call.status.value}, 类型={call.message_type.value}"
                 )
                 del self._calls[call_id]
+                self._unindex_call(call)
                 deleted_count += 1
 
         # 如果删除了记录，压缩持久化文件
@@ -432,3 +451,29 @@ class AgentCallManager:
             by_message_type[type_key] = by_message_type.get(type_key, 0) + 1
 
         return stats
+
+    def _index_call(self, call: AgentCall):
+        """维护 send_to -> call_id 索引。"""
+        call_ids = self._calls_by_receiver.setdefault(call.send_to, [])
+        if call.call_id not in call_ids:
+            call_ids.append(call.call_id)
+
+    def _unindex_call(self, call: AgentCall):
+        """从 send_to -> call_id 索引移除调用。"""
+        call_ids = self._calls_by_receiver.get(call.send_to)
+        if not call_ids:
+            return
+        with contextlib.suppress(ValueError):
+            call_ids.remove(call.call_id)
+        if not call_ids:
+            del self._calls_by_receiver[call.send_to]
+
+    def _should_include_in_runtime(self, call: AgentCall) -> bool:
+        """判断调用是否应出现在接收方 runtime prompt 中。"""
+        if call.status in (CallStatus.FAILED, CallStatus.TIMEOUT):
+            return False
+        if call.message_type == MessageType.TASK:
+            return not call.has_agent_response
+        if call.message_type == MessageType.NOTIFICATION:
+            return call.status != CallStatus.COMPLETED
+        return False  # type: ignore[unreachable]

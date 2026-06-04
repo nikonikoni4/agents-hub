@@ -181,6 +181,65 @@ class TestAgentCallManagerAgentResponse:
         assert call.completed_at is not None
 
 
+class TestAgentCallManagerRuntimeCalls:
+    """测试面向 runtime 注入的接收方调用查询"""
+
+    def test_runtime_calls_for_agent_includes_unanswered_task_calls(self, manager):
+        """契约：未显式回复的 TASK 调用会持续暴露给接收方 runtime"""
+        first = manager.create_call(
+            send_from="Manager",
+            send_to="worker",
+            content="实现登录页面",
+            message_type=MessageType.TASK,
+        )
+        second = manager.create_call(
+            send_from="user",
+            send_to="worker",
+            content="顺便检查报错",
+            message_type=MessageType.TASK,
+        )
+        other_agent_call = manager.create_call(
+            send_from="Manager",
+            send_to="other",
+            content="不应出现",
+            message_type=MessageType.TASK,
+        )
+        manager.mark_agent_response(other_agent_call.call_id, content="done", success=True)
+
+        calls = manager.get_runtime_calls_for_agent("worker")
+
+        assert [call.call_id for call in calls] == [first.call_id, second.call_id]
+
+    def test_runtime_calls_for_agent_excludes_finished_task_calls(self, manager):
+        """契约：已显式回复闭环的 TASK 调用不再暴露给 runtime"""
+        call = manager.create_call(
+            send_from="Manager",
+            send_to="worker",
+            content="实现登录页面",
+            message_type=MessageType.TASK,
+        )
+        manager.mark_agent_response(call.call_id, content="done", success=True)
+
+        calls = manager.get_runtime_calls_for_agent("worker")
+
+        assert calls == []
+
+    def test_runtime_calls_for_agent_keeps_notification_for_one_processing_round(self, manager):
+        """契约：NOTIFICATION 在执行完成前暴露，完成后从 runtime 中移除"""
+        call = manager.create_call(
+            send_from="Manager",
+            send_to="worker",
+            content="FYI: API 已更新",
+            message_type=MessageType.NOTIFICATION,
+        )
+
+        assert manager.get_runtime_calls_for_agent("worker") == [call]
+
+        manager.update_status(call.call_id, CallStatus.COMPLETED)
+
+        assert manager.get_runtime_calls_for_agent("worker") == []
+
+
 class TestAgentCallManagerStats:
     """测试 get_stats()"""
 

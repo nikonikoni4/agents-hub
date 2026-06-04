@@ -13,7 +13,6 @@ import asyncio
 from pathlib import Path
 
 from agents_hub.agent_bridge import agent_platform_client
-from agents_hub.config import config
 from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import AgentContext, GroupChatContext
 from agents_hub.core.foundation import (
@@ -263,9 +262,37 @@ class Agent:
                     )
                 content_parts.append("</team_workboard>")
 
+        runtime_calls = self.agent_call_manager.get_runtime_calls_for_agent(self.name)
+        if runtime_calls:
+            content_parts.extend(
+                [
+                    "",
+                    "<active_agent_calls>",
+                    "当前需要你处理的 AgentCall：",
+                ]
+            )
+            from itertools import groupby
+
+            sorted_calls = sorted(runtime_calls, key=lambda c: c.message_type.value)
+            for msg_type, group in groupby(sorted_calls, key=lambda c: c.message_type):
+                content_parts.append(self._format_runtime_call_instruction(msg_type))
+                for call in group:
+                    content_parts.append(
+                        f"- call_id={call.call_id}; from={call.send_from}; "
+                        f"type={call.message_type.value}; status={call.status.value}; "
+                        f"request={call.content}"
+                    )
+            content_parts.append("</active_agent_calls>")
+
         content_parts.append("</AGENT_RUNTIME>")
 
         return "\n".join(content_parts)
+
+    def _format_runtime_call_instruction(self, message_type: MessageType) -> str:
+        """生成 runtime 中针对不同 AgentCall 类型的操作提示。"""
+        if message_type == MessageType.TASK:
+            return "- 需要回复：请在完成时调用 finish_agent_call。"
+        return "- 无需使用 finish_agent_call；"
 
     def _inject_runtime_to_files(self, task_manager=None):
         """注入 runtime 内容到 CLAUDE.md 和 AGENTS.md。

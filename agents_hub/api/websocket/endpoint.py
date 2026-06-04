@@ -8,9 +8,9 @@ import logging
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
-from agents_hub.api.websocket.dependencies import get_ws_manager
 from agents_hub.api.websocket.exceptions import WebSocketError
-from agents_hub.api.websocket.manager import WebSocketManager
+from agents_hub.realtime.dependencies import get_realtime_manager
+from agents_hub.realtime.manager import WebSocketManager
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ async def handle_websocket_error(websocket: WebSocket, error: WebSocketError):
 async def websocket_endpoint(
     websocket: WebSocket,
     group_chat_id: str,
-    manager: WebSocketManager = Depends(get_ws_manager),
+    manager: WebSocketManager = Depends(get_realtime_manager),
 ):
     """WebSocket 端点
 

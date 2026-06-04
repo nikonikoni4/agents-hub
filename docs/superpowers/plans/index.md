@@ -67,3 +67,9 @@
 - **路径**：`docs/superpowers/plans/2026-06-04-core-runtime-ssot-implementation.md`
 - **触发规则**：当实现 core runtime 内存 SSOT、Runtime/State、Repository 所有权迁移或 GroupChatService runtime 查询改造时阅读
 - **内容摘要**：Core Runtime 内存 SSOT 实施计划，定义 Runtime/State 函数签名、service 所需 query/command、持久化矩阵和测试迁移任务
+
+## realtime-boundary-implementation
+- **更新时间**：2026-06-04
+- **路径**：`docs/superpowers/plans/2026-06-04-realtime-boundary-implementation.md`
+- **触发规则**：当实现 WebSocket realtime 边界迁移、API/MCP 共享实时刷新能力或 MCP 工具结束后广播 refresh 时阅读
+- **内容摘要**：Realtime 边界实施计划，定义 realtime 模块创建、API WebSocket 改线、MCP speak/finish 后 refresh 广播接入和验证任务

@@ -1,16 +1,8 @@
 """WebSocket Pydantic Schemas"""
 
-from datetime import datetime
-
 from pydantic import BaseModel, Field
 
-
-class RefreshSignal(BaseModel):
-    """刷新信号请求体"""
-
-    type: str = Field(default="refresh", description="信号类型")
-    group_chat_id: str = Field(..., description="群聊 ID")
-    timestamp: datetime = Field(default_factory=datetime.now, description="信号时间戳")
+from agents_hub.realtime.events import RefreshSignal
 
 
 class BroadcastResponse(BaseModel):
@@ -18,3 +10,6 @@ class BroadcastResponse(BaseModel):
 
     status: str = Field(default="ok", description="状态")
     message: str = Field(default="Broadcast sent", description="描述")
+
+
+__all__ = ["BroadcastResponse", "RefreshSignal"]

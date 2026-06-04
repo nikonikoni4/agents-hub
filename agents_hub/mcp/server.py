@@ -48,6 +48,7 @@ from agents_hub.mcp.errors import (
     PERMISSION_DENIED,
     make_error_response,
 )
+from agents_hub.realtime.dependencies import broadcast_group_chat_refresh
 
 # ============================================================================
 # FastMCP 实例
@@ -411,7 +412,7 @@ async def speak_in_group_chat(agent_token: str, content: str, send_to: str | Non
 
         agent_name, group_chat_id = identity
         try:
-            group_chat = group_chat_manager.get_group_chat(group_chat_id)
+            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
@@ -426,6 +427,7 @@ async def speak_in_group_chat(agent_token: str, content: str, send_to: str | Non
         await group_chat.group_chat_context.add_message(
             _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)
         )
+        await broadcast_group_chat_refresh(group_chat_id)
         return {"ok": True}
 
     except Exception as e:
@@ -470,7 +472,7 @@ async def finish_agent_call(
 
         agent_name, group_chat_id = identity
         try:
-            group_chat = group_chat_manager.get_group_chat(group_chat_id)
+            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
@@ -520,6 +522,7 @@ async def finish_agent_call(
                 content=render_for_chat(agent_name, call.send_from, safe_content),
             )
         )
+        await broadcast_group_chat_refresh(group_chat_id)
 
         status = CallStatus.COMPLETED if success else CallStatus.FAILED
         return {"call_id": call_id, "status": status.value}
