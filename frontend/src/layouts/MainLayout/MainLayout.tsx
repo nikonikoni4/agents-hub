@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { TopBar } from '../TopBar';
 import { LeftSidebar } from '../LeftSidebar';
 import { ChatArea } from '../ChatArea';
 import { RightSidebar } from '../RightSidebar';
 import { RoleManagement } from '../RoleManagement';
 import { SkillSquare } from '@/features/skills';
+import { useSessionStore } from '@/features/session/store/sessionStore';
 import { ToastContainer } from '@/shared/components';
 import styles from './MainLayout.module.css';
 
@@ -37,6 +38,15 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
+
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+
+  // 当 session 被选中时，自动切换到 chat 视图
+  useEffect(() => {
+    if (activeSessionId) {
+      setViewMode('chat');
+    }
+  }, [activeSessionId]);
 
   const handleToggleLeftSidebar = useCallback(() => {
     setLeftSidebarCollapsed((prev) => !prev);
