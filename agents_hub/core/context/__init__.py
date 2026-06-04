@@ -7,6 +7,7 @@ Context layer - 上下文层
 from .agent_context import AgentContext
 from .group_chat_context import GroupChatContext
 from .group_chat_repository import GroupChatRepository
+from .group_chat_runtime import GroupChatRuntime
 from .group_chat_runtime_state import GroupChatRuntimeState
 from .group_chat_session import AgentContextState, AgentSessionInfo, GroupChatSession
 from .group_metadata import GroupMetadata
@@ -20,4 +21,5 @@ __all__ = [
     "AgentContext",
     "GroupMetadata",
     "GroupChatRuntimeState",
+    "GroupChatRuntime",
 ]

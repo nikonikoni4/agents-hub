@@ -2,10 +2,13 @@ from datetime import datetime
 
 import pytest
 
+from tests.core.context.conftest import FakeRepository
+
+from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 from agents_hub.core.context.group_chat_runtime_state import GroupChatRuntimeState
-from agents_hub.core.context.group_chat_session import GroupChatSession
+from agents_hub.core.context.group_chat_session import AgentSessionInfo, GroupChatSession
 from agents_hub.core.context.group_metadata import GroupMetadata
-from agents_hub.core.foundation import StateError
+from agents_hub.core.foundation import GroupChatType, StateError
 
 
 def test_runtime_state_requires_loaded_session():
@@ -36,3 +39,194 @@ def test_runtime_state_requires_metadata():
     state.metadata = metadata
 
     assert state.require_metadata() is metadata
+
+
+# ==================== Load and Query Tests ====================
+
+
+async def test_runtime_loads_files_into_memory_and_queries_dicts():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+
+    state = await runtime.load()
+
+    assert state.group_chat_session is not None
+    assert state.agent_sessions["Worker1"].main_session == "s1"
+    assert state.compact_history == [{"content": {"summary": "old"}}]
+    assert state.metadata is not None
+
+    info = runtime.get_info_dict(is_active=True)
+    assert info["group_chat_id"] == "gc_1"
+    assert info["group_chat_name"] == "Test"
+    assert info["project_path"] == "/tmp/project"
+    assert info["group_type"] == "manager_orchestrate"
+    assert info["is_active"] is True
+
+    members = runtime.get_member_dicts()
+    assert members == [
+        {
+            "name": "Worker1",
+            "main_session": "s1",
+            "btw_session": ["b1"],
+            "cwd": "/tmp/project/w1",
+            "use_docker": True,
+        }
+    ]
+
+    messages = runtime.get_message_dicts(limit=10, offset=0)
+    assert messages == [
+        {
+            "speaker": "Worker1",
+            "content": "hello",
+            "timestamp": "2026-06-04T10:00:00",
+            "platform": "claude",
+        }
+    ]
+
+
+async def test_get_or_create_agent_session_returns_existing():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    session_info = runtime.get_or_create_agent_session("Worker1")
+    assert session_info.main_session == "s1"
+
+
+async def test_get_or_create_agent_session_creates_new():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    session_info = runtime.get_or_create_agent_session("Worker2")
+    assert session_info.main_session is None
+    assert session_info.btw_session == []
+
+
+async def test_get_agent_names_returns_all_names():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    names = runtime.get_agent_names()
+    assert names == ["Worker1"]
+
+
+async def test_runtime_close_closes_repository():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+
+    runtime.close()
+
+    assert repository.closed is True
+
+
+# ==================== Command Tests ====================
+
+
+class MockAgentResult:
+    def __init__(self, agent_name="Worker1", session_id="s1", text="hello"):
+        from agents_hub.config.types import AgentPlatform
+
+        self.agent_name = agent_name
+        self.session_id = session_id
+        self.text = text
+        self.timestamp = "2026-06-04T10:00:00"
+        self.platform = AgentPlatform.CLAUDE
+
+
+async def test_runtime_commands_update_memory_then_persist():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    metadata = await runtime.initialize_metadata(
+        group_chat_name="New Name",
+        group_type=GroupChatType.MANAGER_ORCHESTRATE,
+        created_at=datetime(2026, 6, 4, 11, 0, 0),
+    )
+    assert runtime.state.metadata is metadata
+    assert repository.saved_metadata is metadata
+
+    session_info = await runtime.set_agent_token_and_default_cwd("Worker1", "tok_1")
+    assert session_info.token == "tok_1"
+    assert session_info.cwd == "/tmp/project/w1"
+    assert repository.saved_sessions is runtime.state.agent_sessions
+
+    await runtime.set_agent_use_docker("Worker1", False)
+    assert runtime.state.agent_sessions["Worker1"].use_docker is False
+
+    await runtime.update_context_load_state("Worker1", 3, 7)
+    context_state = runtime.state.agent_sessions["Worker1"].context_state
+    assert context_state.last_loaded_compact_index == 3
+    assert context_state.last_loaded_message_index == 7
+
+    await runtime.add_message(MockAgentResult(text="new message"))
+    assert runtime.state.group_chat_session.messages[-1]["content"] == "new message"
+    assert repository.saved_group_session is runtime.state.group_chat_session
+
+    compact_record = {"create_at": "2026-06-04T12:00:00", "content": {"summary": "sum"}}
+    await runtime.append_compact_record_and_mark_compacted(compact_record)
+    assert runtime.state.compact_history[-1] == compact_record
+    assert repository.saved_compact_history is runtime.state.compact_history
+    assert runtime.state.group_chat_session.last_compacted_loc == len(
+        runtime.state.group_chat_session.messages
+    )
+
+
+async def test_update_agent_session_handles_empty_main_session():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    # Create new agent with no main_session
+    result = MockAgentResult(agent_name="Worker2", session_id="s2")
+    session_info = await runtime.update_agent_session_from_result(result)
+
+    assert session_info.main_session == "s2"
+    assert session_info.btw_session == []
+
+
+async def test_update_agent_session_appends_different_session_to_btw():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    # Worker1 already has main_session="s1"
+    result = MockAgentResult(agent_name="Worker1", session_id="s2")
+    session_info = await runtime.update_agent_session_from_result(result)
+
+    assert session_info.main_session == "s1"
+    assert "s2" in session_info.btw_session
+
+
+async def test_persistence_error_flag_set_on_failure():
+    repository = FakeRepository()
+
+    # Make save fail
+    async def failing_save(metadata):
+        raise IOError("Disk full")
+
+    repository.save_group_metadata = failing_save
+
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    with pytest.raises(IOError):
+        await runtime.initialize_metadata("Test", GroupChatType.MANAGER_ORCHESTRATE)
+
+    assert runtime.state.persistence_error == "Disk full"
+
+
+async def test_persistence_error_cleared_on_success():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    # Set error manually
+    runtime.state.persistence_error = "Previous error"
+
+    # Successful operation should clear it
+    await runtime.initialize_metadata("Test", GroupChatType.MANAGER_ORCHESTRATE)
+
+    assert runtime.state.persistence_error is None

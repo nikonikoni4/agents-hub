@@ -155,8 +155,12 @@ class GroupChatRepository:
         result = {}
         for agent_name, session_data in data.items():
             context_state_data = session_data.get("context_state", {})
+            main_session = session_data.get("main_session")
+            # Convert empty string to None
+            if main_session == "":
+                main_session = None
             result[agent_name] = AgentSessionInfo(
-                main_session=session_data.get("main_session", ""),
+                main_session=main_session,
                 btw_session=session_data.get("btw_session", []),
                 context_state=AgentContextState(
                     last_loaded_compact_index=context_state_data.get(

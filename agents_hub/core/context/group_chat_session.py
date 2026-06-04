@@ -21,7 +21,7 @@ class AgentContextState:
 class AgentSessionInfo:
     """Agent 的会话信息"""
 
-    main_session: str = ""  # 主会话 ID
+    main_session: str | None = None  # 主会话 ID
     btw_session: list[str] = field(default_factory=list)  # by the way session 列表
     context_state: AgentContextState = field(default_factory=AgentContextState)  # 上下文加载状态
     token: str = ""  # Agent 的 token，用于 MCP 工具身份验证
