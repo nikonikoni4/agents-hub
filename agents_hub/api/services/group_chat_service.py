@@ -16,7 +16,6 @@ from uuid import uuid4
 from agents_hub.api.schemas.group_chats import (
     GroupChatInfo,
     GroupChatMember,
-    GroupChatSummary,
     MessageInfo,
 )
 from agents_hub.config import config
@@ -212,25 +211,26 @@ class GroupChatService:
                     },
                 ) from e
 
-    async def list_group_chats(self, is_active_only: bool = False) -> list[GroupChatSummary]:
+    async def list_group_chats(self, is_active_only: bool = False) -> list[GroupChatInfo]:
         """列出所有群聊
 
         Args:
             is_active_only: True=只返回活跃群聊，False=返回所有群聊
 
         Returns:
-            list[GroupChatSummary]（群聊摘要，用于列表页）:
+            list[GroupChatInfo]（群聊信息）:
                 - group_chat_id: str, 群聊唯一标识
                 - group_chat_name: str | None, 群聊显示名称
                 - project_path: str, 关联的项目路径
-                - is_active: bool, agent 是否已激活（run() 任务是否在运行）
                 - created_at: datetime, 创建时间
+                - group_type: GroupChatType, 编排模式
+                - is_active: bool, agent 是否已激活（run() 任务是否在运行）
         """
         # 1. 调用 GroupChatManager.list_all_group_chats()
         all_metadata = self.group_chat_manager.list_all_group_chats()
 
-        # 2. 转换为 GroupChatSummary 列表
-        summaries: list[GroupChatSummary] = []
+        # 2. 转换为 GroupChatInfo 列表
+        result: list[GroupChatInfo] = []
         for metadata_dict in all_metadata:
             # 转换为 GroupMetadata 对象
             metadata = GroupMetadata(**metadata_dict)
@@ -242,17 +242,18 @@ class GroupChatService:
             if is_active_only and not is_active:
                 continue
 
-            summaries.append(
-                GroupChatSummary(
+            result.append(
+                GroupChatInfo(
                     group_chat_id=metadata.group_chat_id,
                     group_chat_name=metadata.group_chat_name,
                     project_path=metadata.project_path,
-                    is_active=is_active,
                     created_at=metadata.created_at,
+                    group_type=GroupChatType(metadata.group_type),
+                    is_active=is_active,
                 )
             )
 
-        return summaries
+        return result
 
     async def get_group_chat_info(self, group_chat_id: str) -> GroupChatInfo:
         """获取群聊详细信息

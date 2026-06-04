@@ -7,7 +7,6 @@
 import apiClient, { mockableRequest } from './client';
 import type {
   GroupChatApiResponse,
-  GroupChatSummaryApiItem,
   GroupChatMemberApiItem,
   MessageApiItem,
   CreateGroupChatRequest,
@@ -27,41 +26,46 @@ const MOCK_GROUP_CHAT: GroupChatApiResponse = {
   is_active: true,
 };
 
-const MOCK_GROUP_CHATS: GroupChatSummaryApiItem[] = [
+const MOCK_GROUP_CHATS: GroupChatApiResponse[] = [
   {
     group_chat_id: 'mock-chat-001',
     group_chat_name: 'Frontend Development Team',
     project_path: '/home/user/projects/frontend-app',
-    is_active: true,
     created_at: '2026-06-03T10:00:00Z',
+    group_type: 'manager_orchestrate',
+    is_active: true,
   },
   {
     group_chat_id: 'mock-chat-002',
     group_chat_name: 'Backend API Team',
     project_path: '/home/user/projects/backend-api',
-    is_active: true,
     created_at: '2026-06-02T15:30:00Z',
+    group_type: 'sequence_execute',
+    is_active: true,
   },
   {
     group_chat_id: 'mock-chat-003',
     group_chat_name: 'Code Review Session',
     project_path: '/home/user/projects/legacy-system',
-    is_active: false,
     created_at: '2026-06-01T09:15:00Z',
+    group_type: 'manager_orchestrate',
+    is_active: false,
   },
   {
     group_chat_id: 'mock-chat-004',
     group_chat_name: 'Database Migration',
     project_path: '/home/user/projects/db-migration',
-    is_active: true,
     created_at: '2026-05-31T14:20:00Z',
+    group_type: 'sequence_execute',
+    is_active: true,
   },
   {
     group_chat_id: 'mock-chat-005',
     group_chat_name: 'Testing & QA',
     project_path: '/home/user/projects/test-automation',
-    is_active: false,
     created_at: '2026-05-30T08:45:00Z',
+    group_type: 'manager_orchestrate',
+    is_active: false,
   },
 ];
 
@@ -178,10 +182,10 @@ export async function getGroupChatInfo(chatId: string): Promise<GroupChatApiResp
  */
 export async function listGroupChats(
   isActiveOnly: boolean = false
-): Promise<GroupChatSummaryApiItem[]> {
+): Promise<GroupChatApiResponse[]> {
   return mockableRequest(
     () =>
-      apiClient.get<GroupChatSummaryApiItem[]>('/group-chats', {
+      apiClient.get<GroupChatApiResponse[]>('/group-chats', {
         params: { is_active_only: isActiveOnly },
       }),
     isActiveOnly ? MOCK_GROUP_CHATS.filter((c) => c.is_active) : MOCK_GROUP_CHATS

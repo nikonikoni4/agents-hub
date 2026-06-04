@@ -170,23 +170,6 @@ export interface GroupChatApiResponse {
 }
 
 /**
- * 群聊摘要信息（列表项）
- * 对应后端: GroupChatSummary schema
- */
-export interface GroupChatSummaryApiItem {
-  /** 群聊 ID */
-  group_chat_id: string;
-  /** 群聊名称 */
-  group_chat_name: string;
-  /** 项目路径 */
-  project_path: string;
-  /** 是否活跃 */
-  is_active: boolean;
-  /** 创建时间（ISO 8601 格式） */
-  created_at: string;
-}
-
-/**
  * 群聊成员运行时信息
  * 对应后端: GroupChatMember schema
  */

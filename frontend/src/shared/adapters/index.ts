@@ -38,7 +38,6 @@ export type {
   RoleSkillApiItem,
   // 群聊相关
   GroupChatApiResponse,
-  GroupChatSummaryApiItem,
   GroupChatMemberApiItem,
   // 会话相关
   AgentContextStateApiResponse,

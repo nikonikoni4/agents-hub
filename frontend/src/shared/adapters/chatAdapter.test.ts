@@ -10,7 +10,6 @@ import {
 } from './chatAdapter';
 import type {
   GroupChatApiResponse,
-  GroupChatSummaryApiItem,
   GroupChatMemberApiItem,
 } from '@/shared/types/api-schemas';
 
@@ -23,12 +22,13 @@ const mockChat: GroupChatApiResponse = {
   is_active: true,
 };
 
-const mockSummary: GroupChatSummaryApiItem = {
+const mockSummary: GroupChatApiResponse = {
   group_chat_id: 'chat-001',
   group_chat_name: 'Test Chat',
   project_path: '/tmp',
-  is_active: true,
   created_at: '2026-06-03T10:00:00Z',
+  group_type: 'manager_orchestrate',
+  is_active: true,
 };
 
 const mockMember: GroupChatMemberApiItem = {

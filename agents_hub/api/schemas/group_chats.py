@@ -30,16 +30,6 @@ class GroupChatInfo(BaseModel):
     is_active: bool
 
 
-class GroupChatSummary(BaseModel):
-    """群聊摘要（列表展示）"""
-
-    group_chat_id: str
-    group_chat_name: str
-    project_path: str
-    is_active: bool
-    created_at: datetime
-
-
 class GroupChatMember(BaseModel):
     """群聊成员（运行时信息）"""
 
