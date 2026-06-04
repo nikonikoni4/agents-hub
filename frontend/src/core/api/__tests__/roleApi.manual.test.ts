@@ -6,7 +6,7 @@
  */
 
 import * as roleApi from '../roleApi';
-import type { CreateRoleRequest } from '@/shared/types/api';
+import type { CreateRoleRequest } from '@/shared/types/api-requests';
 
 /**
  * 集成测试场景

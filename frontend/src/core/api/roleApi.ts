@@ -5,17 +5,17 @@
  */
 
 import apiClient, { mockableRequest } from './client';
-import type { Role, RoleSkill } from '@/shared/types/models';
+import type { RoleApiResponse, RoleSkillApiItem } from '@/shared/types/api-schemas';
 import type {
   CreateRoleRequest,
   UpdateRoleRequest,
   AddSkillRequest,
   DeleteResponse,
-} from '@/shared/types/api';
+} from '@/shared/types/api-requests';
 
 // ==================== Mock 数据 ====================
 
-const MOCK_ROLES: Role[] = [
+const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Leader',
     platform: 'claude',
@@ -45,7 +45,7 @@ const MOCK_ROLES: Role[] = [
   },
 ];
 
-const MOCK_NEW_ROLE: Role = {
+const MOCK_NEW_ROLE: RoleApiResponse = {
   name: 'New Role',
   platform: 'claude',
   avatar: null,
@@ -55,7 +55,7 @@ const MOCK_NEW_ROLE: Role = {
   description: 'Newly created role',
 };
 
-const MOCK_ROLE_SKILLS = new Map<string, RoleSkill[]>([
+const MOCK_ROLE_SKILLS = new Map<string, RoleSkillApiItem[]>([
   [
     'Leader',
     [
@@ -91,7 +91,7 @@ const MOCK_AVATARS: string[] = [
   'avatar5.png',
 ];
 
-const MOCK_SKILL: RoleSkill = {
+const MOCK_SKILL: RoleSkillApiItem = {
   id: 'mock-skill',
   name: 'Mock Skill',
   description: 'A mock skill for testing',
@@ -106,30 +106,36 @@ const MOCK_DELETE_RESPONSE: DeleteResponse = {
 /**
  * 创建角色
  */
-export async function createRole(data: CreateRoleRequest): Promise<Role> {
-  return mockableRequest(() => apiClient.post<Role>('/roles', data), MOCK_NEW_ROLE);
+export async function createRole(data: CreateRoleRequest): Promise<RoleApiResponse> {
+  return mockableRequest(() => apiClient.post<RoleApiResponse>('/roles', data), MOCK_NEW_ROLE);
 }
 
 /**
  * 获取单个角色信息
  */
-export async function getRoleInfo(name: string): Promise<Role> {
+export async function getRoleInfo(name: string): Promise<RoleApiResponse> {
   const mockRole = MOCK_ROLES.find((r) => r.name === name);
-  return mockableRequest(() => apiClient.get<Role>(`/roles/${name}`), mockRole ?? MOCK_ROLES[0]!);
+  return mockableRequest(
+    () => apiClient.get<RoleApiResponse>(`/roles/${name}`),
+    mockRole ?? MOCK_ROLES[0]!
+  );
 }
 
 /**
  * 列出所有角色
  */
-export async function listRoles(): Promise<Role[]> {
-  return mockableRequest(() => apiClient.get<Role[]>('/roles'), MOCK_ROLES);
+export async function listRoles(): Promise<RoleApiResponse[]> {
+  return mockableRequest(() => apiClient.get<RoleApiResponse[]>('/roles'), MOCK_ROLES);
 }
 
 /**
  * 更新角色信息
  */
-export async function updateRole(name: string, data: UpdateRoleRequest): Promise<Role> {
-  return mockableRequest(() => apiClient.patch<Role>(`/roles/${name}`, data), MOCK_ROLES[0]!);
+export async function updateRole(name: string, data: UpdateRoleRequest): Promise<RoleApiResponse> {
+  return mockableRequest(
+    () => apiClient.patch<RoleApiResponse>(`/roles/${name}`, data),
+    MOCK_ROLES[0]!
+  );
 }
 
 /**
@@ -145,9 +151,9 @@ export async function deleteRole(name: string): Promise<DeleteResponse> {
 /**
  * 列出角色关联的 Skills
  */
-export async function getRoleSkills(name: string): Promise<RoleSkill[]> {
+export async function getRoleSkills(name: string): Promise<RoleSkillApiItem[]> {
   return mockableRequest(
-    () => apiClient.get<RoleSkill[]>(`/roles/${name}/skills`),
+    () => apiClient.get<RoleSkillApiItem[]>(`/roles/${name}/skills`),
     MOCK_ROLE_SKILLS.get(name) ?? []
   );
 }
@@ -155,10 +161,10 @@ export async function getRoleSkills(name: string): Promise<RoleSkill[]> {
 /**
  * 为角色添加 Skill
  */
-export async function addSkillToRole(name: string, skillId: string): Promise<RoleSkill> {
+export async function addSkillToRole(name: string, skillId: string): Promise<RoleSkillApiItem> {
   const requestData: AddSkillRequest = { skill_id: skillId };
   return mockableRequest(
-    () => apiClient.post<RoleSkill>(`/roles/${name}/skills`, requestData),
+    () => apiClient.post<RoleSkillApiItem>(`/roles/${name}/skills`, requestData),
     MOCK_SKILL
   );
 }

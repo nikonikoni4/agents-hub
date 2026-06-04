@@ -4,7 +4,7 @@
  * 与后端 Pydantic request/response schemas 对应
  */
 
-import type { AgentPlatform, RoleType } from './models';
+import type { AgentPlatform, RoleType } from './api-schemas';
 
 // ==================== 群聊相关 ====================
 
