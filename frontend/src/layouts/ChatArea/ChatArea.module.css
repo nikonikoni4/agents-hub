@@ -95,6 +95,11 @@
   color: var(--text-primary);
 }
 
+.chatInput:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
 .chatInput::placeholder {
   color: var(--text-tertiary);
 }

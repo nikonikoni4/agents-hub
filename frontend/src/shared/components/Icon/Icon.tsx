@@ -4,7 +4,7 @@ export interface IconProps extends SVGProps<SVGSVGElement> {
   size?: number;
 }
 
-export function Icon({ size = 20, ...props }: IconProps) {
+export function Icon({ size = 18, ...props }: IconProps) {
   return (
     <svg
       width={size}
@@ -54,9 +54,6 @@ export function SettingsIcon(props: IconProps) {
     <Icon {...props}>
       <circle cx="12" cy="12" r="3" />
       <path d="M12 1v6m0 6v6" />
-      <path d="m19.07 4.93-4.24 4.24m-5.66 5.66-4.24 4.24" />
-      <path d="M1 12h6m6 0h6" />
-      <path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24" />
     </Icon>
   );
 }
@@ -81,6 +78,93 @@ export function SunIcon(props: IconProps) {
       <path d="M20 12h2" />
       <path d="m6.34 17.66-1.41 1.41" />
       <path d="m19.07 4.93-1.41 1.41" />
+    </Icon>
+  );
+}
+
+// Layout Icons
+export function LeftPanelIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+    </Icon>
+  );
+}
+
+export function RightPanelIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <line x1="15" y1="3" x2="15" y2="21" />
+    </Icon>
+  );
+}
+
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M15 18l-6-6 6-6" />
+    </Icon>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M9 18l6-6-6-6" />
+    </Icon>
+  );
+}
+
+export function UsersIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </Icon>
+  );
+}
+
+export function ZapIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </Icon>
+  );
+}
+
+export function FolderIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </Icon>
+  );
+}
+
+export function MoreVerticalIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </Icon>
+  );
+}
+
+export function CheckCircleIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m9 12 2 2 4-4" />
+    </Icon>
+  );
+}
+
+export function SendIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12h14m-7-7 7 7-7 7" />
     </Icon>
   );
 }

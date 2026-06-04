@@ -29,3 +29,13 @@ body {
     color 0.15s ease,
     border-color 0.15s ease;
 }
+
+/* 键盘导航焦点样式 */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible,
+[tabindex='0']:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}

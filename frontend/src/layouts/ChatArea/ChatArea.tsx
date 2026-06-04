@@ -1,59 +1,14 @@
+import {
+  MoreVerticalIcon,
+  RightPanelIcon,
+  PlusIcon,
+  CheckCircleIcon,
+  SendIcon,
+} from '@/shared/components';
 import styles from './ChatArea.module.css';
 
 export interface ChatAreaProps {
   onToggleRightSidebar?: () => void;
-}
-
-// SVG 图标组件
-function MoreVerticalIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <circle cx="12" cy="12" r="1" />
-      <circle cx="12" cy="5" r="1" />
-      <circle cx="12" cy="19" r="1" />
-    </svg>
-  );
-}
-
-function RightPanelIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-      <line x1="15" y1="3" x2="15" y2="21" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <path d="M12 5v14m7-7H5" />
-    </svg>
-  );
-}
-
-function CheckCircleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <path d="M5 12h14m-7-7 7 7-7 7" />
-    </svg>
-  );
 }
 
 export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
