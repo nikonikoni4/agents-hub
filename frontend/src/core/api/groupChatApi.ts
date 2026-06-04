@@ -6,18 +6,19 @@
 
 import apiClient, { mockableRequest } from './client';
 import type {
-  GroupChat,
-  GroupChatSummary,
-  GroupChatMember,
-  Message,
+  GroupChatApiResponse,
+  GroupChatSummaryApiItem,
+  GroupChatMemberApiItem,
+  MessageApiItem,
   CreateGroupChatRequest,
   SendMessageRequest,
   UpdateDockerModeRequest,
+  SuccessResponse,
 } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
 
-const MOCK_GROUP_CHAT: GroupChat = {
+const MOCK_GROUP_CHAT: GroupChatApiResponse = {
   group_chat_id: 'mock-chat-001',
   group_chat_name: 'Test Chat',
   project_path: '/home/user/project',
@@ -26,7 +27,7 @@ const MOCK_GROUP_CHAT: GroupChat = {
   is_active: true,
 };
 
-const MOCK_GROUP_CHATS: GroupChatSummary[] = [
+const MOCK_GROUP_CHATS: GroupChatSummaryApiItem[] = [
   {
     group_chat_id: 'mock-chat-001',
     group_chat_name: 'Test Chat 1',
@@ -43,7 +44,7 @@ const MOCK_GROUP_CHATS: GroupChatSummary[] = [
   },
 ];
 
-const MOCK_MESSAGES: Message[] = [
+const MOCK_MESSAGES: MessageApiItem[] = [
   {
     speaker: 'user',
     content: 'Hello, Agent!',
@@ -58,7 +59,7 @@ const MOCK_MESSAGES: Message[] = [
   },
 ];
 
-const MOCK_MEMBERS: GroupChatMember[] = [
+const MOCK_MEMBERS: GroupChatMemberApiItem[] = [
   {
     name: 'Agent1',
     main_session: 'session-001',
@@ -80,15 +81,21 @@ const MOCK_MEMBERS: GroupChatMember[] = [
 /**
  * 创建并启动新群聊
  */
-export async function createGroupChat(data: CreateGroupChatRequest): Promise<GroupChat> {
-  return mockableRequest(() => apiClient.post('/group-chats', data), MOCK_GROUP_CHAT);
+export async function createGroupChat(data: CreateGroupChatRequest): Promise<GroupChatApiResponse> {
+  return mockableRequest(
+    () => apiClient.post<GroupChatApiResponse>('/group-chats', data),
+    MOCK_GROUP_CHAT
+  );
 }
 
 /**
  * 获取群聊详细信息
  */
-export async function getGroupChatInfo(chatId: string): Promise<GroupChat> {
-  return mockableRequest(() => apiClient.get(`/group-chats/${chatId}`), MOCK_GROUP_CHAT);
+export async function getGroupChatInfo(chatId: string): Promise<GroupChatApiResponse> {
+  return mockableRequest(
+    () => apiClient.get<GroupChatApiResponse>(`/group-chats/${chatId}`),
+    MOCK_GROUP_CHAT
+  );
 }
 
 /**
@@ -96,9 +103,14 @@ export async function getGroupChatInfo(chatId: string): Promise<GroupChat> {
  *
  * @param isActiveOnly - 是否只返回活跃群聊
  */
-export async function listGroupChats(isActiveOnly: boolean = false): Promise<GroupChatSummary[]> {
+export async function listGroupChats(
+  isActiveOnly: boolean = false
+): Promise<GroupChatSummaryApiItem[]> {
   return mockableRequest(
-    () => apiClient.get('/group-chats', { params: { is_active_only: isActiveOnly } }),
+    () =>
+      apiClient.get<GroupChatSummaryApiItem[]>('/group-chats', {
+        params: { is_active_only: isActiveOnly },
+      }),
     isActiveOnly ? MOCK_GROUP_CHATS.filter((c) => c.is_active) : MOCK_GROUP_CHATS
   );
 }
@@ -114,9 +126,12 @@ export async function getMessages(
   chatId: string,
   limit: number = 50,
   offset: number = 0
-): Promise<Message[]> {
+): Promise<MessageApiItem[]> {
   return mockableRequest(
-    () => apiClient.get(`/group-chats/${chatId}/messages`, { params: { limit, offset } }),
+    () =>
+      apiClient.get<MessageApiItem[]>(`/group-chats/${chatId}/messages`, {
+        params: { limit, offset },
+      }),
     MOCK_MESSAGES
   );
 }
@@ -124,8 +139,11 @@ export async function getMessages(
 /**
  * 获取群聊成员列表
  */
-export async function getMembers(chatId: string): Promise<GroupChatMember[]> {
-  return mockableRequest(() => apiClient.get(`/group-chats/${chatId}/members`), MOCK_MEMBERS);
+export async function getMembers(chatId: string): Promise<GroupChatMemberApiItem[]> {
+  return mockableRequest(
+    () => apiClient.get<GroupChatMemberApiItem[]>(`/group-chats/${chatId}/members`),
+    MOCK_MEMBERS
+  );
 }
 
 /**
@@ -134,10 +152,11 @@ export async function getMembers(chatId: string): Promise<GroupChatMember[]> {
 export async function sendMessage(
   chatId: string,
   data: SendMessageRequest
-): Promise<{ message: string }> {
-  return mockableRequest(() => apiClient.post(`/group-chats/${chatId}/messages`, data), {
-    message: 'Message sent successfully',
-  });
+): Promise<SuccessResponse> {
+  return mockableRequest(
+    () => apiClient.post<SuccessResponse>(`/group-chats/${chatId}/messages`, data),
+    { message: 'Message sent successfully' }
+  );
 }
 
 /**
@@ -147,10 +166,14 @@ export async function updateMemberDockerMode(
   chatId: string,
   memberName: string,
   useDocker: boolean
-): Promise<GroupChatMember> {
+): Promise<GroupChatMemberApiItem> {
   const data: UpdateDockerModeRequest = { use_docker: useDocker };
   return mockableRequest(
-    () => apiClient.put(`/group-chats/${chatId}/${memberName}/use-docker`, data),
+    () =>
+      apiClient.put<GroupChatMemberApiItem>(
+        `/group-chats/${chatId}/${memberName}/use-docker`,
+        data
+      ),
     {
       ...MOCK_MEMBERS[0],
       name: memberName,
@@ -171,9 +194,12 @@ export async function updateMemberDockerMode(
 export async function deleteGroupChat(
   chatId: string,
   keepData: boolean = false
-): Promise<{ message: string }> {
+): Promise<SuccessResponse> {
   return mockableRequest(
-    () => apiClient.delete(`/group-chats/${chatId}`, { params: { keep_data: keepData } }),
+    () =>
+      apiClient.delete<SuccessResponse>(`/group-chats/${chatId}`, {
+        params: { keep_data: keepData },
+      }),
     { message: `Group chat ${chatId} deleted successfully` }
   );
 }

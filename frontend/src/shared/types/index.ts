@@ -2,7 +2,7 @@
  * 统一导出所有类型定义
  */
 
-// 核心数据模型
+// API Schemas 类型（后端契约）
 export type {
   AgentPlatform,
   RoleType,
@@ -11,21 +11,20 @@ export type {
   MessageType,
   CallStatus,
   TaskStatus,
-  Message,
-  AgentMessage,
-  Role,
-  Agent,
-  Skill,
-  RoleSkill,
-  GroupChat,
-  GroupChatSummary,
-  GroupChatMember,
-  AgentContextState,
-  AgentSessionInfo,
-  SystemConfig,
-} from './models';
+  MessageApiItem,
+  AgentMessageApiItem,
+  RoleApiResponse,
+  SkillApiItem,
+  RoleSkillApiItem,
+  GroupChatApiResponse,
+  GroupChatSummaryApiItem,
+  GroupChatMemberApiItem,
+  AgentContextStateApiResponse,
+  AgentSessionInfoApiResponse,
+  SystemConfigApiResponse,
+} from './api-schemas';
 
-// API 请求/响应类型
+// API 请求类型
 export type {
   CreateGroupChatRequest,
   SendMessageRequest,
@@ -37,7 +36,7 @@ export type {
   UpdateConfigRequest,
   SuccessResponse,
   ErrorResponse,
-} from './api';
+} from './api-requests';
 
 // WebSocket 相关类型
 export type {
