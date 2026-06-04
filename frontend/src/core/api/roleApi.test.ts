@@ -76,7 +76,7 @@ describe('roleApi', () => {
   it('listAvatars 返回头像列表', async () => {
     const result = await listAvatars();
     expect(result).toHaveLength(5);
-    expect(result[0]).toBe('avatar1.png');
+    expect(result[0]).toBe('avatar-circle.svg');
   });
 
   describe('真实 API 调用路径（通过 client）', () => {

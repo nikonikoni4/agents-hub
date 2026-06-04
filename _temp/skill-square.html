@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>技能广场 - Agents Hub</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-page: #f8f9fb;
+      --bg-card: #ffffff;
+      --bg-input: #ffffff;
+      --bg-filter: #f0f2f5;
+      --bg-filter-active: #2563eb;
+      --bg-header: linear-gradient(135deg, #eef2ff 0%, #f8f9fb 100%);
+
+      --text-primary: #1a1a2e;
+      --text-secondary: #64748b;
+      --text-tertiary: #94a3b8;
+      --text-filter-active: #ffffff;
+
+      --border-color: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --accent-color: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-light: rgba(37, 99, 235, 0.08);
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+      --shadow-card-hover: 0 8px 25px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02);
+      --shadow-search: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+
+      /* 技能图标色板 */
+      --icon-blue: #dbeafe;
+      --icon-blue-text: #2563eb;
+      --icon-green: #dcfce7;
+      --icon-green-text: #16a34a;
+      --icon-purple: #f3e8ff;
+      --icon-purple-text: #7c3aed;
+      --icon-orange: #ffedd5;
+      --icon-orange-text: #ea580c;
+      --icon-pink: #fce7f3;
+      --icon-pink-text: #db2777;
+      --icon-teal: #ccfbf1;
+      --icon-teal-text: #0d9488;
+      --icon-amber: #fef3c7;
+      --icon-amber-text: #d97706;
+      --icon-rose: #ffe4e6;
+      --icon-rose-text: #e11d48;
+      --icon-indigo: #e0e7ff;
+      --icon-indigo-text: #4f46e5;
+    }
+
+    html[data-theme="dark"] {
+      --bg-page: #0f1117;
+      --bg-card: #1a1d28;
+      --bg-input: #1a1d28;
+      --bg-filter: #1a1d28;
+      --bg-filter-active: #3b82f6;
+      --bg-header: linear-gradient(135deg, #1a1d28 0%, #0f1117 100%);
+
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-tertiary: #64748b;
+      --text-filter-active: #ffffff;
+
+      --border-color: #2a2d3a;
+      --border-hover: #3a3d4a;
+      --accent-color: #3b82f6;
+      --accent-hover: #60a5fa;
+      --accent-light: rgba(59, 130, 246, 0.12);
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+      --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
+      --shadow-card-hover: 0 8px 25px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.1);
+      --shadow-search: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+      --icon-blue: #1e3a5f;
+      --icon-blue-text: #60a5fa;
+      --icon-green: #14432a;
+      --icon-green-text: #4ade80;
+      --icon-purple: #2e1065;
+      --icon-purple-text: #a78bfa;
+      --icon-orange: #431407;
+      --icon-orange-text: #fb923c;
+      --icon-pink: #500724;
+      --icon-pink-text: #f472b6;
+      --icon-teal: #042f2e;
+      --icon-teal-text: #2dd4bf;
+      --icon-amber: #451a03;
+      --icon-amber-text: #fbbf24;
+      --icon-rose: #4c0519;
+      --icon-rose-text: #fb7185;
+      --icon-indigo: #1e1b4b;
+      --icon-indigo-text: #818cf8;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 48px 24px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 780px;
+    }
+
+    /* === 头部 === */
+    .header {
+      background: var(--bg-header);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -10%;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      filter: blur(60px);
+      pointer-events: none;
+    }
+
+    .header-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-top {
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    /* === 搜索框 === */
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      gap: 10px;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-search);
+    }
+
+    .search-box:focus-within {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px var(--accent-light), var(--shadow-search);
+    }
+
+    .search-icon {
+      width: 16px;
+      height: 16px;
+      stroke: var(--text-tertiary);
+      flex-shrink: 0;
+      transition: stroke 0.2s;
+    }
+
+    .search-box:focus-within .search-icon {
+      stroke: var(--accent-color);
+    }
+
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: var(--text-primary);
+      min-width: 0;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    /* === 筛选按钮 === */
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+      background: var(--bg-filter);
+    }
+
+    .filter-btn.active {
+      background: var(--bg-filter-active);
+      border-color: var(--bg-filter-active);
+      color: var(--text-filter-active);
+      box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25);
+    }
+
+    .filter-icon {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* === 技能卡片网格 === */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    /* === 技能卡片 === */
+    .skill-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px 18px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+
+    .skill-card:hover {
+      border-color: var(--accent-color);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-card-hover);
+    }
+
+    .skill-card:hover .skill-avatar {
+      transform: scale(1.04);
+    }
+
+    .skill-avatar {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      user-select: none;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .skill-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .skill-desc {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .skill-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .skill-tag.local {
+      background: var(--accent-light);
+      color: var(--accent-color);
+    }
+
+    .skill-tag.remote {
+      background: var(--bg-filter);
+      color: var(--text-tertiary);
+    }
+
+    .skill-tag-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* === 空状态 === */
+    .empty-state {
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--text-tertiary);
+    }
+
+    .empty-state svg {
+      width: 56px;
+      height: 56px;
+      stroke: var(--border-color);
+      margin-bottom: 16px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* === 主题切换 === */
+    .theme-toggle {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s ease;
+      z-index: 1000;
+    }
+
+    .theme-toggle:hover {
+      color: var(--text-primary);
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-card-hover);
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* === 滚动条 === */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary);
+    }
+
+    /* === 动画 === */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .skill-card {
+      animation: fadeInUp 0.35s ease both;
+    }
+
+    .skill-card:nth-child(1) { animation-delay: 0s; }
+    .skill-card:nth-child(2) { animation-delay: 0.04s; }
+    .skill-card:nth-child(3) { animation-delay: 0.08s; }
+    .skill-card:nth-child(4) { animation-delay: 0.12s; }
+    .skill-card:nth-child(5) { animation-delay: 0.16s; }
+    .skill-card:nth-child(6) { animation-delay: 0.20s; }
+    .skill-card:nth-child(7) { animation-delay: 0.24s; }
+    .skill-card:nth-child(8) { animation-delay: 0.28s; }
+    .skill-card:nth-child(9) { animation-delay: 0.32s; }
+
+    /* === 响应式 === */
+    @media (max-width: 680px) {
+      body {
+        padding: 24px 16px;
+      }
+
+      .header {
+        padding: 24px 20px;
+      }
+
+      .header-top {
+        flex-direction: column;
+      }
+
+      .skills-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .skills-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <div class="header">
+      <div class="header-content">
+        <div class="header-top">
+          <h1>技能广场</h1>
+          <p>发现和管理你的技能</p>
+        </div>
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" class="search-input" placeholder="搜索技能..." id="searchInput">
+        </div>
+      </div>
+    </div>
+
+    <!-- 筛选按钮 -->
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">
+        <svg class="filter-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        全部
+      </button>
+      <button class="filter-btn" data-filter="local">
+        <svg class="filter-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+          <line x1="6" y1="6" x2="6.01" y2="6"/>
+          <line x1="6" y1="18" x2="6.01" y2="18"/>
+        </svg>
+        本地
+      </button>
+      <button class="filter-btn" data-filter="remote">
+        <svg class="filter-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <line x1="12" y1="20" x2="12.01" y2="20"/>
+        </svg>
+        网络
+      </button>
+    </div>
+
+    <!-- 技能卡片网格 -->
+    <div class="skills-grid" id="skillsGrid">
+    </div>
+
+    <!-- 空状态 -->
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.35-4.35"/>
+        <line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+      <p>未找到匹配的技能</p>
+    </div>
+  </div>
+
+  <!-- 主题切换按钮 -->
+  <button class="theme-toggle" id="themeToggle" title="切换主题">
+    <svg viewBox="0 0 24 24" id="themeIcon">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  </button>
+
+  <script>
+    // 技能数据 — 每个技能分配独立色调
+    const skillsData = [
+      {
+        id: 1,
+        name: '代码审查',
+        desc: '自动化代码质量检查和最佳实践建议',
+        type: 'local',
+        color: 'blue'
+      },
+      {
+        id: 2,
+        name: '文档生成',
+        desc: '根据代码自动生成技术文档和API说明',
+        type: 'local',
+        color: 'indigo'
+      },
+      {
+        id: 3,
+        name: '测试编写',
+        desc: '智能生成单元测试和集成测试用例',
+        type: 'local',
+        color: 'green'
+      },
+      {
+        id: 4,
+        name: '架构设计',
+        desc: '系统架构分析和设计方案推荐',
+        type: 'local',
+        color: 'purple'
+      },
+      {
+        id: 5,
+        name: '代码翻译',
+        desc: '多语言代码转换和迁移工具',
+        type: 'remote',
+        color: 'teal'
+      },
+      {
+        id: 6,
+        name: '性能优化',
+        desc: '代码性能分析和优化建议',
+        type: 'remote',
+        color: 'amber'
+      },
+      {
+        id: 7,
+        name: 'UI 设计',
+        desc: '界面设计建议和组件生成',
+        type: 'remote',
+        color: 'pink'
+      },
+      {
+        id: 8,
+        name: '安全扫描',
+        desc: '代码安全漏洞检测和修复方案',
+        type: 'remote',
+        color: 'rose'
+      },
+      {
+        id: 9,
+        name: '数据库优化',
+        desc: 'SQL查询优化和数据库架构建议',
+        type: 'local',
+        color: 'orange'
+      }
+    ];
+
+    // 状态
+    let currentFilter = 'all';
+    let searchQuery = '';
+
+    // DOM 元素
+    const searchInput = document.getElementById('searchInput');
+    const skillsGrid = document.getElementById('skillsGrid');
+    const emptyState = document.getElementById('emptyState');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+
+    // 渲染技能卡片
+    function renderSkills() {
+      const filtered = skillsData.filter(skill => {
+        const matchFilter = currentFilter === 'all' || skill.type === currentFilter;
+        const matchSearch = skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          skill.desc.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchFilter && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        skillsGrid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      skillsGrid.style.display = 'grid';
+      emptyState.style.display = 'none';
+
+      skillsGrid.innerHTML = filtered.map(skill => `
+        <div class="skill-card" data-id="${skill.id}">
+          <div class="skill-avatar" style="background: var(--icon-${skill.color}); color: var(--icon-${skill.color}-text);">
+            ${skill.name}
+          </div>
+          <div class="skill-desc">${skill.desc}</div>
+          <span class="skill-tag ${skill.type}">
+            <span class="skill-tag-dot"></span>
+            ${skill.type === 'local' ? '本地' : '网络'}
+          </span>
+        </div>
+      `).join('');
+    }
+
+    // 搜索
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderSkills();
+    });
+
+    // 筛选
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderSkills();
+      });
+    });
+
+    // 点击卡片
+    skillsGrid.addEventListener('click', (e) => {
+      const card = e.target.closest('.skill-card');
+      if (card) {
+        const skillId = card.dataset.id;
+        console.log('点击技能:', skillId);
+      }
+    });
+
+    // 主题切换
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    html.setAttribute('data-theme', savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+
+    // 初始化
+    renderSkills();
+  </script>
+</body>
+</html>

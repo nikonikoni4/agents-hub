@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mimo-image": {
+      "command": "D:/program/anaconda/python.exe",
+      "args": ["D:/desktop/软件开发/图像mcp/server.py"],
+      "env": {}
+    }
+  }
+}

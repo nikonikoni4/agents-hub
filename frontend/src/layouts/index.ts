@@ -3,3 +3,5 @@ export * from './TopBar';
 export * from './LeftSidebar';
 export * from './ChatArea';
 export * from './RightSidebar';
+export * from './RoleManagement';
+export * from './SkillSquare';

@@ -1,0 +1,22 @@
+.skillSquare {
+  flex: 1;
+  background: var(--bg-main);
+  border-radius: 12px 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}

@@ -1,0 +1,1 @@
+export { SkillSquare } from './SkillSquare';
