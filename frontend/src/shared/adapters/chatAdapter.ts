@@ -4,11 +4,7 @@
  * 提供 GroupChat API 响应到 Domain 类型的转换和聚合功能
  */
 
-import type {
-  GroupChatApiResponse,
-  GroupChatSummaryApiItem,
-  GroupChatMemberApiItem,
-} from '@/shared/types/api-schemas';
+import type { GroupChatApiResponse, GroupChatMemberApiItem } from '@/shared/types/api-schemas';
 
 // TODO: 需要时在 types/domain.ts 中定义 Domain 类型
 // import type { Conversation, ChatMessage } from '@/shared/types/domain';
@@ -40,24 +36,24 @@ export function adaptGroupChat(apiChat: GroupChatApiResponse) {
 }
 
 /**
- * 将 API 群聊摘要转换为前端业务模型
+ * 将 API 群聊响应转换为前端业务模型（用于列表展示）
  *
- * @param apiSummary - API 响应的群聊摘要
+ * @param apiChat - API 响应的群聊数据
  * @returns 前端业务模型
  */
-export function adaptGroupChatSummary(apiSummary: GroupChatSummaryApiItem) {
+export function adaptGroupChatSummary(apiChat: GroupChatApiResponse) {
   // TODO: 实现转换逻辑
-  return apiSummary;
+  return apiChat;
 }
 
 /**
- * 批量转换群聊摘要列表
+ * 批量转换群聊列表
  *
- * @param apiSummaries - API 响应的群聊摘要列表
+ * @param apiChats - API 响应的群聊列表
  * @returns 前端业务模型列表
  */
-export function adaptGroupChatSummaryList(apiSummaries: GroupChatSummaryApiItem[]) {
-  return apiSummaries.map(adaptGroupChatSummary);
+export function adaptGroupChatSummaryList(apiChats: GroupChatApiResponse[]) {
+  return apiChats.map(adaptGroupChatSummary);
 }
 
 /**

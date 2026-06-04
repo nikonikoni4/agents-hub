@@ -65,16 +65,31 @@ class GroupChatRuntime:
             is_active: 是否活跃
 
         Returns:
-            dict: 包含群聊基本信息
+            dict: 群聊信息，包含以下字段：
+                - group_chat_id: str, 群聊唯一标识
+                - group_chat_name: str, 群聊名称
+                - project_path: str, 项目路径
+                - group_type: str, 编排模式
+                - is_active: bool, 是否活跃
+                - last_speaker: str | None, 最后一条消息的发送者（无消息时为 None）
+                - last_message: str | None, 最后一条消息内容（无消息时为 None）
+                - last_update_time: str | None, 最后一条消息的时间戳（无消息时为 None）
         """
         metadata = self.state.require_metadata()
-        return {
+        info = {
             "group_chat_id": self.group_chat_id,
             "group_chat_name": metadata.group_chat_name,
             "project_path": self.project_path,
             "group_type": metadata.group_type,
             "is_active": is_active,
         }
+        session = self.state.group_chat_session
+        if session and session.messages:
+            last = session.messages[-1]
+            info["last_speaker"] = last.get("agent_name")
+            info["last_message"] = last.get("content")
+            info["last_update_time"] = last.get("timestamp")
+        return info
 
     def get_member_dicts(self) -> list[dict]:
         """

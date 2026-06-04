@@ -15,7 +15,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "ci": "npm run type-check && npm run lint && npm run format:check && npm run test run"
+    "ci": "npm run type-check && npm run lint && npm run format:check && npm run test run",
+    "prepare": "cd .. && husky"
   },
   "dependencies": {
     "axios": "^1.7.2",
@@ -23,6 +24,9 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.16.0",
     "zustand": "^5.0.14"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx,css,json}": "prettier --write"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
@@ -40,7 +44,9 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.12.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.3.2",
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.15.0",

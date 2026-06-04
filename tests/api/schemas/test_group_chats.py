@@ -4,7 +4,6 @@ from pydantic import ValidationError
 from agents_hub.api.schemas.group_chats import (
     GroupChatCreate,
     GroupChatInfo,
-    GroupChatSummary,
     GroupChatMember,
 )
 from agents_hub.core.foundation.models import GroupChatType
@@ -96,17 +95,19 @@ def test_group_chat_info_invalid_group_type():
     assert "group_type" in str(exc_info.value).lower()
 
 
-def test_group_chat_summary_valid():
-    """测试群聊摘要响应"""
+def test_group_chat_info_list_valid():
+    """测试群聊列表信息响应"""
     data = {
         "group_chat_id": "gc_123",
         "group_chat_name": "Test Group",
         "project_path": "/path/to/project",
-        "is_active": False,
         "created_at": datetime(2026, 6, 3, 10, 0, 0),
+        "group_type": GroupChatType.MANAGER_ORCHESTRATE,
+        "is_active": False,
     }
-    schema = GroupChatSummary(**data)
+    schema = GroupChatInfo(**data)
     assert schema.project_path == "/path/to/project"
+    assert schema.group_type == GroupChatType.MANAGER_ORCHESTRATE
 
 
 def test_group_chat_member_valid():

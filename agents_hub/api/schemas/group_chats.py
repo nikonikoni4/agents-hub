@@ -28,16 +28,9 @@ class GroupChatInfo(BaseModel):
     created_at: datetime
     group_type: GroupChatType
     is_active: bool
-
-
-class GroupChatSummary(BaseModel):
-    """群聊摘要（列表展示）"""
-
-    group_chat_id: str
-    group_chat_name: str
-    project_path: str
-    is_active: bool
-    created_at: datetime
+    last_speaker: str | None = None
+    last_message: str | None = None
+    last_update_time: str | None = None
 
 
 class GroupChatMember(BaseModel):

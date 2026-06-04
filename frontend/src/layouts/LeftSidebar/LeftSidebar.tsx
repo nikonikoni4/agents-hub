@@ -1,4 +1,5 @@
-import { PlusIcon, UsersIcon, ZapIcon, FolderIcon, SettingsIcon } from '@/shared/components';
+import { PlusIcon, UsersIcon, ZapIcon, SettingsIcon } from '@/shared/components';
+import { SessionList } from '@/features/session';
 import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
@@ -37,42 +38,9 @@ export function LeftSidebar({ collapsed, onViewModeChange }: LeftSidebarProps) {
         </button>
       </div>
 
-      {/* 项目区 */}
-      <div className={styles.sidebarProjects}>
-        <div className={styles.sectionTitle}>项目</div>
-
-        <button className={styles.projectItem} aria-label="项目 feat_group_chat_service">
-          <div className={styles.projectName}>
-            <FolderIcon />
-            feat_group_chat_service
-          </div>
-        </button>
-        <button className={styles.chatItem} aria-label="测试连接">
-          <span>测试连接</span>
-          <span className={styles.chatTime}>58 分</span>
-        </button>
-        <button className={styles.chatItem} aria-label="我现在在准备开始实现docs...">
-          <span>我现在在准备开始实现docs...</span>
-        </button>
-
-        <button className={styles.projectItem} aria-label="项目 agents-hub">
-          <div className={styles.projectName}>
-            <FolderIcon />
-            agents-hub
-          </div>
-        </button>
-        <button className={styles.chatItem} aria-label="当前存在一个问题，docker...">
-          <span>当前存在一个问题，docker...</span>
-        </button>
-        <button className={styles.chatItem} aria-label="$superpowers:brainstorming...">
-          <span>$superpowers:brainstorming...</span>
-        </button>
-      </div>
-
-      {/* 对话区域 */}
-      <div className={styles.sidebarChats}>
-        <div className={styles.sectionTitle}>对话</div>
-        <div className={styles.chatListItem}>暂无聊天</div>
+      {/* Session 列表区（按项目分组） */}
+      <div className={styles.sidebarSessions}>
+        <SessionList />
       </div>
 
       {/* 设置按钮 */}

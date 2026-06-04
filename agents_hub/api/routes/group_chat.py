@@ -6,7 +6,6 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatCreate,
     GroupChatInfo,
     GroupChatMember,
-    GroupChatSummary,
     MessageCreate,
     MessageInfo,
     UseDockerUpdate,
@@ -38,7 +37,7 @@ async def create_group_chat(
     )
 
 
-@router.get("", response_model=list[GroupChatSummary])
+@router.get("", response_model=list[GroupChatInfo])
 async def list_group_chats(
     is_active_only: bool = Query(False, description="是否只返回活跃群聊"),
     service: GroupChatService = Depends(get_group_chat_service),
