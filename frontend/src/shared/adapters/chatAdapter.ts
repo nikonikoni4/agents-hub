@@ -4,10 +4,7 @@
  * 提供 GroupChat API 响应到 Domain 类型的转换和聚合功能
  */
 
-import type {
-  GroupChatApiResponse,
-  GroupChatMemberApiItem,
-} from '@/shared/types/api-schemas';
+import type { GroupChatApiResponse, GroupChatMemberApiItem } from '@/shared/types/api-schemas';
 
 // TODO: 需要时在 types/domain.ts 中定义 Domain 类型
 // import type { Conversation, ChatMessage } from '@/shared/types/domain';

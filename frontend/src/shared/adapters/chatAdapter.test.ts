@@ -8,10 +8,7 @@ import {
   aggregateConversationWithMessages,
   aggregateConversationWithMembers,
 } from './chatAdapter';
-import type {
-  GroupChatApiResponse,
-  GroupChatMemberApiItem,
-} from '@/shared/types/api-schemas';
+import type { GroupChatApiResponse, GroupChatMemberApiItem } from '@/shared/types/api-schemas';
 
 const mockChat: GroupChatApiResponse = {
   group_chat_id: 'chat-001',
