@@ -41,7 +41,7 @@ class TestGroupChatContextTokenPersistence:
             context = GroupChatContext(runtime)
             await context.load()
 
-            # 创建 AgentMember 并设置 token
+            # 创建 AgentMemberInfo 并设置 token
             agent_name = "agent_a"
             session_id = "session_123"
             agent_token = "tok_a1b2c3d4e5f6"
@@ -155,7 +155,7 @@ class TestGroupChatContextTokenPersistence:
             context = GroupChatContext(runtime)
             await context.load()
 
-            # 创建 AgentMember，token 为空
+            # 创建 AgentMemberInfo，token 为空
             agent_name = "agent_a"
             session_id = "session_123"
             agent_result = MockAgentResult(agent_name, session_id)

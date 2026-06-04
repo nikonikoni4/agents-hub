@@ -1,4 +1,4 @@
-"""测试 AgentMember 的 cwd 字段持久化"""
+"""测试 AgentMemberInfo 的 cwd 字段持久化"""
 
 import os
 import tempfile
@@ -6,11 +6,11 @@ import tempfile
 import pytest
 
 from agents_hub.core.context.group_chat_repository import GroupChatRepository
-from agents_hub.core.context.group_chat_session import AgentMember
+from agents_hub.core.context.group_chat_session import AgentMemberInfo
 
 
 class TestAgentSessionCwd:
-    """测试 AgentMember 的 cwd 字段"""
+    """测试 AgentMemberInfo 的 cwd 字段"""
 
     @pytest.mark.asyncio
     async def test_save_and_load_agent_cwd(self):
@@ -21,7 +21,7 @@ class TestAgentSessionCwd:
 
             # 设置 agent session info，包含 cwd
             agent_sessions = {
-                "agent1": AgentMember(
+                "agent1": AgentMemberInfo(
                     main_session="session_123",
                     token="token_abc",
                     cwd="/path/to/project",
@@ -86,17 +86,17 @@ class TestAgentSessionCwd:
 
             # 设置多个 agent，每个有不同的 cwd
             agent_sessions = {
-                "agent1": AgentMember(
+                "agent1": AgentMemberInfo(
                     main_session="session_1",
                     token="token_1",
                     cwd="/project/agent1",
                 ),
-                "agent2": AgentMember(
+                "agent2": AgentMemberInfo(
                     main_session="session_2",
                     token="token_2",
                     cwd="/project/agent2",
                 ),
-                "agent3": AgentMember(
+                "agent3": AgentMemberInfo(
                     main_session="session_3",
                     token="token_3",
                     cwd="",  # 空 cwd
@@ -122,7 +122,7 @@ class TestAgentSessionCwd:
 
             # 初始保存
             agent_sessions = {
-                "agent1": AgentMember(
+                "agent1": AgentMemberInfo(
                     main_session="session_abc",
                     token="token_def",
                     cwd="/original/path",

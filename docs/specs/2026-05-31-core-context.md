@@ -2,7 +2,7 @@
 version: 1.3
 created_at: 2026-05-31
 updated_at: 2026-06-04
-last_updated: 对齐现有 GroupChatContext 创建 Repository、metadata 持久化和 AgentMember 字段
+last_updated: 对齐现有 GroupChatContext 创建 Repository、metadata 持久化和 AgentMemberInfo 字段
 abstract: core/context 层的正式规格，定义群聊会话管理、Agent 上下文增量加载、消息压缩策略和持久化机制
 id: spec-core-context
 title: Core Context 层规格
@@ -28,9 +28,9 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
-| 1.1 | AgentMember 新增 token 字段 |
+| 1.1 | AgentMemberInfo 新增 token 字段 |
 | 1.2 | 路径管理改用 group_chat_paths 集中管理 |
-| 1.3 | 对齐现有 GroupChatContext 创建 Repository、metadata 持久化和 AgentMember 字段 |
+| 1.3 | 对齐现有 GroupChatContext 创建 Repository、metadata 持久化和 AgentMemberInfo 字段 |
 
 ## Overview
 
@@ -88,7 +88,7 @@ GroupChatSession 管理群聊的消息历史，核心数据：
 - `use_docker`：是否启用 Docker 沙箱执行
 
 **Session 更新规则**：
-- 首次出现的 Agent → 创建新的 AgentMember
+- 首次出现的 Agent → 创建新的 AgentMemberInfo
 - session_id 与 main_session 相同 → 不处理
 - session_id 不同且不在 btw_session 中 → 追加到 btw_session
 

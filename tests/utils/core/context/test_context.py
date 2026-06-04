@@ -19,7 +19,7 @@ from agents_hub.core.context.group_chat_context import GroupChatContext
 from agents_hub.core.context.group_chat_repository import GroupChatRepository
 from agents_hub.core.context.group_chat_session import (
     AgentContextState,
-    AgentMember,
+    AgentMemberInfo,
     GroupChatSession,
 )
 from agents_hub.core.foundation import StateError, Tag, wrap_xml
@@ -45,20 +45,20 @@ class TestAgentContextState:
         assert state.last_loaded_message_index == 10
 
 
-class TestAgentMember:
-    """测试 AgentMember"""
+class TestAgentMemberInfo:
+    """测试 AgentMemberInfo"""
 
     def test_defaults(self):
         """契约：默认值正确"""
-        info = AgentMember()
+        info = AgentMemberInfo()
         assert info.main_session == ""
         assert info.btw_session == []
         assert isinstance(info.context_state, AgentContextState)
 
     def test_btw_session_isolation(self):
         """契约：不同实例的 btw_session 互不影响"""
-        a = AgentMember()
-        b = AgentMember()
+        a = AgentMemberInfo()
+        b = AgentMemberInfo()
         a.btw_session.append("s1")
         assert "s1" not in b.btw_session
 
@@ -183,7 +183,7 @@ class TestGroupChatRepositoryRoundtrip:
         repo.agent_member_file = str(tmp_path / "agent_member.json")
 
         state = {
-            "agent_a": AgentMember(
+            "agent_a": AgentMemberInfo(
                 main_session="sess_1",
                 btw_session=["btw_1"],
                 context_state=AgentContextState(
@@ -243,7 +243,7 @@ class TestGroupChatContextClose:
         with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
             ctx = GroupChatContext.__new__(GroupChatContext)
             ctx.group_chat_session = GroupChatSession(group_chat_id="gc1")
-            ctx.agent_session_id = {"a": AgentMember()}
+            ctx.agent_session_id = {"a": AgentMemberInfo()}
             ctx.repository = MagicMock()
 
             ctx.close()
@@ -256,7 +256,7 @@ class TestGroupChatContextClose:
         with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
             ctx = GroupChatContext.__new__(GroupChatContext)
             ctx.group_chat_session = GroupChatSession(group_chat_id="gc1")
-            ctx.agent_session_id = {"a": AgentMember()}
+            ctx.agent_session_id = {"a": AgentMemberInfo()}
             ctx.repository = MagicMock()
 
             ctx.close()

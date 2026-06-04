@@ -18,7 +18,7 @@ class AgentContextState:
 
 
 @dataclass
-class AgentMember:
+class AgentMemberInfo:
     """Agent 的会话信息"""
 
     main_session: str | None = None  # 主会话 ID

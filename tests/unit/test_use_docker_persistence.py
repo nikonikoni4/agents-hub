@@ -11,7 +11,7 @@ import json
 import pytest
 
 from agents_hub.core.context.group_chat_repository import GroupChatRepository
-from agents_hub.core.context.group_chat_session import AgentContextState, AgentMember
+from agents_hub.core.context.group_chat_session import AgentContextState, AgentMemberInfo
 
 
 @pytest.fixture
@@ -25,13 +25,13 @@ async def test_save_and_load_use_docker_round_trip(repo):
     契约：use_docker=True 正确序列化/反序列化
 
     验证方式：
-    1. 构造 AgentMember(use_docker=True)
+    1. 构造 AgentMemberInfo(use_docker=True)
     2. save_agent_member 写入文件
     3. load_agent_member 读取
     4. 断言 use_docker=True
     """
     state = {
-        "agent1": AgentMember(
+        "agent1": AgentMemberInfo(
             main_session="sess_1",
             use_docker=True,
         ),
@@ -49,12 +49,12 @@ async def test_save_use_docker_false_round_trip(repo):
     契约：use_docker=False 正确 round-trip（不会被过滤掉）
 
     验证方式：
-    1. 构造 AgentMember(use_docker=False)
+    1. 构造 AgentMemberInfo(use_docker=False)
     2. save → load
     3. 断言 use_docker=False 且字段存在于 JSON
     """
     state = {
-        "agent1": AgentMember(
+        "agent1": AgentMemberInfo(
             main_session="sess_1",
             use_docker=False,
         ),

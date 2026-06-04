@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from agents_hub.core.context.group_chat_session import AgentMember, GroupChatSession
+from agents_hub.core.context.group_chat_session import AgentMemberInfo, GroupChatSession
 from agents_hub.core.context.group_metadata import GroupMetadata
 
 
@@ -28,7 +28,7 @@ class FakeRepository:
 
     async def load_agent_member(self):
         return {
-            "Worker1": AgentMember(
+            "Worker1": AgentMemberInfo(
                 main_session="s1",
                 btw_session=["b1"],
                 cwd="/tmp/project/w1",

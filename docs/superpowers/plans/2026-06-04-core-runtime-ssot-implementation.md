@@ -111,7 +111,7 @@ File: `agents_hub/core/context/group_chat_runtime_state.py`
 ```python
 from dataclasses import dataclass, field
 
-from agents_hub.core.context.group_chat_session import AgentMember, GroupChatSession
+from agents_hub.core.context.group_chat_session import AgentMemberInfo, GroupChatSession
 from agents_hub.core.context.group_metadata import GroupMetadata
 
 
@@ -120,7 +120,7 @@ class GroupChatRuntimeState:
     group_chat_id: str
     project_path: str
     group_chat_session: GroupChatSession | None = None
-    agent_sessions: dict[str, AgentMember] = field(default_factory=dict)
+    agent_sessions: dict[str, AgentMemberInfo] = field(default_factory=dict)
     compact_history: list[dict] = field(default_factory=list)
     metadata: GroupMetadata | None = None
     persistence_error: str | None = None
@@ -152,7 +152,7 @@ from agents_hub.core.context.group_chat_repository import GroupChatRepository
 from agents_hub.core.context.group_chat_runtime_state import GroupChatRuntimeState
 from agents_hub.core.context.group_chat_session import (
     AgentContextState,
-    AgentMember,
+    AgentMemberInfo,
 )
 from agents_hub.core.context.group_metadata import GroupMetadata
 from agents_hub.core.foundation import GroupChatType
@@ -203,10 +203,10 @@ class GroupChatRuntime:
     def get_agent_names(self) -> list[str]:
         """Return names present in agent session state."""
 
-    def get_agent_session(self, agent_name: str) -> AgentMember | None:
+    def get_agent_session(self, agent_name: str) -> AgentMemberInfo | None:
         """Return one agent session or None."""
 
-    def get_or_create_agent_session(self, agent_name: str) -> AgentMember:
+    def get_or_create_agent_session(self, agent_name: str) -> AgentMemberInfo:
         """Return existing agent session or create an empty one in memory."""
 
     async def save_agent_sessions(self) -> None:
@@ -215,7 +215,7 @@ class GroupChatRuntime:
     async def add_message(self, agent_result) -> None:
         """Append an agent result to memory messages and persist messages jsonl."""
 
-    async def update_agent_session_from_result(self, agent_result) -> AgentMember:
+    async def update_agent_session_from_result(self, agent_result) -> AgentMemberInfo:
         """Update session IDs from AgentResult and persist agent_member.json."""
 
     async def set_agent_token_and_default_cwd(
@@ -223,7 +223,7 @@ class GroupChatRuntime:
         agent_name: str,
         token: str,
         default_cwd: str | None = None,
-    ) -> AgentMember:
+    ) -> AgentMemberInfo:
         """Set token and fill empty cwd with default cwd, then persist."""
 
     async def update_context_load_state(
@@ -231,14 +231,14 @@ class GroupChatRuntime:
         agent_name: str,
         last_loaded_compact_index: int,
         last_loaded_message_index: int,
-    ) -> AgentMember:
+    ) -> AgentMemberInfo:
         """Update one agent context load state and persist."""
 
     async def set_agent_use_docker(
         self,
         agent_name: str,
         use_docker: bool,
-    ) -> AgentMember:
+    ) -> AgentMemberInfo:
         """Set one agent Docker flag and persist."""
 
     async def load_compact_history(self) -> list[dict]:
@@ -270,11 +270,11 @@ Complex method steps:
 
 - `update_agent_session_from_result()`
   1. Read `agent_result.agent_name` and `agent_result.session_id`.
-  2. Get or create `AgentMember` if absent: `get_or_create_agent_session(agent_name)`.
+  2. Get or create `AgentMemberInfo` if absent: `get_or_create_agent_session(agent_name)`.
   3. If existing `main_session` is empty, set it to `session_id`.
   4. If `session_id` differs from `main_session` and is not in `btw_session`, append it.
   5. Persist all agent sessions with `save_agent_sessions()`.
-  6. Return the updated `AgentMember`.
+  6. Return the updated `AgentMemberInfo`.
 
 - `append_compact_record_and_mark_compacted()`
   1. Require loaded group session.
@@ -344,7 +344,7 @@ Create `tests/core/context/conftest.py` with the `FakeRepository` class that wil
 ```python
 from datetime import datetime
 
-from agents_hub.core.context.group_chat_session import AgentMember, GroupChatSession
+from agents_hub.core.context.group_chat_session import AgentMemberInfo, GroupChatSession
 from agents_hub.core.context.group_metadata import GroupMetadata
 
 
@@ -372,7 +372,7 @@ class FakeRepository:
 
     async def load_agent_member(self):
         return {
-            "Worker1": AgentMember(
+            "Worker1": AgentMemberInfo(
                 main_session="s1",
                 btw_session=["b1"],
                 cwd="/tmp/project/w1",
@@ -431,7 +431,7 @@ from .group_chat_runtime_state import GroupChatRuntimeState
 
 __all__ = [
     "GroupChatSession",
-    "AgentMember",
+    "AgentMemberInfo",
     "AgentContextState",
     "GroupChatRepository",
     "GroupChatContext",
@@ -475,7 +475,7 @@ from datetime import datetime
 from tests.core.context.conftest import FakeRepository
 
 from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
-from agents_hub.core.context.group_chat_session import AgentMember
+from agents_hub.core.context.group_chat_session import AgentMemberInfo
 from agents_hub.core.foundation import GroupChatType
 
 
@@ -723,7 +723,7 @@ from .group_chat_runtime import GroupChatRuntime
 
 __all__ = [
     "GroupChatSession",
-    "AgentMember",
+    "AgentMemberInfo",
     "AgentContextState",
     "GroupChatRepository",
     "GroupChatRuntimeState",
@@ -814,12 +814,12 @@ def group_chat_session(self) -> GroupChatSession | None:
     return self.runtime.state.group_chat_session
 
 @property
-def agent_sessions(self) -> dict[str, AgentMember]:
+def agent_sessions(self) -> dict[str, AgentMemberInfo]:
     """Preferred accessor - returns agent sessions from runtime state."""
     return self.runtime.state.agent_sessions
 
 @property
-def agent_session_id(self) -> dict[str, AgentMember]:
+def agent_session_id(self) -> dict[str, AgentMemberInfo]:
     """Backward compatibility alias for agent_sessions."""
     return self.runtime.state.agent_sessions
 
@@ -1093,7 +1093,7 @@ In the Docker config test file, ensure the mock context has `get_project_path()`
 ```python
 context.get_project_path.return_value = "/workspace/main"
 context.agent_session_id = {
-    "Worker1": AgentMember(cwd="/workspace/main", use_docker=True)
+    "Worker1": AgentMemberInfo(cwd="/workspace/main", use_docker=True)
 }
 ```
 
@@ -1364,7 +1364,7 @@ For Docker command:
 
 ```python
 mock_group_chat.runtime.set_agent_use_docker = AsyncMock(
-    return_value=AgentMember(main_session="s1", cwd="/path", use_docker=True)
+    return_value=AgentMemberInfo(main_session="s1", cwd="/path", use_docker=True)
 )
 ```
 

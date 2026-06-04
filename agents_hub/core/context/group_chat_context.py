@@ -10,7 +10,7 @@ from agents_hub.agent_bridge import agent_platform_client
 from agents_hub.core.foundation import MAX_TOKEN, StateError
 
 from .group_chat_runtime import GroupChatRuntime
-from .group_chat_session import AgentMember, GroupChatSession
+from .group_chat_session import AgentMemberInfo, GroupChatSession
 
 
 class GroupChatContext:
@@ -31,12 +31,12 @@ class GroupChatContext:
         return self.runtime.state.group_chat_session
 
     @property
-    def agent_sessions(self) -> dict[str, AgentMember]:
+    def agent_sessions(self) -> dict[str, AgentMemberInfo]:
         """Preferred accessor - returns agent sessions from runtime state."""
         return self.runtime.state.agent_sessions
 
     @property
-    def agent_session_id(self) -> dict[str, AgentMember]:
+    def agent_session_id(self) -> dict[str, AgentMemberInfo]:
         """Backward compatibility alias for agent_sessions."""
         return self.runtime.state.agent_sessions
 
@@ -70,7 +70,7 @@ class GroupChatContext:
         """
         根据 AgentResult 更新 agent session id 并保存
 
-        如果 agent 不存在，创建新的 AgentMember
+        如果 agent 不存在，创建新的 AgentMemberInfo
         如果 session_id 不同于 main_session，添加到 btw_session
 
         Args:

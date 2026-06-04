@@ -6,7 +6,7 @@ import tempfile
 import pytest
 
 from agents_hub.core.context.group_chat_repository import GroupChatRepository
-from agents_hub.core.context.group_chat_session import AgentMember
+from agents_hub.core.context.group_chat_session import AgentMemberInfo
 from agents_hub.core.foundation import GroupChatType
 
 
@@ -46,11 +46,11 @@ class TestGroupChatMetadataIntegration:
 
             # 创建 agent_session_id
             agent_session_id = {}
-            agent_session_id["Leader"] = AgentMember(
+            agent_session_id["Leader"] = AgentMemberInfo(
                 token="token_leader",
                 cwd=default_cwd,
             )
-            agent_session_id["Worker1"] = AgentMember(
+            agent_session_id["Worker1"] = AgentMemberInfo(
                 token="token_worker1",
                 cwd=default_cwd,
             )
@@ -86,7 +86,7 @@ class TestGroupChatMetadataIntegration:
 
             # 模拟已存在的 agent，但 cwd 为空
             agent_session_id = {}
-            agent_session_id["Leader"] = AgentMember(
+            agent_session_id["Leader"] = AgentMemberInfo(
                 token="token_leader",
                 cwd="",  # 空 cwd
             )

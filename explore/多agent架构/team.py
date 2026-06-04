@@ -422,7 +422,7 @@ class GroupChat:
         return self.group_chat_context.get_agent_context(agent_name)
 
 @dataclass
-class AgentMember:
+class AgentMemberInfo:
     """Agent 的会话信息"""
     main_session: str = ""  # 主会话 ID
     btw_session: list[str] = field(default_factory=list)  # by the way session 列表
@@ -452,7 +452,7 @@ class GroupChatContext:
     """
     def __init__(self,group_chat_id : str,project_path:str):
         self.group_chat_id = group_chat_id
-        self.agent_session_id: dict[str, AgentMember] = {}  # agent_name -> AgentMember
+        self.agent_session_id: dict[str, AgentMemberInfo] = {}  # agent_name -> AgentMemberInfo
         # 获取当前的聊天历史路径
         sanitized_path = self.sanitize_project_path(project_path)
         self.group_chat_session_path = f"{LOCAL_DATA_PATH}/teams/{sanitized_path}/{group_chat_id}"
@@ -535,12 +535,12 @@ class GroupChatContext:
             for msg in self.group_chat_session.messages:
                 f.write(json.dumps(msg, ensure_ascii=False) + '\n')
 
-    def get_agent_session_id(self) -> dict[str, AgentMember]:
+    def get_agent_session_id(self) -> dict[str, AgentMemberInfo]:
         """
         获取 agent session id 映射
 
         Returns:
-            dict: {agent_name: AgentMember}
+            dict: {agent_name: AgentMemberInfo}
         """
         import json
         import os
@@ -556,10 +556,10 @@ class GroupChatContext:
         with open(self.agent_member_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        # 转换为 AgentMember 对象
+        # 转换为 AgentMemberInfo 对象
         result = {}
         for agent_name, session_data in data.items():
-            result[agent_name] = AgentMember(
+            result[agent_name] = AgentMemberInfo(
                 main_session=session_data.get('main_session', ''),
                 btw_session=session_data.get('btw_session', [])
             )
@@ -593,7 +593,7 @@ class GroupChatContext:
         """
         根据 AgentResult 更新 agent session id
 
-        如果 agent 不存在，创建新的 AgentMember
+        如果 agent 不存在，创建新的 AgentMemberInfo
         如果 session_id 不同于 main_session，添加到 btw_session
 
         Args:
@@ -604,7 +604,7 @@ class GroupChatContext:
 
         # 如果 agent 不存在，创建新的
         if agent_name not in self.agent_session_id:
-            self.agent_session_id[agent_name] = AgentMember(
+            self.agent_session_id[agent_name] = AgentMemberInfo(
                 main_session=session_id,
                 btw_session=[]
             )

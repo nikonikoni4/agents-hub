@@ -50,7 +50,7 @@ class MockRole:
 @pytest.fixture
 async def group_chat_context(tmp_path):
     """创建测试用的 GroupChatContext"""
-    from agents_hub.core.context import AgentMember
+    from agents_hub.core.context import AgentMemberInfo
     from agents_hub.core.context.group_chat_repository import GroupChatRepository
     from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 
@@ -60,7 +60,7 @@ async def group_chat_context(tmp_path):
     context = GroupChatContext(runtime)
 
     # 添加 agent session info
-    context.agent_session_id["test_agent"] = AgentMember(
+    context.agent_session_id["test_agent"] = AgentMemberInfo(
         main_session="test_session", token="tok_test123456789012345678901234"
     )
     return context

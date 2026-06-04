@@ -23,7 +23,7 @@
 
 ### 修改文件
 - `agents_hub/core/foundation/exceptions.py` - 新增 Docker 异常类
-- `agents_hub/core/context/group_chat_session.py` - AgentMember 新增 use_docker 字段
+- `agents_hub/core/context/group_chat_session.py` - AgentMemberInfo 新增 use_docker 字段
 - `agents_hub/core/agent/base_agent.py` - 添加 Docker 配置校验和执行逻辑
 - `agents_hub/agent_bridge/bridge.py` - 添加 Docker Executor 选择逻辑
 
@@ -182,7 +182,7 @@ git commit -m "feat(core): 添加 Docker 异常类"
 
 ---
 
-## Task 3: 扩展 AgentMember 数据模型
+## Task 3: 扩展 AgentMemberInfo 数据模型
 
 **Files:**
 - Modify: `agents_hub/core/context/group_chat_session.py`
@@ -192,25 +192,25 @@ git commit -m "feat(core): 添加 Docker 异常类"
 Create: `tests/unit/core/context/test_agent_session_info_docker.py`
 
 ```python
-from agents_hub.core.context.group_chat_session import AgentMember
+from agents_hub.core.context.group_chat_session import AgentMemberInfo
 
 
 def test_agent_session_info_default_use_docker():
     """测试 use_docker 默认值为 False"""
-    info = AgentMember()
+    info = AgentMemberInfo()
     assert info.use_docker is False
 
 
 def test_agent_session_info_with_use_docker():
     """测试设置 use_docker"""
-    info = AgentMember(use_docker=True)
+    info = AgentMemberInfo(use_docker=True)
     assert info.use_docker is True
 ```
 
 - [ ] **Step 2: 运行测试验证失败**
 
 Run: `pytest tests/unit/core/context/test_agent_session_info_docker.py -v`
-Expected: FAIL - AttributeError: 'AgentMember' object has no attribute 'use_docker'
+Expected: FAIL - AttributeError: 'AgentMemberInfo' object has no attribute 'use_docker'
 
 - [ ] **Step 3: 添加 use_docker 字段**
 
@@ -218,7 +218,7 @@ Modify `agents_hub/core/context/group_chat_session.py`:
 
 ```python
 @dataclass
-class AgentMember:
+class AgentMemberInfo:
     """Agent 的会话信息"""
 
     main_session: str = ""
@@ -238,7 +238,7 @@ Expected: PASS (2 tests)
 
 ```bash
 git add agents_hub/core/context/group_chat_session.py tests/unit/core/context/test_agent_session_info_docker.py
-git commit -m "feat(core): AgentMember 新增 use_docker 字段"
+git commit -m "feat(core): AgentMemberInfo 新增 use_docker 字段"
 ```
 
 ---
@@ -1181,7 +1181,7 @@ import pytest
 from unittest.mock import Mock
 from agents_hub.core.agent.base_agent import Agent
 from agents_hub.core.foundation.exceptions import DockerConfigError
-from agents_hub.core.context.group_chat_session import AgentMember
+from agents_hub.core.context.group_chat_session import AgentMemberInfo
 
 
 def test_validate_docker_config_no_docker():
@@ -1231,7 +1231,7 @@ def create_mock_agent(use_docker=False, agent_cwd="local_data", project_path="lo
     agent.group_chat_context.repository.project_path = project_path
     
     # Mock agent_session_id
-    session_info = AgentMember(cwd=agent_cwd, use_docker=use_docker)
+    session_info = AgentMemberInfo(cwd=agent_cwd, use_docker=use_docker)
     agent.group_chat_context.agent_session_id = {"test-agent": session_info}
     
     # 绑定真实方法
@@ -1583,7 +1583,7 @@ git commit -m "docs: 添加 Docker 沙箱使用指南"
 
 - [x] **Spec 覆盖**：所有设计要求已实现
   - ✅ Docker 异常类
-  - ✅ AgentMember 扩展
+  - ✅ AgentMemberInfo 扩展
   - ✅ DockerManager 容器池管理
   - ✅ DockerExecutor 基类和子类
   - ✅ Agent 层配置校验

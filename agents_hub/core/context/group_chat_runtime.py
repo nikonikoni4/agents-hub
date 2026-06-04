@@ -10,7 +10,7 @@ from agents_hub.core.foundation import GroupChatType
 
 from .group_chat_repository import GroupChatRepository
 from .group_chat_runtime_state import GroupChatRuntimeState
-from .group_chat_session import AgentMember
+from .group_chat_session import AgentMemberInfo
 from .group_metadata import GroupMetadata
 
 
@@ -121,7 +121,7 @@ class GroupChatRuntime:
             for msg in messages
         ]
 
-    def get_or_create_agent_session(self, agent_name: str) -> AgentMember:
+    def get_or_create_agent_session(self, agent_name: str) -> AgentMemberInfo:
         """
         获取或创建 Agent 会话信息
 
@@ -129,10 +129,10 @@ class GroupChatRuntime:
             agent_name: Agent 名称
 
         Returns:
-            AgentMember: Agent 会话信息
+            AgentMemberInfo: Agent 会话信息
         """
         if agent_name not in self.state.agent_sessions:
-            self.state.agent_sessions[agent_name] = AgentMember()
+            self.state.agent_sessions[agent_name] = AgentMemberInfo()
         return self.state.agent_sessions[agent_name]
 
     def get_agent_names(self) -> list[str]:
@@ -192,7 +192,7 @@ class GroupChatRuntime:
         await self._persist(lambda: self.repository.save_group_metadata(metadata))
         return metadata
 
-    async def set_agent_token_and_default_cwd(self, agent_name: str, token: str) -> AgentMember:
+    async def set_agent_token_and_default_cwd(self, agent_name: str, token: str) -> AgentMemberInfo:
         """
         设置 Agent 的 token 和默认工作目录
 
@@ -201,7 +201,7 @@ class GroupChatRuntime:
             token: Agent token
 
         Returns:
-            AgentMember: 更新后的会话信息
+            AgentMemberInfo: 更新后的会话信息
         """
         session_info = self.get_or_create_agent_session(agent_name)
         session_info.token = token
@@ -217,7 +217,7 @@ class GroupChatRuntime:
         await self._persist(lambda: self.repository.save_agent_member(self.state.agent_sessions))
         return session_info
 
-    async def set_agent_use_docker(self, agent_name: str, use_docker: bool) -> AgentMember:
+    async def set_agent_use_docker(self, agent_name: str, use_docker: bool) -> AgentMemberInfo:
         """
         设置 Agent 是否使用 Docker
 
@@ -226,7 +226,7 @@ class GroupChatRuntime:
             use_docker: 是否使用 Docker
 
         Returns:
-            AgentMember: 更新后的会话信息
+            AgentMemberInfo: 更新后的会话信息
         """
         session_info = self.get_or_create_agent_session(agent_name)
         session_info.use_docker = use_docker
@@ -235,7 +235,7 @@ class GroupChatRuntime:
 
     async def update_context_load_state(
         self, agent_name: str, compact_index: int, message_index: int
-    ) -> AgentMember:
+    ) -> AgentMemberInfo:
         """
         更新 Agent 的上下文加载状态
 
@@ -245,7 +245,7 @@ class GroupChatRuntime:
             message_index: 已加载的消息索引
 
         Returns:
-            AgentMember: 更新后的会话信息
+            AgentMemberInfo: 更新后的会话信息
         """
         session_info = self.get_or_create_agent_session(agent_name)
         session_info.context_state.last_loaded_compact_index = compact_index
@@ -281,7 +281,7 @@ class GroupChatRuntime:
         )
         await self._persist(lambda: self.repository.save_group_chat_session(session))
 
-    async def update_agent_session_from_result(self, agent_result) -> AgentMember:
+    async def update_agent_session_from_result(self, agent_result) -> AgentMemberInfo:
         """
         根据 Agent 执行结果更新会话信息
 
@@ -289,7 +289,7 @@ class GroupChatRuntime:
             agent_result: Agent 执行结果（包含 agent_name, session_id）
 
         Returns:
-            AgentMember: 更新后的会话信息
+            AgentMemberInfo: 更新后的会话信息
         """
         session_info = self.get_or_create_agent_session(agent_result.agent_name)
 
