@@ -5,6 +5,7 @@ import { ChatArea } from '../ChatArea';
 import { RightSidebar } from '../RightSidebar';
 import { RoleManagement } from '../RoleManagement';
 import { SkillSquare } from '@/features/skills';
+import { ToastContainer } from '@/shared/components';
 import styles from './MainLayout.module.css';
 
 type ViewMode = 'chat' | 'role' | 'skill';
@@ -64,6 +65,9 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
       <button className={styles.themeToggle} onClick={onToggleTheme} aria-label="切换主题">
         {theme === 'light' ? <MoonIcon /> : <SunIcon />}
       </button>
+
+      {/* Toast 通知 */}
+      <ToastContainer />
     </div>
   );
 }

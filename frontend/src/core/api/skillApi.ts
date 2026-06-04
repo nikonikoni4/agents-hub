@@ -1,110 +1,54 @@
 /**
- * Skill 相关 API 接口
- *
- * 提供全局 skill 库的查询、删除和添加操作
+ * 技能相关 API 接口
  */
 
 import apiClient, { mockableRequest } from './client';
-import type { SkillApiItem, CreateSkillRequest, SuccessResponse } from '@/shared/types';
+import type { SkillApiItem } from '@/shared/types';
+import type { CreateSkillRequest } from '@/shared/types/api-requests';
 
 // ==================== Mock 数据 ====================
 
 const MOCK_SKILLS: SkillApiItem[] = [
-  {
-    name: 'code-review',
-    description: '代码审查工具，帮助检查代码质量和潜在问题',
-  },
-  {
-    name: 'test-generator',
-    description: '自动生成单元测试代码',
-  },
-  {
-    name: 'refactor-assistant',
-    description: '重构建议和代码优化助手',
-  },
-  {
-    name: 'documentation-writer',
-    description: '自动生成代码文档和注释',
-  },
+  { name: 'code-review', description: '自动化代码质量检查和最佳实践建议' },
+  { name: 'doc-generation', description: '根据代码自动生成技术文档和API说明' },
+  { name: 'test-writing', description: '智能生成单元测试和集成测试用例' },
+  { name: 'architecture', description: '系统架构分析和设计方案推荐' },
 ];
 
 const MOCK_SKILL: SkillApiItem = {
-  name: 'code-review',
-  description: '代码审查工具，帮助检查代码质量和潜在问题',
+  name: 'new-skill',
+  description: 'A newly created skill',
 };
 
 // ==================== API 接口 ====================
 
 /**
- * 列出所有 skills
- *
- * GET /api/v1/skills
- *
- * @returns 所有 skill 列表
- *
- * @example
- * const skills = await listSkills();
- * console.log(skills); // [{ name: 'code-review', description: '...' }]
+ * 获取所有技能
  */
 export async function listSkills(): Promise<SkillApiItem[]> {
   return mockableRequest(() => apiClient.get<SkillApiItem[]>('/skills'), MOCK_SKILLS);
 }
 
 /**
- * 获取单个 skill 详情
- *
- * GET /api/v1/skills/{skillName}
- *
- * @param skillName - skill 名称
- * @returns skill 详情
- *
- * @throws {ApiError} 404 - skill 不存在
- *
- * @example
- * const skill = await getSkill('code-review');
- * console.log(skill); // { name: 'code-review', description: '...' }
+ * 获取单个技能信息
  */
-export async function getSkill(skillName: string): Promise<SkillApiItem> {
-  return mockableRequest(() => apiClient.get<SkillApiItem>(`/skills/${skillName}`), MOCK_SKILL);
+export async function getSkill(name: string): Promise<SkillApiItem> {
+  const mockSkill = MOCK_SKILLS.find((s) => s.name === name) ?? MOCK_SKILLS[0]!;
+  return mockableRequest(() => apiClient.get<SkillApiItem>(`/skills/${name}`), mockSkill);
 }
 
 /**
- * 删除 skill
- *
- * DELETE /api/v1/skills/{skillName}
- *
- * @param skillName - skill 名称
- * @returns 删除成功的消息
- *
- * @throws {ApiError} 404 - skill 不存在
- *
- * @example
- * const result = await deleteSkill('code-review');
- * console.log(result); // { message: "Skill 'code-review' 删除成功" }
- */
-export async function deleteSkill(skillName: string): Promise<SuccessResponse> {
-  return mockableRequest(() => apiClient.delete<SuccessResponse>(`/skills/${skillName}`), {
-    message: `Skill '${skillName}' 删除成功`,
-  });
-}
-
-/**
- * 从网络添加 skill（预留接口）
- *
- * POST /api/v1/skills
- *
- * @param data - 包含 skill URL 的请求数据
- * @returns 新添加的 skill 信息
- *
- * @throws {ApiError} 500 - 网络获取功能暂未实现
- *
- * @example
- * const skill = await addSkill({ url: 'https://example.com/skill.zip' });
- * console.log(skill); // { name: 'new-skill', description: '...' }
+ * 添加技能
  */
 export async function addSkill(data: CreateSkillRequest): Promise<SkillApiItem> {
-  return mockableRequest(() => apiClient.post<SkillApiItem>('/skills', data), {
-    name: 'new-skill',
-    description: '新添加的 skill（Mock 数据）',
+  return mockableRequest(() => apiClient.post<SkillApiItem>('/skills', data), MOCK_SKILL);
+}
+
+/**
+ * 删除技能
+ */
+export async function deleteSkill(name: string): Promise<{ message: string }> {
+  return mockableRequest(() => apiClient.delete<{ message: string }>(`/skills/${name}`), {
+    message: `Skill '${name}' 删除成功`,
   });
 }
