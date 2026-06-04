@@ -30,31 +30,104 @@ const MOCK_GROUP_CHAT: GroupChatApiResponse = {
 const MOCK_GROUP_CHATS: GroupChatSummaryApiItem[] = [
   {
     group_chat_id: 'mock-chat-001',
-    group_chat_name: 'Test Chat 1',
-    project_path: '/home/user/project1',
+    group_chat_name: 'Frontend Development Team',
+    project_path: '/home/user/projects/frontend-app',
     is_active: true,
     created_at: '2026-06-03T10:00:00Z',
   },
   {
     group_chat_id: 'mock-chat-002',
-    group_chat_name: 'Test Chat 2',
-    project_path: '/home/user/project2',
-    is_active: false,
+    group_chat_name: 'Backend API Team',
+    project_path: '/home/user/projects/backend-api',
+    is_active: true,
     created_at: '2026-06-02T15:30:00Z',
+  },
+  {
+    group_chat_id: 'mock-chat-003',
+    group_chat_name: 'Code Review Session',
+    project_path: '/home/user/projects/legacy-system',
+    is_active: false,
+    created_at: '2026-06-01T09:15:00Z',
+  },
+  {
+    group_chat_id: 'mock-chat-004',
+    group_chat_name: 'Database Migration',
+    project_path: '/home/user/projects/db-migration',
+    is_active: true,
+    created_at: '2026-05-31T14:20:00Z',
+  },
+  {
+    group_chat_id: 'mock-chat-005',
+    group_chat_name: 'Testing & QA',
+    project_path: '/home/user/projects/test-automation',
+    is_active: false,
+    created_at: '2026-05-30T08:45:00Z',
   },
 ];
 
 const MOCK_MESSAGES: MessageApiItem[] = [
   {
     speaker: 'user',
-    content: 'Hello, Agent!',
+    content: "Hello team! Let's start the code review for the authentication module.",
     timestamp: '2026-06-03T10:00:00Z',
     platform: 'user',
   },
   {
     speaker: 'Agent1',
-    content: '你好！我是 Agent1，有什么可以帮助你的吗？',
+    content:
+      '你好！我是 Agent1，我已经查看了认证模块的代码。整体结构清晰，但有几个安全性问题需要注意。',
     timestamp: '2026-06-03T10:00:05Z',
+    platform: 'claude',
+  },
+  {
+    speaker: 'Agent2',
+    content:
+      'I noticed the password validation is too weak. We should enforce stronger requirements.',
+    timestamp: '2026-06-03T10:00:12Z',
+    platform: 'codex',
+  },
+  {
+    speaker: 'Agent1',
+    content: '同意。另外，我发现 JWT token 的过期时间设置得太长了，建议调整为 15 分钟。',
+    timestamp: '2026-06-03T10:00:20Z',
+    platform: 'claude',
+  },
+  {
+    speaker: 'user',
+    content: 'Good points. What about the refresh token mechanism?',
+    timestamp: '2026-06-03T10:00:35Z',
+    platform: 'user',
+  },
+  {
+    speaker: 'Agent2',
+    content:
+      'The refresh token is stored in localStorage, which is vulnerable to XSS attacks. I recommend using httpOnly cookies instead.',
+    timestamp: '2026-06-03T10:00:42Z',
+    platform: 'codex',
+  },
+  {
+    speaker: 'Agent1',
+    content: '正确。我还建议添加 CSRF 保护和 rate limiting 来防止暴力破解攻击。',
+    timestamp: '2026-06-03T10:00:55Z',
+    platform: 'claude',
+  },
+  {
+    speaker: 'user',
+    content: 'Excellent suggestions. Can you create a task list for these improvements?',
+    timestamp: '2026-06-03T10:01:10Z',
+    platform: 'user',
+  },
+  {
+    speaker: 'Agent2',
+    content:
+      'Sure! Here are the tasks:\n1. Strengthen password requirements\n2. Reduce JWT expiration to 15 minutes\n3. Move refresh token to httpOnly cookie\n4. Add CSRF protection\n5. Implement rate limiting',
+    timestamp: '2026-06-03T10:01:18Z',
+    platform: 'codex',
+  },
+  {
+    speaker: 'Agent1',
+    content: '我可以帮忙实现第 1、2、4 项。Agent2 可以处理第 3、5 项吗？',
+    timestamp: '2026-06-03T10:01:30Z',
     platform: 'claude',
   },
 ];

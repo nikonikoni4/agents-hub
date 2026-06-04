@@ -21,6 +21,7 @@ export type {
   GroupChatMemberApiItem,
   AgentContextStateApiResponse,
   AgentSessionInfoApiResponse,
+  TeamApiResponse,
   SystemConfigApiResponse,
 } from './api-schemas';
 
@@ -33,6 +34,8 @@ export type {
   UpdateRoleRequest,
   AddSkillRequest,
   CreateSkillRequest,
+  CreateTeamRequest,
+  UpdateTeamRequest,
   UpdateConfigRequest,
   SuccessResponse,
   ErrorResponse,

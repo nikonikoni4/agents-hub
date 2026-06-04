@@ -32,3 +32,6 @@ export {
 
 // Skill 管理 API
 export { listSkills, getSkill, deleteSkill, addSkill } from './skillApi';
+
+// 团队管理 API
+export { listTeams, getTeam, createTeam, updateTeam, deleteTeam } from './teamApi';
