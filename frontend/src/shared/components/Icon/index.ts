@@ -1,2 +1,20 @@
-export { Icon, MenuIcon, SearchIcon, PlusIcon, SettingsIcon, MoonIcon, SunIcon } from './Icon';
+export {
+  Icon,
+  MenuIcon,
+  SearchIcon,
+  PlusIcon,
+  SettingsIcon,
+  MoonIcon,
+  SunIcon,
+  LeftPanelIcon,
+  RightPanelIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  UsersIcon,
+  ZapIcon,
+  FolderIcon,
+  MoreVerticalIcon,
+  CheckCircleIcon,
+  SendIcon,
+} from './Icon';
 export type { IconProps } from './Icon';

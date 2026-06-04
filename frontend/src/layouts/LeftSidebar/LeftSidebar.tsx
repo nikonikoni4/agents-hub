@@ -1,50 +1,8 @@
+import { PlusIcon, UsersIcon, ZapIcon, FolderIcon, SettingsIcon } from '@/shared/components';
 import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
   collapsed: boolean;
-}
-
-// SVG 图标组件
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <path d="M12 5v14m7-7H5" />
-    </svg>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function ZapIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
-
-function FolderIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 1v6m0 6v6" />
-    </svg>
-  );
 }
 
 export function LeftSidebar({ collapsed }: LeftSidebarProps) {
