@@ -4,7 +4,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRolesStore } from '../store/rolesStore';
-import { fetchAllRolesWithSkills } from '@/shared/adapters/roleAdapter';
+import { aggregateAllRolesWithSkills } from '@/shared/adapters/roleAdapter';
 
 export function useRoles() {
   const { roles, loading, error, setRoles, setLoading, setError } = useRolesStore();
@@ -13,7 +13,7 @@ export function useRoles() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchAllRolesWithSkills();
+      const data = await aggregateAllRolesWithSkills();
       setRoles(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载角色失败');

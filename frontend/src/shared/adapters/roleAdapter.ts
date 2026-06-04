@@ -13,17 +13,17 @@ export interface RoleWithSkills extends RoleApiResponse {
 }
 
 /**
- * 获取单个角色及其技能
+ * 聚合单个角色及其技能
  */
-export async function fetchRoleWithSkills(roleName: string): Promise<RoleWithSkills> {
+export async function aggregateRoleWithSkills(roleName: string): Promise<RoleWithSkills> {
   const [role, skills] = await Promise.all([getRoleInfo(roleName), getRoleSkills(roleName)]);
   return { ...role, skills };
 }
 
 /**
- * 获取所有角色及其技能
+ * 聚合所有角色及其技能
  */
-export async function fetchAllRolesWithSkills(): Promise<RoleWithSkills[]> {
+export async function aggregateAllRolesWithSkills(): Promise<RoleWithSkills[]> {
   const roles = await listRoles();
-  return Promise.all(roles.map((role) => fetchRoleWithSkills(role.name)));
+  return Promise.all(roles.map((role) => aggregateRoleWithSkills(role.name)));
 }

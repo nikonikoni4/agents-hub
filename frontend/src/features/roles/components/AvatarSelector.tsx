@@ -2,8 +2,7 @@
  * 头像选择器组件
  */
 
-import { useState, useEffect } from 'react';
-import { listAvatars } from '@/core/api/roleApi';
+import { useAvatars } from '../hooks/useAvatars';
 import styles from './AvatarSelector.module.css';
 
 export interface AvatarSelectorProps {
@@ -12,14 +11,7 @@ export interface AvatarSelectorProps {
 }
 
 export function AvatarSelector({ selectedAvatar, onSelect }: AvatarSelectorProps) {
-  const [avatars, setAvatars] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    listAvatars()
-      .then(setAvatars)
-      .finally(() => setLoading(false));
-  }, []);
+  const { avatars, loading } = useAvatars();
 
   if (loading) {
     return <div className={styles.loading}>加载头像...</div>;

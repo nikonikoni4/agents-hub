@@ -1,31 +1,40 @@
 /**
- * 团队适配器 - 聚合团队和成员角色数据
+ * 团队适配器 - 聚合团队数据
  */
 
 import { getTeam, listTeams } from '@/core/api/teamApi';
-import { fetchRoleWithSkills, type RoleWithSkills } from './roleAdapter';
+import type { TeamApiResponse } from '@/shared/types/api-schemas';
 
 /**
- * 聚合后的团队数据（包含完整的成员角色对象）
+ * 团队数据（包含成员名称列表）
  */
-export interface TeamWithMembers {
+export interface TeamData {
   name: string;
-  members: RoleWithSkills[];
+  members: string[];
 }
 
 /**
- * 获取单个团队及其成员详情
+ * 适配单个团队数据
  */
-export async function fetchTeamWithMembers(teamName: string): Promise<TeamWithMembers> {
+export function adaptTeam(apiTeam: TeamApiResponse): TeamData {
+  return {
+    name: apiTeam.name,
+    members: apiTeam.members,
+  };
+}
+
+/**
+ * 聚合单个团队数据
+ */
+export async function aggregateTeam(teamName: string): Promise<TeamData> {
   const team = await getTeam(teamName);
-  const members = await Promise.all(team.members.map((name) => fetchRoleWithSkills(name)));
-  return { name: team.name, members };
+  return adaptTeam(team);
 }
 
 /**
- * 获取所有团队及其成员详情
+ * 聚合所有团队数据
  */
-export async function fetchAllTeamsWithMembers(): Promise<TeamWithMembers[]> {
+export async function aggregateAllTeams(): Promise<TeamData[]> {
   const teams = await listTeams();
-  return Promise.all(teams.map((team) => fetchTeamWithMembers(team.name)));
+  return teams.map(adaptTeam);
 }
