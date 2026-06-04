@@ -51,7 +51,8 @@ def create_agent_with_docker_config(
             use_docker=use_docker,
         )
     }
-    group_chat_context.repository.project_path = group_chat_path
+    # Mock get_project_path() instead of repository.project_path
+    group_chat_context.get_project_path.return_value = group_chat_path
 
     agent_call_manager = MagicMock()
     message_router = MagicMock()

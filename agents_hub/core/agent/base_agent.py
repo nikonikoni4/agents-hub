@@ -156,7 +156,7 @@ class Agent:
             return
 
         agent_cwd = session_info.cwd
-        group_chat_path = self.group_chat_context.repository.project_path
+        group_chat_path = self.group_chat_context.get_project_path()
 
         if self._is_same_path(agent_cwd, group_chat_path):
             raise DockerConfigError(
