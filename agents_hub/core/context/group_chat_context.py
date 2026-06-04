@@ -33,7 +33,7 @@ class GroupChatContext:
     @property
     def agent_member_info(self) -> dict[str, AgentMemberInfo]:
         """Backward compatibility alias for agent_sessions."""
-        return self.runtime.state.agent_sessions
+        return self.runtime.state.agent_member_infos
 
     def get_project_path(self) -> str:
         return self.runtime.project_path

@@ -9,7 +9,7 @@ class GroupChatRuntimeState:
     group_chat_id: str
     project_path: str
     group_chat_session: GroupChatSession | None = None
-    agent_sessions: dict[str, AgentMemberInfo] = field(default_factory=dict)
+    agent_member_infos: dict[str, AgentMemberInfo] = field(default_factory=dict)
     compact_history: list[dict] = field(default_factory=list)
     metadata: GroupMetadata | None = None
     persistence_error: str | None = None

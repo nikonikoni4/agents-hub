@@ -360,7 +360,7 @@ class GroupChat:
 
         # 恢复 manager 的 token
         if self.manager:
-            session_info = self.runtime.state.agent_sessions.get(self.manager.name)
+            session_info = self.runtime.state.agent_member_infos.get(self.manager.name)
             if session_info and session_info.token:
                 # 恢复已有的 token
                 group_chat_manager.register_token(
@@ -374,7 +374,7 @@ class GroupChat:
 
         # 恢复 workers 的 token
         for worker_name in self.workers:
-            session_info = self.runtime.state.agent_sessions.get(worker_name)
+            session_info = self.runtime.state.agent_member_infos.get(worker_name)
             if session_info and session_info.token:
                 # 恢复已有的 token
                 group_chat_manager.register_token(

@@ -73,10 +73,10 @@ All runtime writes must update memory first and synchronously persist the durabl
 | --- | --- | --- |
 | `initialize_metadata()` | `state.metadata` | `group_metadata.json` |
 | `add_message()` | `state.group_chat_session.messages` | `<group_chat_id>.jsonl` |
-| `update_agent_session_from_result()` | `state.agent_sessions[agent_name]` | `agent_member.json` |
-| `set_agent_token_and_default_cwd()` | `state.agent_sessions[agent_name].token/cwd` | `agent_member.json` |
-| `update_context_load_state()` | `state.agent_sessions[agent_name].context_state` | `agent_member.json` |
-| `set_agent_use_docker()` | `state.agent_sessions[agent_name].use_docker` | `agent_member.json` |
+| `update_agent_session_from_result()` | `state.agent_member_infos[agent_name]` | `agent_member.json` |
+| `set_agent_token_and_default_cwd()` | `state.agent_member_infos[agent_name].token/cwd` | `agent_member.json` |
+| `update_context_load_state()` | `state.agent_member_infos[agent_name].context_state` | `agent_member.json` |
+| `set_agent_use_docker()` | `state.agent_member_infos[agent_name].use_docker` | `agent_member.json` |
 | `append_compact_record_and_mark_compacted()` | `state.compact_history`, `state.group_chat_session.last_compacted_loc` | `memory/compact_history.jsonl`, `<group_chat_id>.jsonl` |
 
 **Degraded State Handling:** On persistence failure, set `state.persistence_error` to a non-empty string and re-raise the original exception. Do not silently continue. The persistence error flag is checked by guard validations in runtime commands to prevent cascading failures.
@@ -255,7 +255,7 @@ Complex method steps:
 
 - `load()`
   1. `state.group_chat_session = await repository.load_group_chat_session()`
-  2. `state.agent_sessions = await repository.load_agent_member_infos()`
+  2. `state.agent_member_infos = await repository.load_agent_member_infos()`
   3. `state.compact_history = await repository.load_compact_history()`
   4. `state.metadata = await repository.load_group_metadata()`
   5. Return `state`
@@ -486,7 +486,7 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
     state = await runtime.load()
 
     assert state.group_chat_session is not None
-    assert state.agent_sessions["Worker1"].main_session == "s1"
+    assert state.agent_member_infos["Worker1"].main_session == "s1"
     assert state.compact_history == [{"content": {"summary": "old"}}]
     assert state.metadata is not None
 
@@ -591,13 +591,13 @@ async def test_runtime_commands_update_memory_then_persist():
     session_info = await runtime.set_agent_token_and_default_cwd("Worker1", "tok_1")
     assert session_info.token == "tok_1"
     assert session_info.cwd == "/tmp/project/w1"
-    assert repository.saved_sessions is runtime.state.agent_sessions
+    assert repository.saved_sessions is runtime.state.agent_member_infos
 
     await runtime.set_agent_use_docker("Worker1", False)
-    assert runtime.state.agent_sessions["Worker1"].use_docker is False
+    assert runtime.state.agent_member_infos["Worker1"].use_docker is False
 
     await runtime.update_context_load_state("Worker1", 3, 7)
-    context_state = runtime.state.agent_sessions["Worker1"].context_state
+    context_state = runtime.state.agent_member_infos["Worker1"].context_state
     assert context_state.last_loaded_compact_index == 3
     assert context_state.last_loaded_message_index == 7
 
@@ -780,9 +780,9 @@ async def test_group_chat_context_uses_runtime_for_message_and_session_commands(
     await context.update_agent_member_info(result)
     await context.add_message(result)
 
-    assert runtime.state.agent_sessions["Worker2"].main_session == "s2"
+    assert runtime.state.agent_member_infos["Worker2"].main_session == "s2"
     assert runtime.state.group_chat_session.messages[-1]["agent_name"] == "Worker2"
-    assert repository.saved_sessions is runtime.state.agent_sessions
+    assert repository.saved_sessions is runtime.state.agent_member_infos
     assert repository.saved_group_session is runtime.state.group_chat_session
 ```
 
@@ -816,12 +816,12 @@ def group_chat_session(self) -> GroupChatSession | None:
 @property
 def agent_sessions(self) -> dict[str, AgentMemberInfo]:
     """Preferred accessor - returns agent sessions from runtime state."""
-    return self.runtime.state.agent_sessions
+    return self.runtime.state.agent_member_infos
 
 @property
 def agent_member_info(self) -> dict[str, AgentMemberInfo]:
     """Backward compatibility alias for agent_sessions."""
-    return self.runtime.state.agent_sessions
+    return self.runtime.state.agent_member_infos
 
 def get_project_path(self) -> str:
     return self.runtime.get_project_path()
