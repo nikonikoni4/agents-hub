@@ -232,8 +232,8 @@ class GroupChatService:
         # 2. 转换为 GroupChatSummary 列表
         summaries: list[GroupChatSummary] = []
         for metadata_dict in all_metadata:
-            # 转换为 GroupMetadata 对象
-            metadata = GroupMetadata(**metadata_dict)
+            # 转换为 GroupMetadata 对象（from_dict 处理 created_at 的 ISO 字符串转换）
+            metadata = GroupMetadata.from_dict(metadata_dict)
 
             # 检查是否在内存中（活跃状态）
             is_active = self.group_chat_manager.is_active_group(metadata.group_chat_id)

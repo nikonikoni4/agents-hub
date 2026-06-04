@@ -382,9 +382,11 @@ class RoleManager:
         env = os.environ.copy()
         mcp_url = f"http://localhost:{config.mcp_port}/mcp"
         if platform == AgentPlatform.CLAUDE:
+            from agents_hub.config.types import CLAUDE_COMMAND
+
             env["CLAUDE_CONFIG_DIR"] = str(work_root)
             cmd = [
-                "claude",
+                CLAUDE_COMMAND,
                 "mcp",
                 "add",
                 "--transport",
@@ -394,9 +396,11 @@ class RoleManager:
                 mcp_url,
             ]
         else:
+            from agents_hub.config.types import CODEX_COMMAND
+
             env["CODEX_HOME"] = str(work_root)
             cmd = [
-                "codex",
+                CODEX_COMMAND,
                 "mcp",
                 "add",
                 "agents-hub",

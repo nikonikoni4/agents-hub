@@ -21,7 +21,7 @@ class GroupMetadata:
     group_chat_name: str  # 默认使用 group_chat_id
     project_path: str  # 项目路径，用于计算存储路径和作为 agent 默认 cwd
     created_at: datetime
-    group_type: str = "MANAGER_ORCHESTRATE"  # GroupChatType 的值
+    group_type: str = "manager_orchestrate"  # GroupChatType 的值
 
     def to_dict(self) -> dict:
         """转换为可序列化的字典"""
@@ -41,5 +41,5 @@ class GroupMetadata:
             group_chat_name=data["group_chat_name"],
             project_path=data["project_path"],
             created_at=datetime.fromisoformat(data["created_at"]),
-            group_type=data.get("group_type", "MANAGER_ORCHESTRATE"),
+            group_type=data.get("group_type", "manager_orchestrate"),
         )
