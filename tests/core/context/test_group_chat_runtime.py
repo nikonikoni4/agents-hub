@@ -89,8 +89,8 @@ async def test_get_or_create_agent_member_info_returns_existing():
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    session_info = runtime.get_or_create_agent_member_info("Worker1")
-    assert session_info.main_session == "s1"
+    agent_member_info = runtime.get_or_create_agent_member_info("Worker1")
+    assert agent_member_info.main_session == "s1"
 
 
 async def test_get_or_create_agent_member_info_creates_new():
@@ -98,9 +98,9 @@ async def test_get_or_create_agent_member_info_creates_new():
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    session_info = runtime.get_or_create_agent_member_info("Worker2")
-    assert session_info.main_session is None
-    assert session_info.btw_session == []
+    agent_member_info = runtime.get_or_create_agent_member_info("Worker2")
+    assert agent_member_info.main_session is None
+    assert agent_member_info.btw_session == []
 
 
 async def test_get_agent_names_returns_all_names():
@@ -148,9 +148,9 @@ async def test_runtime_commands_update_memory_then_persist():
     assert runtime.state.metadata is metadata
     assert repository.saved_metadata is metadata
 
-    session_info = await runtime.set_agent_token_and_default_cwd("Worker1", "tok_1")
-    assert session_info.token == "tok_1"
-    assert session_info.cwd == "/tmp/project/w1"
+    agent_member_info = await runtime.set_agent_token_and_default_cwd("Worker1", "tok_1")
+    assert agent_member_info.token == "tok_1"
+    assert agent_member_info.cwd == "/tmp/project/w1"
     assert repository.saved_sessions is runtime.state.agent_member_infos
 
     await runtime.set_agent_use_docker("Worker1", False)
@@ -181,10 +181,10 @@ async def test_update_agent_member_info_handles_empty_main_session():
 
     # Create new agent with no main_session
     result = MockAgentResult(agent_name="Worker2", session_id="s2")
-    session_info = await runtime.update_agent_member_info_from_result(result)
+    agent_member_info = await runtime.update_agent_member_info_from_result(result)
 
-    assert session_info.main_session == "s2"
-    assert session_info.btw_session == []
+    assert agent_member_info.main_session == "s2"
+    assert agent_member_info.btw_session == []
 
 
 async def test_update_agent_member_info_appends_different_session_to_btw():
@@ -194,10 +194,10 @@ async def test_update_agent_member_info_appends_different_session_to_btw():
 
     # Worker1 already has main_session="s1"
     result = MockAgentResult(agent_name="Worker1", session_id="s2")
-    session_info = await runtime.update_agent_member_info_from_result(result)
+    agent_member_info = await runtime.update_agent_member_info_from_result(result)
 
-    assert session_info.main_session == "s1"
-    assert "s2" in session_info.btw_session
+    assert agent_member_info.main_session == "s1"
+    assert "s2" in agent_member_info.btw_session
 
 
 async def test_persistence_error_flag_set_on_failure():

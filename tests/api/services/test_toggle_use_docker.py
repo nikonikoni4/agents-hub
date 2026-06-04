@@ -7,7 +7,7 @@
 4. 全局 use_docker=False + 请求开启 → ValidationError
 5. Docker 未启动 → DockerNotAvailableError
 6. 关闭 use_docker → 跳过 Docker 检查
-7. 角色无 session_info → 新建 AgentMemberInfo
+7. 角色无 agent_member_info → 新建 AgentMemberInfo
 """
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -108,7 +108,7 @@ async def test_toggle_use_docker_disable_success(service, mock_group_chat_manage
 @pytest.mark.asyncio
 async def test_toggle_use_docker_creates_session_if_missing(service, mock_group_chat_manager):
     """
-    契约：角色无 session_info → 新建 AgentMemberInfo
+    契约：角色无 agent_member_info → 新建 AgentMemberInfo
 
     验证方式：
     1. mock 群聊存在，但 agent_member_info 中无该角色

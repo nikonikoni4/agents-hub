@@ -230,16 +230,16 @@ def _validate_docker_config(self):
     Raises:
         DockerConfigError: Docker 配置不合理
     """
-    session_info = self.group_chat_context.agent_member_info.get(self.name)
-    if not session_info:
+    agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+    if not agent_member_info:
         return
     
-    use_docker = getattr(session_info, 'use_docker', False)
+    use_docker = getattr(agent_member_info, 'use_docker', False)
     if not use_docker:
         return  # 未启用 Docker，无需校验
     
     # 启用了 Docker，检查路径条件
-    agent_cwd = session_info.cwd
+    agent_cwd = agent_member_info.cwd
     
     # 获取群聊的项目路径（从 GroupChatRepository.project_path）
     group_chat_path = self.group_chat_context.repository.project_path

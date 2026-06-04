@@ -193,17 +193,17 @@ class GroupChatRepository:
 
             # 转换为可序列化的字典
             data = {}
-            for agent_name, session_info in state.items():
+            for agent_name, agent_member_info in state.items():
                 data[agent_name] = {
-                    "main_session": session_info.main_session,
-                    "btw_session": session_info.btw_session,
+                    "main_session": agent_member_info.main_session,
+                    "btw_session": agent_member_info.btw_session,
                     "context_state": {
-                        "last_loaded_compact_index": session_info.context_state.last_loaded_compact_index,
-                        "last_loaded_message_index": session_info.context_state.last_loaded_message_index,
+                        "last_loaded_compact_index": agent_member_info.context_state.last_loaded_compact_index,
+                        "last_loaded_message_index": agent_member_info.context_state.last_loaded_message_index,
                     },
-                    "token": session_info.token,  # 保存 token 字段
-                    "cwd": session_info.cwd,  # 保存 cwd 字段
-                    "use_docker": session_info.use_docker,  # 保存 use_docker 字段
+                    "token": agent_member_info.token,  # 保存 token 字段
+                    "cwd": agent_member_info.cwd,  # 保存 cwd 字段
+                    "use_docker": agent_member_info.use_docker,  # 保存 use_docker 字段
                 }
 
             # 写入文件

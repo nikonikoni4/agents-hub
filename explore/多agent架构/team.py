@@ -579,10 +579,10 @@ class GroupChatContext:
 
         # 转换为可序列化的字典
         data = {}
-        for agent_name, session_info in self.agent_member_info.items():
+        for agent_name, agent_member_info in self.agent_member_info.items():
             data[agent_name] = {
-                'main_session': session_info.main_session,
-                'btw_session': session_info.btw_session
+                'main_session': agent_member_info.main_session,
+                'btw_session': agent_member_info.btw_session
             }
 
         # 写入文件
@@ -609,14 +609,14 @@ class GroupChatContext:
                 btw_session=[]
             )
         else:
-            session_info = self.agent_member_info[agent_name]
+            agent_member_info = self.agent_member_info[agent_name]
 
             # 如果是第一次设置 main_session
-            if not session_info.main_session:
-                session_info.main_session = session_id
+            if not agent_member_info.main_session:
+                agent_member_info.main_session = session_id
             # 如果 session_id 不同于 main_session，且不在 btw_session 中
-            elif session_id != session_info.main_session and session_id not in session_info.btw_session:
-                session_info.btw_session.append(session_id)
+            elif session_id != agent_member_info.main_session and session_id not in agent_member_info.btw_session:
+                agent_member_info.btw_session.append(session_id)
 
     async def compact_messages(self, agent_info: dict[str, str]):
         """

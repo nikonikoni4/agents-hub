@@ -189,18 +189,18 @@ class GroupChat:
         new_members: list[Agent] = []
 
         # 检查 manager 是否需要初始化
-        session_info = (
+        agent_member_info = (
             self.group_chat_context.agent_member_info.get(self.manager.name)
             if self.manager
             else None
         )
-        if self.manager and (not session_info or not session_info.main_session):
+        if self.manager and (not agent_member_info or not agent_member_info.main_session):
             new_members.append(self.manager)
 
         # 检查 workers 是否需要初始化
         for name, worker in self.workers.items():
-            session_info = self.group_chat_context.agent_member_info.get(name)
-            if not session_info or not session_info.main_session:
+            agent_member_info = self.group_chat_context.agent_member_info.get(name)
+            if not agent_member_info or not agent_member_info.main_session:
                 new_members.append(worker)
 
         if not new_members:
@@ -360,11 +360,11 @@ class GroupChat:
 
         # 恢复 manager 的 token
         if self.manager:
-            session_info = self.runtime.state.agent_member_infos.get(self.manager.name)
-            if session_info and session_info.token:
+            agent_member_info = self.runtime.state.agent_member_infos.get(self.manager.name)
+            if agent_member_info and agent_member_info.token:
                 # 恢复已有的 token
                 group_chat_manager.register_token(
-                    session_info.token, self.manager.name, self.group_chat_id
+                    agent_member_info.token, self.manager.name, self.group_chat_id
                 )
             else:
                 # 生成新的 token
@@ -374,11 +374,11 @@ class GroupChat:
 
         # 恢复 workers 的 token
         for worker_name in self.workers:
-            session_info = self.runtime.state.agent_member_infos.get(worker_name)
-            if session_info and session_info.token:
+            agent_member_info = self.runtime.state.agent_member_infos.get(worker_name)
+            if agent_member_info and agent_member_info.token:
                 # 恢复已有的 token
                 group_chat_manager.register_token(
-                    session_info.token, worker_name, self.group_chat_id
+                    agent_member_info.token, worker_name, self.group_chat_id
                 )
             else:
                 # 生成新的 token

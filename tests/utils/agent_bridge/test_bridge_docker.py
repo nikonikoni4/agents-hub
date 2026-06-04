@@ -288,8 +288,8 @@ class TestAgentProcessMessageDocker:
                 assert call_kwargs[1]['group_chat_id'] == "gc_test_123"
 
     @pytest.mark.asyncio
-    async def test_process_message_no_session_info(self):
-        """契约 5：无 session_info 时 use_docker 默认为 False"""
+    async def test_process_message_no_agent_member_info(self):
+        """契约 5：无 agent_member_info 时 use_docker 默认为 False"""
         from agents_hub.core.agent.base_agent import Agent
         from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
         from agents_hub.agent_bridge.models import AgentResult

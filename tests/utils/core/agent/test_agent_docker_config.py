@@ -2,7 +2,7 @@
 Agent Docker 配置校验测试
 
 契约：
-1. _validate_docker_config() 当 session_info 不存在时静默跳过
+1. _validate_docker_config() 当 agent_member_info 不存在时静默跳过
 2. _validate_docker_config() 当 use_docker=False 时静默跳过
 3. _validate_docker_config() 当 CWD 与群聊路径相同时抛出 DockerConfigError
 4. _validate_docker_config() 当 CWD 与群聊路径不同时正常通过
@@ -63,11 +63,11 @@ def create_agent_with_docker_config(
 class TestValidateDockerConfig:
     """测试 _validate_docker_config() 的所有契约"""
 
-    def test_no_session_info_skips_validation(self):
-        """契约 1：session_info 不存在时静默跳过"""
+    def test_no_agent_member_info_skips_validation(self):
+        """契约 1：agent_member_info 不存在时静默跳过"""
         role = create_mock_role("test_agent")
         group_chat_context = MagicMock()
-        group_chat_context.agent_member_info = {}  # 空字典，无 session_info
+        group_chat_context.agent_member_info = {}  # 空字典，无 agent_member_info
 
         agent = Agent(role, group_chat_context, MagicMock(), MagicMock())
 

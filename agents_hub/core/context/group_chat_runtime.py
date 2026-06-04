@@ -84,14 +84,14 @@ class GroupChatRuntime:
             list[dict]: 成员信息列表
         """
         members = []
-        for agent_name, session_info in self.state.agent_member_infos.items():
+        for agent_name, agent_member_info in self.state.agent_member_infos.items():
             members.append(
                 {
                     "name": agent_name,
-                    "main_session": session_info.main_session,
-                    "btw_session": session_info.btw_session,
-                    "cwd": session_info.cwd,
-                    "use_docker": session_info.use_docker,
+                    "main_session": agent_member_info.main_session,
+                    "btw_session": agent_member_info.btw_session,
+                    "cwd": agent_member_info.cwd,
+                    "use_docker": agent_member_info.use_docker,
                 }
             )
         return members
@@ -203,8 +203,8 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        session_info = self.get_or_create_agent_member_info(agent_name)
-        session_info.token = token
+        agent_member_info = self.get_or_create_agent_member_info(agent_name)
+        agent_member_info.token = token
         # 设置默认 cwd 为 project_path/agent_name_lowercase
         # Format: first letter + trailing digits (e.g., "Worker1" -> "w1")
         agent_lower = agent_name.lower()
@@ -213,11 +213,11 @@ class GroupChatRuntime:
         trailing_digits = "".join(c for c in reversed(agent_lower) if c.isdigit())
         trailing_digits = trailing_digits[::-1]  # Reverse back to correct order
         agent_dir = first_char + trailing_digits
-        session_info.cwd = f"{self.project_path}/{agent_dir}"
+        agent_member_info.cwd = f"{self.project_path}/{agent_dir}"
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )
-        return session_info
+        return agent_member_info
 
     async def set_agent_use_docker(self, agent_name: str, use_docker: bool) -> AgentMemberInfo:
         """
@@ -230,12 +230,12 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        session_info = self.get_or_create_agent_member_info(agent_name)
-        session_info.use_docker = use_docker
+        agent_member_info = self.get_or_create_agent_member_info(agent_name)
+        agent_member_info.use_docker = use_docker
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )
-        return session_info
+        return agent_member_info
 
     async def update_context_load_state(
         self, agent_name: str, compact_index: int, message_index: int
@@ -251,13 +251,13 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        session_info = self.get_or_create_agent_member_info(agent_name)
-        session_info.context_state.last_loaded_compact_index = compact_index
-        session_info.context_state.last_loaded_message_index = message_index
+        agent_member_info = self.get_or_create_agent_member_info(agent_name)
+        agent_member_info.context_state.last_loaded_compact_index = compact_index
+        agent_member_info.context_state.last_loaded_message_index = message_index
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )
-        return session_info
+        return agent_member_info
 
     async def add_message(self, agent_result) -> None:
         """
@@ -297,22 +297,22 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        session_info = self.get_or_create_agent_member_info(agent_result.agent_name)
+        agent_member_info = self.get_or_create_agent_member_info(agent_result.agent_name)
 
         # 如果没有 main_session，设置为当前 session_id
-        if not session_info.main_session:
-            session_info.main_session = agent_result.session_id
+        if not agent_member_info.main_session:
+            agent_member_info.main_session = agent_result.session_id
         # 如果 session_id 不同且不在 btw_session 中，追加到 btw_session
         elif (
-            agent_result.session_id != session_info.main_session
-            and agent_result.session_id not in session_info.btw_session
+            agent_result.session_id != agent_member_info.main_session
+            and agent_result.session_id not in agent_member_info.btw_session
         ):
-            session_info.btw_session.append(agent_result.session_id)
+            agent_member_info.btw_session.append(agent_result.session_id)
 
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )
-        return session_info
+        return agent_member_info
 
     # ==================== Persistence Helper ====================
 

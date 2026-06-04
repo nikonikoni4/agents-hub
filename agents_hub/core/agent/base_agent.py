@@ -53,9 +53,9 @@ class Agent:
         self._run = True
 
         # 从 group_chat_context 获取 agent_token 和 cwd
-        session_info = group_chat_context.agent_member_info.get(self.name)
-        self.agent_token: str = session_info.token if session_info else ""
-        self.agent_cwd: str = session_info.cwd if session_info else ""
+        agent_member_info = group_chat_context.agent_member_info.get(self.name)
+        self.agent_token: str = agent_member_info.token if agent_member_info else ""
+        self.agent_cwd: str = agent_member_info.cwd if agent_member_info else ""
 
     def set_run(self, run: bool):
         """设置该agent是否工作"""
@@ -147,15 +147,15 @@ class Agent:
 
     def _validate_docker_config(self):
         """校验 Docker 配置（在 _process_message 中调用）"""
-        session_info = self.group_chat_context.agent_member_info.get(self.name)
-        if not session_info:
+        agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+        if not agent_member_info:
             return
 
-        use_docker = getattr(session_info, "use_docker", False)
+        use_docker = getattr(agent_member_info, "use_docker", False)
         if not use_docker:
             return
 
-        agent_cwd = session_info.cwd
+        agent_cwd = agent_member_info.cwd
         group_chat_path = self.group_chat_context.get_project_path()
 
         if self._is_same_path(agent_cwd, group_chat_path):
@@ -188,8 +188,8 @@ class Agent:
         self._validate_docker_config()
 
         # 2. 读取 use_docker 配置
-        session_info = self.group_chat_context.agent_member_info.get(self.name)
-        use_docker = getattr(session_info, "use_docker", False) if session_info else False
+        agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+        use_docker = getattr(agent_member_info, "use_docker", False) if agent_member_info else False
 
         self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
         try:

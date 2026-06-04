@@ -39,7 +39,7 @@
 4. 全局 use_docker=False + 请求开启 → ValidationError
 5. Docker 未启动 → DockerNotAvailableError
 6. 关闭 use_docker（use_docker=False）→ 跳过 Docker 检查，直接更新
-7. 角色无 session_info → 新建 AgentMemberInfo
+7. 角色无 agent_member_info → 新建 AgentMemberInfo
 
 **Bad Cases**：
 - 关闭 Docker 时不检查全局开关（应该允许关闭）
