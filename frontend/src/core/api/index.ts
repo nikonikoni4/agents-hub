@@ -10,6 +10,7 @@ export {
   createGroupChat,
   getGroupChatInfo,
   listGroupChats,
+  listGroupChatInfos,
   getMessages,
   getMembers,
   sendMessage,

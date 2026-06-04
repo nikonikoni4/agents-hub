@@ -7,6 +7,7 @@
 import apiClient, { mockableRequest } from './client';
 import type {
   GroupChatApiResponse,
+  GroupChatInfoApiResponse,
   GroupChatMemberApiItem,
   MessageApiItem,
   CreateGroupChatRequest,
@@ -69,69 +70,147 @@ const MOCK_GROUP_CHATS: GroupChatApiResponse[] = [
   },
 ];
 
-const MOCK_MESSAGES: MessageApiItem[] = [
+const MOCK_GROUP_CHAT_INFOS: GroupChatInfoApiResponse[] = [
+  {
+    group_chat_id: 'mock-chat-001',
+    group_chat_name: 'Frontend Development Team',
+    project_path: '/home/user/projects/frontend-app',
+    created_at: '2026-06-03T10:00:00Z',
+    group_type: 'manager_orchestrate',
+    is_active: true,
+    last_speaker: 'Agent1',
+    last_message: '前端组件已完成开发，准备提交代码审查',
+    last_update_at: '2026-06-03T11:30:00Z',
+  },
+  {
+    group_chat_id: 'mock-chat-002',
+    group_chat_name: 'Backend API Team',
+    project_path: '/home/user/projects/backend-api',
+    created_at: '2026-06-02T15:30:00Z',
+    group_type: 'sequence_execute',
+    is_active: true,
+    last_speaker: 'Agent2',
+    last_message: 'API 接口文档已更新，包含新的认证端点',
+    last_update_at: '2026-06-02T16:45:00Z',
+  },
+  {
+    group_chat_id: 'mock-chat-003',
+    group_chat_name: 'Code Review Session',
+    project_path: '/home/user/projects/legacy-system',
+    created_at: '2026-06-01T09:15:00Z',
+    group_type: 'manager_orchestrate',
+    is_active: false,
+    last_speaker: 'user',
+    last_message: '请检查认证模块的安全性问题',
+    last_update_at: '2026-06-01T10:00:00Z',
+  },
+  {
+    group_chat_id: 'mock-chat-004',
+    group_chat_name: 'Database Migration',
+    project_path: '/home/user/projects/db-migration',
+    created_at: '2026-05-31T14:20:00Z',
+    group_type: 'sequence_execute',
+    is_active: true,
+    last_speaker: 'Agent1',
+    last_message: '迁移脚本已准备就绪，建议在低峰期执行',
+    last_update_at: '2026-05-31T15:30:00Z',
+  },
+  {
+    group_chat_id: 'mock-chat-005',
+    group_chat_name: 'Testing & QA',
+    project_path: '/home/user/projects/test-automation',
+    created_at: '2026-05-30T08:45:00Z',
+    group_type: 'manager_orchestrate',
+    is_active: false,
+    last_speaker: 'Agent2',
+    last_message: '单元测试覆盖率已达到 85%',
+    last_update_at: '2026-05-30T09:15:00Z',
+  },
+];
+
+// 按 chatId 分组的 mock 消息数据
+const MOCK_MESSAGES_BY_CHAT: Record<string, MessageApiItem[]> = {
+  'mock-chat-001': [
+    {
+      speaker: 'user',
+      content: '我们需要开发一个新的用户仪表板页面，包含数据可视化组件。',
+      timestamp: '2026-06-03T10:00:00Z',
+      platform: 'user',
+    },
+    {
+      speaker: 'Agent1',
+      content: '好的，我来负责前端组件开发。建议使用 Recharts 库来实现图表功能。',
+      timestamp: '2026-06-03T10:00:05Z',
+      platform: 'claude',
+    },
+    {
+      speaker: 'Agent2',
+      content: '我可以处理后端 API 接口，提供用户统计数据。',
+      timestamp: '2026-06-03T10:00:12Z',
+      platform: 'codex',
+    },
+  ],
+  'mock-chat-002': [
+    {
+      speaker: 'user',
+      content: '请帮我设计用户认证系统的 API 接口。',
+      timestamp: '2026-06-02T15:30:00Z',
+      platform: 'user',
+    },
+    {
+      speaker: 'Agent1',
+      content: '我建议采用 JWT + Refresh Token 的方案，access token 设置 15 分钟过期。',
+      timestamp: '2026-06-02T15:30:05Z',
+      platform: 'claude',
+    },
+    {
+      speaker: 'user',
+      content: '好的，请输出完整的 API 文档。',
+      timestamp: '2026-06-02T15:31:00Z',
+      platform: 'user',
+    },
+    {
+      speaker: 'Agent1',
+      content: 'API 文档已更新，包含登录、注册、刷新 token、登出四个端点。',
+      timestamp: '2026-06-02T16:45:00Z',
+      platform: 'claude',
+    },
+  ],
+  'mock-chat-003': [
+    {
+      speaker: 'user',
+      content: '请检查认证模块的安全性问题。',
+      timestamp: '2026-06-01T09:15:00Z',
+      platform: 'user',
+    },
+    {
+      speaker: 'Agent1',
+      content:
+        '已发现几个安全问题：1. 密码验证过于简单 2. JWT token 过期时间过长 3. refresh token 存储在 localStorage',
+      timestamp: '2026-06-01T09:15:10Z',
+      platform: 'claude',
+    },
+    {
+      speaker: 'Agent2',
+      content: '建议使用 httpOnly cookie 存储 refresh token，并添加 CSRF 保护。',
+      timestamp: '2026-06-01T09:15:20Z',
+      platform: 'codex',
+    },
+  ],
+};
+
+// 默认 mock 消息（用于未匹配的 chatId）
+const MOCK_MESSAGES_DEFAULT: MessageApiItem[] = [
   {
     speaker: 'user',
-    content: "Hello team! Let's start the code review for the authentication module.",
+    content: '开始新会话。',
     timestamp: '2026-06-03T10:00:00Z',
     platform: 'user',
   },
   {
     speaker: 'Agent1',
-    content:
-      '你好！我是 Agent1，我已经查看了认证模块的代码。整体结构清晰，但有几个安全性问题需要注意。',
+    content: '收到，准备就绪。',
     timestamp: '2026-06-03T10:00:05Z',
-    platform: 'claude',
-  },
-  {
-    speaker: 'Agent2',
-    content:
-      'I noticed the password validation is too weak. We should enforce stronger requirements.',
-    timestamp: '2026-06-03T10:00:12Z',
-    platform: 'codex',
-  },
-  {
-    speaker: 'Agent1',
-    content: '同意。另外，我发现 JWT token 的过期时间设置得太长了，建议调整为 15 分钟。',
-    timestamp: '2026-06-03T10:00:20Z',
-    platform: 'claude',
-  },
-  {
-    speaker: 'user',
-    content: 'Good points. What about the refresh token mechanism?',
-    timestamp: '2026-06-03T10:00:35Z',
-    platform: 'user',
-  },
-  {
-    speaker: 'Agent2',
-    content:
-      'The refresh token is stored in localStorage, which is vulnerable to XSS attacks. I recommend using httpOnly cookies instead.',
-    timestamp: '2026-06-03T10:00:42Z',
-    platform: 'codex',
-  },
-  {
-    speaker: 'Agent1',
-    content: '正确。我还建议添加 CSRF 保护和 rate limiting 来防止暴力破解攻击。',
-    timestamp: '2026-06-03T10:00:55Z',
-    platform: 'claude',
-  },
-  {
-    speaker: 'user',
-    content: 'Excellent suggestions. Can you create a task list for these improvements?',
-    timestamp: '2026-06-03T10:01:10Z',
-    platform: 'user',
-  },
-  {
-    speaker: 'Agent2',
-    content:
-      'Sure! Here are the tasks:\n1. Strengthen password requirements\n2. Reduce JWT expiration to 15 minutes\n3. Move refresh token to httpOnly cookie\n4. Add CSRF protection\n5. Implement rate limiting',
-    timestamp: '2026-06-03T10:01:18Z',
-    platform: 'codex',
-  },
-  {
-    speaker: 'Agent1',
-    content: '我可以帮忙实现第 1、2、4 项。Agent2 可以处理第 3、5 项吗？',
-    timestamp: '2026-06-03T10:01:30Z',
     platform: 'claude',
   },
 ];
@@ -193,6 +272,26 @@ export async function listGroupChats(
 }
 
 /**
+ * 列出所有群聊（包含 Session 列表扩展信息）
+ *
+ * 返回包含 last_speaker、last_message、last_update_at 的完整信息
+ * 用于 Session 列表展示
+ *
+ * @param isActiveOnly - 是否只返回活跃群聊
+ */
+export async function listGroupChatInfos(
+  isActiveOnly: boolean = false
+): Promise<GroupChatInfoApiResponse[]> {
+  return mockableRequest(
+    () =>
+      apiClient.get<GroupChatInfoApiResponse[]>('/group-chats', {
+        params: { is_active_only: isActiveOnly, include_info: true },
+      }),
+    isActiveOnly ? MOCK_GROUP_CHAT_INFOS.filter((c) => c.is_active) : MOCK_GROUP_CHAT_INFOS
+  );
+}
+
+/**
  * 获取消息历史
  *
  * @param chatId - 群聊 ID
@@ -209,7 +308,7 @@ export async function getMessages(
       apiClient.get<MessageApiItem[]>(`/group-chats/${chatId}/messages`, {
         params: { limit, offset },
       }),
-    MOCK_MESSAGES
+    MOCK_MESSAGES_BY_CHAT[chatId] ?? MOCK_MESSAGES_DEFAULT
   );
 }
 

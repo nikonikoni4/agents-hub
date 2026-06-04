@@ -17,6 +17,7 @@ export type {
   SkillApiItem,
   RoleSkillApiItem,
   GroupChatApiResponse,
+  GroupChatInfoApiResponse,
   GroupChatMemberApiItem,
   AgentContextStateApiResponse,
   AgentSessionInfoApiResponse,
