@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { TopBar } from '../TopBar';
 import { LeftSidebar } from '../LeftSidebar';
 import { ChatArea } from '../ChatArea';
@@ -32,12 +32,20 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
+  const handleToggleLeftSidebar = useCallback(() => {
+    setLeftSidebarCollapsed((prev) => !prev);
+  }, []);
+
+  const handleToggleRightSidebar = useCallback(() => {
+    setRightSidebarCollapsed((prev) => !prev);
+  }, []);
+
   return (
     <div className={styles.mainLayout}>
-      <TopBar onToggleSidebar={() => setLeftSidebarCollapsed(!leftSidebarCollapsed)} />
+      <TopBar onToggleSidebar={handleToggleLeftSidebar} />
       <div className={styles.mainContainer}>
         <LeftSidebar collapsed={leftSidebarCollapsed} />
-        <ChatArea onToggleRightSidebar={() => setRightSidebarCollapsed(!rightSidebarCollapsed)} />
+        <ChatArea onToggleRightSidebar={handleToggleRightSidebar} />
         <RightSidebar collapsed={rightSidebarCollapsed} />
       </div>
 
