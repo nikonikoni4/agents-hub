@@ -230,7 +230,7 @@ local_data
 927e0e2c-2c69-40d4-9e6a-f494a92efe4a.jsonl
 
 # Docker experiment
-explore/docker-experiment/
-explore\docker-experiment
+docker-experiment/
 worktrees
 .codex
+.husky

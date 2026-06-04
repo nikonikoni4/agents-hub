@@ -1,3 +1,4 @@
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   MoreVerticalIcon,
   RightPanelIcon,
@@ -5,18 +6,94 @@ import {
   CheckCircleIcon,
   SendIcon,
 } from '@/shared/components';
+import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
+import { sendMessage } from '@/core/api/groupChatApi';
+import type { MessageApiItem } from '@/shared/types';
 import styles from './ChatArea.module.css';
 
 export interface ChatAreaProps {
   onToggleRightSidebar?: () => void;
 }
 
+function MessageBubble({ msg }: { msg: MessageApiItem }) {
+  const isUser = msg.speaker === 'user';
+
+  return (
+    <div className={`${styles.message} ${isUser ? styles.messageUser : styles.messageAgent}`}>
+      {!isUser && <span className={styles.speakerName}>{msg.speaker}</span>}
+      <div className={`${styles.messageBubble} ${isUser ? styles.bubbleUser : styles.bubbleAgent}`}>
+        <p>{msg.content}</p>
+      </div>
+    </div>
+  );
+}
+
 export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
+  const { messages, loading, activeTitle, activeSessionId } = useChatMessages();
+  const [inputValue, setInputValue] = useState('');
+  const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 合并 API 消息和本地发送的消息
+  const allMessages = [...messages, ...localMessages];
+
+  // 自动滚动到底部
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [allMessages.length]);
+
+  // 切换 session 时清空本地消息
+  useEffect(() => {
+    setLocalMessages([]);
+  }, [activeSessionId]);
+
+  const handleSend = useCallback(async () => {
+    const text = inputValue.trim();
+    if (!text || !activeSessionId) return;
+
+    // 乐观更新：立即显示用户消息
+    const optimisticMsg: MessageApiItem = {
+      speaker: 'user',
+      content: text,
+      timestamp: new Date().toISOString(),
+      platform: 'user',
+    };
+    setLocalMessages((prev) => [...prev, optimisticMsg]);
+    setInputValue('');
+
+    try {
+      await sendMessage(activeSessionId, { content: text, send_to: '' });
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
+  }, [inputValue, activeSessionId]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend]
+  );
+
+  // 未选择会话时的空态
+  if (!activeSessionId) {
+    return (
+      <div className={styles.chatArea}>
+        <div className={styles.emptyState}>
+          <p className={styles.emptyText}>选择一个会话开始对话</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.chatArea}>
       {/* 对话头部 */}
       <div className={styles.chatHeader}>
-        <div className={styles.chatTitle}>测试连接</div>
+        <div className={styles.chatTitle}>{activeTitle ?? '会话'}</div>
         <div className={styles.chatActions}>
           <button className={styles.iconBtn} aria-label="更多操作">
             <MoreVerticalIcon />
@@ -29,11 +106,12 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
 
       {/* 消息区域 */}
       <div className={styles.chatMessages}>
-        <div className={styles.message}>
-          <div className={styles.messageBubble}>
-            <p>在的，连接正常。</p>
-          </div>
-        </div>
+        {loading && allMessages.length === 0 ? (
+          <div className={styles.loadingText}>加载中...</div>
+        ) : (
+          allMessages.map((msg, i) => <MessageBubble key={i} msg={msg} />)
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* 输入区 */}
@@ -45,14 +123,16 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
           <input
             type="text"
             className={styles.chatInput}
-            placeholder="要求后续变更"
+            placeholder="输入消息..."
             aria-label="输入消息"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
           <button className={styles.iconBtn} aria-label="确认">
             <CheckCircleIcon />
           </button>
-          <div className={styles.versionLabel}>5.5</div>
-          <button className={styles.iconBtn} aria-label="发送消息">
+          <button className={styles.iconBtn} onClick={handleSend} aria-label="发送消息">
             <SendIcon />
           </button>
         </div>
