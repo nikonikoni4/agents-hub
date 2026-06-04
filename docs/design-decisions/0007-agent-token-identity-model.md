@@ -94,7 +94,7 @@ agents-hub 通过 MCP Tool 把 `call_agent` 等工具暴露给 Agent 平台（Cl
 **做法**：
 
 1. **Token 注册**：GroupChat.start() / load() 时，为每个成员生成随机 token，写入 `GroupChatManager` 的全局反向索引：`token → (agent_name, group_chat_id)`
-2. **持久化**：token 写入 `agent_session_state.json`（agents-hub 内部数据，Agent 子进程读不到）
+2. **持久化**：token 写入 `agent_member.json`（agents-hub 内部数据，Agent 子进程读不到）
 3. **运行时注入**：Agent.run() 渲染 LLM prompt 时，通过 `render_runtime(...)` 在 user prompt 前部加 `<agent_runtime>` 块，包含 token + agent_name + group_chat 上下文 + （仅 Manager）team_workboard
 4. **工具签名**：所有 MCP Tool 的第一个参数是 `agent_token`，Server 用 token 解析出身份，不再要求 LLM 传 `send_from` 或 `group_chat_id`
 5. **权限校验**：Server 拿到可信身份后，对照 `RoleType.LEADER` 等规则判断
@@ -207,7 +207,7 @@ class GroupChatManager:
 
 ### 对持久化的影响
 
-`agent_session_state.json` 增加 `agent_token` 字段：
+`agent_member.json` 增加 `agent_token` 字段：
 
 ```json
 {

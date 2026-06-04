@@ -47,7 +47,7 @@
 ```
 teams/<project_path>/<group_chat_id>/
 ├── group_chat_session.jsonl      # 消息历史（首次消息时创建，包含 group_cwd）
-├── agent_session_state.json       # Agent 状态
+├── agent_member.json       # Agent 状态
 └── compact_history.jsonl          # 压缩历史
 ```
 
@@ -56,7 +56,7 @@ teams/<project_path>/<group_chat_id>/
 teams/<project_path>/<group_chat_id>/
 ├── group_metadata.json            # ✅ 新增：群聊元数据（GroupChat.start() 时立即创建）
 ├── group_chat_session.jsonl       # 消息历史（首次消息时创建，不再包含 group_cwd）
-├── agent_session_state.json       # Agent 状态
+├── agent_member.json       # Agent 状态
 └── compact_history.jsonl          # 压缩历史
 ```
 
@@ -118,8 +118,8 @@ teams/<project_path>/<group_chat_id>/
    - `_generate_and_register_tokens()` 中 `default_cwd` 为空字符串
    - Agent 的 cwd 保持原有值或为空
 
-2. **没有 cwd 字段的旧 agent_session_state.json**：
-   - `load_agent_session_state()` 会将 `cwd` 设置为默认值 `""`
+2. **没有 cwd 字段的旧 agent_member.json**：
+   - `load_agent_member()` 会将 `cwd` 设置为默认值 `""`
    - 向后兼容测试已通过
 
 ---

@@ -277,7 +277,7 @@ class DockerManager:
                     "Docker Engine 未运行，无法启动沙箱容器。\n\n"
                     "解决方案：\n"
                     "1. 启动 Docker Desktop\n"
-                    "2. 或在 agent_session_state.json 中设置 use_docker=false"
+                    "2. 或在 agent_member.json 中设置 use_docker=false"
                 ),
             )
 

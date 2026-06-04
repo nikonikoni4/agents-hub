@@ -56,10 +56,10 @@ class TestGroupChatMetadataIntegration:
             )
 
             # 保存 agent session state
-            await repository.save_agent_session_state(agent_session_id)
+            await repository.save_agent_member(agent_session_id)
 
             # 3. 验证：重新加载，确认 cwd 正确
-            loaded_state = await repository.load_agent_session_state()
+            loaded_state = await repository.load_agent_member()
             assert loaded_state["Leader"].cwd == temp_dir
             assert loaded_state["Worker1"].cwd == temp_dir
 

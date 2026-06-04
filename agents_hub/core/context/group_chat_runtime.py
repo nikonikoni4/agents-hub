@@ -50,7 +50,7 @@ class GroupChatRuntime:
             GroupChatRuntimeState: 加载后的状态对象
         """
         self.state.group_chat_session = await self.repository.load_group_chat_session()
-        self.state.agent_sessions = await self.repository.load_agent_session_state()
+        self.state.agent_sessions = await self.repository.load_agent_member()
         self.state.compact_history = await self.repository.load_compact_history()
         self.state.metadata = await self.repository.load_group_metadata()
         return self.state
@@ -216,9 +216,7 @@ class GroupChatRuntime:
         trailing_digits = trailing_digits[::-1]  # Reverse back to correct order
         agent_dir = first_char + trailing_digits
         session_info.cwd = f"{self.project_path}/{agent_dir}"
-        await self._persist(
-            lambda: self.repository.save_agent_session_state(self.state.agent_sessions)
-        )
+        await self._persist(lambda: self.repository.save_agent_member(self.state.agent_sessions))
         return session_info
 
     async def set_agent_use_docker(self, agent_name: str, use_docker: bool) -> AgentSessionInfo:
@@ -234,9 +232,7 @@ class GroupChatRuntime:
         """
         session_info = self.get_or_create_agent_session(agent_name)
         session_info.use_docker = use_docker
-        await self._persist(
-            lambda: self.repository.save_agent_session_state(self.state.agent_sessions)
-        )
+        await self._persist(lambda: self.repository.save_agent_member(self.state.agent_sessions))
         return session_info
 
     async def update_context_load_state(
@@ -256,9 +252,7 @@ class GroupChatRuntime:
         session_info = self.get_or_create_agent_session(agent_name)
         session_info.context_state.last_loaded_compact_index = compact_index
         session_info.context_state.last_loaded_message_index = message_index
-        await self._persist(
-            lambda: self.repository.save_agent_session_state(self.state.agent_sessions)
-        )
+        await self._persist(lambda: self.repository.save_agent_member(self.state.agent_sessions))
         return session_info
 
     async def add_message(self, agent_result) -> None:
@@ -311,9 +305,7 @@ class GroupChatRuntime:
         ):
             session_info.btw_session.append(agent_result.session_id)
 
-        await self._persist(
-            lambda: self.repository.save_agent_session_state(self.state.agent_sessions)
-        )
+        await self._persist(lambda: self.repository.save_agent_member(self.state.agent_sessions))
         return session_info
 
     # ==================== Persistence Helper ====================

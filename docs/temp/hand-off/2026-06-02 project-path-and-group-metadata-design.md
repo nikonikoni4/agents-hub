@@ -35,7 +35,7 @@
 
 #### 核心设计
 1. **延迟创建消息历史 + 立即创建元数据索引**
-   - 群聊数据（messages、agent_session_state）在**首次消息时**才创建
+   - 群聊数据（messages、agent_member）在**首次消息时**才创建
    - 使用 `group_metadata.json` 立即保存群聊配置信息
 
 2. **文件结构**
@@ -45,7 +45,7 @@ teams/
     <group_chat_id>/
       group_metadata.json          # 新增：群聊元数据（GroupChat.start() 时立即创建）
       group_chat_session.jsonl     # 消息历史（首次消息时创建）
-      agent_session_state.json     # Agent 状态（_generate_and_register_tokens() 时创建）
+      agent_member.json     # Agent 状态（_generate_and_register_tokens() 时创建）
       compact_history.jsonl        # 压缩历史（首次压缩时创建）
 ```
 

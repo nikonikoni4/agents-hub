@@ -204,7 +204,7 @@ class GroupChatMember(BaseModel):
     btw_session: list[str]
     cwd: str | None
     use_docker: bool = False  # 占位，当前默认 False
-                              # 数据来源：agent_session_state.json 的 "use_docker" 字段
+                              # 数据来源：agent_member.json 的 "use_docker" 字段
                               # Docker 分支实现后需要从配置读取
 ```
 
@@ -216,7 +216,7 @@ class GroupChatMember(BaseModel):
 group_metadata.json  →  GroupMetadata        →  GroupChatSummary
                         (dataclass)              GroupChatInfo
 
-agent_session_state  →  dict[str, dict]      →  GroupChatMember
+agent_member  →  dict[str, dict]      →  GroupChatMember
 .json                   (直接解析JSON)
 ```
 
@@ -364,7 +364,7 @@ async def get_group_chat_members(self, group_chat_id: str) -> list[GroupChatMemb
 **流程**：
 1. 读取 metadata 获取 project_path
    - 调用 `GroupChatManager.load_group_chat_from_disk()`
-2. 构建 agent_session_state.json 文件路径
+2. 构建 agent_member.json 文件路径
 3. 验证文件存在性
 4. 读取并解析 JSON（带异常捕获）
 5. 使用 Pydantic 模型验证并转换为 GroupChatMember 列表
@@ -434,7 +434,7 @@ except Exception as e:
 | Team 的 ValueError | ResourceNotFoundError | role 不存在 |
 | GroupChat.start() 失败 | StateError | 启动失败 |
 | FileNotFoundError | ResourceNotFoundError | 群聊不存在或文件不存在 |
-| JSONDecodeError | StateError | agent_session_state.json 格式错误 |
+| JSONDecodeError | StateError | agent_member.json 格式错误 |
 | PermissionError | ExternalServiceError | 文件权限不足 |
 | OSError (磁盘满等) | ExternalServiceError | 系统级文件操作错误 |
 | GroupChatNotFoundError | ResourceNotFoundError | 群聊不在内存中 |
@@ -532,7 +532,7 @@ GroupChatService（业务编排）
 ### 决策 5：为什么不在 metadata 中存储 team_members？
 
 **理由**：
-- agent_session_state.json 是运行时真实状态的 SSOT
+- agent_member.json 是运行时真实状态的 SSOT
 - metadata 是配置快照，应保持轻量
 - Service 层负责数据聚合和转换
 

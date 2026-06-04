@@ -21,7 +21,7 @@ class GroupChatRepository:
     群聊持久化层
 
     职责：
-    1. 文件读写（GroupChatSession, agent_session_state, compact_history）
+    1. 文件读写（GroupChatSession, agent_member, compact_history）
     2. 并发控制（锁保护文件读写）
     """
 
@@ -31,7 +31,7 @@ class GroupChatRepository:
 
         # 并发控制锁
         self._session_lock = asyncio.Lock()  # 保护 group_chat_session 文件读写
-        self._agent_state_lock = asyncio.Lock()  # 保护 agent_session_state 文件读写
+        self._agent_state_lock = asyncio.Lock()  # 保护 agent_member 文件读写
         self._compact_lock = asyncio.Lock()  # 保护 compact_history 文件读写
         self._metadata_lock = asyncio.Lock()  # 保护 group_metadata 文件读写
 
@@ -129,7 +129,7 @@ class GroupChatRepository:
 
     # ==================== Agent Session State 持久化 ====================
 
-    async def load_agent_session_state(self) -> dict[str, AgentSessionInfo]:
+    async def load_agent_member(self) -> dict[str, AgentSessionInfo]:
         """
         加载 agent session 状态（无锁，读操作）
 
@@ -176,7 +176,7 @@ class GroupChatRepository:
             )
         return result
 
-    async def save_agent_session_state(self, state: dict[str, AgentSessionInfo]):
+    async def save_agent_member(self, state: dict[str, AgentSessionInfo]):
         """
         保存 agent session 状态到文件（加锁）
 

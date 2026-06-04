@@ -84,9 +84,9 @@ class GroupChatPaths:
         - 需要支持 agent 重启后恢复状态
         - 与消息历史分离，避免单文件过大
 
-        路径格式：<base_path>/<project>/<id>/agent_session_state.json
+        路径格式：<base_path>/<project>/<id>/agent_member.json
         """
-        return self.base_dir(group_chat_id, project_path, base_path) / "agent_session_state.json"
+        return self.base_dir(group_chat_id, project_path, base_path) / "agent_member.json"
 
     def compact_history_file(self, group_chat_id: str, project_path: str) -> Path:
         """

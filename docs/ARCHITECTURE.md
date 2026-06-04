@@ -240,7 +240,7 @@ orchestration → agent → communication → foundation
 
 - `group_chat_repository.py`: 群聊持久化层
   - `GroupChatRepository`: 文件读写和并发控制（锁保护）
-  - 负责 GroupChatSession、agent_session_state、compact_history 的持久化
+  - 负责 GroupChatSession、agent_member、compact_history 的持久化
 
 - `agent_context.py`: Agent 上下文（未来实现）
   - `AgentContext`: 为 Agent 提供个性化的上下文

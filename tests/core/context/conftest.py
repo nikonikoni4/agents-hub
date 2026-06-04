@@ -26,7 +26,7 @@ class FakeRepository:
         ]
         return session
 
-    async def load_agent_session_state(self):
+    async def load_agent_member(self):
         return {
             "Worker1": AgentSessionInfo(
                 main_session="s1",
@@ -51,7 +51,7 @@ class FakeRepository:
     async def save_group_metadata(self, metadata):
         self.saved_metadata = metadata
 
-    async def save_agent_session_state(self, state):
+    async def save_agent_member(self, state):
         self.saved_sessions = state
 
     async def save_group_chat_session(self, session):

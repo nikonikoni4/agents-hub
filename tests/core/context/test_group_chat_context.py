@@ -1,5 +1,5 @@
 """
-测试 GroupChatContext 的 agent_session_state.json 持久化功能
+测试 GroupChatContext 的 agent_member.json 持久化功能
 """
 
 import tempfile
@@ -30,7 +30,7 @@ class MockAgentResult:
 
 
 class TestGroupChatContextTokenPersistence:
-    """测试 agent_session_state.json 的 token 持久化功能"""
+    """测试 agent_member.json 的 token 持久化功能"""
 
     @pytest.mark.asyncio
     async def test_save_and_load_agent_token(self):
@@ -52,7 +52,7 @@ class TestGroupChatContextTokenPersistence:
 
             # 手动设置 token
             context.agent_session_id[agent_name].token = agent_token
-            await runtime.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_session_id)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -88,7 +88,7 @@ class TestGroupChatContextTokenPersistence:
                 await context.update_agent_session_id(agent_result)
                 context.agent_session_id[agent_name].token = token
 
-            await runtime.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_session_id)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -162,7 +162,7 @@ class TestGroupChatContextTokenPersistence:
             await context.update_agent_session_id(agent_result)
 
             # token 默认为空字符串
-            await runtime.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_session_id)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -192,12 +192,12 @@ class TestGroupChatContextTokenPersistence:
             await context.update_agent_session_id(agent_result)
 
             # 第一次保存，token 为空
-            await runtime.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_session_id)
 
             # 更新 token
             new_token = "tok_new_token"
             context.agent_session_id[agent_name].token = new_token
-            await runtime.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_session_id)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -229,7 +229,7 @@ class TestGroupChatContextTokenPersistence:
             context.agent_session_id[agent_name].token = "tok_test"
             context.agent_session_id[agent_name].context_state.last_loaded_compact_index = 5
             context.agent_session_id[agent_name].context_state.last_loaded_message_index = 10
-            await runtime.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_session_id)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)

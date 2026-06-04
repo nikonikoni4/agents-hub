@@ -41,7 +41,7 @@
 - 所有 MCP Tool 第一个参数是 `agent_token: str`
 - Server 维护全局反向索引 `_tokens: dict[str, tuple[str, str]]`（位于 `GroupChatManager`）
 - token 在 GroupChat.start/load 生成，cleanup 清空
-- token 持久化在 `agent_session_state.json`（agents-hub 内部目录）
+- token 持久化在 `agent_member.json`（agents-hub 内部目录）
 - token 通过 runtime user prompt 注入（不进 system prompt）
 - token 防泄漏：剥离过滤（出口 A 写群聊前 redact `tok_xxx`） + tool 描述里的"永不复述"提示
 - MCP Server 与 agents-hub 后端**同进程嵌入**（FastMCP HTTP transport，监听 8001）
@@ -169,7 +169,7 @@ def check_agent_call(
 | 4 | communication 层：新增 `Task` 数据模型、`TaskList` 状态机、持久化 | spec |
 | 5 | orchestration 层：`GroupChatManager._tokens` 全局索引，注册/注销逻辑 | (3) |
 | 6 | orchestration 层：`GroupChat.start/load` 生成 / 恢复 token，`cleanup` 清空 | (5) |
-| 7 | context 层：`agent_session_state.json` 加 `agent_token` 字段 | (5) |
+| 7 | context 层：`agent_member.json` 加 `agent_token` 字段 | (5) |
 | 8 | agent 层：`Agent._process_message` 调 `render_runtime` 注入 token | (2)(6) |
 | 9 | agent 层：`Agent.run()` 出口 A 在写群聊前调 token redact | (3) |
 | 10 | mcp 层：FastMCP HTTP transport，注册 4 个 tool | (4)-(9) |

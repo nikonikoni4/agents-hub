@@ -44,7 +44,7 @@ AI Agent（Claude Code、Codex）运行时存在权限管理问题：
 
 Docker 沙箱只在**同时满足两个条件**时启用：
 
-1. **配置启用**：`agent_session_state.json` 中 `use_docker = true`
+1. **配置启用**：`agent_member.json` 中 `use_docker = true`
 2. **路径隔离**：`agent.cwd ≠ group_chat.path`（需要隔离）
 
 **判断逻辑**：
@@ -184,8 +184,8 @@ Docker Engine 未运行，无法启动沙箱容器。
 
 解决方案：
 1. 启动 Docker Desktop
-2. 或在 agent_session_state.json 中设置 use_docker=false
-   路径：local_data/teams/.../e2e_demo_chat/agent_session_state.json
+2. 或在 agent_member.json 中设置 use_docker=false
+   路径：local_data/teams/.../e2e_demo_chat/agent_member.json
    修改 '小李' 的 use_docker 字段
 ```
 
@@ -252,7 +252,7 @@ def _validate_docker_config(self):
                 f"Docker 隔离不必要：Agent CWD 与群聊路径相同。\n"
                 f"  Agent CWD: {agent_cwd}\n"
                 f"  GroupChat Path: {group_chat_path}\n"
-                f"建议：将 agent_session_state.json 中的 use_docker 改为 false"
+                f"建议：将 agent_member.json 中的 use_docker 改为 false"
             )
         )
 ```
@@ -357,8 +357,8 @@ class DockerManager:
                     "Docker Engine 未运行，无法启动沙箱容器。\n\n"
                     "解决方案：\n"
                     "1. 启动 Docker Desktop\n"
-                    "2. 或在 agent_session_state.json 中设置 use_docker=false\n"
-                    f"   路径：local_data/teams/.../agent_session_state.json\n"
+                    "2. 或在 agent_member.json 中设置 use_docker=false\n"
+                    f"   路径：local_data/teams/.../agent_member.json\n"
                     f"   修改 '{agent_name}' 的 use_docker 字段"
                 )
             )
@@ -493,7 +493,7 @@ class DockerManager:
 
 ## 五、数据模型
 
-### 5.1 agent_session_state.json 扩展
+### 5.1 agent_member.json 扩展
 
 ```json
 {
@@ -672,7 +672,7 @@ Claude Code 进程：6 × 300 MB = 1.8 GB 内存（执行时）
 
 ### Phase 3: Agent 层集成（3 天）
 - [ ] `Agent._validate_docker_config()` 实现
-- [ ] `agent_session_state.json` 数据模型扩展
+- [ ] `agent_member.json` 数据模型扩展
 - [ ] 异常类实现
 - [ ] 集成测试：配置校验
 

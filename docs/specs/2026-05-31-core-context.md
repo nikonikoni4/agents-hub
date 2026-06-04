@@ -147,7 +147,7 @@ GroupChatRepository 由 GroupChatContext 创建并持有，负责群聊相关文
 | 文件 | 格式 | 锁 | 说明 |
 |------|------|-----|------|
 | `<id>.jsonl` | JSONL | _session_lock | 消息历史，首行为 meta_data |
-| `agent_session_state.json` | JSON | _agent_state_lock | Agent session 映射（含 context_state、token、cwd、use_docker 字段） |
+| `agent_member.json` | JSON | _agent_state_lock | Agent session 映射（含 context_state、token、cwd、use_docker 字段） |
 | `memory/compact_history.jsonl` | JSONL | _compact_lock | 压缩历史 |
 | `group_metadata.json` | JSON | _metadata_lock | 群聊元数据，包含 group_chat_id、group_chat_name、project_path、created_at、group_type |
 

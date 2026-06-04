@@ -246,7 +246,7 @@ class GroupChatManager:
         只需要 group_chat_id，其他信息从磁盘自动加载：
         1. 扫描 base_path 找到 project_path
         2. 读取 group_metadata.json 验证信息
-        3. 从 agent_session_state.json 读取 team members
+        3. 从 agent_member.json 读取 team members
         4. 创建 GroupChat 实例
         5. 调用 GroupChat.load()
         6. 注册到 GroupChatManager
@@ -289,7 +289,7 @@ class GroupChatManager:
                 f"与参数不一致 ({group_chat_id})"
             )
 
-        # 3. 从 agent_session_state.json 读取 team members
+        # 3. 从 agent_member.json 读取 team members
         session_file = group_chat_paths.session_state_file(group_chat_id, project_path, base_path)
         if not session_file.exists():
             raise FileNotFoundError(f"agent session 状态文件不存在: {session_file}")

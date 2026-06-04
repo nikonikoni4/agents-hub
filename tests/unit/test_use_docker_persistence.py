@@ -1,8 +1,8 @@
 """use_docker 持久化单元测试
 
 契约：
-1. save_agent_session_state 序列化 use_docker 字段
-2. load_agent_session_state 反序列化 use_docker 字段
+1. save_agent_member 序列化 use_docker 字段
+2. load_agent_member 反序列化 use_docker 字段
 3. use_docker=False 正确 round-trip
 """
 
@@ -26,8 +26,8 @@ async def test_save_and_load_use_docker_round_trip(repo):
 
     验证方式：
     1. 构造 AgentSessionInfo(use_docker=True)
-    2. save_agent_session_state 写入文件
-    3. load_agent_session_state 读取
+    2. save_agent_member 写入文件
+    3. load_agent_member 读取
     4. 断言 use_docker=True
     """
     state = {
@@ -37,8 +37,8 @@ async def test_save_and_load_use_docker_round_trip(repo):
         ),
     }
 
-    await repo.save_agent_session_state(state)
-    loaded = await repo.load_agent_session_state()
+    await repo.save_agent_member(state)
+    loaded = await repo.load_agent_member()
 
     assert "agent1" in loaded
     assert loaded["agent1"].use_docker is True
@@ -60,7 +60,7 @@ async def test_save_use_docker_false_round_trip(repo):
         ),
     }
 
-    await repo.save_agent_session_state(state)
+    await repo.save_agent_member(state)
 
     # 验证 JSON 文件中显式包含 use_docker 字段
     with open(repo.session_file, encoding="utf-8") as f:
@@ -68,7 +68,7 @@ async def test_save_use_docker_false_round_trip(repo):
     assert "use_docker" in raw["agent1"]
     assert raw["agent1"]["use_docker"] is False
 
-    loaded = await repo.load_agent_session_state()
+    loaded = await repo.load_agent_member()
     assert loaded["agent1"].use_docker is False
 
 
@@ -78,7 +78,7 @@ async def test_load_missing_use_docker_defaults_false(repo):
 
     验证方式：
     1. 写入不含 use_docker 的 JSON
-    2. load_agent_session_state
+    2. load_agent_member
     3. 断言 use_docker=False
     """
     import os
@@ -96,6 +96,6 @@ async def test_load_missing_use_docker_defaults_false(repo):
     with open(repo.session_file, "w", encoding="utf-8") as f:
         json.dump(old_data, f)
 
-    loaded = await repo.load_agent_session_state()
+    loaded = await repo.load_agent_member()
 
     assert loaded["agent1"].use_docker is False

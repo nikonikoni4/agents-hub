@@ -29,10 +29,10 @@ class TestAgentSessionCwd:
             }
 
             # 保存
-            await repository.save_agent_session_state(agent_sessions)
+            await repository.save_agent_member(agent_sessions)
 
             # 重新加载
-            loaded_state = await repository.load_agent_session_state()
+            loaded_state = await repository.load_agent_member()
 
             # 验证
             assert "agent1" in loaded_state
@@ -70,7 +70,7 @@ class TestAgentSessionCwd:
                 json.dump(old_format_data, f)
 
             # 加载
-            loaded_state = await repository.load_agent_session_state()
+            loaded_state = await repository.load_agent_member()
 
             # 验证：cwd 字段应该有默认值 ""
             assert "agent1" in loaded_state
@@ -104,10 +104,10 @@ class TestAgentSessionCwd:
             }
 
             # 保存
-            await repository.save_agent_session_state(agent_sessions)
+            await repository.save_agent_member(agent_sessions)
 
             # 重新加载
-            loaded_state = await repository.load_agent_session_state()
+            loaded_state = await repository.load_agent_member()
 
             # 验证
             assert loaded_state["agent1"].cwd == "/project/agent1"
@@ -128,16 +128,16 @@ class TestAgentSessionCwd:
                     cwd="/original/path",
                 )
             }
-            await repository.save_agent_session_state(agent_sessions)
+            await repository.save_agent_member(agent_sessions)
 
             # 重新加载
-            loaded_state = await repository.load_agent_session_state()
+            loaded_state = await repository.load_agent_member()
             assert loaded_state["agent1"].cwd == "/original/path"
 
             # 更新 cwd
             loaded_state["agent1"].cwd = "/updated/path"
-            await repository.save_agent_session_state(loaded_state)
+            await repository.save_agent_member(loaded_state)
 
             # 再次加载验证
-            final_state = await repository.load_agent_session_state()
+            final_state = await repository.load_agent_member()
             assert final_state["agent1"].cwd == "/updated/path"

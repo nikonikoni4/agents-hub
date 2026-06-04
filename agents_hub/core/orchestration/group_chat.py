@@ -14,7 +14,7 @@ from agents_hub.config import config
 from agents_hub.config.types import RoleType
 from agents_hub.core.agent import Agent, Manager, Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
-from agents_hub.core.context import GroupChatContext
+from agents_hub.core.context import GroupChatContext, GroupChatRuntime
 from agents_hub.core.foundation import GroupChatType, StateError
 from agents_hub.core.foundation.token import generate_token
 from agents_hub.roles import RoleManager
@@ -55,7 +55,6 @@ class GroupChat:
         self.worker_tasks: list[asyncio.Task] = []
 
         # 依赖组件（按依赖顺序初始化）
-        from agents_hub.core.context import GroupChatRuntime
 
         self.runtime = GroupChatRuntime(group_chat_id, project_path)
         self.group_chat_context = GroupChatContext(self.runtime)

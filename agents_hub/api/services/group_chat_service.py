@@ -282,7 +282,7 @@ class GroupChatService:
             group_chat_id: 群聊 ID
 
         Returns:
-            list[GroupChatMember]（群聊成员，从 agent_session_state.json 读取）:
+            list[GroupChatMember]（群聊成员，从 agent_member.json 读取）:
                 - name: str, 角色名称（如 "pm", "architect"）
                 - main_session: str | None, 主会话 ID
                 - btw_session: list[str], 额外的临时会话 ID 列表

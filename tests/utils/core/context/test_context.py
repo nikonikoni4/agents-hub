@@ -178,9 +178,9 @@ class TestGroupChatRepositoryRoundtrip:
 
     @pytest.mark.asyncio
     async def test_save_load_agent_state_roundtrip(self, tmp_path):
-        """契约：save/load agent_session_state 往返一致"""
+        """契约：save/load agent_member 往返一致"""
         repo = GroupChatRepository("gc1", "test/project")
-        repo.session_file = str(tmp_path / "agent_session_state.json")
+        repo.session_file = str(tmp_path / "agent_member.json")
 
         state = {
             "agent_a": AgentSessionInfo(
@@ -194,8 +194,8 @@ class TestGroupChatRepositoryRoundtrip:
         }
 
         with patch("agents_hub.core.context.group_chat_repository.os.makedirs"):
-            await repo.save_agent_session_state(state)
-            loaded = await repo.load_agent_session_state()
+            await repo.save_agent_member(state)
+            loaded = await repo.load_agent_member()
 
         assert "agent_a" in loaded
         assert loaded["agent_a"].main_session == "sess_1"

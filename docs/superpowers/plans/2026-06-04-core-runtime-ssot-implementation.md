@@ -73,10 +73,10 @@ All runtime writes must update memory first and synchronously persist the durabl
 | --- | --- | --- |
 | `initialize_metadata()` | `state.metadata` | `group_metadata.json` |
 | `add_message()` | `state.group_chat_session.messages` | `<group_chat_id>.jsonl` |
-| `update_agent_session_from_result()` | `state.agent_sessions[agent_name]` | `agent_session_state.json` |
-| `set_agent_token_and_default_cwd()` | `state.agent_sessions[agent_name].token/cwd` | `agent_session_state.json` |
-| `update_context_load_state()` | `state.agent_sessions[agent_name].context_state` | `agent_session_state.json` |
-| `set_agent_use_docker()` | `state.agent_sessions[agent_name].use_docker` | `agent_session_state.json` |
+| `update_agent_session_from_result()` | `state.agent_sessions[agent_name]` | `agent_member.json` |
+| `set_agent_token_and_default_cwd()` | `state.agent_sessions[agent_name].token/cwd` | `agent_member.json` |
+| `update_context_load_state()` | `state.agent_sessions[agent_name].context_state` | `agent_member.json` |
+| `set_agent_use_docker()` | `state.agent_sessions[agent_name].use_docker` | `agent_member.json` |
 | `append_compact_record_and_mark_compacted()` | `state.compact_history`, `state.group_chat_session.last_compacted_loc` | `memory/compact_history.jsonl`, `<group_chat_id>.jsonl` |
 
 **Degraded State Handling:** On persistence failure, set `state.persistence_error` to a non-empty string and re-raise the original exception. Do not silently continue. The persistence error flag is checked by guard validations in runtime commands to prevent cascading failures.
@@ -210,13 +210,13 @@ class GroupChatRuntime:
         """Return existing agent session or create an empty one in memory."""
 
     async def save_agent_sessions(self) -> None:
-        """Persist all agent sessions to agent_session_state.json."""
+        """Persist all agent sessions to agent_member.json."""
 
     async def add_message(self, agent_result) -> None:
         """Append an agent result to memory messages and persist messages jsonl."""
 
     async def update_agent_session_from_result(self, agent_result) -> AgentSessionInfo:
-        """Update session IDs from AgentResult and persist agent_session_state.json."""
+        """Update session IDs from AgentResult and persist agent_member.json."""
 
     async def set_agent_token_and_default_cwd(
         self,
@@ -255,7 +255,7 @@ Complex method steps:
 
 - `load()`
   1. `state.group_chat_session = await repository.load_group_chat_session()`
-  2. `state.agent_sessions = await repository.load_agent_session_state()`
+  2. `state.agent_sessions = await repository.load_agent_member()`
   3. `state.compact_history = await repository.load_compact_history()`
   4. `state.metadata = await repository.load_group_metadata()`
   5. Return `state`
@@ -370,7 +370,7 @@ class FakeRepository:
         ]
         return session
 
-    async def load_agent_session_state(self):
+    async def load_agent_member(self):
         return {
             "Worker1": AgentSessionInfo(
                 main_session="s1",
@@ -395,7 +395,7 @@ class FakeRepository:
     async def save_group_metadata(self, metadata):
         self.saved_metadata = metadata
 
-    async def save_agent_session_state(self, state):
+    async def save_agent_member(self, state):
         self.saved_sessions = state
 
     async def save_group_chat_session(self, session):
@@ -1244,7 +1244,7 @@ return GroupChatInfo(**info)
 
 - [ ] **Step 4: Replace `get_group_chat_members()`**
 
-Use active runtime state instead of raw `agent_session_state.json` reads:
+Use active runtime state instead of raw `agent_member.json` reads:
 
 ```python
 try:
@@ -1395,7 +1395,7 @@ git commit -m "refactor: use runtime queries in group chat service"
 Run:
 
 ```bash
-rg -n "group_chat_context\\.repository|context\\.repository|\\.repository\\.load_group_metadata|\\.repository\\.save_agent_session_state" agents_hub/core agents_hub/api/services
+rg -n "group_chat_context\\.repository|context\\.repository|\\.repository\\.load_group_metadata|\\.repository\\.save_agent_member" agents_hub/core agents_hub/api/services
 ```
 
 Expected remaining matches:

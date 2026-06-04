@@ -39,7 +39,7 @@
 - updated_at: 2026-05-31
 - path: `docs/design-decisions/0007-agent-token-identity-model.md`
 - 状态：decided
-- 触发规则：当设计或修改 MCP Tool 签名、调用者身份校验逻辑、GroupChatManager 的注册逻辑、agent_session_state 持久化结构时阅读
+- 触发规则：当设计或修改 MCP Tool 签名、调用者身份校验逻辑、GroupChatManager 的注册逻辑、agent_member 持久化结构时阅读
 - 内容摘要：MCP Tool 调用者的身份模型选用 Agent Token——Server 维护 token→(agent_name, group_chat_id) 索引，LLM 通过 runtime user prompt 拿到 token 并在 tool 调用时回传。否决了"LLM 自报身份"（伪造）和"每 Agent 一个 MCP Server 子进程"（爆炸）。Token 群聊级生命周期，runtime 注入，剥离过滤兜底
 
 ## user-design-summary

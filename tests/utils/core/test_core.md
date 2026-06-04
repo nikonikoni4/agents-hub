@@ -96,7 +96,7 @@
 **契约点**：
 - sanitize_project_path() 正确转换特殊字符（已移至 core.utils）
 - load_group_chat_session() 文件不存在返回空 session
-- save/load agent_session_state 往返一致
+- save/load agent_member 往返一致
 - save/load compact_history 往返一致
 
 #### 3.3 group_chat_context.py - GroupChatContext

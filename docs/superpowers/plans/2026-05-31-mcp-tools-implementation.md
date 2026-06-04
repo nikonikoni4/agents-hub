@@ -45,7 +45,7 @@
 - `agents_hub/core/orchestration/group_chat.py` — start/load 生成 token，cleanup 清空 token
 
 **context 层：**
-- `agents_hub/core/context/group_chat_context.py` — agent_session_state.json 新增 agent_token 字段
+- `agents_hub/core/context/group_chat_context.py` — agent_member.json 新增 agent_token 字段
 
 **agent 层：**
 - `agents_hub/core/agent/base_agent.py` — 新增 agent_token 属性、_generate_runtime_content 方法、runtime 注入、token redact
@@ -611,7 +611,7 @@ feat(orchestration): GroupChatManager 新增 token 索引管理
 
 在 GroupChat 中修改：
 - `start()`: 为每个成员生成 token，调用 manager.register_token()
-- `load()`: 从 agent_session_state.json 恢复 token，调用 manager.register_token()
+- `load()`: 从 agent_member.json 恢复 token，调用 manager.register_token()
 - `cleanup()`: 调用 manager.unregister_tokens(group_chat_id)
 
 测试应覆盖：
@@ -632,13 +632,13 @@ Token 在 GroupChat 启动时生成，清理时注销。
 
 ---
 
-## Task 7: agent_session_state.json 持久化 token（context 层）
+## Task 7: agent_member.json 持久化 token（context 层）
 
 **Files:**
 - Modify: `agents_hub/core/context/group_chat_context.py`
 - Modify: `tests/core/context/test_group_chat_context.py`
 
-在 agent_session_state.json 中新增 `agent_token` 字段：
+在 agent_member.json 中新增 `agent_token` 字段：
 ```json
 {
   "Manager": {
@@ -654,7 +654,7 @@ Token 在 GroupChat 启动时生成，清理时注销。
 
 提交信息：
 ```
-feat(context): agent_session_state.json 新增 agent_token 字段
+feat(context): agent_member.json 新增 agent_token 字段
 
 - 保存时写入 agent_token
 - 加载时恢复 agent_token
@@ -957,7 +957,7 @@ test(integration): 新增 MCP 工具端到端测试
 - ✅ Token 生成和剥离（Task 1）
 - ✅ Task/TaskList 数据模型（Task 2-4）
 - ✅ GroupChatManager token 索引（Task 5-6）
-- ✅ agent_session_state.json 持久化（Task 7）
+- ✅ agent_member.json 持久化（Task 7）
 - ✅ Agent Runtime 注入（Task 8）
 - ✅ Token 防泄漏（Task 9）
 - ✅ MCP Server 和 4 个工具（Task 10-11）

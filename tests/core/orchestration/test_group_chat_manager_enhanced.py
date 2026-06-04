@@ -271,12 +271,12 @@ class TestLoadGroupChatFromDisk:
         with open(metadata_file, "w", encoding="utf-8") as f:
             json.dump(metadata.to_dict(), f)
 
-        # 创建 agent_session_state.json
+        # 创建 agent_member.json
         session_state = {
             "test_role_1": {"main_session": "sess-1", "btw_session": []},
             "test_role_2": {"main_session": "sess-2", "btw_session": []},
         }
-        session_file = group_dir / "agent_session_state.json"
+        session_file = group_dir / "agent_member.json"
         with open(session_file, "w", encoding="utf-8") as f:
             json.dump(session_state, f)
 

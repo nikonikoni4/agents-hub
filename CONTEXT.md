@@ -328,7 +328,7 @@ local_data/
             └── <group_chat_id>/
                 ├── group_metadata.json            # 群聊元数据（GroupChat.start() 时立即创建）
                 ├── <group_chat_id>.jsonl          # 群聊消息历史（首次消息时创建）
-                ├── agent_session_state.json       # Agent session 和上下文状态
+                ├── agent_member.json       # Agent session 和上下文状态
                 └── memory/
                     └── compact_history.jsonl      # 压缩历史
 ```

@@ -1377,9 +1377,9 @@ Expected: FAIL with "AttributeError: 'GroupChatService' object has no attribute 
                 details={"group_chat_id": group_chat_id},
             ) from e
 
-        # 2. 构建 agent_session_state.json 文件路径
+        # 2. 构建 agent_member.json 文件路径
         group_chat_dir = get_group_chat_dir(project_path, group_chat_id)
-        session_state_file = group_chat_dir / "agent_session_state.json"
+        session_state_file = group_chat_dir / "agent_member.json"
 
         # 3. 验证文件存在性
         if not session_state_file.exists():
@@ -1430,7 +1430,7 @@ Expected: 所有 get_group_chat_members 相关测试通过
 git add agents_hub/api/services/group_chat_service.py tests/api/services/test_group_chat_service.py
 git commit -m "feat(service): 实现 get_group_chat_members 方法
 
-- 从 agent_session_state.json 读取成员信息
+- 从 agent_member.json 读取成员信息
 - 完整的容错处理（文件不存在、JSON 格式错误）
 - 使用 dict.get() 提供默认值
 - Pydantic 自动验证字段类型
