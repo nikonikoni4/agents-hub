@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>角色管理面板</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-sidebar: rgb(246, 246, 246);
+    --bg-shadow: rgb(234, 234, 234);
+    --bg-main: rgb(255, 255, 255);
+    --bg-bubble: rgb(246, 246, 246);
+    --bg-right-module: rgb(246, 246, 246);
+    --bg-input: rgb(255, 255, 255);
+    --text-primary: rgb(30, 30, 30);
+    --text-secondary: rgb(100, 100, 100);
+    --text-tertiary: rgb(150, 150, 150);
+    --border-color: rgb(220, 220, 220);
+    --accent-color: rgb(74, 158, 255);
+    --accent-bg: rgba(74, 158, 255, 0.08);
+    --accent-hover: rgba(74, 158, 255, 0.12);
+    --admin-tint: rgba(255, 107, 107, 0.04);
+    --admin-accent: #FF6B6B;
+    --header-gradient: linear-gradient(135deg, rgba(74, 158, 255, 0.04) 0%, rgba(74, 158, 255, 0.01) 100%);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-card: 0 1px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+    --shadow-card-hover: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  html[data-theme="dark"] {
+    --bg-sidebar: rgb(20, 20, 20);
+    --bg-shadow: rgb(38, 38, 38);
+    --bg-main: rgb(24, 24, 24);
+    --bg-bubble: rgb(20, 20, 20);
+    --bg-right-module: rgb(20, 20, 20);
+    --bg-input: rgb(45, 45, 45);
+    --text-primary: rgb(230, 230, 230);
+    --text-secondary: rgb(180, 180, 180);
+    --text-tertiary: rgb(120, 120, 120);
+    --border-color: rgb(60, 60, 60);
+    --accent-color: rgb(74, 158, 255);
+    --accent-bg: rgba(74, 158, 255, 0.1);
+    --accent-hover: rgba(74, 158, 255, 0.16);
+    --admin-tint: rgba(255, 107, 107, 0.06);
+    --admin-accent: #FF6B6B;
+    --header-gradient: linear-gradient(135deg, rgba(74, 158, 255, 0.06) 0%, rgba(74, 158, 255, 0.02) 100%);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-card: 0 1px 4px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.1);
+    --shadow-card-hover: 0 2px 8px rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.15);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--bg-sidebar);
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+
+  #root {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+/* ─── Mock Data ─── */
+const mockTeams = [
+  {
+    id: 't1',
+    name: '前端开发团队',
+    description: '负责用户界面开发与交互体验优化',
+    members: [
+      { id: 'm1', name: 'Alex Chen', avatar: null, role: 'admin', description: '全栈架构师，负责系统设计与技术选型' },
+      { id: 'm2', name: 'Mia Zhang', avatar: null, role: 'member', description: '前端开发工程师，专注 React 与组件库' },
+      { id: 'm3', name: 'Leo Wang', avatar: null, role: 'member', description: 'UI/UX 设计师，负责交互设计与视觉规范' },
+      { id: 'm4', name: 'Sophie Liu', avatar: null, role: 'member', description: '前端测试工程师，保障产品质量' },
+    ],
+  },
+  {
+    id: 't2',
+    name: '后端架构团队',
+    description: '负责核心服务、API 设计与数据层',
+    members: [
+      { id: 'm5', name: 'David Li', avatar: null, role: 'admin', description: '后端架构师，负责微服务拆分与性能优化' },
+      { id: 'm6', name: 'Emma Zhao', avatar: null, role: 'member', description: '数据工程师，负责数据管道与存储方案' },
+      { id: 'm7', name: 'Ryan Xu', avatar: null, role: 'member', description: '后端开发工程师，负责 API 开发与集成' },
+    ],
+  },
+  {
+    id: 't3',
+    name: 'AI 研究团队',
+    description: '负责 AI Agent 核心能力与模型集成',
+    members: [
+      { id: 'm8', name: 'Grace Huang', avatar: null, role: 'admin', description: 'AI 研究员，负责 Prompt 工程与 Agent 编排' },
+      { id: 'm9', name: 'Tom Yang', avatar: null, role: 'member', description: '机器学习工程师，负责模型微调与推理优化' },
+      { id: 'm10', name: 'Lucy Gao', avatar: null, role: 'member', description: 'NLP 工程师，负责语义理解与知识图谱' },
+      { id: 'm11', name: 'Kevin Wu', avatar: null, role: 'member', description: 'AI 产品经理，定义 Agent 能力边界' },
+      { id: 'm12', name: 'Nina Ma', avatar: null, role: 'member', description: '数据标注师，负责训练数据质量' },
+    ],
+  },
+];
+
+const mockRoles = [
+  {
+    id: 'r1',
+    name: 'Architect',
+    type: 'admin',
+    description: '系统架构师，负责整体技术方案设计与评审',
+    skills: ['code-review', 'architecture-design', 'tech-writing'],
+    avatar: null,
+  },
+  {
+    id: 'r2',
+    name: 'Code Reviewer',
+    type: 'member',
+    description: '代码审查员，负责代码质量把控与最佳实践推广',
+    skills: ['code-review', 'security-audit'],
+    avatar: null,
+  },
+  {
+    id: 'r3',
+    name: 'Frontend Dev',
+    type: 'member',
+    description: '前端开发工程师，负责 React 组件与页面实现',
+    skills: ['frontend-dev', 'component-design', 'ui-testing'],
+    avatar: null,
+  },
+  {
+    id: 'r4',
+    name: 'Backend Dev',
+    type: 'member',
+    description: '后端开发工程师，负责 API 设计与服务端逻辑',
+    skills: ['backend-dev', 'api-design', 'database-ops'],
+    avatar: null,
+  },
+  {
+    id: 'r5',
+    name: 'AI Researcher',
+    type: 'admin',
+    description: 'AI 研究员，负责 Prompt 工程、Agent 编排与模型评估',
+    skills: ['prompt-engineering', 'agent-orchestration', 'model-eval'],
+    avatar: null,
+  },
+  {
+    id: 'r6',
+    name: 'DevOps',
+    type: 'member',
+    description: '运维工程师，负责 CI/CD 流水线与基础设施管理',
+    skills: ['ci-cd', 'monitoring', 'infra-management'],
+    avatar: null,
+  },
+];
+
+/* ─── Color Palette ─── */
+const avatarColors = [
+  '#4A9EFF', '#FF6B6B', '#51CF66', '#FCC419',
+  '#845EF7', '#FF922B', '#22B8CF', '#E64980',
+  '#20C997', '#BE4BDB', '#FD7E14', '#339AF0',
+];
+
+function getAvatarColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
+
+function getInitials(name) {
+  const parts = name.split(' ');
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+/* ─── Styles ─── */
+const containerStyles = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+  background: 'var(--bg-main)',
+  borderRadius: '12px 0 0 12px',
+  overflow: 'hidden',
+  boxShadow: '0 0 0 1px var(--border-color)',
+};
+
+const headerStyles = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '0 24px',
+  height: 56,
+  borderBottom: '1px solid var(--border-color)',
+  flexShrink: 0,
+};
+
+const tabContainerStyles = {
+  display: 'flex',
+  gap: 4,
+  background: 'var(--bg-sidebar)',
+  borderRadius: 8,
+  padding: 3,
+};
+
+const tabBtnBase = {
+  padding: '6px 16px',
+  borderRadius: 6,
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 500,
+  transition: 'all 0.15s ease',
+  fontFamily: 'inherit',
+};
+
+const themeToggleBtn = {
+  width: 32,
+  height: 32,
+  borderRadius: 6,
+  border: '1px solid var(--border-color)',
+  background: 'var(--bg-sidebar)',
+  color: 'var(--text-secondary)',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 16,
+  transition: 'all 0.15s ease',
+};
+
+const contentStyles = {
+  flex: 1,
+  overflow: 'hidden',
+  padding: '24px',
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+/* ─── Avatar Component ─── */
+function Avatar({ name, size = 36, avatarUrl }) {
+  const color = getAvatarColor(name);
+  const initials = getInitials(name);
+  return (
+    <div style={{
+      width: size,
+      height: size,
+      minWidth: size,
+      borderRadius: '50%',
+      background: color,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: size * 0.36,
+      fontWeight: 600,
+      color: '#fff',
+      letterSpacing: '0.5px',
+      userSelect: 'none',
+    }}>
+      {initials}
+    </div>
+  );
+}
+
+/* ─── Badge Component ─── */
+function Badge({ children, variant = 'default' }) {
+  const variants = {
+    default: { bg: 'var(--accent-bg)', color: 'var(--accent-color)', border: 'transparent' },
+    admin: { bg: 'rgba(255, 107, 107, 0.1)', color: '#FF6B6B', border: 'transparent' },
+    member: { bg: 'var(--accent-bg)', color: 'var(--accent-color)', border: 'transparent' },
+    skill: { bg: 'var(--bg-sidebar)', color: 'var(--text-secondary)', border: 'var(--border-color)' },
+  };
+  const v = variants[variant] || variants.default;
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '2px 8px',
+      borderRadius: 4,
+      fontSize: 11,
+      fontWeight: 600,
+      background: v.bg,
+      color: v.color,
+      border: `1px solid ${v.border}`,
+      lineHeight: '18px',
+      whiteSpace: 'nowrap',
+    }}>
+      {children}
+    </span>
+  );
+}
+
+/* ─── Team Panel ─── */
+function TeamPanel() {
+  const [selectedTeam, setSelectedTeam] = useState('t1');
+  const team = mockTeams.find(t => t.id === selectedTeam);
+  const admins = team ? team.members.filter(m => m.role === 'admin') : [];
+  const members = team ? team.members.filter(m => m.role === 'member') : [];
+
+  return (
+    <div style={{ display: 'flex', gap: 20, flex: 1, minHeight: 0 }}>
+      {/* Left: Team List */}
+      <div style={{
+        width: 260,
+        minWidth: 260,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        borderRight: '1px solid var(--bg-shadow)',
+        paddingRight: 20,
+        overflow: 'auto',
+      }}>
+        <div style={{
+          fontSize: 11,
+          fontWeight: 600,
+          color: 'var(--text-tertiary)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          marginBottom: 8,
+          paddingLeft: 10,
+        }}>
+          全部团队
+        </div>
+        {mockTeams.map(t => {
+          const isSelected = t.id === selectedTeam;
+          return (
+            <div
+              key={t.id}
+              onClick={() => setSelectedTeam(t.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '10px 10px',
+                borderRadius: 6,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                background: isSelected ? 'var(--accent-bg)' : 'transparent',
+                borderLeft: isSelected ? '3px solid var(--accent-color)' : '3px solid transparent',
+                borderTop: '1px solid transparent',
+                borderBottom: '1px solid transparent',
+                borderRight: '1px solid transparent',
+              }}
+              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-shadow)'; }}
+              onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <div style={{
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                background: isSelected ? 'var(--accent-color)' : 'var(--bg-shadow)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.15s ease',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke={isSelected ? '#fff' : 'var(--text-tertiary)'}
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: isSelected ? 600 : 400,
+                  color: isSelected ? 'var(--accent-color)' : 'var(--text-primary)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {t.name}
+                </div>
+                <div style={{
+                  fontSize: 11,
+                  color: 'var(--text-tertiary)',
+                  marginTop: 1,
+                }}>
+                  {t.members.length} 位成员
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Right: Member Details */}
+      {team && (
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          {/* Team Header — visual anchor */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            marginBottom: 28,
+            padding: '16px 20px',
+            borderRadius: 10,
+            background: 'var(--header-gradient)',
+            border: '1px solid var(--border-color)',
+          }}>
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: 'var(--accent-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(74, 158, 255, 0.25)',
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                {team.name}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+                {team.description}
+              </div>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 10px',
+              borderRadius: 6,
+              background: 'var(--bg-shadow)',
+              fontSize: 12,
+              fontWeight: 500,
+              color: 'var(--text-secondary)',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              {team.members.length} 人
+            </div>
+          </div>
+
+          {/* Admins — elevated visual treatment */}
+          {admins.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--admin-accent)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: 10,
+                paddingLeft: 10,
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                管理员
+              </div>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                borderLeft: '3px solid var(--admin-accent)',
+                paddingLeft: 12,
+                marginLeft: 10,
+                background: 'var(--admin-tint)',
+                borderRadius: '0 8px 8px 0',
+                padding: '8px 8px 8px 15px',
+              }}>
+                {admins.map(m => (
+                  <MemberRow key={m.id} member={m} isAdmin />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Members */}
+          {members.length > 0 && (
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--text-tertiary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: 10,
+                paddingLeft: 10,
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                </svg>
+                成员
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 10 }}>
+                {members.map(m => (
+                  <MemberRow key={m.id} member={m} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MemberRow({ member, isAdmin }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: isAdmin ? '10px 10px' : '8px 10px',
+      borderRadius: 6,
+      transition: 'all 0.15s ease',
+    }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = 'var(--bg-shadow)';
+        if (isAdmin) e.currentTarget.style.transform = 'translateX(2px)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = 'transparent';
+        if (isAdmin) e.currentTarget.style.transform = 'translateX(0)';
+      }}
+    >
+      <Avatar name={member.name} size={isAdmin ? 36 : 32} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            fontSize: isAdmin ? 13.5 : 13,
+            fontWeight: isAdmin ? 600 : 500,
+            color: 'var(--text-primary)',
+          }}>
+            {member.name}
+          </span>
+          <Badge variant={member.role === 'admin' ? 'admin' : 'member'}>
+            {member.role === 'admin' ? '管理员' : '成员'}
+          </Badge>
+        </div>
+        <div style={{
+          fontSize: 12,
+          color: isAdmin ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+          marginTop: 3,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {member.description}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Role Panel ─── */
+function RolePanel() {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+      gap: 16,
+    }}>
+      {mockRoles.map(role => (
+        <div key={role.id} style={{
+          background: 'var(--bg-main)',
+          borderRadius: 10,
+          border: '1px solid var(--border-color)',
+          padding: '20px',
+          transition: 'all 0.2s ease',
+          cursor: 'default',
+          boxShadow: 'var(--shadow-card)',
+        }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = 'var(--accent-color)';
+            e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+            e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          {/* Role Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+            <div style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              background: role.type === 'admin'
+                ? 'linear-gradient(135deg, rgba(255,107,107,0.15) 0%, rgba(255,107,107,0.05) 100%)'
+                : 'var(--accent-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: role.type === 'admin'
+                ? '1px solid rgba(255,107,107,0.2)'
+                : '1px solid rgba(74,158,255,0.15)',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke={role.type === 'admin' ? 'var(--admin-accent)' : 'var(--accent-color)'}
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="7" r="4"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                {role.name}
+              </div>
+              <div style={{ marginTop: 4 }}>
+                <Badge variant={role.type === 'admin' ? 'admin' : 'member'}>
+                  {role.type === 'admin' ? '管理员' : '团队成员'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div style={{
+            fontSize: 12,
+            color: 'var(--text-secondary)',
+            lineHeight: 1.6,
+            marginBottom: 12,
+          }}>
+            {role.description}
+          </div>
+
+          {/* Skills */}
+          <div style={{ paddingTop: 12, borderTop: '1px solid var(--border-color)' }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: 'var(--text-tertiary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              marginBottom: 8,
+            }}>
+              Skills
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {role.skills.map(skill => (
+                <Badge key={skill} variant="skill">{skill}</Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Main App ─── */
+function App() {
+  const [activeTab, setActiveTab] = useState('teams');
+  const [theme, setTheme] = useState('light');
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+  };
+
+  return (
+    <div style={containerStyles}>
+      {/* Header */}
+      <div style={headerStyles}>
+        <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
+          角色管理
+        </h2>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Tab Switcher */}
+          <div style={tabContainerStyles}>
+            <button
+              onClick={() => setActiveTab('teams')}
+              style={{
+                ...tabBtnBase,
+                background: activeTab === 'teams' ? 'var(--bg-main)' : 'transparent',
+                color: activeTab === 'teams' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                boxShadow: activeTab === 'teams' ? 'var(--shadow-sm)' : 'none',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                团队管理
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('roles')}
+              style={{
+                ...tabBtnBase,
+                background: activeTab === 'roles' ? 'var(--bg-main)' : 'transparent',
+                color: activeTab === 'roles' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                boxShadow: activeTab === 'roles' ? 'var(--shadow-sm)' : 'none',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="7" r="4"/>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                </svg>
+                角色管理
+              </span>
+            </button>
+          </div>
+
+          {/* Theme Toggle */}
+          <button onClick={toggleTheme} style={themeToggleBtn} title="切换主题">
+            {theme === 'light' ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{
+        ...contentStyles,
+        overflow: activeTab === 'teams' ? 'hidden' : 'auto',
+      }}>
+        {activeTab === 'teams' ? <TeamPanel /> : <RolePanel />}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

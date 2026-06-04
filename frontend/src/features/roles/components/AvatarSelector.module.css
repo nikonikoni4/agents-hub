@@ -1,0 +1,44 @@
+.container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  padding: 16px;
+}
+
+.avatarItem {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--bg-bubble);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.avatarItem:hover {
+  border-color: var(--border-color);
+  transform: scale(1.05);
+}
+
+.avatarItem.selected {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+.avatarPreview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.loading {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+}

@@ -17,15 +17,15 @@ import type {
 const MOCK_TEAMS: TeamApiResponse[] = [
   {
     name: 'Frontend Team',
-    members: ['Designer', 'Frontend Developer', 'QA Engineer'],
+    members: ['Designer', 'Developer'],
   },
   {
     name: 'Backend Team',
-    members: ['Backend Developer', 'Database Admin', 'DevOps Engineer'],
+    members: ['Developer', 'Tester'],
   },
   {
     name: 'Product Team',
-    members: ['Product Manager', 'UX Researcher', 'Data Analyst'],
+    members: ['Designer'],
   },
 ];
 

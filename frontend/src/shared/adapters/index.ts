@@ -16,6 +16,9 @@ export * from './skillAdapter';
 // 消息相关 Adapter
 export * from './messageAdapter';
 
+// 团队相关 Adapter
+export * from './teamAdapter';
+
 // 转发导出 API Schemas（作为统一入口）
 export type {
   // 枚举类型

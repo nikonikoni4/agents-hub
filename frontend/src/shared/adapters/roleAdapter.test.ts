@@ -1,43 +1,77 @@
-import { describe, it, expect } from 'vitest';
-import { adaptRole, adaptRoleList, aggregateRoleWithSkills } from './roleAdapter';
-import type { RoleApiResponse } from '@/shared/types/api-schemas';
+/**
+ * roleAdapter 单元测试
+ */
 
-const mockRole: RoleApiResponse = {
-  name: 'Leader',
-  platform: 'claude',
-  avatar: 'avatar1.png',
-  abilities: ['任务分派'],
-  type: 'leader',
-  scope: null,
-  description: '团队领导者',
-};
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchRoleWithSkills, fetchAllRolesWithSkills } from './roleAdapter';
+import * as roleApi from '@/core/api/roleApi';
+
+vi.mock('@/core/api/roleApi');
 
 describe('roleAdapter', () => {
-  describe('adaptRole', () => {
-    it('转换单个角色', () => {
-      const result = adaptRole(mockRole);
-      expect(result.name).toBe('Leader');
-      expect(result.platform).toBe('claude');
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('fetchRoleWithSkills', () => {
+    it('should aggregate role info and skills', async () => {
+      const mockRole = {
+        name: 'Designer',
+        platform: 'claude' as const,
+        avatar: 'avatar1.png',
+        abilities: ['UI设计'],
+        type: 'team_member' as const,
+        scope: null,
+        description: '前端设计师',
+      };
+
+      const mockSkills = [{ id: 'skill-1', name: 'design', description: '设计技能' }];
+
+      vi.mocked(roleApi.getRoleInfo).mockResolvedValue(mockRole);
+      vi.mocked(roleApi.getRoleSkills).mockResolvedValue(mockSkills);
+
+      const result = await fetchRoleWithSkills('Designer');
+
+      expect(result).toEqual({ ...mockRole, skills: mockSkills });
+      expect(roleApi.getRoleInfo).toHaveBeenCalledWith('Designer');
+      expect(roleApi.getRoleSkills).toHaveBeenCalledWith('Designer');
     });
   });
 
-  describe('adaptRoleList', () => {
-    it('转换角色列表', () => {
-      const roles = [mockRole, { ...mockRole, name: 'Developer' }];
-      const result = adaptRoleList(roles);
+  describe('fetchAllRolesWithSkills', () => {
+    it('should aggregate all roles with skills', async () => {
+      const mockRoles = [
+        {
+          name: 'Designer',
+          platform: 'claude' as const,
+          avatar: null,
+          abilities: [],
+          type: 'team_member' as const,
+          scope: null,
+          description: 'A',
+        },
+        {
+          name: 'Developer',
+          platform: 'codex' as const,
+          avatar: null,
+          abilities: [],
+          type: 'team_member' as const,
+          scope: null,
+          description: 'B',
+        },
+      ];
+
+      vi.mocked(roleApi.listRoles).mockResolvedValue(mockRoles);
+      vi.mocked(roleApi.getRoleInfo).mockImplementation((name) =>
+        Promise.resolve(mockRoles.find((r) => r.name === name)!)
+      );
+      vi.mocked(roleApi.getRoleSkills).mockResolvedValue([]);
+
+      const result = await fetchAllRolesWithSkills();
+
       expect(result).toHaveLength(2);
-      expect(result[0]!.name).toBe('Leader');
-      expect(result[1]!.name).toBe('Developer');
-    });
-
-    it('空列表返回空数组', () => {
-      expect(adaptRoleList([])).toEqual([]);
-    });
-  });
-
-  describe('aggregateRoleWithSkills', () => {
-    it('未实现时抛出错误', async () => {
-      await expect(aggregateRoleWithSkills('Leader')).rejects.toThrow('not implemented');
+      expect(result[0]!.name).toBe('Designer');
+      expect(result[0]!.skills).toEqual([]);
     });
   });
 });
