@@ -9,7 +9,7 @@ from datetime import datetime
 from agents_hub.agent_bridge import agent_platform_client
 from agents_hub.core.foundation import MAX_TOKEN, StateError
 
-from .group_chat_repository import GroupChatRepository
+from .group_chat_runtime import GroupChatRuntime
 from .group_chat_session import AgentSessionInfo, GroupChatSession
 
 
@@ -19,21 +19,33 @@ class GroupChatContext:
 
     职责：
     1. 业务逻辑：消息管理、session 管理、上下文压缩
-    2. 调用 Repository 进行持久化
+    2. 通过 Runtime 进行持久化
     """
 
-    def __init__(self, group_chat_id: str, project_path: str):
-        self.group_chat_id = group_chat_id
-        self.repository = GroupChatRepository(group_chat_id, project_path)
+    def __init__(self, runtime: GroupChatRuntime):
+        self.runtime = runtime
+        self.group_chat_id = runtime.group_chat_id
 
-        # 数据
-        self.group_chat_session: GroupChatSession | None = None
-        self.agent_session_id: dict[str, AgentSessionInfo] = {}
+    @property
+    def group_chat_session(self) -> GroupChatSession | None:
+        return self.runtime.state.group_chat_session
+
+    @property
+    def agent_sessions(self) -> dict[str, AgentSessionInfo]:
+        """Preferred accessor - returns agent sessions from runtime state."""
+        return self.runtime.state.agent_sessions
+
+    @property
+    def agent_session_id(self) -> dict[str, AgentSessionInfo]:
+        """Backward compatibility alias for agent_sessions."""
+        return self.runtime.state.agent_sessions
+
+    def get_project_path(self) -> str:
+        return self.runtime.project_path
 
     async def load(self):
         """加载数据"""
-        self.group_chat_session = await self.repository.load_group_chat_session()
-        self.agent_session_id = await self.repository.load_agent_session_state()
+        await self.runtime.load()
 
     # ==================== 消息管理 ====================
 
@@ -45,11 +57,7 @@ class GroupChatContext:
             agent_result: Agent 执行结果（AgentResult）
                 需要包含: agent_name, text, timestamp, platform
         """
-        if self.group_chat_session is None:
-            raise StateError("GroupChatSession 未加载，请先调用 load()")
-        self.group_chat_session.add_message(agent_result)
-        # TODO 调用websocket,让前端更新显示
-        await self.repository.save_group_chat_session(self.group_chat_session)
+        await self.runtime.add_message(agent_result)
 
     # ==================== Agent Session 管理 ====================
 
@@ -64,29 +72,7 @@ class GroupChatContext:
             agent_result: Agent 执行结果（AgentResult）
                 需要包含: agent_name, session_id
         """
-        agent_name = agent_result.agent_name
-        session_id = agent_result.session_id
-
-        # 如果 agent 不存在，创建新的
-        if agent_name not in self.agent_session_id:
-            self.agent_session_id[agent_name] = AgentSessionInfo(
-                main_session=session_id, btw_session=[]
-            )
-        else:
-            session_info = self.agent_session_id[agent_name]
-
-            # 如果是第一次设置 main_session
-            if not session_info.main_session:
-                session_info.main_session = session_id
-            # 如果 session_id 不同于 main_session，且不在 btw_session 中
-            elif (
-                session_id != session_info.main_session
-                and session_id not in session_info.btw_session
-            ):
-                session_info.btw_session.append(session_id)
-
-        # 保存到文件
-        await self.repository.save_agent_session_state(self.agent_session_id)
+        await self.runtime.update_agent_session_from_result(agent_result)
 
     # ==================== 压缩历史管理 ====================
 
@@ -97,7 +83,7 @@ class GroupChatContext:
         Returns:
             压缩历史记录列表
         """
-        return await self.repository.load_compact_history()
+        return await self.runtime.load_compact_history()
 
     async def compact_messages(self, agent_info: dict[str, str]):
         """
@@ -196,27 +182,15 @@ class GroupChatContext:
             "content": content,
         }
 
-        # 加载已有压缩历史，追加新记录，保存
-        compact_history = await self.repository.load_compact_history()
-        compact_history.append(compact_record)
-        await self.repository.save_compact_history(compact_history)
-
-        # 更新 last_compacted_loc
-        self.group_chat_session.last_compacted_loc = len(self.group_chat_session.messages)
-        await self.repository.save_group_chat_session(self.group_chat_session)
+        # 追加压缩记录并标记压缩位置
+        await self.runtime.append_compact_record_and_mark_compacted(compact_record)
 
     def close(self):
         """
         关闭上下文，释放资源
 
         此方法用于资源清理，确保：
-        1. Repository 被关闭（释放文件锁等）
-        2. 内存引用被清空
-        3. 可以多次调用（幂等性）
+        1. Runtime 被关闭（释放文件锁等）
+        2. 可以多次调用（幂等性）
         """
-        # 关闭 repository
-        self.repository.close()
-
-        # 清空引用
-        self.group_chat_session = None
-        self.agent_session_id.clear()
+        self.runtime.close()

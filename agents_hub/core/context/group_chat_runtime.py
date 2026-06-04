@@ -144,6 +144,24 @@ class GroupChatRuntime:
         """
         return list(self.state.agent_sessions.keys())
 
+    async def load_compact_history(self) -> list[dict]:
+        """
+        加载压缩历史记录
+
+        Returns:
+            压缩历史记录列表
+        """
+        return self.state.compact_history
+
+    def get_project_path(self) -> str:
+        """
+        获取项目路径
+
+        Returns:
+            str: 项目路径
+        """
+        return self.project_path
+
     # ==================== Command Methods ====================
 
     async def initialize_metadata(

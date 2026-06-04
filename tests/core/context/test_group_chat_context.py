@@ -8,6 +8,7 @@ import pytest
 
 from agents_hub.config.types import AgentPlatform
 from agents_hub.core.context.group_chat_context import GroupChatContext
+from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 
 
 class MockAgentResult:
@@ -36,7 +37,8 @@ class TestGroupChatContextTokenPersistence:
         """测试保存和加载 agent token"""
         with tempfile.TemporaryDirectory() as tmpdir:
             group_chat_id = "test_chat_001"
-            context = GroupChatContext(group_chat_id, tmpdir)
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
             await context.load()
 
             # 创建 AgentSessionInfo 并设置 token
@@ -50,10 +52,11 @@ class TestGroupChatContextTokenPersistence:
 
             # 手动设置 token
             context.agent_session_id[agent_name].token = agent_token
-            await context.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_session_state(context.agent_session_id)
 
             # 创建新的 context 并加载
-            context2 = GroupChatContext(group_chat_id, tmpdir)
+            runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
+            context2 = GroupChatContext(runtime2)
             await context2.load()
 
             # 验证 token 被正确加载
@@ -69,7 +72,8 @@ class TestGroupChatContextTokenPersistence:
         """测试保存多个 agent 的 token"""
         with tempfile.TemporaryDirectory() as tmpdir:
             group_chat_id = "test_chat_002"
-            context = GroupChatContext(group_chat_id, tmpdir)
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
             await context.load()
 
             # 创建多个 agent 的 session info
@@ -84,10 +88,11 @@ class TestGroupChatContextTokenPersistence:
                 await context.update_agent_session_id(agent_result)
                 context.agent_session_id[agent_name].token = token
 
-            await context.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_session_state(context.agent_session_id)
 
             # 创建新的 context 并加载
-            context2 = GroupChatContext(group_chat_id, tmpdir)
+            runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
+            context2 = GroupChatContext(runtime2)
             await context2.load()
 
             # 验证所有 token 都被正确加载
@@ -104,7 +109,8 @@ class TestGroupChatContextTokenPersistence:
         """测试向后兼容：旧文件没有 token 字段时不报错"""
         with tempfile.TemporaryDirectory() as tmpdir:
             group_chat_id = "test_chat_003"
-            context = GroupChatContext(group_chat_id, tmpdir)
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
             await context.load()
 
             # 创建一个没有 token 字段的旧格式文件
@@ -116,7 +122,7 @@ class TestGroupChatContextTokenPersistence:
             # 手动修改文件，移除 token 字段（模拟旧文件）
             import json
 
-            session_file = context.repository.session_file
+            session_file = runtime.repository.session_file
             with open(session_file, encoding="utf-8") as f:
                 data = json.load(f)
 
@@ -128,7 +134,8 @@ class TestGroupChatContextTokenPersistence:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             # 创建新的 context 并加载（应该不报错）
-            context2 = GroupChatContext(group_chat_id, tmpdir)
+            runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
+            context2 = GroupChatContext(runtime2)
             await context2.load()
 
             # 验证加载成功，token 为空字符串（默认值）
@@ -144,7 +151,8 @@ class TestGroupChatContextTokenPersistence:
         """测试 token 字段为空字符串"""
         with tempfile.TemporaryDirectory() as tmpdir:
             group_chat_id = "test_chat_004"
-            context = GroupChatContext(group_chat_id, tmpdir)
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
             await context.load()
 
             # 创建 AgentSessionInfo，token 为空
@@ -154,10 +162,11 @@ class TestGroupChatContextTokenPersistence:
             await context.update_agent_session_id(agent_result)
 
             # token 默认为空字符串
-            await context.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_session_state(context.agent_session_id)
 
             # 创建新的 context 并加载
-            context2 = GroupChatContext(group_chat_id, tmpdir)
+            runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
+            context2 = GroupChatContext(runtime2)
             await context2.load()
 
             # 验证 token 为空字符串
@@ -172,7 +181,8 @@ class TestGroupChatContextTokenPersistence:
         """测试加载后更新 token"""
         with tempfile.TemporaryDirectory() as tmpdir:
             group_chat_id = "test_chat_005"
-            context = GroupChatContext(group_chat_id, tmpdir)
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
             await context.load()
 
             # 创建 agent session
@@ -182,15 +192,16 @@ class TestGroupChatContextTokenPersistence:
             await context.update_agent_session_id(agent_result)
 
             # 第一次保存，token 为空
-            await context.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_session_state(context.agent_session_id)
 
             # 更新 token
             new_token = "tok_new_token"
             context.agent_session_id[agent_name].token = new_token
-            await context.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_session_state(context.agent_session_id)
 
             # 创建新的 context 并加载
-            context2 = GroupChatContext(group_chat_id, tmpdir)
+            runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
+            context2 = GroupChatContext(runtime2)
             await context2.load()
 
             # 验证 token 被更新
@@ -204,7 +215,8 @@ class TestGroupChatContextTokenPersistence:
         """测试 token 与 context_state 一起持久化"""
         with tempfile.TemporaryDirectory() as tmpdir:
             group_chat_id = "test_chat_006"
-            context = GroupChatContext(group_chat_id, tmpdir)
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
             await context.load()
 
             # 创建 agent session
@@ -217,10 +229,11 @@ class TestGroupChatContextTokenPersistence:
             context.agent_session_id[agent_name].token = "tok_test"
             context.agent_session_id[agent_name].context_state.last_loaded_compact_index = 5
             context.agent_session_id[agent_name].context_state.last_loaded_message_index = 10
-            await context.repository.save_agent_session_state(context.agent_session_id)
+            await runtime.repository.save_agent_session_state(context.agent_session_id)
 
             # 创建新的 context 并加载
-            context2 = GroupChatContext(group_chat_id, tmpdir)
+            runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
+            context2 = GroupChatContext(runtime2)
             await context2.load()
 
             # 验证所有字段都被正确加载

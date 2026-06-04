@@ -175,6 +175,8 @@ class AgentContext:
             agent_session_info.context_state.last_loaded_message_index = last_loaded_message_index
 
         # 保存到文件
-        await self.group_chat_context.repository.save_agent_session_state(
-            self.group_chat_context.agent_session_id
+        await self.group_chat_context.runtime.update_context_load_state(
+            self.agent_name,
+            last_loaded_compact_index,
+            last_loaded_message_index,
         )

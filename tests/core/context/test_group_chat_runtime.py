@@ -230,3 +230,22 @@ async def test_persistence_error_cleared_on_success():
     await runtime.initialize_metadata("Test", GroupChatType.MANAGER_ORCHESTRATE)
 
     assert runtime.state.persistence_error is None
+
+
+async def test_group_chat_context_uses_runtime_for_message_and_session_commands():
+    from agents_hub.core.context.agent_context import AgentContext
+    from agents_hub.core.context.group_chat_context import GroupChatContext
+
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+    context = GroupChatContext(runtime)
+
+    result = MockAgentResult(agent_name="Worker2", session_id="s2", text="hello from w2")
+    await context.update_agent_session_id(result)
+    await context.add_message(result)
+
+    assert runtime.state.agent_sessions["Worker2"].main_session == "s2"
+    assert runtime.state.group_chat_session.messages[-1]["agent_name"] == "Worker2"
+    assert repository.saved_sessions is runtime.state.agent_sessions
+    assert repository.saved_group_session is runtime.state.group_chat_session
