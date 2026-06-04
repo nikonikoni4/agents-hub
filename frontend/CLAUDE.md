@@ -120,6 +120,43 @@ frontend/src/
 
 ---
 
+## 测试文件放置规则
+
+测试文件**必须共置**在源码旁边，禁止集中放在独立的 `tests/` 目录。
+
+```
+features/skills/
+  SkillCard.tsx
+  SkillCard.test.tsx       ← 紧挨源码
+  useSkillList.ts
+  useSkillList.test.ts
+
+core/api/
+  roleApi.ts
+  roleApi.test.ts
+
+tests/
+  setup.ts                 ← 只放全局 setup 和跨模块集成测试
+```
+
+**禁止**：
+- ❌ 把单元测试放在 `frontend/tests/` 或 `frontend/src/tests/`
+- ❌ 把单元测试放在 `__tests__/` 子目录（Jest 风格，本项目不用）
+- ❌ 用 `test-xxx.ts` 命名（必须用 `xxx.test.ts`）
+
+**命名规范**：
+- `xxx.test.ts` / `xxx.test.tsx`
+
+| 测试类型 | 放哪里 |
+|---------|--------|
+| 组件测试 | 与组件同目录：`SkillCard.test.tsx` |
+| hook 测试 | 与 hook 同目录：`useSkillList.test.ts` |
+| API/service 测试 | 与源码同目录：`roleApi.test.ts` |
+| 全局 setup | `src/tests/setup.ts`（vitest.config 引用） |
+| 跨模块集成测试 | `src/tests/integration.test.ts` |
+
+---
+
 ## 参考
 
 - 完整架构：[`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)

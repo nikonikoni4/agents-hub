@@ -9,7 +9,7 @@ import prettier from 'eslint-config-prettier';
 export default tseslint.config(
   // 忽略文件
   {
-    ignores: ['dist', 'node_modules', 'build', 'coverage', '*.config.js', '*.config.ts'],
+    ignores: ['dist', 'node_modules', 'build', 'coverage', '*.config.js', '*.config.ts', 'vite.config.ts', 'vitest.config.ts', '**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', 'src/tests/'],
   },
 
   // 基础配置
