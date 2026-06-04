@@ -39,13 +39,10 @@ def _make_mock_group_chat(members=None, manager_name=None):
     gc.manager = Mock(name=manager_name) if manager_name else None
     if gc.manager:
         gc.manager.name = manager_name
-    gc.group_chat_context = Mock()
-    gc.group_chat_context.agent_session_id = {
-        "Worker1": AgentSessionInfo(main_session="s1", use_docker=False),
-        "Worker2": AgentSessionInfo(main_session="s2", use_docker=False),
-    }
-    gc.group_chat_context.repository = Mock()
-    gc.group_chat_context.repository.save_agent_session_state = AsyncMock()
+    gc.runtime = Mock()
+    gc.runtime.set_agent_use_docker = AsyncMock(
+        return_value=AgentSessionInfo(main_session="s1", use_docker=True)
+    )
     return gc
 
 
@@ -60,10 +57,12 @@ async def test_toggle_use_docker_enable_success(service, mock_group_chat_manager
     3. mock DockerManager.ensure_image_ready 成功
     4. 调用 toggle_use_docker
     5. 断言返回 GroupChatMember(use_docker=True)
-    6. 断言内存已更新
-    7. 断言持久化已调用
+    6. 断言 runtime 命令已调用
     """
     mock_gc = _make_mock_group_chat()
+    mock_gc.runtime.set_agent_use_docker = AsyncMock(
+        return_value=AgentSessionInfo(main_session="s1", cwd="/path", use_docker=True)
+    )
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_gc)
 
     with (
@@ -77,8 +76,7 @@ async def test_toggle_use_docker_enable_success(service, mock_group_chat_manager
 
     assert isinstance(result, GroupChatMember)
     assert result.use_docker is True
-    assert mock_gc.group_chat_context.agent_session_id["Worker1"].use_docker is True
-    mock_gc.group_chat_context.repository.save_agent_session_state.assert_called_once()
+    mock_gc.runtime.set_agent_use_docker.assert_called_once_with("Worker1", True)
 
 
 @pytest.mark.asyncio
@@ -93,6 +91,9 @@ async def test_toggle_use_docker_disable_success(service, mock_group_chat_manage
     4. 断言 use_docker=False
     """
     mock_gc = _make_mock_group_chat()
+    mock_gc.runtime.set_agent_use_docker = AsyncMock(
+        return_value=AgentSessionInfo(main_session="s1", cwd="/path", use_docker=False)
+    )
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_gc)
 
     with patch("agents_hub.api.services.group_chat_service.config") as mock_config:
@@ -101,8 +102,7 @@ async def test_toggle_use_docker_disable_success(service, mock_group_chat_manage
         result = await service.toggle_use_docker("gc_1", "Worker1", False)
 
     assert result.use_docker is False
-    assert mock_gc.group_chat_context.agent_session_id["Worker1"].use_docker is False
-    mock_gc.group_chat_context.repository.save_agent_session_state.assert_called_once()
+    mock_gc.runtime.set_agent_use_docker.assert_called_once_with("Worker1", False)
 
 
 @pytest.mark.asyncio
@@ -113,10 +113,12 @@ async def test_toggle_use_docker_creates_session_if_missing(service, mock_group_
     验证方式：
     1. mock 群聊存在，但 agent_session_id 中无该角色
     2. 调用 toggle_use_docker
-    3. 断言新 session 已创建
+    3. 断言 runtime 命令已调用
     """
     mock_gc = _make_mock_group_chat()
-    mock_gc.group_chat_context.agent_session_id = {}  # 空
+    mock_gc.runtime.set_agent_use_docker = AsyncMock(
+        return_value=AgentSessionInfo(main_session=None, cwd=None, use_docker=True)
+    )
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_gc)
 
     with (
@@ -128,8 +130,7 @@ async def test_toggle_use_docker_creates_session_if_missing(service, mock_group_
 
         result = await service.toggle_use_docker("gc_1", "Worker1", True)
 
-    assert "Worker1" in mock_gc.group_chat_context.agent_session_id
-    assert mock_gc.group_chat_context.agent_session_id["Worker1"].use_docker is True
+    mock_gc.runtime.set_agent_use_docker.assert_called_once_with("Worker1", True)
     assert result.use_docker is True
 
 
@@ -235,6 +236,9 @@ async def test_toggle_use_docker_disable_skips_docker_check(service, mock_group_
     4. 成功返回
     """
     mock_gc = _make_mock_group_chat()
+    mock_gc.runtime.set_agent_use_docker = AsyncMock(
+        return_value=AgentSessionInfo(main_session="s1", cwd="/path", use_docker=False)
+    )
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_gc)
 
     with (

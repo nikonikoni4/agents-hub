@@ -32,15 +32,14 @@ async def test_create_group_chat_success(service, mock_group_chat_manager):
     mock_group_chat = Mock()
     mock_group_chat._activated = True
     mock_group_chat.start = AsyncMock()
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(
-            group_chat_id="gc_test_123",
-            group_chat_name="Test Group",
-            project_path="/path/to/project",
-            created_at=datetime(2026, 6, 3, 10, 0, 0),
-            group_type="manager_orchestrate",
-        )
-    )
+    mock_group_chat.runtime.get_info_dict.return_value = {
+        "group_chat_id": "gc_test_123",
+        "group_chat_name": "Test Group",
+        "project_path": "/path/to/project",
+        "created_at": datetime(2026, 6, 3, 10, 0, 0),
+        "group_type": "manager_orchestrate",
+        "is_active": True,
+    }
 
     with patch("agents_hub.api.services.group_chat_service.Team") as MockTeam, \
          patch("agents_hub.api.services.group_chat_service.GroupChat") as MockGroupChat, \
@@ -99,15 +98,14 @@ async def test_load_group_chat_already_in_memory(service, mock_group_chat_manage
     group_chat_id = "gc_existing"
     mock_group_chat = Mock()
     mock_group_chat._activated = True
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(
-            group_chat_id=group_chat_id,
-            group_chat_name="Existing Group",
-            project_path="/path/to/project",
-            created_at=datetime(2026, 6, 3, 10, 0, 0),
-            group_type="manager_orchestrate",
-        )
-    )
+    mock_group_chat.runtime.get_info_dict.return_value = {
+        "group_chat_id": group_chat_id,
+        "group_chat_name": "Existing Group",
+        "project_path": "/path/to/project",
+        "created_at": datetime(2026, 6, 3, 10, 0, 0),
+        "group_type": "manager_orchestrate",
+        "is_active": True,
+    }
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
     # Act
@@ -127,15 +125,14 @@ async def test_load_group_chat_from_disk(service, mock_group_chat_manager):
 
     mock_group_chat = Mock()
     mock_group_chat._activated = True
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(
-            group_chat_id=group_chat_id,
-            group_chat_name="Loaded Group",
-            project_path="/path/to/project",
-            created_at=datetime(2026, 6, 3, 10, 0, 0),
-            group_type="manager_orchestrate",
-        )
-    )
+    mock_group_chat.runtime.get_info_dict.return_value = {
+        "group_chat_id": group_chat_id,
+        "group_chat_name": "Loaded Group",
+        "project_path": "/path/to/project",
+        "created_at": datetime(2026, 6, 3, 10, 0, 0),
+        "group_type": "manager_orchestrate",
+        "is_active": True,
+    }
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
     # Act
@@ -184,9 +181,7 @@ async def test_delete_group_chat_with_data(service, mock_group_chat_manager):
     project_path = "/path/to/project"
 
     mock_group_chat = Mock()
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(project_path=project_path)
-    )
+    mock_group_chat.runtime.get_project_path.return_value = project_path
     mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
     mock_group_chat_manager.unregister = AsyncMock()
 
@@ -277,9 +272,7 @@ async def test_delete_group_chat_file_deletion_fails(service, mock_group_chat_ma
     project_path = "/path"
 
     mock_group_chat = Mock()
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(project_path=project_path)
-    )
+    mock_group_chat.runtime.get_project_path.return_value = project_path
     mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
     mock_group_chat_manager.unregister = AsyncMock()
 
@@ -384,16 +377,14 @@ async def test_get_group_chat_info_from_memory(service, mock_group_chat_manager)
     # Arrange
     group_chat_id = "gc_memory"
     mock_group_chat = Mock()
-    mock_group_chat._activated = True
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(
-            group_chat_id=group_chat_id,
-            group_chat_name="Memory Group",
-            project_path="/path/to/project",
-            created_at=datetime(2026, 6, 3, 10, 0, 0),
-            group_type="manager_orchestrate",
-        )
-    )
+    mock_group_chat.runtime.get_info_dict.return_value = {
+        "group_chat_id": group_chat_id,
+        "group_chat_name": "Memory Group",
+        "project_path": "/path/to/project",
+        "created_at": datetime(2026, 6, 3, 10, 0, 0),
+        "group_type": "manager_orchestrate",
+        "is_active": True,
+    }
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
     mock_group_chat_manager.is_active_group.return_value = True
 
@@ -412,16 +403,14 @@ async def test_get_group_chat_info_from_disk(service, mock_group_chat_manager):
     group_chat_id = "gc_disk"
 
     mock_group_chat = Mock()
-    mock_group_chat._activated = False
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(
-            group_chat_id=group_chat_id,
-            group_chat_name="Disk Group",
-            project_path="/path/to/project",
-            created_at=datetime(2026, 6, 3, 10, 0, 0),
-            group_type="manager_orchestrate",
-        )
-    )
+    mock_group_chat.runtime.get_info_dict.return_value = {
+        "group_chat_id": group_chat_id,
+        "group_chat_name": "Disk Group",
+        "project_path": "/path/to/project",
+        "created_at": datetime(2026, 6, 3, 10, 0, 0),
+        "group_type": "manager_orchestrate",
+        "is_active": False,
+    }
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
     mock_group_chat_manager.is_active_group.return_value = False
 
@@ -452,42 +441,29 @@ async def test_get_group_chat_info_not_found(service, mock_group_chat_manager):
 async def test_get_group_chat_members_success(service, mock_group_chat_manager):
     """测试成功获取群聊成员"""
     # Arrange
-    import json
-
     group_chat_id = "gc_members"
-    project_path = "/path/to/project"
 
     mock_group_chat = Mock()
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(project_path=project_path)
-    )
-    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
-
-    session_state_data = {
-        "Leader": {
+    mock_group_chat.runtime.get_member_dicts.return_value = [
+        {
+            "name": "Leader",
             "main_session": "session_123",
             "btw_session": ["btw_1", "btw_2"],
             "cwd": "/path/to/project",
             "use_docker": False,
         },
-        "Worker1": {
+        {
+            "name": "Worker1",
             "main_session": None,
             "btw_session": [],
             "cwd": "/path/to/project",
+            "use_docker": False,
         },
-    }
+    ]
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
-    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
-         patch("json.load", return_value=session_state_data), \
-         patch("builtins.open", MagicMock()):
-        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_members"
-
-        mock_session_file = MagicMock()
-        mock_session_file.exists.return_value = True
-        # Mock Path 的 __truediv__ 操作
-        with patch("agents_hub.api.services.group_chat_service.Path", return_value=mock_session_file):
-            # Act
-            result = await service.get_group_chat_members(group_chat_id)
+    # Act
+    result = await service.get_group_chat_members(group_chat_id)
 
     # Assert
     assert len(result) == 2
@@ -502,85 +478,35 @@ async def test_get_group_chat_members_success(service, mock_group_chat_manager):
 async def test_get_group_chat_members_file_not_found(service, mock_group_chat_manager):
     """测试 session_state 文件不存在"""
     # Arrange
-    mock_group_chat = Mock()
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(project_path="/path")
+    from agents_hub.core.foundation import GroupChatNotFoundError
+
+    mock_group_chat_manager.load_group_chat = AsyncMock(
+        side_effect=GroupChatNotFoundError("群聊不存在")
     )
-    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
 
-    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
-        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_no_file"
-
-        # Mock Path 的 / 操作和 exists
-        mock_path_obj = MagicMock()
-        mock_session_file = MagicMock()
-        mock_session_file.exists.return_value = False
-        mock_path_obj.__truediv__ = MagicMock(return_value=mock_session_file)
-
-        with patch("agents_hub.api.services.group_chat_service.Path", return_value=mock_path_obj):
-            # Act & Assert
-            with pytest.raises(ResourceNotFoundError) as exc_info:
-                await service.get_group_chat_members("gc_no_file")
-            assert "session_state 文件不存在" in str(exc_info.value)
-
-
-async def test_get_group_chat_members_json_decode_error(service, mock_group_chat_manager):
-    """测试 JSON 格式错误转换为 StateError"""
-    # Arrange
-    import json
-    from agents_hub.exceptions import StateError
-
-    mock_group_chat = Mock()
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(project_path="/path")
-    )
-    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
-
-    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
-         patch("builtins.open", MagicMock()), \
-         patch("json.load", side_effect=json.JSONDecodeError("Invalid JSON", "", 0)):
-        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_bad_json"
-
-        mock_file = MagicMock()
-        mock_file.exists.return_value = True
-
-        with patch("agents_hub.api.services.group_chat_service.Path", return_value=mock_file):
-            # Act & Assert
-            with pytest.raises(StateError) as exc_info:
-                await service.get_group_chat_members("gc_bad_json")
-            assert "JSON 格式错误" in str(exc_info.value)
+    # Act & Assert
+    with pytest.raises(ResourceNotFoundError) as exc_info:
+        await service.get_group_chat_members("gc_no_file")
+    assert "群聊不存在" in str(exc_info.value)
 
 
 async def test_get_group_chat_members_missing_fields_use_defaults(service, mock_group_chat_manager):
     """测试缺失字段使用默认值"""
     # Arrange
-    import json
-
     mock_group_chat = Mock()
-    mock_group_chat.group_chat_context.repository.load_group_metadata = AsyncMock(
-        return_value=Mock(project_path="/path")
-    )
-    mock_group_chat_manager.load_group_chat_from_disk = AsyncMock(return_value=mock_group_chat)
-
-    # 缺少某些字段
-    session_state_data = {
-        "Leader": {
+    mock_group_chat.runtime.get_member_dicts.return_value = [
+        {
+            "name": "Leader",
             "main_session": "session_123",
-            # 缺少 btw_session, cwd, use_docker
+            "btw_session": [],
+            "cwd": None,
+            "use_docker": False,
         },
-    }
+    ]
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
-    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
-         patch("json.load", return_value=session_state_data), \
-         patch("builtins.open", MagicMock()):
-        mock_paths.base_dir.return_value = "/path/to/group_chats/gc_partial"
-
-        mock_session_file = MagicMock()
-        mock_session_file.exists.return_value = True
-
-        with patch("agents_hub.api.services.group_chat_service.Path", return_value=mock_session_file):
-            # Act
-            result = await service.get_group_chat_members("gc_partial")
+    # Act
+    result = await service.get_group_chat_members("gc_partial")
 
     # Assert
     assert len(result) == 1

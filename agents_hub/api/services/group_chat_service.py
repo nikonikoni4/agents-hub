@@ -9,7 +9,6 @@ GroupChatService 业务编排层
 - 异常统一转换为 exceptions 模块中的 API 异常，对上层屏蔽核心层细节
 """
 
-import json
 import shutil
 from pathlib import Path
 from uuid import uuid4
@@ -176,13 +175,12 @@ class GroupChatService:
         """
         project_path = None
 
-        # 1. 如果 keep_data=False，先读取 metadata（在 unregister 之前）
+        # 1. 如果 keep_data=False，先读取 project_path（在 unregister 之前）
         if not keep_data:
             # 尝试从内存中的 GroupChat 实例读取
             group_chat = self.group_chat_manager._group_chats.get(group_chat_id)
             if group_chat:
-                metadata = await group_chat.group_chat_context.repository.load_group_metadata()
-                project_path = metadata.project_path
+                project_path = group_chat.runtime.get_project_path()
             else:
                 # 从磁盘读取 - 通过 list_all_group_chats 查找
                 all_chats = self.group_chat_manager.list_all_group_chats()
@@ -272,16 +270,10 @@ class GroupChatService:
                 details={"group_chat_id": group_chat_id},
             ) from e
 
-        is_active = self.group_chat_manager.is_active_group(group_chat_id)
-        metadata = await group_chat.group_chat_context.repository.load_group_metadata()
-        return GroupChatInfo(
-            group_chat_id=metadata.group_chat_id,
-            group_chat_name=metadata.group_chat_name,
-            project_path=metadata.project_path,
-            created_at=metadata.created_at,
-            group_type=metadata.group_type,
-            is_active=is_active,
+        info = group_chat.runtime.get_info_dict(
+            is_active=self.group_chat_manager.is_active_group(group_chat_id)
         )
+        return GroupChatInfo(**info)
 
     async def get_group_chat_members(self, group_chat_id: str) -> list[GroupChatMember]:
         """获取群聊成员列表
@@ -301,57 +293,15 @@ class GroupChatService:
             ResourceNotFoundError: 群聊不存在或 session_state 文件不存在
             StateError: JSON 格式错误或数据损坏
         """
-        # 1. 读取 metadata 获取 project_path
         try:
-            group_chat = await self.group_chat_manager.load_group_chat_from_disk(group_chat_id)
-            metadata = await group_chat.group_chat_context.repository.load_group_metadata()
-            project_path = metadata.project_path
-        except FileNotFoundError as e:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
             ) from e
 
-        # 2. 构建 agent_session_state.json 文件路径
-        group_chat_dir = Path(group_chat_paths.base_dir(group_chat_id, project_path))
-        session_state_file = group_chat_dir / "agent_session_state.json"
-
-        # 3. 验证文件存在性
-        if not session_state_file.exists():
-            raise ResourceNotFoundError(
-                f"session_state 文件不存在: {session_state_file}",
-                details={
-                    "group_chat_id": group_chat_id,
-                    "session_state_file": str(session_state_file),
-                },
-            )
-
-        # 4. 读取并解析 JSON（带异常捕获）
-        try:
-            with session_state_file.open("r", encoding="utf-8") as f:
-                session_data = json.load(f)
-        except json.JSONDecodeError as e:
-            raise StateError(
-                f"session_state JSON 格式错误: {e}",
-                details={
-                    "group_chat_id": group_chat_id,
-                    "session_state_file": str(session_state_file),
-                },
-            ) from e
-
-        # 5. 使用 Pydantic 模型验证并转换
-        members: list[GroupChatMember] = []
-        for agent_name, agent_data in session_data.items():
-            member = GroupChatMember(
-                name=agent_name,
-                main_session=agent_data.get("main_session"),
-                btw_session=agent_data.get("btw_session", []),
-                cwd=agent_data.get("cwd"),
-                use_docker=agent_data.get("use_docker", False),
-            )
-            members.append(member)
-
-        return members
+        return [GroupChatMember(**member) for member in group_chat.runtime.get_member_dicts()]
 
     async def get_messages(
         self,
@@ -384,19 +334,9 @@ class GroupChatService:
                 details={"group_chat_id": group_chat_id},
             ) from e
 
-        session = group_chat.group_chat_context.group_chat_session
-        if session is None:
-            return []
-        raw_messages = session.messages[offset : offset + limit]
-
         return [
-            MessageInfo(
-                speaker=msg["agent_name"],
-                content=msg["content"],
-                timestamp=msg["timestamp"],
-                platform=msg["platform"],
-            )
-            for msg in raw_messages
+            MessageInfo(**message)
+            for message in group_chat.runtime.get_message_dicts(limit=limit, offset=offset)
         ]
 
     async def send_message(
@@ -527,21 +467,8 @@ class GroupChatService:
                     message="Docker 未启动，请先打开 Docker Desktop 并确保镜像已安装",
                 ) from e
 
-        # 5. 更新内存中的 use_docker
-        context = group_chat.group_chat_context
-        session_info = context.agent_session_id.get(role_name)
-        if session_info:
-            session_info.use_docker = use_docker
-        else:
-            from agents_hub.core.context.group_chat_session import AgentSessionInfo
-
-            context.agent_session_id[role_name] = AgentSessionInfo(use_docker=use_docker)
-
-        # 6. 持久化到 agent_session_state.json
-        await context.repository.save_agent_session_state(context.agent_session_id)
-
-        # 7. 构建返回的 member 信息
-        updated_info = context.agent_session_id[role_name]
+        # 5. 使用 runtime 命令更新 use_docker
+        updated_info = await group_chat.runtime.set_agent_use_docker(role_name, use_docker)
         return GroupChatMember(
             name=role_name,
             main_session=updated_info.main_session or None,
@@ -552,12 +479,5 @@ class GroupChatService:
 
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""
-        metadata = await group_chat.group_chat_context.repository.load_group_metadata()
-        return GroupChatInfo(
-            group_chat_id=metadata.group_chat_id,
-            group_chat_name=metadata.group_chat_name,
-            project_path=metadata.project_path,
-            created_at=metadata.created_at,
-            group_type=metadata.group_type,
-            is_active=group_chat._activated,
-        )
+        info = group_chat.runtime.get_info_dict(is_active=group_chat._activated)
+        return GroupChatInfo(**info)
