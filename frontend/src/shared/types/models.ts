@@ -63,10 +63,19 @@ export interface Role {
 export type Agent = Role;
 
 /**
- * Skill 信息
- * 对应后端 SkillInfo / RoleSkillResponse
+ * 全局 Skill 信息
+ * 对应后端 SkillResponse（来自 /api/v1/skills）
  */
 export interface Skill {
+  name: string;
+  description: string;
+}
+
+/**
+ * 角色关联的 Skill 信息
+ * 对应后端 RoleSkillResponse（来自 /api/v1/roles/{name}/skills）
+ */
+export interface RoleSkill {
   id: string;
   name: string;
   description: string;

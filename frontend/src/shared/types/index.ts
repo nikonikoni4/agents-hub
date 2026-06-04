@@ -16,6 +16,7 @@ export type {
   Role,
   Agent,
   Skill,
+  RoleSkill,
   GroupChat,
   GroupChatSummary,
   GroupChatMember,

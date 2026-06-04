@@ -7,6 +7,20 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import type { ErrorResponse } from '@/shared/types';
 
+// ==================== 类型定义 ====================
+
+/**
+ * 修正后的 Axios 实例类型
+ * 由于响应拦截器返回 response.data，实际返回类型是 T 而不是 AxiosResponse<T>
+ */
+interface ApiClient extends Omit<AxiosInstance, 'get' | 'post' | 'put' | 'patch' | 'delete'> {
+  get<T = any>(url: string, config?: any): Promise<T>;
+  post<T = any>(url: string, data?: any, config?: any): Promise<T>;
+  put<T = any>(url: string, data?: any, config?: any): Promise<T>;
+  patch<T = any>(url: string, data?: any, config?: any): Promise<T>;
+  delete<T = any>(url: string, config?: any): Promise<T>;
+}
+
 // ==================== API 错误类 ====================
 
 /**
@@ -49,13 +63,13 @@ export class ApiError extends Error {
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 const timeout = 30000; // 30 秒超时
 
-const apiClient: AxiosInstance = axios.create({
+const apiClient = axios.create({
   baseURL,
   timeout,
   headers: {
     'Content-Type': 'application/json',
   },
-});
+}) as ApiClient;
 
 // ==================== 请求拦截器 ====================
 
