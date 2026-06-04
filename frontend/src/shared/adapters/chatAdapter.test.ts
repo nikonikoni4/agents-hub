@@ -57,7 +57,10 @@ describe('chatAdapter', () => {
 
   describe('adaptGroupChatSummaryList', () => {
     it('转换摘要列表', () => {
-      const result = adaptGroupChatSummaryList([mockSummary, { ...mockSummary, group_chat_id: 'chat-002' }]);
+      const result = adaptGroupChatSummaryList([
+        mockSummary,
+        { ...mockSummary, group_chat_id: 'chat-002' },
+      ]);
       expect(result).toHaveLength(2);
     });
 
@@ -83,7 +86,9 @@ describe('chatAdapter', () => {
 
   describe('聚合函数', () => {
     it('aggregateConversationWithMessages 未实现', async () => {
-      await expect(aggregateConversationWithMessages('chat-001')).rejects.toThrow('not implemented');
+      await expect(aggregateConversationWithMessages('chat-001')).rejects.toThrow(
+        'not implemented'
+      );
     });
 
     it('aggregateConversationWithMembers 未实现', async () => {

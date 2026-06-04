@@ -72,7 +72,9 @@ describe('skillApi', () => {
       mockedClient.post.mockResolvedValue({});
 
       await addSkill({ url: 'https://example.com/skill.zip' });
-      expect(mockedClient.post).toHaveBeenCalledWith('/skills', { url: 'https://example.com/skill.zip' });
+      expect(mockedClient.post).toHaveBeenCalledWith('/skills', {
+        url: 'https://example.com/skill.zip',
+      });
     });
   });
 });
