@@ -1,0 +1,48 @@
+/**
+ * ProjectGroup 样式
+ */
+
+.project-group {
+  margin-bottom: 16px;
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary, #333);
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.project-header:hover {
+  background: var(--bg-hover, #e8e8e8);
+}
+
+.project-icon {
+  font-size: 10px;
+  color: var(--text-secondary, #666);
+}
+
+.project-name {
+  flex: 1;
+}
+
+.session-count {
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--text-secondary, #666);
+  background: var(--bg-tertiary, #e0e0e0);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.sessions {
+  padding-left: 16px;
+  margin-top: 4px;
+}

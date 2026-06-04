@@ -217,3 +217,44 @@ export interface SystemConfigApiResponse {
   /** Docker 镜像名称 */
   docker_image: string;
 }
+
+// ==================== Session 相关 ====================
+
+/**
+ * 群聊 Session 列表项（扩展版）
+ * 对应后端: GroupChatInfo + 扩展字段
+ * 注意：后端需要添加 last_speaker、last_message、last_update_at 字段
+ */
+export interface GroupChatInfoApiResponse {
+  /** 群聊 ID */
+  group_chat_id: string;
+  /** 群聊名称 */
+  group_chat_name: string;
+  /** 项目路径 */
+  project_path: string;
+  /** 创建时间（ISO 8601 格式） */
+  created_at: string;
+  /** 群聊类型 */
+  group_type: GroupChatType;
+  /** 是否活跃 */
+  is_active: boolean;
+
+  // Session 列表扩展字段（后端待添加）
+  /** 最后发言者 */
+  last_speaker: string | null;
+  /** 最后消息内容 */
+  last_message: string | null;
+  /** 最后更新时间（ISO 8601 格式） */
+  last_update_at: string | null;
+}
+
+/**
+ * 本地存储的 last_view 记录
+ * 用于计算未读状态
+ */
+export interface LastViewRecord {
+  /** 群聊 ID */
+  group_chat_id: string;
+  /** 最后查看时间（ISO 8601 格式） */
+  last_view_at: string;
+}

@@ -19,6 +19,9 @@ export * from './messageAdapter';
 // 团队相关 Adapter
 export * from './teamAdapter';
 
+// Session 相关 Adapter
+export * from './sessionAdapter';
+
 // 转发导出 API Schemas（作为统一入口）
 export type {
   // 枚举类型
@@ -39,6 +42,9 @@ export type {
   // 群聊相关
   GroupChatApiResponse,
   GroupChatMemberApiItem,
+  // Session 相关
+  GroupChatInfoApiResponse,
+  LastViewRecord,
   // 配置相关
   SystemConfigApiResponse,
 } from '@/shared/types/api-schemas';

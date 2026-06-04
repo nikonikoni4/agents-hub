@@ -1,0 +1,18 @@
+/**
+ * SessionList 样式
+ */
+
+.session-list {
+  overflow-y: auto;
+  height: 100%;
+  padding: 8px 0;
+}
+
+.session-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-secondary, #666);
+  font-size: 14px;
+}
