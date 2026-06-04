@@ -6,11 +6,13 @@ import { useCallback, useState } from 'react';
 import { useTeamsStore } from '../store/teamsStore';
 import { updateTeam, getTeam } from '@/core/api/teamApi';
 import { aggregateRoleWithSkills } from '@/shared/adapters/roleAdapter';
+import { useToast } from '@/shared/components';
 import type { TeamWithMembers } from '../types';
 
 export function useTeamMembers() {
   const [submitting, setSubmitting] = useState(false);
   const { updateTeam: updateTeamInStore } = useTeamsStore();
+  const toast = useToast();
 
   const fetchTeamWithMembers = useCallback(async (teamName: string): Promise<TeamWithMembers> => {
     const team = await getTeam(teamName);
@@ -30,8 +32,9 @@ export function useTeamMembers() {
 
         const updatedTeam = await fetchTeamWithMembers(teamName);
         updateTeamInStore(teamName, () => updatedTeam);
+        toast.success('成员添加成功');
       } catch (err) {
-        console.error('添加成员失败:', err);
+        toast.error(err instanceof Error ? err.message : '添加成员失败');
       } finally {
         setSubmitting(false);
       }
@@ -50,8 +53,9 @@ export function useTeamMembers() {
 
         const updatedTeam = await fetchTeamWithMembers(teamName);
         updateTeamInStore(teamName, () => updatedTeam);
+        toast.success('成员已移除');
       } catch (err) {
-        console.error('移除成员失败:', err);
+        toast.error(err instanceof Error ? err.message : '移除成员失败');
       } finally {
         setSubmitting(false);
       }

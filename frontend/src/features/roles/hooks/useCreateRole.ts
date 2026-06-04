@@ -6,11 +6,13 @@ import { useCallback, useState } from 'react';
 import { useRolesStore } from '../store/rolesStore';
 import { createRole } from '@/core/api/roleApi';
 import { aggregateRoleWithSkills } from '@/shared/adapters/roleAdapter';
+import { useToast } from '@/shared/components';
 import type { CreateRoleFormData } from '../types';
 
 export function useCreateRole() {
   const [submitting, setSubmitting] = useState(false);
   const { addRole } = useRolesStore();
+  const toast = useToast();
 
   const handleCreateRole = useCallback(
     async (formData: CreateRoleFormData): Promise<boolean> => {
@@ -27,15 +29,16 @@ export function useCreateRole() {
 
         const newRole = await aggregateRoleWithSkills(formData.name);
         addRole(newRole);
+        toast.success('角色创建成功');
         return true;
       } catch (err) {
-        console.error('创建角色失败:', err);
+        toast.error(err instanceof Error ? err.message : '创建角色失败');
         return false;
       } finally {
         setSubmitting(false);
       }
     },
-    [addRole]
+    [addRole, toast]
   );
 
   return { createRole: handleCreateRole, submitting };

@@ -19,16 +19,25 @@ const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Leader',
     platform: 'claude',
-    avatar: 'avatar1.png',
+    avatar: 'avatar-circle.svg',
     abilities: ['任务分派', '团队协调', '进度管理'],
     type: 'leader',
     scope: null,
     description: '团队领导者，负责任务分配和协调',
   },
   {
+    name: 'Designer',
+    platform: 'claude',
+    avatar: 'avatar-square.svg',
+    abilities: ['UI设计', 'UX设计', '原型制作'],
+    type: 'team_member',
+    scope: null,
+    description: '设计师，负责界面和交互设计',
+  },
+  {
     name: 'Developer',
     platform: 'codex',
-    avatar: 'avatar2.png',
+    avatar: 'avatar-hexagon.svg',
     abilities: ['代码编写', '代码审查', '单元测试'],
     type: 'team_member',
     scope: null,
@@ -37,7 +46,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Tester',
     platform: 'claude',
-    avatar: null,
+    avatar: 'avatar-triangle.svg',
     abilities: ['测试用例编写', '缺陷发现', '回归测试'],
     type: 'team_member',
     scope: null,
@@ -63,6 +72,21 @@ const MOCK_ROLE_SKILLS = new Map<string, RoleSkillApiItem[]>([
         id: 'skill-brainstorming',
         name: 'brainstorming',
         description: '头脑风暴和需求分析',
+      },
+    ],
+  ],
+  [
+    'Designer',
+    [
+      {
+        id: 'skill-ui-design',
+        name: 'ui-design',
+        description: 'UI 设计和视觉设计',
+      },
+      {
+        id: 'skill-prototyping',
+        name: 'prototyping',
+        description: '原型设计和交互设计',
       },
     ],
   ],
