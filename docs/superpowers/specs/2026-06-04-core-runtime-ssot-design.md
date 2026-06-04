@@ -1,8 +1,8 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-04
 updated_at: 2026-06-04
-last_updated: 创建 core runtime 内存 SSOT 重构 brainstorm 设计稿
+last_updated: 移除多方案对比，仅保留 Runtime/State 选定方案
 abstract: core runtime 内存 SSOT 重构的 brainstorm 设计稿，聚焦运行态与文件持久化边界、GroupChat 职责收窄、Runtime/State/Repository/Context 的职责划分和依赖注入关系。
 id: brainstorm-core-runtime-ssot
 title: Core Runtime 内存 SSOT 重构设计
@@ -22,6 +22,7 @@ contract_refs: []
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 brainstorm 设计稿 |
+| 1.1 | 移除多方案对比，仅保留 Runtime/State 选定方案 |
 
 ## 设计定位
 
@@ -124,31 +125,7 @@ core runtime 的运行态采用内存优先：
 2. 直接暴露内部 state 给 api / service。
 3. 直接读写 repository 文件细节。
 
-## 方案选项
-
-### 方案 A：Repository 仍由 Context 持有，只减少穿透访问
-
-做法：
-
-1. 保留 `GroupChatContext.repository`。
-2. 把部分 `GroupChat` / `Agent` 的 repository 访问改成 Context 方法。
-3. 约定业务层不要直接 `load_*`。
-
-优点：
-
-1. 改动最小。
-2. 迁移风险低。
-3. 短期能减少一部分穿透访问。
-
-缺点：
-
-1. Context 仍然同时承担领域逻辑和持久化拥有者职责。
-2. 内存 SSOT 没有真正建立。
-3. API / service 以后仍容易把 Context 当作状态查询入口。
-
-适合做临时修补，不适合作为核心重构终点。
-
-### 方案 B：引入 Runtime/State，Repository 归 Runtime 管理
+## 选定方案：引入 Runtime/State，Repository 归 Runtime 管理
 
 做法：
 
@@ -172,33 +149,7 @@ core runtime 的运行态采用内存优先：
 2. 需要重新梳理 Context 与 Runtime 的 command 边界。
 3. 短期会增加一些转发方法。
 
-推荐采用该方案。
-
-### 方案 C：文件作为运行期 SSOT，内存只做缓存
-
-做法：
-
-1. 每次查询都从文件读取或刷新缓存。
-2. 内存对象只作为性能优化。
-3. Repository 成为统一读写入口。
-
-优点：
-
-1. 概念上容易恢复。
-2. 跨进程查询更自然。
-
-缺点：
-
-1. 运行期会出现大量文件读写。
-2. Agent 正在运行时的内存副作用无法完全从文件表达。
-3. 会鼓励 service / manager 继续绕过运行对象读文件。
-4. 文件锁、刷新时机、缓存失效会变复杂。
-
-不推荐作为当前 core runtime 的主方案。
-
 ## 推荐架构
-
-推荐选择方案 B：引入 Runtime/State。
 
 目标不是增加层数，而是把现在混在一起的三件事拆开：
 
