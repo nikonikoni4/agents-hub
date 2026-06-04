@@ -103,10 +103,29 @@ export interface SuccessResponse {
 }
 
 /**
+ * 删除操作响应
+ */
+export interface DeleteResponse {
+  message: string;
+}
+
+/**
  * API 错误响应
  */
 export interface ErrorResponse {
   error_code: string;
   message: string;
   type: string;
+  details?: Record<string, any>;
+}
+
+/**
+ * 角色特定错误码
+ */
+export enum RoleErrorCode {
+  ROLE_NOT_FOUND = 'ROLE_NOT_FOUND',
+  ROLE_ALREADY_EXISTS = 'ROLE_ALREADY_EXISTS',
+  SKILL_NOT_FOUND = 'SKILL_NOT_FOUND',
+  SKILL_ALREADY_EXISTS = 'SKILL_ALREADY_EXISTS',
+  PLATFORM_CONFIG_NOT_FOUND = 'PLATFORM_CONFIG_NOT_FOUND',
 }

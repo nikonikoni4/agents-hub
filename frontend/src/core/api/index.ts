@@ -29,3 +29,11 @@ export {
   removeSkillFromRole,
   listAvatars,
 } from './roleApi';
+
+// Skill 管理 API
+export {
+  listSkills,
+  getSkill,
+  deleteSkill,
+  addSkill,
+} from './skillApi';
