@@ -14,6 +14,8 @@ from typing import Optional
 
 import yaml
 
+USER_DISPLAY_SUFFIX = "(user)"
+
 
 class SystemConfig:
     """系统配置（单例）"""
@@ -129,8 +131,26 @@ class SystemConfig:
     @default_user_name.setter
     def default_user_name(self, value: str):
         """设置默认用户身份名"""
+        value = value.strip()
+        if self.normalize_user_name(value).lower() != "user" and not value.endswith(
+            USER_DISPLAY_SUFFIX
+        ):
+            value = f"{value}{USER_DISPLAY_SUFFIX}"
         self._config_data["default_user_name"] = value
         self._save_config()
+
+    def normalize_user_name(self, value: str) -> str:
+        """将 user 展示名规范化为用于身份比较的名称。"""
+        normalized = value.strip()
+        if normalized.endswith(USER_DISPLAY_SUFFIX):
+            normalized = normalized[: -len(USER_DISPLAY_SUFFIX)].rstrip()
+        return normalized
+
+    def is_user_name(self, value: str) -> bool:
+        """判断给定名称是否表示前端 user 身份。"""
+        normalized = self.normalize_user_name(value).lower()
+        configured = self.normalize_user_name(self.default_user_name).lower()
+        return normalized in {"user", configured}
 
     @property
     def docker_image(self) -> str:
@@ -221,6 +241,14 @@ class Config:
     def default_user_name(self, value: str):
         """快捷访问：设置默认用户身份名"""
         self.system.default_user_name = value
+
+    def normalize_user_name(self, value: str) -> str:
+        """快捷访问：规范化 user 名称。"""
+        return self.system.normalize_user_name(value)
+
+    def is_user_name(self, value: str) -> bool:
+        """快捷访问：判断名称是否表示前端 user 身份。"""
+        return self.system.is_user_name(value)
 
     @property
     def docker_image(self) -> str:

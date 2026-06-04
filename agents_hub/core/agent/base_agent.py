@@ -222,6 +222,7 @@ class Agent:
         Returns:
             XML 格式的 runtime 内容字符串
         """
+        from agents_hub.config import config
         from agents_hub.config.types import RoleType
 
         # 获取团队成员列表（排除自己）
@@ -241,6 +242,8 @@ class Agent:
             "",
             "<team>",
             f"团队成员：{team_members_str}",
+            f"前端用户身份名：{config.default_user_name}",
+            "带有 user 标记的前端用户不是可调用 Agent；不要对它使用 call_agent。",
             "</team>",
         ]
 

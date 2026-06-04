@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents_hub.core.foundation import CallStatus, MessageType
+from agents_hub.core.foundation import AgentMessage, CallStatus, MessageType
 from agents_hub.mcp import (
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
@@ -505,13 +505,14 @@ class TestFinishAgentCall:
 
     @pytest.mark.asyncio
     async def test_finish_agent_call_success(self, mock_group_chat_manager, mock_group_chat):
-        """契约：TASK 接收者可通过 finish_agent_call 结束调用并写入群聊"""
+        """契约：TASK 接收者结束调用后，系统向原调用方投递完成通知"""
         from agents_hub.mcp.server import finish_agent_call
 
         token = "worker_token"
         worker_name = "worker1"
         group_chat_id = "group_123"
         call_id = "call_456"
+        response_call_id = "call_response"
 
         mock_group_chat_manager.resolve_token.return_value = (worker_name, group_chat_id)
         mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
@@ -523,6 +524,9 @@ class TestFinishAgentCall:
         mock_call.message_type = MessageType.TASK
         mock_call.has_agent_response = False
         mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+        mock_response_call = MagicMock()
+        mock_response_call.call_id = response_call_id
+        mock_group_chat.agent_call_manager.create_call.return_value = mock_response_call
 
         with patch(
             "agents_hub.mcp.server.broadcast_group_chat_refresh",
@@ -542,7 +546,118 @@ class TestFinishAgentCall:
             content="任务已完成",
             success=True,
         )
-        mock_group_chat.group_chat_context.add_message.assert_called_once()
+        mock_group_chat.agent_call_manager.create_call.assert_called_once_with(
+            send_from=worker_name,
+            send_to="Leader",
+            content="任务已完成",
+            message_type=MessageType.NOTIFICATION,
+            timeout_seconds=None,
+        )
+        mock_group_chat.message_router.send_message.assert_called_once()
+        sent_message = mock_group_chat.message_router.send_message.call_args.args[0]
+        assert isinstance(sent_message, AgentMessage)
+        assert sent_message.call_id == response_call_id
+        assert sent_message.send_from == worker_name
+        assert sent_message.send_to == "Leader"
+        assert sent_message.content == "任务已完成"
+        assert sent_message.message_type == MessageType.NOTIFICATION
+        mock_group_chat.group_chat_context.add_message.assert_not_called()
+        mock_broadcast.assert_awaited_once_with(group_chat_id)
+
+    @pytest.mark.asyncio
+    async def test_finish_agent_call_redacts_completion_notification(
+        self, mock_group_chat_manager, mock_group_chat
+    ):
+        """契约：完成通知和原调用结果都使用脱敏后的内容"""
+        from agents_hub.mcp.server import finish_agent_call
+
+        token = "worker_token"
+        worker_name = "worker1"
+        group_chat_id = "group_123"
+
+        mock_group_chat_manager.resolve_token.return_value = (worker_name, group_chat_id)
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
+
+        mock_call = MagicMock()
+        mock_call.call_id = "call_456"
+        mock_call.send_from = "worker2"
+        mock_call.send_to = worker_name
+        mock_call.message_type = MessageType.TASK
+        mock_call.has_agent_response = False
+        mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+
+        mock_response_call = MagicMock()
+        mock_response_call.call_id = "call_response"
+        mock_group_chat.agent_call_manager.create_call.return_value = mock_response_call
+
+        await finish_agent_call(
+            agent_token=token,
+            call_id="call_456",
+            content="完成了，token=tok_0123456789abcdef0123456789abcdef",
+            success=True,
+        )
+
+        mock_group_chat.agent_call_manager.mark_agent_response.assert_called_once()
+        safe_content = mock_group_chat.agent_call_manager.mark_agent_response.call_args.kwargs[
+            "content"
+        ]
+        assert "tok_0123456789abcdef0123456789abcdef" not in safe_content
+        assert "[REDACTED]" in safe_content
+
+        mock_group_chat.agent_call_manager.create_call.assert_called_once()
+        assert mock_group_chat.agent_call_manager.create_call.call_args.kwargs[
+            "content"
+        ] == safe_content
+        sent_message = mock_group_chat.message_router.send_message.call_args.args[0]
+        assert sent_message.send_from == worker_name
+        assert sent_message.send_to == "worker2"
+        assert sent_message.content == safe_content
+
+    @pytest.mark.asyncio
+    async def test_finish_agent_call_to_user_writes_group_chat_message(
+        self, mock_group_chat_manager, mock_group_chat
+    ):
+        """契约：原调用方是 user 时，完成结果写入群聊并由 refresh 暴露给前端"""
+        from agents_hub.mcp.server import finish_agent_call
+
+        worker_name = "worker1"
+        group_chat_id = "group_123"
+        mock_group_chat_manager.resolve_token.return_value = (worker_name, group_chat_id)
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
+
+        mock_call = MagicMock()
+        mock_call.call_id = "call_456"
+        mock_call.send_from = "Alice"
+        mock_call.send_to = worker_name
+        mock_call.message_type = MessageType.TASK
+        mock_call.has_agent_response = False
+        mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+
+        with (
+            patch("agents_hub.mcp.server.config") as mock_config,
+            patch(
+                "agents_hub.mcp.server.broadcast_group_chat_refresh",
+                new=AsyncMock(),
+                create=True,
+            ) as mock_broadcast,
+        ):
+            mock_config.is_user_name.return_value = True
+            result = await finish_agent_call(
+                agent_token="worker_token",
+                call_id="call_456",
+                content="用户任务完成，token=tok_0123456789abcdef0123456789abcdef",
+                success=True,
+            )
+
+        mock_config.is_user_name.assert_called_once_with("Alice")
+        assert result == {"call_id": "call_456", "status": CallStatus.COMPLETED.value}
+        mock_group_chat.agent_call_manager.mark_agent_response.assert_called_once()
+        mock_group_chat.agent_call_manager.create_call.assert_not_called()
+        mock_group_chat.message_router.send_message.assert_not_called()
+        mock_group_chat.group_chat_context.add_message.assert_awaited_once()
+        agent_result = mock_group_chat.group_chat_context.add_message.call_args.args[0]
+        assert agent_result.agent_name == worker_name
+        assert agent_result.text == "@Alice 用户任务完成，token=[REDACTED]"
         mock_broadcast.assert_awaited_once_with(group_chat_id)
 
     @pytest.mark.asyncio

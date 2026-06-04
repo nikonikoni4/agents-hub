@@ -453,7 +453,7 @@ class AgentCallManager:
         return stats
 
     def _index_call(self, call: AgentCall):
-        """维护 send_to -> call_id 索引。"""
+        """维护 send_to -> call_id 索引list 用于runtime注入。"""
         call_ids = self._calls_by_receiver.setdefault(call.send_to, [])
         if call.call_id not in call_ids:
             call_ids.append(call.call_id)

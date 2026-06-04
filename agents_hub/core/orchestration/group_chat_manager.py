@@ -8,13 +8,10 @@ import threading
 from pathlib import Path
 
 from agents_hub.config import config
-from agents_hub.core.communication import AgentCall
 from agents_hub.core.context import GroupMetadata
 from agents_hub.core.foundation import (
-    AgentMessage,
     GroupChatNotFoundError,
     GroupChatType,
-    MessageType,
 )
 from agents_hub.core.foundation.paths import group_chat_paths
 
@@ -373,61 +370,3 @@ class GroupChatManager:
 
 # 全局单例
 group_chat_manager = GroupChatManager()
-
-
-async def call_agent(
-    group_chat_id: str,
-    send_from: str,
-    send_to: str,
-    content: str,
-    need_response: bool,
-    timeout_seconds: int | None = None,
-) -> str:
-    """
-    call_agent MCP 工具入口
-
-    Agent 平台（Claude Code / Codex）通过 MCP 调用此函数与别的 agent 对话。
-
-    Args:
-        group_chat_id: 群聊 ID
-        send_from: 发送者名称
-        send_to: 接收者名称
-        content: 发送的内容（问题或任务）
-        need_response: 是否需要被调用的 agent 回复
-        timeout_seconds: 超时阈值（秒）
-
-    Returns:
-        call_id 用于查询调用状态
-    """
-    try:
-        # 1. 获取 group chat
-        group_chat = await group_chat_manager.load_group_chat(group_chat_id)
-
-        # 2. 创建 AgentCall
-        call: AgentCall = group_chat.agent_call_manager.create_call(
-            send_from=send_from,
-            send_to=send_to,
-            content=content,
-            message_type=MessageType.TASK if need_response else MessageType.NOTIFICATION,
-            timeout_seconds=timeout_seconds,
-        )
-
-        # 3. 通过 MessageRouter 发送消息
-        group_chat.message_router.send_message(
-            AgentMessage(
-                call_id=call.call_id,
-                send_from=call.send_from,
-                send_to=call.send_to,
-                content=call.content,
-                message_type=call.message_type,
-            )
-        )
-
-        return call.call_id
-
-    except Exception as e:
-        # TODO: 需要适配 MCP tool 的错误响应格式
-        # 当前返回错误信息字符串，正式版本应使用 to_mcp_response()
-        if hasattr(e, "to_mcp_response"):
-            return str(e.to_mcp_response())
-        return str(e)

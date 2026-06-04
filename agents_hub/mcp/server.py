@@ -21,12 +21,15 @@ MCP Server 和 6 个工具
 - 拆分优先采用 tools/<domain>.py 或 tools/<tool_name>.py；只有当某个 tool
   自身包含复杂 schema、辅助函数或测试夹具时，才升级为独立文件夹。
 """
+# TODO 缺乏工具调用错误统计，需要增加显式的工具错误调用统计，但是在外围无法直接关闭agent的工具调用循环，
+# 只能做提醒或者强行关闭一致错误的agent（调用错误可能是系统问题，直接停止是比较好的选择）
 
 from datetime import datetime
 
 from fastmcp import FastMCP
 
 from agents_hub.agent_bridge.models import AgentResult
+from agents_hub.config import config
 from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.core.foundation import (
     AgentMessage,
@@ -38,6 +41,7 @@ from agents_hub.core.foundation import (
 )
 from agents_hub.core.foundation.token import redact_token
 from agents_hub.core.orchestration import group_chat_manager
+from agents_hub.core.orchestration.group_chat import GroupChat
 from agents_hub.mcp.errors import (
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
@@ -86,6 +90,30 @@ def _make_chat_result(group_chat, agent_name: str, content: str) -> AgentResult:
         platform=platform,
         role_type=role_type,
     )
+
+
+def _send_agent_call_completion_notification(
+    group_chat: GroupChat,
+    send_from: str,
+    send_to: str,
+    content: str,
+) -> None:
+    """创建并投递 AgentCall 完成通知，唤醒原调用方。"""
+    response_call = group_chat.agent_call_manager.create_call(
+        send_from=send_from,
+        send_to=send_to,
+        content=content,
+        message_type=MessageType.NOTIFICATION,
+        timeout_seconds=None,
+    )
+    message = AgentMessage(
+        send_from=send_from,
+        send_to=send_to,
+        content=content,
+        message_type=MessageType.NOTIFICATION,
+        call_id=response_call.call_id,
+    )
+    group_chat.message_router.send_message(message)
 
 
 # ============================================================================
@@ -424,6 +452,10 @@ async def speak_in_group_chat(agent_token: str, content: str, send_to: str | Non
         chat_content = (
             render_for_chat(agent_name, send_to, safe_content) if send_to else safe_content
         )
+        # TODO : [DESIGN] 当前在agent_Context中使用了_get_filtered_messages，会忽略掉所有@agent或agent发起的信息，
+        # 所以如果这里的群聊信息如果是使用了speak_in_the_group@某个agent，这个agent实际上是不会收到这个消息的
+        # 需要某个机制去区分finish_agent_call 和 speak_in_group_chat的区别
+        # 这里暂时不做处理
         await group_chat.group_chat_context.add_message(
             _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)
         )
@@ -450,7 +482,7 @@ async def finish_agent_call(
     success: bool = True,
 ) -> dict:
     """
-    结束一个需要回复的 AgentCall，并把最终回复写入群聊。
+    结束一个需要回复的 AgentCall，并向原调用方投递完成通知以唤醒下一轮处理。
 
     Args:
         agent_token: 调用者的身份令牌
@@ -463,6 +495,7 @@ async def finish_agent_call(
         失败: {"error": {"code": "...", "message": "..."}}
     """
     try:
+        # 1. 验证token
         identity = group_chat_manager.resolve_token(agent_token)
         if identity is None:
             return make_error_response(
@@ -471,6 +504,7 @@ async def finish_agent_call(
             )
 
         agent_name, group_chat_id = identity
+        # 2. 验证群聊，agent call id, 当前是否是被调用方，call id 是否是TASK若不是不能调用，判断是否重复处理
         try:
             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
@@ -498,7 +532,7 @@ async def finish_agent_call(
         if call.message_type != MessageType.TASK:
             return make_error_response(
                 INVALID_AGENT_CALL_STATE,
-                "该 AgentCall 是 notification，不需要回复，不能调用 finish_agent_call",
+                "该 AgentCall 是 notification，不需要回复，不能调用 finish_agent_call,可以使用speak_in_the_group在群聊进行非正式回复",
                 details={"call_id": call_id, "message_type": call.message_type.value},
             )
 
@@ -508,20 +542,33 @@ async def finish_agent_call(
                 "该 AgentCall 已经通过 finish_agent_call 闭环，不能重复结束",
                 details={"call_id": call_id},
             )
-
+        # 3. 将token信息从返回的信息中剥离
         safe_content = redact_token(content)
+        # 4. 完成call闭环
+        # TODO : [DESIGN] 这里会把结果发在result中，但是当前也会在直接发送给agent信息，
+        # 如果agent调用check_agent_call，实际上会得到2份结果，但是这里先不管
+        # 一个可行的方法是使用 “agent call结束，具体内容{agent_name}会直接发送信息给你”
         group_chat.agent_call_manager.mark_agent_response(
             call_id=call_id,
-            content=safe_content,
+            content=safe_content,  #  “agent call结束，具体内容{agent_name}会直接发送信息给你”
             success=success,
         )
-        await group_chat.group_chat_context.add_message(
-            _make_chat_result(
-                group_chat=group_chat,
-                agent_name=agent_name,
-                content=render_for_chat(agent_name, call.send_from, safe_content),
+        # 5. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
+        if config.is_user_name(call.send_from):
+            await group_chat.group_chat_context.add_message(
+                _make_chat_result(
+                    group_chat=group_chat,
+                    agent_name=agent_name,
+                    content=render_for_chat(agent_name, call.send_from, safe_content),
+                )
             )
-        )
+        else:
+            _send_agent_call_completion_notification(
+                group_chat=group_chat,
+                send_from=agent_name,
+                send_to=call.send_from,
+                content=safe_content,
+            )
         await broadcast_group_chat_refresh(group_chat_id)
 
         status = CallStatus.COMPLETED if success else CallStatus.FAILED

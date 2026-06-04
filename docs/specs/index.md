@@ -35,11 +35,10 @@
  - 内容摘要：core/context 层规格，定义会话状态模型、Agent session 管理（含 token/cwd/use_docker）、上下文压缩、增量加载、GroupChatContext 持有 Repository 的现有持久化契约
 
 ## core-agent-orchestration
-<<<<<<< HEAD
  - updated_at : 2026-06-04
  - path: `docs/specs/2026-05-31-core-agent-orchestration.md`
  - 触发规则：当设计、修改或扩展 Agent 执行模型、团队管理、群聊编排、token 生命周期或 MCP 工具入口时阅读
- - 内容摘要：core/agent 和 core/orchestration 层规格，定义 Agent 消息循环、Manager/Worker 角色、Team 验证、GroupChat 生命周期、现有组件持有关系、GroupChatManager token 索引和 MCP 工具入口
+ - 内容摘要：core/agent 和 core/orchestration 层规格，定义 Agent 消息循环、显式群聊发言、显式 AgentCall 闭环、Agent 完成通知唤醒、user 群聊回执、Manager/Worker 角色、GroupChat 生命周期、现有组件持有关系、GroupChatManager token 索引和 MCP 工具入口
 
 ## docker-executor
  - updated_at : 2026-06-03
@@ -70,9 +69,3 @@
  - path: `docs/superpowers/specs/2026-06-03-team-management-design.md`
  - 触发规则：当设计、修改或扩展 teams 团队管理模块时阅读
  - 内容摘要：teams 团队管理模块规格，定义团队 CRUD、成员验证机制、持久化策略和 HTTP API 契约
-=======
- - updated_at : 2026-06-03
- - path: `docs/specs/2026-05-31-core-agent-orchestration.md`
- - 触发规则：当设计、修改或扩展 Agent 执行模型、团队管理、群聊编排、token 生命周期或 MCP 工具入口时阅读
- - 内容摘要：core/agent 和 core/orchestration 层规格，定义 Agent 消息循环、显式群聊发言、显式 AgentCall 闭环、Manager/Worker 角色、GroupChat 生命周期和 MCP 工具入口
->>>>>>> 40ec740 (feat(mcp): 新增显式群聊发言和任务闭环工具)

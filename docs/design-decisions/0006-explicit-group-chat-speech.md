@@ -1,9 +1,9 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-05-31
-updated_at: 2026-06-03
-last_updated: 采纳显式发言与显式调用闭环方案，区分 speak_in_group_chat 和 finish_agent_call
-abstract: 将群聊发言从 Agent.run() 出口 A/B 的隐式自动写入，改为显式 MCP 工具调用；普通公开发言使用 speak_in_group_chat，需要回复的 AgentCall 使用 finish_agent_call 闭环
+updated_at: 2026-06-04
+last_updated: 明确 finish_agent_call 对 Agent 调用方投递完成通知，对 user 调用方写入群聊并刷新前端
+abstract: 将群聊发言从 Agent.run() 出口 A/B 的隐式自动写入，改为显式 MCP 工具调用；普通公开发言使用 speak_in_group_chat，需要回复的 AgentCall 使用 finish_agent_call 闭环，Agent 调用方通过完成通知唤醒，user 调用方通过群聊消息和 refresh 感知结果
 status: decided
 ---
 
@@ -15,13 +15,14 @@ status: decided
 | ---- | -------- |
 | 0.1  | 创建草案，捕获讨论结论，等待 MCP 主流程跑通后实施 |
 | 1.0  | 采纳显式发言与显式调用闭环方案，明确 speak_in_group_chat 不负责关闭 AgentCall |
+| 1.1  | 明确 finish_agent_call 不默认写群聊；闭环后对 Agent 调用方创建完成通知，对 user 调用方写入群聊并刷新前端 |
 
 ## 状态说明
 
 本 ADR 状态为 `decided`：已采纳显式工具方案，并进一步拆分为两个语义不同的工具：
 
 - `speak_in_group_chat`：公开发言，只写入群聊，不创建、不关闭 AgentCall
-- `finish_agent_call`：结束一次需要回复的 AgentCall，并把最终回复写入群聊
+- `finish_agent_call`：结束一次需要回复的 AgentCall；原调用方是 Agent 时投递完成通知，原调用方是 user 时写入群聊消息
 
 核心原则：**调用/指令是控制面事实，群聊消息是公开协作记录**。群聊消息不反向驱动 Agent 调用状态。
 
@@ -158,10 +159,16 @@ ADR 0005 已确立"按需提供上下文""避免越权访问"为多 agent 通信
 
 `call_agent` 创建的是一次控制面调用，`call_id` 是这次调用的回执凭证。完成任务时传回 `call_id`，系统才能准确更新 AgentCall 状态、停止等待、保留可查询记录。`speak_in_group_chat` 是公开说话动作，不应该因为携带一个 ID 就改变调用生命周期。
 
+### 原因 5：完成事件应唤醒原调用方，而不是要求轮询
+
+Manager 派活后会立即拿到 `call_id`，并可能结束当前 LLM turn；如果 Worker 完成后只更新 AgentCall 状态，Manager 需要额外等待或轮询才能继续协作。`finish_agent_call` 闭环后创建一条 `NOTIFICATION` 投递给原调用方，可以自然唤醒 Manager 的下一轮 LLM 调用。该机制同样适用于未来开放 Worker 之间相互派活的场景：例如执行型 Worker 向顾问型 Worker 发起 TASK，顾问完成后通过完成通知唤醒执行者继续处理。
+
+当原调用方是 `user` 时，`MessageRouter` 中的 user 只是路由身份占位，没有对应的 Agent run loop 消费队列。因此 user 调用方不走完成通知队列，而是把最终回复写入群聊历史，并通过 realtime refresh 让前端拉取展示。
+
 ## 实施细节
 
 - `speak_in_group_chat`：用于普通群聊公开发言，可选 @ 某个对象；写入前执行 token 剥离
-- `finish_agent_call`：只能用于需要回复的 TASK 调用；只有调用接收者可以结束该 call；notification 调用使用该工具会报错
+- `finish_agent_call`：只能用于需要回复的 TASK 调用；只有调用接收者可以结束该 call；notification 调用使用该工具会报错；闭环后如果原调用方是 Agent，则创建一条 `NOTIFICATION` 投递给原调用方，用于唤醒其下一轮处理；如果原调用方是 user，则写入群聊历史并触发前端 refresh
 - `AgentCall` 增加显式回复闭环标志，用于判断 TASK 是否已经由 Agent 主动结束
 - TASK 执行一轮后如果仍未闭环，Agent.run() 给该 Agent 私有队列追加系统提醒，要求调用 `finish_agent_call`
 - `Agent.run()` 不再把 `result.text` 自动写入群聊，也不再自动给发送者投递回执
@@ -175,7 +182,7 @@ ADR 0005 已确立"按需提供上下文""避免越权访问"为多 agent 通信
 
 MCP 工具集新增两个明确的群聊协作工具：
 - `speak_in_group_chat`：公开发言
-- `finish_agent_call`：结束需要回复的调用
+- `finish_agent_call`：结束需要回复的调用；Agent 调用方收到完成通知，user 调用方通过群聊消息和 refresh 收到结果
 
 `call_agent` 仍负责创建调用；`check_agent_call` 仍负责查询调用状态；二者不承担公开发言职责。
 

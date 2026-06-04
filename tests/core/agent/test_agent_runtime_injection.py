@@ -170,6 +170,8 @@ class TestAgentRuntimeContentGeneration:
         # 应该包含所有成员（除了自己）
         assert "Worker1" in content
         assert "Worker2" in content
+        assert "前端用户身份名：" in content
+        assert "不是可调用 Agent" in content
         assert "</team>" in content
 
         # 验证 team_workboard 部分（Manager 特有）
@@ -246,7 +248,7 @@ class TestAgentRuntimeContentGeneration:
         assert "type=notification" in content
         assert "status=pending" in content
         assert "request=FYI: API 文档已更新" in content
-        assert "无需 finish_agent_call" in content
+        assert "无需使用 finish_agent_call" in content
         assert "</active_agent_calls>" in content
 
     def test_runtime_call_instructions_grouped_by_type(
@@ -284,7 +286,7 @@ class TestAgentRuntimeContentGeneration:
 
         # 每种类型的提示只出现一次
         assert content.count("需要回复：请在完成时调用 finish_agent_call") == 1
-        assert content.count("无需 finish_agent_call") == 1
+        assert content.count("无需使用 finish_agent_call") == 1
         # 两个 TASK call 都应出现
         assert "call_id=call_task_1" in content
         assert "call_id=call_task_2" in content

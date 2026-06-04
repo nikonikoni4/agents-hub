@@ -1,17 +1,9 @@
 ---
-<<<<<<< HEAD
-version: 1.3
+version: 1.4
 created_at: 2026-05-31
 updated_at: 2026-06-04
-last_updated: 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问
-abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制和 MCP 工具入口
-=======
-version: 1.2
-created_at: 2026-05-31
-updated_at: 2026-06-03
-last_updated: Agent.run 改为显式公开发言和显式 AgentCall 闭环，新增 speak/finish MCP 工具契约
-abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制、显式群聊发言和 MCP 工具入口
->>>>>>> 40ec740 (feat(mcp): 新增显式群聊发言和任务闭环工具)
+last_updated: 对齐 finish_agent_call 的 Agent 完成通知和 user 群聊回执分支，以及现有 GroupChat 组件持有关系
+abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制、显式群聊发言、显式 AgentCall 闭环、user 回执和 MCP 工具入口
 id: spec-core-agent-orchestration
 title: Core Agent & Orchestration 层规格
 status: draft
@@ -40,12 +32,9 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | 新增 token 生命周期、token 索引、runtime 注入、task_manager、MCP 工具入口更新 |
-<<<<<<< HEAD
 | 1.2 | Team 语义明确（team_members 包含 manager+worker）、初始化分离机制、user 伪 Agent 注册、config.default_manager_name / default_user_name 替代硬编码 |
 | 1.3 | 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问 |
-=======
-| 1.2 | Agent.run 改为显式公开发言和显式 AgentCall 闭环 |
->>>>>>> 40ec740 (feat(mcp): 新增显式群聊发言和任务闭环工具)
+| 1.4 | 对齐 Agent.run 显式公开发言、显式 AgentCall 闭环，以及 finish_agent_call 的 Agent 完成通知和 user 群聊回执 |
 
 ## Overview
 
@@ -101,14 +90,14 @@ while _run:
 - 公开群聊发言必须通过 `speak_in_group_chat`
 - 需要回复的 TASK 调用必须通过 `finish_agent_call` 闭环
 - `speak_in_group_chat` 不创建、不关闭 AgentCall
-- `finish_agent_call` 会更新 AgentCall，并把最终回复写入群聊
+- `finish_agent_call` 会更新 AgentCall；原调用方是 Agent 时投递 NOTIFICATION 唤醒下一轮处理，原调用方是 user 时写入群聊历史并触发前端刷新
 
 **Runtime 注入**：每次处理消息前，通过 `markdown_injector` 将身份信息（token、团队成员、任务看板）动态注入到 work_root 下的 CLAUDE.md/AGENTS.md 的 `<AGENT_RUNTIME_START/>` 和 `<AGENT_RUNTIME_END/>` 标记之间。详见 `2026-05-31-mcp-tools-design.md` §5。
 
 **渲染分工**：
 - 入站 prompt：render_for_llm（msg.content 不被改写）
 - 群聊公开发言：显式工具写入群聊，写入前剥离 token
-- TASK 最终回复：显式工具关闭 AgentCall，并同步写入群聊
+- TASK 最终回复：显式工具关闭 AgentCall；Agent 调用方收到私有完成通知，user 调用方通过群聊历史和 refresh 看到结果
 
 **停止机制**：双重保险——设置 _run=False 标志 + 发送哨兵消息（call_id="__STOP__"）唤醒阻塞的 get()。
 
