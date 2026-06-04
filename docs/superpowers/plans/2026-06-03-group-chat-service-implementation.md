@@ -1379,28 +1379,28 @@ Expected: FAIL with "AttributeError: 'GroupChatService' object has no attribute 
 
         # 2. 构建 agent_member.json 文件路径
         group_chat_dir = get_group_chat_dir(project_path, group_chat_id)
-        session_state_file = group_chat_dir / "agent_member.json"
+        agent_member_file_path = group_chat_dir / "agent_member.json"
 
         # 3. 验证文件存在性
-        if not session_state_file.exists():
+        if not agent_member_file_path.exists():
             raise ResourceNotFoundError(
-                f"session_state 文件不存在: {session_state_file}",
+                f"session_state 文件不存在: {agent_member_file_path}",
                 details={
                     "group_chat_id": group_chat_id,
-                    "session_state_file": str(session_state_file),
+                    "agent_member_file_path": str(agent_member_file_path),
                 },
             )
 
         # 4. 读取并解析 JSON（带异常捕获）
         try:
-            with session_state_file.open("r", encoding="utf-8") as f:
+            with agent_member_file_path.open("r", encoding="utf-8") as f:
                 session_data = json.load(f)
         except json.JSONDecodeError as e:
             raise StateError(
                 f"session_state JSON 格式错误: {e}",
                 details={
                     "group_chat_id": group_chat_id,
-                    "session_state_file": str(session_state_file),
+                    "agent_member_file_path": str(agent_member_file_path),
                 },
             ) from e
 

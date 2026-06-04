@@ -38,7 +38,9 @@ class GroupChatRepository:
         # 文件路径（集中管理）
         self.group_chat_session_path = str(group_chat_paths.base_dir(group_chat_id, project_path))
         self.messages_file = str(group_chat_paths.messages_file(group_chat_id, project_path))
-        self.session_file = str(group_chat_paths.session_state_file(group_chat_id, project_path))
+        self.session_file = str(
+            group_chat_paths.agent_member_file_path(group_chat_id, project_path)
+        )
         self.compact_history_file = str(
             group_chat_paths.compact_history_file(group_chat_id, project_path)
         )

@@ -67,7 +67,7 @@ class GroupChatPaths:
         """
         return self.base_dir(group_chat_id, project_path) / f"{group_chat_id}.jsonl"
 
-    def session_state_file(
+    def agent_member_file_path(
         self, group_chat_id: str, project_path: str, base_path: str = "local_data/teams"
     ) -> Path:
         """

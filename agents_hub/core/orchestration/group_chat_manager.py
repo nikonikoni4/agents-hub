@@ -290,7 +290,9 @@ class GroupChatManager:
             )
 
         # 3. 从 agent_member.json 读取 team members
-        session_file = group_chat_paths.session_state_file(group_chat_id, project_path, base_path)
+        session_file = group_chat_paths.agent_member_file_path(
+            group_chat_id, project_path, base_path
+        )
         if not session_file.exists():
             raise FileNotFoundError(f"agent session 状态文件不存在: {session_file}")
 

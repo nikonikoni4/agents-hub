@@ -170,7 +170,7 @@ base_dir = group_chat_paths.base_dir(group_chat_id, project_path)
 
 # 获取具体文件路径
 messages_file = group_chat_paths.messages_file(group_chat_id, project_path)
-session_state_file = group_chat_paths.session_state_file(group_chat_id, project_path)
+agent_member_file_path = group_chat_paths.agent_member_file_path(group_chat_id, project_path)
 compact_history_file = group_chat_paths.compact_history_file(group_chat_id, project_path)
 metadata_file = group_chat_paths.metadata_file(group_chat_id, project_path)
 ```

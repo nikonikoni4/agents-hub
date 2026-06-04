@@ -158,7 +158,7 @@ msg_file = group_chat_paths.messages_file("gc123", "D:/projects/agents-hub")
 |------|---------|---------|
 | `base_dir()` | `local_data/teams/<project>/<id>/` | 群聊基础目录 |
 | `messages_file()` | `local_data/teams/<project>/<id>/<id>.jsonl` | 群聊消息历史 |
-| `session_state_file()` | `local_data/teams/<project>/<id>/agent_member.json` | Agent session 状态、上下文加载状态、token、cwd、Docker 开关 |
+| `agent_member_file_path()` | `local_data/teams/<project>/<id>/agent_member.json` | Agent session 状态、上下文加载状态、token、cwd、Docker 开关 |
 | `compact_history_file()` | `local_data/teams/<project>/<id>/memory/compact_history.jsonl` | 压缩历史 |
 | `metadata_file()` | `local_data/teams/<project>/<id>/group_metadata.json` | 群聊元数据 |
 | `agent_calls_log()` | `local_data/teams/<project>/<id>/agent_calls.log` | Agent 调用日志 |
