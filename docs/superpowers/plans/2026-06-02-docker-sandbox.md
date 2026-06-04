@@ -189,19 +189,19 @@ git commit -m "feat(core): 添加 Docker 异常类"
 
 - [ ] **Step 1: 写失败测试**
 
-Create: `tests/unit/core/context/test_agent_session_info_docker.py`
+Create: `tests/unit/core/context/test_agent_member_info_docker.py`
 
 ```python
 from agents_hub.core.context.group_chat_session import AgentMemberInfo
 
 
-def test_agent_session_info_default_use_docker():
+def test_agent_member_info_default_use_docker():
     """测试 use_docker 默认值为 False"""
     info = AgentMemberInfo()
     assert info.use_docker is False
 
 
-def test_agent_session_info_with_use_docker():
+def test_agent_member_info_with_use_docker():
     """测试设置 use_docker"""
     info = AgentMemberInfo(use_docker=True)
     assert info.use_docker is True
@@ -209,7 +209,7 @@ def test_agent_session_info_with_use_docker():
 
 - [ ] **Step 2: 运行测试验证失败**
 
-Run: `pytest tests/unit/core/context/test_agent_session_info_docker.py -v`
+Run: `pytest tests/unit/core/context/test_agent_member_info_docker.py -v`
 Expected: FAIL - AttributeError: 'AgentMemberInfo' object has no attribute 'use_docker'
 
 - [ ] **Step 3: 添加 use_docker 字段**
@@ -231,13 +231,13 @@ class AgentMemberInfo:
 
 - [ ] **Step 4: 运行测试验证通过**
 
-Run: `pytest tests/unit/core/context/test_agent_session_info_docker.py -v`
+Run: `pytest tests/unit/core/context/test_agent_member_info_docker.py -v`
 Expected: PASS (2 tests)
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents_hub/core/context/group_chat_session.py tests/unit/core/context/test_agent_session_info_docker.py
+git add agents_hub/core/context/group_chat_session.py tests/unit/core/context/test_agent_member_info_docker.py
 git commit -m "feat(core): AgentMemberInfo 新增 use_docker 字段"
 ```
 

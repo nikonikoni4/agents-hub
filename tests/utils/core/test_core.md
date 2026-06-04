@@ -219,7 +219,7 @@
 
 #### group_chat_session.py
 - [x] `test_agent_context_state_defaults` - 验证默认值
-- [x] `test_agent_session_info_defaults` - 验证默认值
+- [x] `test_agent_member_info_defaults` - 验证默认值
 - [x] `test_group_chat_session_defaults` - 验证默认值
 - [x] `test_add_message_appends` - 验证消息追加
 - [x] `test_get_uncompact_messages_from_loc` - 验证增量获取

@@ -47,13 +47,13 @@ class AgentContext:
         parts: list[str] = []
 
         # 1. 获取 agent 的加载状态
-        agent_session_info = self.group_chat_context.agent_member_info.get(self.agent_name)
-        if not agent_session_info:
+        agent_member_info = self.group_chat_context.agent_member_info.get(self.agent_name)
+        if not agent_member_info:
             last_loaded_compact_index = 0
             last_loaded_message_index = 0
         else:
-            last_loaded_compact_index = agent_session_info.context_state.last_loaded_compact_index
-            last_loaded_message_index = agent_session_info.context_state.last_loaded_message_index
+            last_loaded_compact_index = agent_member_info.context_state.last_loaded_compact_index
+            last_loaded_message_index = agent_member_info.context_state.last_loaded_message_index
 
         # 2. 压缩历史 → <group_chat_history>
         compact_history = await self.group_chat_context.load_compact_history()
@@ -170,9 +170,9 @@ class AgentContext:
             )
         else:
             # 更新现有状态
-            agent_session_info = self.group_chat_context.agent_member_info[self.agent_name]
-            agent_session_info.context_state.last_loaded_compact_index = last_loaded_compact_index
-            agent_session_info.context_state.last_loaded_message_index = last_loaded_message_index
+            agent_member_info = self.group_chat_context.agent_member_info[self.agent_name]
+            agent_member_info.context_state.last_loaded_compact_index = last_loaded_compact_index
+            agent_member_info.context_state.last_loaded_message_index = last_loaded_message_index
 
         # 保存到文件
         await self.group_chat_context.runtime.update_context_load_state(
