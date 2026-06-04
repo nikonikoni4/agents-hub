@@ -15,3 +15,31 @@ export * from './skillAdapter';
 
 // 消息相关 Adapter
 export * from './messageAdapter';
+
+// 转发导出 API Schemas（作为统一入口）
+export type {
+  // 枚举类型
+  AgentPlatform,
+  RoleType,
+  GroupChatType,
+  SessionType,
+  MessageType,
+  CallStatus,
+  TaskStatus,
+  // 消息相关
+  MessageApiItem,
+  AgentMessageApiItem,
+  // 角色相关
+  RoleApiResponse,
+  SkillApiItem,
+  RoleSkillApiItem,
+  // 群聊相关
+  GroupChatApiResponse,
+  GroupChatSummaryApiItem,
+  GroupChatMemberApiItem,
+  // 会话相关
+  AgentContextStateApiResponse,
+  AgentSessionInfoApiResponse,
+  // 配置相关
+  SystemConfigApiResponse,
+} from '@/shared/types/api-schemas';

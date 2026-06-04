@@ -95,7 +95,10 @@ describe('roleApi', () => {
       mockedClient.post.mockResolvedValue({});
 
       await createRole({ name: 'Test', platform: 'claude' });
-      expect(mockedClient.post).toHaveBeenCalledWith('/roles', { name: 'Test', platform: 'claude' });
+      expect(mockedClient.post).toHaveBeenCalledWith('/roles', {
+        name: 'Test',
+        platform: 'claude',
+      });
     });
 
     it('deleteRole 调用 DELETE /roles/:name', async () => {
@@ -113,7 +116,9 @@ describe('roleApi', () => {
       mockedClient.post.mockResolvedValue({});
 
       await addSkillToRole('Leader', 'skill-123');
-      expect(mockedClient.post).toHaveBeenCalledWith('/roles/Leader/skills', { skill_id: 'skill-123' });
+      expect(mockedClient.post).toHaveBeenCalledWith('/roles/Leader/skills', {
+        skill_id: 'skill-123',
+      });
     });
   });
 });

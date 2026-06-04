@@ -85,7 +85,9 @@ describe('groupChatApi', () => {
       mockedClient.get.mockResolvedValue([]);
 
       await listGroupChats();
-      expect(mockedClient.get).toHaveBeenCalledWith('/group-chats', { params: { is_active_only: false } });
+      expect(mockedClient.get).toHaveBeenCalledWith('/group-chats', {
+        params: { is_active_only: false },
+      });
     });
 
     it('getMessages 带分页参数', async () => {
