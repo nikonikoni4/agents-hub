@@ -11,7 +11,7 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -298,6 +298,38 @@ class TestLoadGroupChatFromDisk:
 
         # 清理
         await loaded_chat.cleanup()
+
+
+class TestGetActiveGroupInfo:
+    """测试 get_active_group_info() 方法"""
+
+    def test_get_active_group_info_uses_runtime_query(self, group_chat_manager):
+        """测试活动群聊信息从 runtime 查询"""
+        mock_runtime = Mock()
+        mock_runtime.get_info_dict.return_value = {
+            "group_chat_id": "gc-001",
+            "group_chat_name": "测试群聊",
+            "project_path": "/project1",
+            "created_at": datetime(2026, 6, 1, 10, 0, 0),
+            "group_type": "manager_orchestrate",
+            "is_active": True,
+        }
+        mock_group_chat = Mock()
+        mock_group_chat._activated = True
+        mock_group_chat.runtime = mock_runtime
+        group_chat_manager._group_chats["gc-001"] = mock_group_chat
+
+        result = group_chat_manager.get_active_group_info("gc-001")
+
+        assert result["group_chat_id"] == "gc-001"
+        assert result["is_active"] is True
+        mock_runtime.get_info_dict.assert_called_once_with(is_active=True)
+
+    def test_get_active_group_info_returns_none_for_inactive_registry_miss(
+        self, group_chat_manager
+    ):
+        """测试未激活或不存在的群聊返回 None"""
+        assert group_chat_manager.get_active_group_info("missing") is None
 
 
 class TestCreateGroupChat:

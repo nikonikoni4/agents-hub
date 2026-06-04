@@ -47,6 +47,21 @@ class GroupChatManager:
         group_chat = self._group_chats.get(group_chat_id)
         return group_chat is not None and group_chat._activated
 
+    def get_active_group_info(self, group_chat_id: str) -> dict[str, object] | None:
+        """
+        获取活动群聊信息（从 runtime 查询）
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            群聊信息字典，如果群聊不存在则返回 None
+        """
+        group_chat = self._group_chats.get(group_chat_id)
+        if group_chat is None:
+            return None
+        return group_chat.runtime.get_info_dict(is_active=self.is_active_group(group_chat_id))
+
     async def load_group_chat(self, group_chat_id: str) -> GroupChat:
         """获取 GroupChat，优先从内存加载，不存在时从磁盘加载
 
