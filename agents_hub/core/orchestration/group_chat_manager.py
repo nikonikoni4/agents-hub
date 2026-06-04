@@ -19,7 +19,6 @@ from agents_hub.core.foundation import (
 from agents_hub.core.foundation.paths import group_chat_paths
 
 from .group_chat import GroupChat
-from .team import Team
 
 
 class GroupChatManager:
@@ -303,12 +302,10 @@ class GroupChatManager:
         if not team_members_name:
             raise ValueError(f"群聊 {group_chat_id} 没有团队成员信息")
 
-        team = Team(team_members_name=team_members_name)
-
         # 4. 创建 GroupChat 实例
         group_type = GroupChatType(metadata.group_type)
         group_chat = GroupChat(
-            team=team,
+            team_members_name=team_members_name,
             group_type=group_type,
             project_path=project_path,
             group_chat_id=group_chat_id,
@@ -327,7 +324,7 @@ class GroupChatManager:
 
     async def create_group_chat(
         self,
-        team: Team,
+        team_members_name: list[str],
         group_type: GroupChatType,
         project_path: str,
         group_chat_name: str | None = None,
@@ -342,7 +339,7 @@ class GroupChatManager:
         3. 自动注册到 GroupChatManager
 
         Args:
-            team: 所属 Team 实例
+            team_members_name: 团队成员角色名列表
             group_type: 群聊类型
             project_path: 项目路径
             group_chat_name: 群聊名称（可选，默认使用 group_chat_id）
@@ -358,7 +355,7 @@ class GroupChatManager:
             group_chat_id = str(uuid4())
 
         group_chat = GroupChat(
-            team=team,
+            team_members_name=team_members_name,
             group_type=group_type,
             project_path=project_path,
             group_chat_id=group_chat_id,

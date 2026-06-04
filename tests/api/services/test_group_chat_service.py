@@ -41,11 +41,11 @@ async def test_create_group_chat_success(service, mock_group_chat_manager):
         "is_active": True,
     }
 
-    with patch("agents_hub.api.services.group_chat_service.Team") as MockTeam, \
+    with patch("agents_hub.api.services.group_chat_service.RoleManager") as MockRM, \
          patch("agents_hub.api.services.group_chat_service.GroupChat") as MockGroupChat, \
          patch("agents_hub.api.services.group_chat_service.uuid4", return_value="gc_test_123"):
 
-        MockTeam.return_value = Mock()
+        MockRM.return_value.list_role_names.return_value = ["Leader", "Worker1"]
         MockGroupChat.return_value = mock_group_chat
 
         # Act
@@ -68,8 +68,8 @@ async def test_create_group_chat_empty_members_raises_validation_error(service):
 
 async def test_create_group_chat_invalid_role_raises_resource_not_found(service):
     """测试无效角色抛出 ResourceNotFoundError"""
-    with patch("agents_hub.api.services.group_chat_service.Team") as MockTeam:
-        MockTeam.side_effect = ValueError("错误的role_name InvalidRole")
+    with patch("agents_hub.api.services.group_chat_service.RoleManager") as MockRM:
+        MockRM.return_value.list_role_names.return_value = ["Leader"]
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
             await service.create_group_chat(["InvalidRole"], "/path/to/project")
@@ -81,9 +81,11 @@ async def test_create_group_chat_start_fails_raises_state_error(service, mock_gr
     mock_group_chat = Mock()
     mock_group_chat.start = AsyncMock(side_effect=Exception("启动失败"))
 
-    with patch("agents_hub.api.services.group_chat_service.Team"), \
+    with patch("agents_hub.api.services.group_chat_service.RoleManager") as MockRM, \
          patch("agents_hub.api.services.group_chat_service.GroupChat", return_value=mock_group_chat), \
          patch("agents_hub.api.services.group_chat_service.uuid4", return_value="gc_test"):
+
+        MockRM.return_value.list_role_names.return_value = ["Leader"]
 
         with pytest.raises(StateError) as exc_info:
             await service.create_group_chat(["Leader"], "/path/to/project")

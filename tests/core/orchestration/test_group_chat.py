@@ -6,7 +6,6 @@ import pytest
 
 from agents_hub.core.foundation import GroupChatType
 from agents_hub.core.orchestration import GroupChat
-from agents_hub.core.orchestration.team import Team
 from agents_hub.utils.logger import setup_logging
 
 
@@ -19,16 +18,10 @@ def temp_project_path(tmp_path):
 
 
 @pytest.fixture
-def team():
-    """创建测试 team"""
-    return Team(team_members_name=["小王", "小李"])
-
-
-@pytest.fixture
-def group_chat(team, temp_project_path):
+def group_chat(temp_project_path):
     """创建测试 GroupChat"""
     return GroupChat(
-        team=team,
+        team_members_name=["小王", "小李"],
         group_type=GroupChatType.SEQUENCE_EXECUTE,
         project_path=temp_project_path,
         group_chat_id="test_chat_001",
@@ -86,11 +79,8 @@ class TestGroupChatTokenLifecycle:
         await group_chat.cleanup()
 
         # 创建新的 GroupChat 实例并 load
-        from agents_hub.core.orchestration.team import Team
-
-        new_team = Team(team_members_name=["小王", "小李"])
         new_group_chat = GroupChat(
-            team=new_team,
+            team_members_name=["小王", "小李"],
             group_type=GroupChatType.SEQUENCE_EXECUTE,
             project_path=temp_project_path,
             group_chat_id="test_chat_001",

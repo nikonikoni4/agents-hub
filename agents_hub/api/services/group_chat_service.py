@@ -1,7 +1,7 @@
 """
 GroupChatService 业务编排层
 
-协调 GroupChatManager、Team、RoleManager，提供群聊生命周期管理和查询接口。
+协调 GroupChatManager、RoleManager，提供群聊生命周期管理和查询接口。
 
 职责边界：
 - 本层负责 参数校验 → 组装领域对象 → 调用核心层 → 转换为 API Schema 返回
@@ -29,13 +29,14 @@ from agents_hub.core.foundation import (
     group_chat_paths,
 )
 from agents_hub.core.foundation.exceptions import DockerNotAvailableError
-from agents_hub.core.orchestration import GroupChat, GroupChatManager, Team
+from agents_hub.core.orchestration import GroupChat, GroupChatManager
 from agents_hub.exceptions import (
     ExternalServiceError,
     ResourceNotFoundError,
     StateError,
     ValidationError,
 )
+from agents_hub.roles import RoleManager
 
 
 class GroupChatService:
@@ -88,21 +89,25 @@ class GroupChatService:
                 details={"team_members": team_members},
             )
 
-        # 2. 创建 Team 对象（验证 roles 存在）
-        try:
-            team = Team(team_members_name=team_members, team_name="default_team")
-        except ValueError as e:
+        # 2. 验证 roles 存在
+        role_manager = RoleManager()
+        available_roles = role_manager.list_role_names()
+        invalid_members = [m for m in team_members if m not in available_roles]
+        if invalid_members:
             raise ResourceNotFoundError(
-                str(e),
-                details={"team_members": team_members},
-            ) from e
+                f"无效的团队成员: {', '.join(invalid_members)}",
+                details={
+                    "invalid_members": invalid_members,
+                    "available_roles": available_roles,
+                },
+            )
 
         # 3. 生成 group_chat_id
         group_chat_id = str(uuid4())
 
         # 4. 创建 GroupChat 实例
         group_chat = GroupChat(
-            team=team,
+            team_members_name=team_members,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path=project_path,
             group_chat_id=group_chat_id,
@@ -149,7 +154,7 @@ class GroupChatService:
                 details={"group_chat_id": group_chat_id},
             ) from e
         except ValueError as e:
-            # Team 验证失败（role 已被删除）
+            # role 验证失败（role 已被删除）
             raise ResourceNotFoundError(
                 f"群聊加载失败，role 不存在: {e}",
                 details={"group_chat_id": group_chat_id},

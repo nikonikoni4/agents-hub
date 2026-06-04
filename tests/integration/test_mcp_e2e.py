@@ -16,7 +16,6 @@ import pytest
 
 from agents_hub.core.foundation import CallStatus, GroupChatType, MessageType
 from agents_hub.core.orchestration import GroupChat, group_chat_manager
-from agents_hub.core.orchestration.team import Team
 from agents_hub.mcp.server import (
     archive_task_list,
     assign_tasks_to_team,
@@ -40,16 +39,10 @@ def temp_project_path(tmp_path):
 
 
 @pytest.fixture
-def team():
-    """创建测试 team"""
-    return Team(team_members_name=["小王", "小李"])
-
-
-@pytest.fixture
-async def group_chat(team, temp_project_path):
+async def group_chat(temp_project_path):
     """创建并启动测试 GroupChat"""
     chat = GroupChat(
-        team=team,
+        team_members_name=["小王", "小李"],
         group_type=GroupChatType.SEQUENCE_EXECUTE,
         project_path=temp_project_path,
         group_chat_id="test_e2e_chat",

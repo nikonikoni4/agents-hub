@@ -169,15 +169,13 @@ class TestGroupChatMetadataIntegration:
     async def test_group_chat_exposes_runtime_metadata_after_start(self, monkeypatch, tmp_path):
         """测试 GroupChat 在 start 后通过 runtime 暴露 metadata"""
         from agents_hub.core.orchestration import GroupChat
-        from agents_hub.core.orchestration.team import Team
         from agents_hub.utils.logger import setup_logging
 
         # 初始化日志系统
         setup_logging(log_dir=tmp_path / "logs")
 
-        team = Team.model_construct(team_members_name=["Leader"])
         group_chat = GroupChat(
-            team=team,
+            team_members_name=["Leader"],
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path=str(tmp_path),
             group_chat_id="gc_runtime_metadata",

@@ -18,15 +18,7 @@ import pytest
 from agents_hub.core.context import GroupMetadata
 from agents_hub.core.foundation import GroupChatType
 from agents_hub.core.foundation.paths import group_chat_paths
-from agents_hub.core.orchestration import GroupChat, GroupChatManager, Team
-
-
-# 禁用 Team 的角色验证（测试用）
-@pytest.fixture(autouse=True)
-def disable_role_validation():
-    """自动禁用所有测试中的角色验证"""
-    with patch("agents_hub.core.orchestration.team.Team.validate_team_members", lambda cls, v: v):
-        yield
+from agents_hub.core.orchestration import GroupChat, GroupChatManager
 
 
 @pytest.fixture
@@ -44,10 +36,8 @@ def test_base_path(tmp_path):
 
 @pytest.fixture
 def sample_team():
-    """创建测试用的 Team（使用实际存在的角色）"""
-    # 使用实际存在的角色（避免 RoleNotFoundError）
-    # Leader 和 bare_claude 是已知存在的角色
-    return Team.model_construct(team_members_name=["Leader", "bare_claude"])
+    """创建测试用的成员列表"""
+    return ["Leader", "bare_claude"]
 
 
 @pytest.fixture
@@ -159,7 +149,7 @@ class TestListAllGroupChats:
 
         # 注册群聊后：激活
         mock_group_chat = GroupChat(
-            team=sample_team,
+            team_members_name=sample_team,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path="/test/project",
             group_chat_id=group_chat_id,
@@ -280,9 +270,8 @@ class TestLoadGroupChatFromDisk:
         with open(agent_member_file, "w", encoding="utf-8") as f:
             json.dump(session_state, f)
 
-        # 2. 从磁盘加载（需要 mock Team 构造和 GroupChat.load 以绕过角色验证）
+        # 2. 从磁盘加载（mock GroupChat.load 以绕过角色验证）
         with (
-            patch("agents_hub.core.orchestration.group_chat_manager.Team", return_value=sample_team),
             patch.object(GroupChat, "load"),
             patch.object(GroupChat, "activate"),
         ):
@@ -341,7 +330,7 @@ class TestCreateGroupChat:
         project_path = str(tmp_path / "project")
 
         group_chat = await group_chat_manager.create_group_chat(
-            team=sample_team,
+            team_members_name=sample_team,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path=project_path,
         )
@@ -364,7 +353,7 @@ class TestCreateGroupChat:
         custom_id = "my-custom-gc-id"
 
         group_chat = await group_chat_manager.create_group_chat(
-            team=sample_team,
+            team_members_name=sample_team,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path=project_path,
             group_chat_id=custom_id,
@@ -389,7 +378,7 @@ class TestCreateGroupChat:
         custom_name = "我的开发团队"
 
         group_chat = await group_chat_manager.create_group_chat(
-            team=sample_team,
+            team_members_name=sample_team,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path=project_path,
             group_chat_name=custom_name,
@@ -415,7 +404,7 @@ class TestCreateGroupChat:
         custom_name = "测试群聊"
 
         group_chat = await group_chat_manager.create_group_chat(
-            team=sample_team,
+            team_members_name=sample_team,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path=project_path,
             group_chat_name=custom_name,
@@ -451,7 +440,7 @@ class TestIntegration:
 
         # 1. 创建群聊
         group_chat = await group_chat_manager.create_group_chat(
-            team=sample_team,
+            team_members_name=sample_team,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
             project_path=project_path,
             group_chat_name=custom_name,

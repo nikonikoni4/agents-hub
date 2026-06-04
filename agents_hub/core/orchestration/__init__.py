@@ -6,10 +6,8 @@ Orchestration layer - 编排层
 
 from .group_chat import GroupChat
 from .group_chat_manager import GroupChatManager, call_agent, group_chat_manager
-from .team import Team
 
 __all__ = [
-    "Team",
     "GroupChat",
     "GroupChatManager",
     "group_chat_manager",

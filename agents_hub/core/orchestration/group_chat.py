@@ -19,8 +19,6 @@ from agents_hub.core.foundation import GroupChatType, StateError
 from agents_hub.core.foundation.token import generate_token
 from agents_hub.roles import RoleManager
 
-from .team import Team
-
 
 class GroupChat:
     """
@@ -39,7 +37,7 @@ class GroupChat:
 
     def __init__(
         self,
-        team: Team,
+        team_members_name: list[str],
         group_type: GroupChatType,
         project_path: str,
         group_chat_id: str = str(uuid4()),
@@ -47,7 +45,7 @@ class GroupChat:
     ):
         self.group_chat_id = group_chat_id
         self.group_chat_name = group_chat_name or group_chat_id
-        self.team_members_name = team.team_members_name
+        self.team_members_name = team_members_name
         self.group_type = group_type
         self.workers: dict[str, Worker] = {}
         self.manager: Manager | None = None
