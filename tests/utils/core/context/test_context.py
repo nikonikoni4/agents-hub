@@ -51,7 +51,7 @@ class TestAgentMemberInfo:
     def test_defaults(self):
         """契约：默认值正确"""
         info = AgentMemberInfo()
-        assert info.main_session == ""
+        assert info.main_session is None
         assert info.btw_session == []
         assert isinstance(info.context_state, AgentContextState)
 
@@ -242,25 +242,32 @@ class TestGroupChatContextClose:
         """契约：close() 清空 group_chat_session 和 agent_member_info"""
         with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
             ctx = GroupChatContext.__new__(GroupChatContext)
-            ctx.group_chat_session = GroupChatSession(group_chat_id="gc1")
-            ctx.agent_member_info = {"a": AgentMemberInfo()}
-            ctx.repository = MagicMock()
+            # 通过 runtime 设置
+            runtime = MagicMock()
+            runtime.state = MagicMock()
+            runtime.state.group_chat_session = GroupChatSession(group_chat_id="gc1")
+            runtime.state.agent_member_infos = {"a": AgentMemberInfo()}
+            ctx.runtime = runtime
 
             ctx.close()
 
-            assert ctx.group_chat_session is None
-            assert ctx.agent_member_info == {}
+            # close() 会调用 runtime.close()
+            runtime.close.assert_called_once()
 
     def test_close_idempotent(self):
         """契约：close() 可多次调用不报错"""
         with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
             ctx = GroupChatContext.__new__(GroupChatContext)
-            ctx.group_chat_session = GroupChatSession(group_chat_id="gc1")
-            ctx.agent_member_info = {"a": AgentMemberInfo()}
-            ctx.repository = MagicMock()
+            # 通过 runtime 设置
+            runtime = MagicMock()
+            runtime.state = MagicMock()
+            runtime.state.group_chat_session = GroupChatSession(group_chat_id="gc1")
+            runtime.state.agent_member_infos = {"a": AgentMemberInfo()}
+            ctx.runtime = runtime
 
             ctx.close()
             ctx.close()  # 第二次不应报错
+            assert runtime.close.call_count == 2
 
 
 class TestGroupChatContextAddMessage:
@@ -271,9 +278,14 @@ class TestGroupChatContextAddMessage:
         """契约：未 load 时 add_message 抛 StateError"""
         with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
             ctx = GroupChatContext.__new__(GroupChatContext)
-            ctx.group_chat_session = None
-            ctx.agent_member_info = {}
-            ctx.repository = MagicMock()
+            # 通过 runtime 设置
+            runtime = MagicMock()
+            runtime.state = MagicMock()
+            runtime.state.group_chat_session = None
+            runtime.state.agent_member_infos = {}
+            # 让 runtime.add_message 抛出 StateError
+            runtime.add_message = AsyncMock(side_effect=StateError("GroupChatSession 未加载"))
+            ctx.runtime = runtime
 
             with pytest.raises(StateError):
                 await ctx.add_message(SimpleNamespace(agent_name="a", text="hi"))
@@ -368,7 +380,11 @@ class TestGetFilteredMessages:
         session = GroupChatSession(group_chat_id="gc1")
         session.messages = messages
         group_ctx = GroupChatContext.__new__(GroupChatContext)
-        group_ctx.group_chat_session = session
+        # 通过 runtime.state 设置 group_chat_session
+        runtime = MagicMock()
+        runtime.state = MagicMock()
+        runtime.state.group_chat_session = session
+        group_ctx.runtime = runtime
         ctx.group_chat_context = group_ctx
         return ctx
 

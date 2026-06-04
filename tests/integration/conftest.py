@@ -50,7 +50,7 @@ def _mock_team_validation():
 
     mock_role_manager.get_role.side_effect = _get_role
 
-    def _execute_side_effect(prompt, config=None, session_id=None, cwd=None):
+    def _execute_side_effect(prompt, config=None, session_id=None, cwd=None, use_docker=False, group_chat_id=None):
         return _make_mock_agent_result(
             agent_name=session_id or "unknown",
             session_id=session_id or "mock_session",
