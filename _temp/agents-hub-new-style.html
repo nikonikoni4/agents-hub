@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agents Hub - New Style</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* 浅色主题 */
+      --bg-sidebar: rgb(246, 246, 246);
+      --bg-shadow: rgb(234, 234, 234);
+      --bg-main: rgb(255, 255, 255);
+      --bg-bubble: rgb(246, 246, 246);
+      --bg-right-base: rgb(255, 255, 255);
+      --bg-right-module: rgb(246, 246, 246);
+      --bg-right-shadow: rgb(233, 234, 234);
+      --bg-input: rgb(255, 255, 255);
+
+      --text-primary: rgb(30, 30, 30);
+      --text-secondary: rgb(100, 100, 100);
+      --text-tertiary: rgb(150, 150, 150);
+      --border-color: rgb(220, 220, 220);
+      --accent-color: rgb(74, 158, 255);
+    }
+
+    html[data-theme="dark"] {
+      /* 深色主题 */
+      --bg-sidebar: rgb(20, 20, 20);
+      --bg-shadow: rgb(38, 38, 38);
+      --bg-main: rgb(24, 24, 24);
+      --bg-bubble: rgb(20, 20, 20);
+      --bg-right-base: rgb(24, 24, 24);
+      --bg-right-module: rgb(20, 20, 20);
+      --bg-right-shadow: rgb(36, 36, 36);
+      --bg-input: rgb(45, 45, 45);
+
+      --text-primary: rgb(230, 230, 230);
+      --text-secondary: rgb(180, 180, 180);
+      --text-tertiary: rgb(120, 120, 120);
+      --border-color: rgb(60, 60, 60);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-sidebar);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ========== 顶部栏 ========== */
+    .top-bar {
+      height: 40px;
+      background: var(--bg-sidebar);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 16px;
+      -webkit-app-region: drag;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .top-bar-btn {
+      width: 32px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: background 0.15s;
+      -webkit-app-region: no-drag;
+    }
+
+    .top-bar-btn:hover {
+      background: var(--bg-shadow);
+    }
+
+    .top-bar-menu {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .top-bar-menu span {
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+
+    .top-bar-menu span:hover {
+      background: var(--bg-shadow);
+    }
+
+    /* ========== 主内容区 ========== */
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      padding: 8px 0;
+      background: var(--bg-sidebar);
+    }
+
+    /* ========== 左侧栏 ========== */
+    .left-sidebar {
+      width: 280px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s, margin-left 0.3s;
+    }
+
+    .left-sidebar.collapsed {
+      width: 0;
+      margin-left: -280px;
+    }
+
+    /* 按钮区 */
+    .sidebar-buttons {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .sidebar-btn:hover {
+      background: var(--bg-shadow);
+    }
+
+    .sidebar-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* 项目区 */
+    .sidebar-projects {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      padding: 8px 12px 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .project-item {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-bottom: 2px;
+    }
+
+    .project-item:hover {
+      background: var(--bg-shadow);
+    }
+
+    .project-name {
+      color: var(--text-primary);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chat-item {
+      padding: 6px 12px 6px 24px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 6px;
+      margin-bottom: 1px;
+      transition: background 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-item:hover {
+      background: var(--bg-shadow);
+    }
+
+    .chat-time {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-left: auto;
+    }
+
+    /* 对话区域 */
+    .sidebar-chats {
+      border-top: 1px solid var(--border-color);
+      padding: 8px;
+    }
+
+    .chat-list-item {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .chat-list-item:hover {
+      background: var(--bg-shadow);
+    }
+
+    /* 设置按钮 */
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* ========== 主对话区 ========== */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-main);
+      overflow: hidden;
+      border-radius: 12px 0 0 12px;
+    }
+
+    .chat-header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+
+    .chat-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .chat-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .message {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .message-bubble {
+      background: var(--bg-bubble);
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 80%;
+    }
+
+    .chat-input-container {
+      padding: 16px 24px;
+    }
+
+    .chat-input-wrapper {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    .chat-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    /* ========== 右侧栏 ========== */
+    .right-sidebar {
+      width: 320px;
+      background: var(--bg-right-base);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s, margin-right 0.3s;
+      overflow-y: auto;
+    }
+
+    .right-sidebar.collapsed {
+      width: 0;
+      margin-right: -320px;
+    }
+
+    .right-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .right-module {
+      margin: 12px;
+      padding: 16px;
+      background: var(--bg-right-module);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px var(--bg-right-shadow);
+    }
+
+    .module-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .module-item {
+      padding: 8px 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ========== 主题切换按钮 ========== */
+    .theme-toggle {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 40px;
+      height: 40px;
+      background: var(--accent-color);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+      z-index: 1000;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.05);
+    }
+
+    .theme-toggle svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* ========== 通用按钮样式 ========== */
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: background 0.15s;
+      border: none;
+      background: transparent;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-shadow);
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 顶部栏 -->
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <button class="top-bar-btn" id="toggleLeft" title="切换左侧栏">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="18" rx="1"/>
+            <rect x="14" y="3" width="7" height="18" rx="1"/>
+          </svg>
+        </button>
+        <button class="top-bar-btn" title="后退">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <button class="top-bar-btn" title="前进">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+        <button class="top-bar-btn" title="搜索">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-container">
+      <!-- 左侧栏 -->
+      <div class="left-sidebar" id="leftSidebar">
+        <!-- 按钮区 -->
+        <div class="sidebar-buttons">
+          <div class="sidebar-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14m7-7H5"/></svg>
+            <span>新对话</span>
+          </div>
+          <div class="sidebar-btn">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>角色管理</span>
+          </div>
+          <div class="sidebar-btn">
+            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>技能广场</span>
+          </div>
+        </div>
+
+        <!-- 项目区 -->
+        <div class="sidebar-projects">
+          <div class="section-title">项目</div>
+          <div class="project-item">
+            <div class="project-name">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              feat_group_chat_service
+            </div>
+          </div>
+          <div class="chat-item" style="display:flex;justify-content:space-between">
+            <span>测试连接</span>
+            <span class="chat-time">58 分</span>
+          </div>
+          <div class="chat-item">我现在在准备开始实现docs...</div>
+
+          <div class="project-item">
+            <div class="project-name">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              agents-hub
+            </div>
+          </div>
+          <div class="chat-item">当前存在一个问题，docker...</div>
+          <div class="chat-item">$superpowers:brainstorming...</div>
+        </div>
+
+        <!-- 对话区域 -->
+        <div class="sidebar-chats">
+          <div class="section-title">对话</div>
+          <div class="chat-list-item">暂无聊天</div>
+        </div>
+
+        <!-- 设置按钮 -->
+        <div class="sidebar-footer">
+          <div class="sidebar-btn">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/></svg>
+            <span>设置</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 主对话区 -->
+      <div class="chat-area">
+        <!-- 对话头部 -->
+        <div class="chat-header">
+          <div class="chat-title">测试连接</div>
+          <div class="chat-actions">
+            <button class="icon-btn">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            </button>
+            <button class="icon-btn">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14m7-7H5"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 消息区域 -->
+        <div class="chat-messages">
+          <div class="message">
+            <div class="message-bubble">
+              <p>在的，连接正常。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 输入区 -->
+        <div class="chat-input-container">
+          <div class="chat-input-wrapper">
+            <button class="icon-btn">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14m7-7H5"/></svg>
+            </button>
+            <input type="text" class="chat-input" placeholder="要求后续变更">
+            <button class="icon-btn">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            </button>
+            <div style="font-size:12px;color:var(--text-tertiary)">5.5</div>
+            <button class="icon-btn">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧栏 -->
+      <div class="right-sidebar" id="rightSidebar">
+        <div class="right-header">
+          <button class="icon-btn" id="toggleRight" title="收起右侧栏">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="14" y="3" width="7" height="18" rx="1"/>
+              <path d="M9 3v18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="right-module">
+          <div class="module-title">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            成员列表
+          </div>
+          <div class="module-item">暂无成员</div>
+        </div>
+
+        <div class="right-module">
+          <div class="module-title">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            预览
+          </div>
+          <div class="module-item">无预览内容</div>
+        </div>
+
+        <div class="right-module">
+          <div class="module-title">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px">
+              <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+            </svg>
+            Diff
+          </div>
+          <div class="module-item">无代码差异</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主题切换按钮 -->
+  <button class="theme-toggle" id="themeToggle" title="切换主题">
+    <svg viewBox="0 0 24 24" id="themeIcon">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  </button>
+
+  <script>
+    // 主题切换
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+
+    // 初始化主题
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    html.setAttribute('data-theme', savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+
+    // 左侧栏切换
+    const toggleLeft = document.getElementById('toggleLeft');
+    const leftSidebar = document.getElementById('leftSidebar');
+
+    toggleLeft.addEventListener('click', () => {
+      leftSidebar.classList.toggle('collapsed');
+    });
+
+    // 右侧栏切换
+    const toggleRight = document.getElementById('toggleRight');
+    const rightSidebar = document.getElementById('rightSidebar');
+
+    toggleRight.addEventListener('click', () => {
+      rightSidebar.classList.toggle('collapsed');
+    });
+  </script>
+</body>
+</html>
