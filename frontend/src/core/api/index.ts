@@ -31,9 +31,4 @@ export {
 } from './roleApi';
 
 // Skill 管理 API
-export {
-  listSkills,
-  getSkill,
-  deleteSkill,
-  addSkill,
-} from './skillApi';
+export { listSkills, getSkill, deleteSkill, addSkill } from './skillApi';

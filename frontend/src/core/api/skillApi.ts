@@ -47,10 +47,7 @@ const MOCK_SKILL: Skill = {
  * console.log(skills); // [{ name: 'code-review', description: '...' }]
  */
 export async function listSkills(): Promise<Skill[]> {
-  return mockableRequest(
-    () => apiClient.get<Skill[]>('/skills'),
-    MOCK_SKILLS
-  );
+  return mockableRequest(() => apiClient.get<Skill[]>('/skills'), MOCK_SKILLS);
 }
 
 /**
@@ -68,10 +65,7 @@ export async function listSkills(): Promise<Skill[]> {
  * console.log(skill); // { name: 'code-review', description: '...' }
  */
 export async function getSkill(skillName: string): Promise<Skill> {
-  return mockableRequest(
-    () => apiClient.get<Skill>(`/skills/${skillName}`),
-    MOCK_SKILL
-  );
+  return mockableRequest(() => apiClient.get<Skill>(`/skills/${skillName}`), MOCK_SKILL);
 }
 
 /**
@@ -89,10 +83,9 @@ export async function getSkill(skillName: string): Promise<Skill> {
  * console.log(result); // { message: "Skill 'code-review' 删除成功" }
  */
 export async function deleteSkill(skillName: string): Promise<{ message: string }> {
-  return mockableRequest(
-    () => apiClient.delete<{ message: string }>(`/skills/${skillName}`),
-    { message: `Skill '${skillName}' 删除成功` }
-  );
+  return mockableRequest(() => apiClient.delete<{ message: string }>(`/skills/${skillName}`), {
+    message: `Skill '${skillName}' 删除成功`,
+  });
 }
 
 /**
@@ -110,11 +103,8 @@ export async function deleteSkill(skillName: string): Promise<{ message: string 
  * console.log(skill); // { name: 'new-skill', description: '...' }
  */
 export async function addSkill(data: CreateSkillRequest): Promise<Skill> {
-  return mockableRequest(
-    () => apiClient.post<Skill>('/skills', data),
-    {
-      name: 'new-skill',
-      description: '新添加的 skill（Mock 数据）',
-    }
-  );
+  return mockableRequest(() => apiClient.post<Skill>('/skills', data), {
+    name: 'new-skill',
+    description: '新添加的 skill（Mock 数据）',
+  });
 }

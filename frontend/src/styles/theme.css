@@ -1,0 +1,48 @@
+:root {
+  /* 浅色主题 */
+  --bg-sidebar: rgb(246, 246, 246);
+  --bg-shadow: rgb(234, 234, 234);
+  --bg-main: rgb(255, 255, 255);
+  --bg-bubble: rgb(246, 246, 246);
+  --bg-right-base: rgb(255, 255, 255);
+  --bg-right-module: rgb(246, 246, 246);
+  --bg-right-shadow: rgb(233, 234, 234);
+  --bg-input: rgb(255, 255, 255);
+
+  --text-primary: rgb(30, 30, 30);
+  --text-secondary: rgb(100, 100, 100);
+  --text-tertiary: rgb(150, 150, 150);
+  --border-color: rgb(220, 220, 220);
+  --accent-color: rgb(74, 158, 255);
+
+  /* 圆角系统 */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+
+  /* 间距系统 (4px 倍数) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+}
+
+html[data-theme='dark'] {
+  /* 深色主题 */
+  --bg-sidebar: rgb(20, 20, 20);
+  --bg-shadow: rgb(38, 38, 38);
+  --bg-main: rgb(24, 24, 24);
+  --bg-bubble: rgb(20, 20, 20);
+  --bg-right-base: rgb(24, 24, 24);
+  --bg-right-module: rgb(20, 20, 20);
+  --bg-right-shadow: rgb(36, 36, 36);
+  --bg-input: rgb(45, 45, 45);
+
+  --text-primary: rgb(230, 230, 230);
+  --text-secondary: rgb(180, 180, 180);
+  --text-tertiary: rgb(120, 120, 120);
+  --border-color: rgb(60, 60, 60);
+}
