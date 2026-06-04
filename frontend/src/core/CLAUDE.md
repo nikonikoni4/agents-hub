@@ -87,6 +87,46 @@ export function getUser(id) {
 
 ### 3. Mock 数据规范
 
+#### Mock 启动方式
+- ✅ **统一** 通过环境变量 `VITE_USE_MOCK=true` 控制 mock 模式
+- ✅ **统一** 使用 `mockableRequest` 函数切换 mock/真实 API
+- ❌ **禁止** 在 hooks 或组件中硬编码 mock 数据
+
+**正确做法**：
+```typescript
+// ✅ 正确：在 API 文件中使用 mockableRequest
+export async function listRoles(): Promise<Role[]> {
+  return mockableRequest(
+    () => apiClient.get<Role[]>('/roles'),
+    MOCK_ROLES
+  );
+}
+```
+
+**错误示例**：
+```typescript
+// ❌ 错误：在 hook 中硬编码 mock 数据
+export function useRoles() {
+  useEffect(() => {
+    // 直接使用写死的数据，不调用 API
+    setRoles(MOCK_ROLES);
+  }, []);
+}
+```
+
+**原因**：
+- 统一 mock 方式便于切换开发/生产环境
+- 环境变量控制避免代码修改
+- mock 数据集中在 API 层，便于维护
+
+**配置方式**：
+```bash
+# .env.development
+VITE_USE_MOCK=true
+```
+
+---
+
 #### mockableRequest 调用风格
 - ❌ **禁止** 使用 `async/await` 嵌套访问 `response.data`
 - ✅ 直接传递 apiClient 调用
