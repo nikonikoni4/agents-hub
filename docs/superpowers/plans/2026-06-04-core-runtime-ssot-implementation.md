@@ -1,8 +1,8 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-04
 updated_at: 2026-06-04
-last_updated: 创建 core runtime 内存 SSOT implementation plan
+last_updated: 修复审查发现的问题：补充测试覆盖、明确实现细节、优化任务顺序
 abstract: core runtime 内存 SSOT 重构实施计划，定义 Runtime/State 的完整函数签名、当前 service 所需 query/command 接口、持久化内容矩阵和分步测试迁移任务。
 title: Core Runtime SSOT Implementation Plan
 status: active
@@ -21,12 +21,6 @@ related_spec: docs/superpowers/specs/2026-06-04-core-runtime-ssot-design.md
 
 ---
 
-## 版本
-
-| 版本 | 更新内容 |
-| ---- | -------- |
-| 1.0 | 创建 core runtime 内存 SSOT 重构实施计划 |
-
 ## Current Service Interface Requirements
 
 `agents_hub/api/services/group_chat_service.py` currently needs these core capabilities:
@@ -40,7 +34,7 @@ related_spec: docs/superpowers/specs/2026-06-04-core-runtime-ssot-design.md
 | `get_group_chat_info()` | read active runtime metadata | query | info dict |
 | `get_group_chat_members()` | read member session state | query | `name`, `main_session`, `btw_session`, `cwd`, `use_docker` |
 | `get_messages()` | read group messages | query | `speaker`, `content`, `timestamp`, `platform` |
-| `send_message()` | validate members, create call, route message | command through existing managers | no return |
+| `send_message()` | validate members, create call, route message | command through existing managers | no return (delegates to MessageRouter) |
 | `toggle_use_docker()` | validate member and Docker, update session state | command | member dict |
 
 Core query dicts for this plan are stable only across `core -> api service`. They are not API response schemas.
@@ -85,7 +79,7 @@ All runtime writes must update memory first and synchronously persist the durabl
 | `set_agent_use_docker()` | `state.agent_sessions[agent_name].use_docker` | `agent_session_state.json` |
 | `append_compact_record_and_mark_compacted()` | `state.compact_history`, `state.group_chat_session.last_compacted_loc` | `memory/compact_history.jsonl`, `<group_chat_id>.jsonl` |
 
-On persistence failure, set `state.persistence_error` to a non-empty string and re-raise the original exception. Do not silently continue.
+**Degraded State Handling:** On persistence failure, set `state.persistence_error` to a non-empty string and re-raise the original exception. Do not silently continue. The persistence error flag is checked by guard validations in runtime commands to prevent cascading failures.
 
 ## File Structure
 
@@ -106,7 +100,7 @@ Modify:
 - `agents_hub/api/services/group_chat_service.py`: replace `context.repository` and raw file reads with runtime query/command.
 - Existing tests under `tests/api/services/`, `tests/core/context/`, and `tests/core/orchestration/`: update mocks and assertions to the new runtime API.
 
-Do not move `GroupChatRepository` in this plan. It stays in `core/context` as the file persistence adapter.
+Do not move `GroupChatRepository` in this plan. It stays in `core/context` as the file persistence adapter (Repository is the term consistently used throughout this codebase).
 
 ## Runtime API To Implement
 
@@ -198,7 +192,13 @@ class GroupChatRuntime:
         """Return core external member dicts from memory state."""
 
     def get_message_dicts(self, limit: int = 50, offset: int = 0) -> list[dict[str, str]]:
-        """Return message dicts from memory state."""
+        """Return message dicts from memory state.
+        
+        Implementation:
+        1. Get messages from state.require_session().messages
+        2. Apply pagination: messages[offset:offset+limit]
+        3. Map fields: agent_name -> speaker
+        """
 
     def get_agent_names(self) -> list[str]:
         """Return names present in agent session state."""
@@ -270,8 +270,8 @@ Complex method steps:
 
 - `update_agent_session_from_result()`
   1. Read `agent_result.agent_name` and `agent_result.session_id`.
-  2. Create `AgentSessionInfo(main_session=session_id, btw_session=[])` if absent.
-  3. If existing `main_session` is empty, set it.
+  2. Get or create `AgentSessionInfo` if absent: `get_or_create_agent_session(agent_name)`.
+  3. If existing `main_session` is empty, set it to `session_id`.
   4. If `session_id` differs from `main_session` and is not in `btw_session`, append it.
   5. Persist all agent sessions with `save_agent_sessions()`.
   6. Return the updated `AgentSessionInfo`.
@@ -288,6 +288,7 @@ Complex method steps:
 **Files:**
 - Create: `agents_hub/core/context/group_chat_runtime_state.py`
 - Create: `agents_hub/core/context/group_chat_runtime.py`
+- Create: `tests/core/context/conftest.py` (shared test fixtures)
 - Modify: `agents_hub/core/context/__init__.py`
 - Test: `tests/core/context/test_group_chat_runtime.py`
 
@@ -334,6 +335,77 @@ def test_runtime_state_requires_metadata():
     state.metadata = metadata
 
     assert state.require_metadata() is metadata
+```
+
+- [ ] **Step 1.5: Extract FakeRepository to shared test fixture**
+
+Create `tests/core/context/conftest.py` with the `FakeRepository` class that will be used across multiple test files:
+
+```python
+from datetime import datetime
+
+from agents_hub.core.context.group_chat_session import AgentSessionInfo, GroupChatSession
+from agents_hub.core.context.group_metadata import GroupMetadata
+
+
+class FakeRepository:
+    def __init__(self):
+        self.group_chat_id = "gc_1"
+        self.project_path = "/tmp/project"
+        self.saved_metadata = None
+        self.saved_sessions = None
+        self.saved_group_session = None
+        self.saved_compact_history = None
+        self.closed = False
+
+    async def load_group_chat_session(self):
+        session = GroupChatSession(group_chat_id="gc_1")
+        session.messages = [
+            {
+                "agent_name": "Worker1",
+                "content": "hello",
+                "timestamp": "2026-06-04T10:00:00",
+                "platform": "claude",
+            }
+        ]
+        return session
+
+    async def load_agent_session_state(self):
+        return {
+            "Worker1": AgentSessionInfo(
+                main_session="s1",
+                btw_session=["b1"],
+                cwd="/tmp/project/w1",
+                use_docker=True,
+            )
+        }
+
+    async def load_compact_history(self):
+        return [{"content": {"summary": "old"}}]
+
+    async def load_group_metadata(self):
+        return GroupMetadata(
+            group_chat_id="gc_1",
+            group_chat_name="Test",
+            project_path="/tmp/project",
+            created_at=datetime(2026, 6, 4, 10, 0, 0),
+            group_type="manager_orchestrate",
+        )
+
+    async def save_group_metadata(self, metadata):
+        self.saved_metadata = metadata
+
+    async def save_agent_session_state(self, state):
+        self.saved_sessions = state
+
+    async def save_group_chat_session(self, session):
+        self.saved_group_session = session
+
+    async def save_compact_history(self, history):
+        self.saved_compact_history = history
+
+    def close(self):
+        self.closed = True
 ```
 
 - [ ] **Step 2: Run tests and verify failure**
@@ -395,72 +467,16 @@ git commit -m "feat: add group chat runtime state"
 
 - [ ] **Step 1: Add failing tests for load and query dicts**
 
-Append:
+Import `FakeRepository` from conftest:
 
 ```python
+from datetime import datetime
+
+from tests.core.context.conftest import FakeRepository
+
 from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 from agents_hub.core.context.group_chat_session import AgentSessionInfo
 from agents_hub.core.foundation import GroupChatType
-
-
-class FakeRepository:
-    def __init__(self):
-        self.group_chat_id = "gc_1"
-        self.project_path = "/tmp/project"
-        self.saved_metadata = None
-        self.saved_sessions = None
-        self.saved_group_session = None
-        self.saved_compact_history = None
-        self.closed = False
-
-    async def load_group_chat_session(self):
-        session = GroupChatSession(group_chat_id="gc_1")
-        session.messages = [
-            {
-                "agent_name": "Worker1",
-                "content": "hello",
-                "timestamp": "2026-06-04T10:00:00",
-                "platform": "claude",
-            }
-        ]
-        return session
-
-    async def load_agent_session_state(self):
-        return {
-            "Worker1": AgentSessionInfo(
-                main_session="s1",
-                btw_session=["b1"],
-                cwd="/tmp/project/w1",
-                use_docker=True,
-            )
-        }
-
-    async def load_compact_history(self):
-        return [{"content": {"summary": "old"}}]
-
-    async def load_group_metadata(self):
-        return GroupMetadata(
-            group_chat_id="gc_1",
-            group_chat_name="Test",
-            project_path="/tmp/project",
-            created_at=datetime(2026, 6, 4, 10, 0, 0),
-            group_type="manager_orchestrate",
-        )
-
-    async def save_group_metadata(self, metadata):
-        self.saved_metadata = metadata
-
-    async def save_agent_session_state(self, state):
-        self.saved_sessions = state
-
-    async def save_group_chat_session(self, session):
-        self.saved_group_session = session
-
-    async def save_compact_history(self, history):
-        self.saved_compact_history = history
-
-    def close(self):
-        self.closed = True
 
 
 async def test_runtime_loads_files_into_memory_and_queries_dicts():
@@ -501,13 +517,53 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
             "platform": "claude",
         }
     ]
+
+
+async def test_get_or_create_agent_session_returns_existing():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    session_info = runtime.get_or_create_agent_session("Worker1")
+    assert session_info.main_session == "s1"
+
+
+async def test_get_or_create_agent_session_creates_new():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    session_info = runtime.get_or_create_agent_session("Worker2")
+    assert session_info.main_session is None
+    assert session_info.btw_session == []
+
+
+async def test_get_agent_names_returns_all_names():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    names = runtime.get_agent_names()
+    assert names == ["Worker1"]
+
+
+async def test_runtime_close_closes_repository():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+
+    runtime.close()
+
+    assert repository.closed is True
 ```
 
 - [ ] **Step 2: Add failing command tests**
 
-Append:
+Import `FakeRepository` from conftest:
 
 ```python
+from tests.core.context.conftest import FakeRepository
+
+
 class MockAgentResult:
     def __init__(self, agent_name="Worker1", session_id="s1", text="hello"):
         from agents_hub.config.types import AgentPlatform
@@ -556,6 +612,64 @@ async def test_runtime_commands_update_memory_then_persist():
     assert runtime.state.group_chat_session.last_compacted_loc == len(
         runtime.state.group_chat_session.messages
     )
+
+
+async def test_update_agent_session_handles_empty_main_session():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    # Create new agent with no main_session
+    result = MockAgentResult(agent_name="Worker2", session_id="s2")
+    session_info = await runtime.update_agent_session_from_result(result)
+
+    assert session_info.main_session == "s2"
+    assert session_info.btw_session == []
+
+
+async def test_update_agent_session_appends_different_session_to_btw():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    # Worker1 already has main_session="s1"
+    result = MockAgentResult(agent_name="Worker1", session_id="s2")
+    session_info = await runtime.update_agent_session_from_result(result)
+
+    assert session_info.main_session == "s1"
+    assert "s2" in session_info.btw_session
+
+
+async def test_persistence_error_flag_set_on_failure():
+    repository = FakeRepository()
+    
+    # Make save fail
+    async def failing_save(metadata):
+        raise IOError("Disk full")
+    
+    repository.save_group_metadata = failing_save
+    
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    with pytest.raises(IOError):
+        await runtime.initialize_metadata("Test", GroupChatType.MANAGER_ORCHESTRATE)
+    
+    assert runtime.state.persistence_error == "Disk full"
+
+
+async def test_persistence_error_cleared_on_success():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+    
+    # Set error manually
+    runtime.state.persistence_error = "Previous error"
+    
+    # Successful operation should clear it
+    await runtime.initialize_metadata("Test", GroupChatType.MANAGER_ORCHESTRATE)
+    
+    assert runtime.state.persistence_error is None
 ```
 
 - [ ] **Step 3: Run tests and verify failure**
@@ -647,9 +761,11 @@ git commit -m "feat: add group chat runtime facade"
 
 - [ ] **Step 1: Add failing context compatibility test**
 
-Append to `tests/core/context/test_group_chat_runtime.py`:
+Import `FakeRepository` from conftest:
 
 ```python
+from tests.core.context.conftest import FakeRepository
+
 from agents_hub.core.context.group_chat_context import GroupChatContext
 from agents_hub.core.context.agent_context import AgentContext
 
@@ -698,12 +814,20 @@ def group_chat_session(self) -> GroupChatSession | None:
     return self.runtime.state.group_chat_session
 
 @property
+def agent_sessions(self) -> dict[str, AgentSessionInfo]:
+    """Preferred accessor - returns agent sessions from runtime state."""
+    return self.runtime.state.agent_sessions
+
+@property
 def agent_session_id(self) -> dict[str, AgentSessionInfo]:
+    """Backward compatibility alias for agent_sessions."""
     return self.runtime.state.agent_sessions
 
 def get_project_path(self) -> str:
     return self.runtime.get_project_path()
 ```
+
+**Note:** Keep both `agent_sessions` and `agent_session_id` during migration. In Task 8, search for all usages of `agent_session_id` and verify backward compatibility.
 
 Replace `load()`:
 
@@ -902,7 +1026,7 @@ session_info = await self.runtime.set_agent_token_and_default_cwd(
 
 Apply this for manager and each worker.
 
-In `_restore_and_register_tokens()`, use:
+In the lifecycle load path (when restoring from disk), use:
 
 ```python
 session_info = self.runtime.get_agent_session(agent_name)
@@ -914,15 +1038,19 @@ else:
     await self.runtime.set_agent_token_and_default_cwd(agent_name, token)
 ```
 
+**Note:** The term `_restore_and_register_tokens()` refers to the token restoration logic within the `load()` or `start()` method when loading an existing group chat from disk, not a standalone method name.
+
 - [ ] **Step 6: Remove direct repository access in `GroupChat`**
 
 Run:
 
 ```bash
-rg -n "group_chat_context\\.repository|\\.repository" agents_hub/core/orchestration/group_chat.py
+rg -n "group_chat_context\.repository(?!\.)|\.repository\." agents_hub/core/orchestration/group_chat.py
 ```
 
-Expected after edits: no matches.
+Expected after edits: no matches except in comments or when accessing `runtime.repository` for file verification in tests.
+
+**Note:** Improved regex to avoid false positives in comments and strings.
 
 - [ ] **Step 7: Run orchestration tests**
 
@@ -947,6 +1075,16 @@ git commit -m "refactor: wire runtime into group chat lifecycle"
 - Modify: `agents_hub/core/agent/base_agent.py`
 - Test: `tests/core/agent/test_agent_runtime_injection.py`
 - Test: `tests/utils/core/agent/test_agent_docker_config.py`
+
+- [ ] **Step 0: Search for all repository.project_path accesses**
+
+Run:
+
+```bash
+rg -n "repository\.project_path" agents_hub/core/agent/
+```
+
+List all locations that need to be updated to use `context.get_project_path()` instead.
 
 - [ ] **Step 1: Add or update Docker validation test**
 
@@ -1082,7 +1220,7 @@ git commit -m "refactor: expose group chat runtime info through manager"
 - Test: `tests/api/services/test_group_chat_service.py`
 - Test: `tests/api/services/test_toggle_use_docker.py`
 
-- [ ] **Step 1: Update service helper signatures**
+- [ ] **Step 2: Update service helper signatures**
 
 Replace `_build_group_chat_info_from_instance()` body with:
 
@@ -1092,7 +1230,7 @@ async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> G
     return GroupChatInfo(**info)
 ```
 
-- [ ] **Step 2: Replace `get_group_chat_info()`**
+- [ ] **Step 3: Replace `get_group_chat_info()`**
 
 Use:
 
@@ -1104,7 +1242,7 @@ info = group_chat.runtime.get_info_dict(
 return GroupChatInfo(**info)
 ```
 
-- [ ] **Step 3: Replace `get_group_chat_members()`**
+- [ ] **Step 4: Replace `get_group_chat_members()`**
 
 Use active runtime state instead of raw `agent_session_state.json` reads:
 
@@ -1122,7 +1260,7 @@ return [GroupChatMember(**member) for member in group_chat.runtime.get_member_di
 
 Remove imports no longer needed: `json`, `GroupMetadata` if unused.
 
-- [ ] **Step 4: Replace `get_messages()`**
+- [ ] **Step 5: Replace `get_messages()`**
 
 Use:
 
@@ -1134,7 +1272,7 @@ return [
 ]
 ```
 
-- [ ] **Step 5: Replace `delete_group_chat()` project path lookup**
+- [ ] **Step 6: Replace `delete_group_chat()` project path lookup**
 
 Use active runtime when present:
 
@@ -1152,7 +1290,19 @@ else:
 
 This task still uses manager internals for `_group_chats` because the current service already does. A later cleanup can add a manager method for delete target lookup.
 
-- [ ] **Step 6: Replace `toggle_use_docker()` session mutation**
+- [ ] **Step 7: Clarify `send_message()` handling**
+
+**Analysis:** The `send_message()` method in `group_chat_service.py` already delegates to `MessageRouter` and `AgentCallManager`, which are lifecycle-managed components. This service method does NOT directly access `context.repository` or perform state mutations beyond routing.
+
+**Action:** Verify that `send_message()` does not contain any direct `context.repository` access by searching:
+
+```bash
+rg -n "repository" agents_hub/api/services/group_chat_service.py
+```
+
+If no repository access exists in `send_message()`, no changes are needed. If found, replace with appropriate runtime query/command.
+
+- [ ] **Step 8: Replace `toggle_use_docker()` session mutation**
 
 After validation and Docker checks:
 
@@ -1167,7 +1317,7 @@ return GroupChatMember(
 )
 ```
 
-- [ ] **Step 7: Update service tests to mock runtime**
+- [ ] **Step 9: Update service tests to mock runtime**
 
 Replace mocks like:
 
@@ -1218,7 +1368,7 @@ mock_group_chat.runtime.set_agent_use_docker = AsyncMock(
 )
 ```
 
-- [ ] **Step 8: Run API service tests**
+- [ ] **Step 10: Run API service tests**
 
 Run:
 
@@ -1228,7 +1378,7 @@ pytest tests/api/services/test_group_chat_service.py tests/api/services/test_tog
 
 Expected: PASS.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add agents_hub/api/services/group_chat_service.py tests/api/services/test_group_chat_service.py tests/api/services/test_toggle_use_docker.py
@@ -1261,12 +1411,22 @@ If matches remain in `agents_hub/api/services`, `agents_hub/core/agent`, or `age
 Run:
 
 ```bash
-pytest tests/core/context tests/core/orchestration tests/core/agent tests/api/services -q
+pytest tests/core/context tests/core/orchestration tests/core/agent -q
 ```
 
 Expected: PASS.
 
-- [ ] **Step 3: Run broader regression**
+- [ ] **Step 3: Run API service layer tests**
+
+Run:
+
+```bash
+pytest tests/api/services/test_group_chat_service.py -q
+```
+
+Expected: PASS.
+
+- [ ] **Step 4: Run broader regression**
 
 Run:
 
@@ -1276,7 +1436,17 @@ pytest tests/core tests/api -q
 
 Expected: PASS. If unrelated failures appear, record exact failing tests and decide whether they are caused by runtime changes before editing.
 
-- [ ] **Step 4: Update docs if implementation changes accepted contracts**
+- [ ] **Step 5: Verify backward compatibility of agent_session_id**
+
+Search for all usages of `context.agent_session_id` and verify they work with the compatibility property:
+
+```bash
+rg -n "\.agent_session_id" agents_hub/ tests/
+```
+
+For each usage, confirm it accesses the dict correctly. If any code expects `agent_session_id` to be a different type, update that code.
+
+- [ ] **Step 6: Update docs if implementation changes accepted contracts**
 
 If final code changes core public behavior beyond this plan, update:
 
@@ -1288,7 +1458,7 @@ docs/specs/2026-05-31-core-agent-orchestration.md
 
 Only update formal specs after reading `docs/docs-rules/spec-write-rules.md`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add agents_hub tests docs
@@ -1311,3 +1481,45 @@ Known scope limits:
 1. `AgentCallManager` and `TaskManager` remain manager-owned state in this plan.
 2. Inactive group catalog scan still reads files because no runtime object exists for inactive groups.
 3. This plan does not introduce WAL, event sourcing, async snapshots, or cross-process runtime synchronization.
+
+## Revision History (v1.1)
+
+Based on comprehensive code review, the following improvements were made:
+
+### 必须修复的问题（已解决）
+
+1. **Task 7 缺少 `send_message()` 处理说明** - 已在 Step 7 中明确说明该方法的验证流程
+2. **Token 恢复逻辑位置不明** - 已在 Task 4 Step 5 中澄清这是 `start()`/`load()` 中的逻辑，不是独立方法
+
+### 建议修复的问题（已解决）
+
+1. **测试覆盖补充**：
+   - 增加 `update_agent_session_from_result()` 边界情况测试（空 main_session、追加到 btw_session）
+   - 增加 `get_or_create_agent_session()` 测试
+   - 增加 `get_agent_names()` 测试
+   - 增加 `close()` 方法测试
+   - 增加持久化失败后的 error flag 测试
+
+2. **实现细节明确**：
+   - `get_message_dicts()` 增加实现说明（分页、字段映射）
+   - `update_agent_session_from_result()` 明确使用 `get_or_create_agent_session()`
+   - 持久化失败处理机制说明增强（guard checks）
+
+3. **代码组织优化**：
+   - 提取 `FakeRepository` 到 `tests/core/context/conftest.py` 作为共享 fixture
+   - Task 5 增加预检步骤搜索所有 `repository.project_path` 访问
+
+4. **术语统一**：统一使用 "Repository" 而非混用 "Store"
+
+5. **向后兼容性**：
+   - `GroupChatContext` 同时提供 `agent_sessions` 和 `agent_session_id` 属性
+   - Task 8 增加向后兼容性验证步骤
+
+### 文档改进
+
+1. 移除重复的版本表格
+2. 改进搜索命令的准确性（避免误报）
+3. 优化测试执行策略（分层回归测试）
+4. 明确 `send_message()` 不需要修改（已经通过 MessageRouter 委托）
+
+所有修复确保实现计划更加完整、准确、可执行。
