@@ -50,7 +50,7 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
       </div>
 
       {/* 主题切换按钮 */}
-      <button className={styles.themeToggle} onClick={onToggleTheme} title="切换主题">
+      <button className={styles.themeToggle} onClick={onToggleTheme} aria-label="切换主题">
         {theme === 'light' ? <MoonIcon /> : <SunIcon />}
       </button>
     </div>

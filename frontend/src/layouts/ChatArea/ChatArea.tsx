@@ -18,10 +18,10 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
       <div className={styles.chatHeader}>
         <div className={styles.chatTitle}>测试连接</div>
         <div className={styles.chatActions}>
-          <button className={styles.iconBtn}>
+          <button className={styles.iconBtn} aria-label="更多操作">
             <MoreVerticalIcon />
           </button>
-          <button className={styles.iconBtn} onClick={onToggleRightSidebar} title="切换右侧栏">
+          <button className={styles.iconBtn} onClick={onToggleRightSidebar} aria-label="切换右侧栏">
             <RightPanelIcon />
           </button>
         </div>
@@ -39,15 +39,20 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
       {/* 输入区 */}
       <div className={styles.chatInputContainer}>
         <div className={styles.chatInputWrapper}>
-          <button className={styles.iconBtn}>
+          <button className={styles.iconBtn} aria-label="添加附件">
             <PlusIcon />
           </button>
-          <input type="text" className={styles.chatInput} placeholder="要求后续变更" />
-          <button className={styles.iconBtn}>
+          <input
+            type="text"
+            className={styles.chatInput}
+            placeholder="要求后续变更"
+            aria-label="输入消息"
+          />
+          <button className={styles.iconBtn} aria-label="确认">
             <CheckCircleIcon />
           </button>
           <div className={styles.versionLabel}>5.5</div>
-          <button className={styles.iconBtn}>
+          <button className={styles.iconBtn} aria-label="发送消息">
             <SendIcon />
           </button>
         </div>
