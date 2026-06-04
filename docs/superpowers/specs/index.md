@@ -25,3 +25,11 @@
 - **路径**：`docs/superpowers/specs/2026-06-03-websocket-backend-design.md`
 - **触发规则**：当设计、修改或扩展 WebSocket 后端功能、消息推送机制或实时通信时阅读
 - **内容摘要**：WebSocket 后端设计规格，定义多房间模式、刷新信号推送、FastAPI 原生 WebSocket 实现、错误处理机制和测试方案
+
+## Core Runtime
+
+### core-runtime-ssot-design
+- **更新时间**：2026-06-04
+- **路径**：`docs/superpowers/specs/2026-06-04-core-runtime-ssot-design.md`
+- **触发规则**：当设计或规划 core runtime 内存 SSOT、GroupChat 职责收窄、Repository 所有权迁移或 core 对外查询边界时阅读
+- **内容摘要**：Core Runtime 内存 SSOT 重构 brainstorm 设计稿，定义内存作为运行期 SSOT、文件作为 durable copy、Runtime/State/Repository/Context 职责划分和依赖注入方向
