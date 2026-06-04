@@ -1,3 +1,4 @@
+import { useMembers, MemberWithRole } from '@/features/chat/hooks';
 import styles from './RightSidebar.module.css';
 
 export interface RightSidebarProps {
@@ -34,7 +35,27 @@ function MaximizeIcon() {
   );
 }
 
+function MemberItem({ member }: { member: MemberWithRole }) {
+  const initial = member.name.charAt(0).toUpperCase();
+
+  return (
+    <div className={styles.memberItem}>
+      <div className={styles.memberAvatar}>{initial}</div>
+      <div className={styles.memberInfo}>
+        <div className={styles.memberName}>{member.name}</div>
+        <div className={styles.memberRole}>
+          {member.role?.type === 'leader' ? '负责人' : '成员'}
+          <span className={styles.memberPlatform}>{member.role?.platform ?? 'unknown'}</span>
+        </div>
+      </div>
+      <div className={member.isOnline ? styles.onlineDot : styles.offlineDot} />
+    </div>
+  );
+}
+
 export function RightSidebar({ collapsed }: RightSidebarProps) {
+  const { members, loading } = useMembers();
+
   return (
     <div className={`${styles.rightSidebar} ${collapsed ? styles.collapsed : ''}`}>
       <div className={styles.rightModule}>
@@ -42,7 +63,15 @@ export function RightSidebar({ collapsed }: RightSidebarProps) {
           <UsersIcon />
           成员列表
         </div>
-        <div className={styles.moduleItem}>暂无成员</div>
+        <div className={styles.memberList}>
+          {loading ? (
+            <div className={styles.emptyText}>加载中...</div>
+          ) : members.length === 0 ? (
+            <div className={styles.emptyText}>暂无成员</div>
+          ) : (
+            members.map((member) => <MemberItem key={member.name} member={member} />)
+          )}
+        </div>
       </div>
 
       <div className={styles.rightModule}>

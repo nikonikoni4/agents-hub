@@ -8,14 +8,35 @@ import styles from './RoleCard.module.css';
 export interface RoleCardProps {
   role: RoleWithSkills;
   onClick?: () => void;
+  onEdit?: (role: RoleWithSkills) => void;
 }
 
-export function RoleCard({ role, onClick }: RoleCardProps) {
+function AvatarImage({ avatar, fallback }: { avatar: string | null; fallback: string }) {
+  // SVG 内容以 <svg 开头
+  if (avatar && avatar.startsWith('<svg')) {
+    return <div className={styles.avatarSvg} dangerouslySetInnerHTML={{ __html: avatar }} />;
+  }
+
+  // URL 图片
+  if (avatar) {
+    return <img src={avatar} alt="头像" className={styles.avatarImg} />;
+  }
+
+  // 降级：显示首字母
+  return <div className={styles.avatarFallback}>{fallback.charAt(0).toUpperCase()}</div>;
+}
+
+export function RoleCard({ role, onClick, onEdit }: RoleCardProps) {
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.(role);
+  };
+
   return (
     <div className={styles.card} onClick={onClick}>
       <div className={styles.header}>
         <div className={styles.avatar}>
-          {role.avatar ? role.avatar.charAt(0).toUpperCase() : role.name.charAt(0).toUpperCase()}
+          <AvatarImage avatar={role.avatar} fallback={role.name} />
         </div>
         <div className={styles.info}>
           <h3 className={styles.name}>{role.name}</h3>
@@ -26,6 +47,16 @@ export function RoleCard({ role, onClick }: RoleCardProps) {
             </span>
           </div>
         </div>
+        {onEdit && (
+          <button
+            type="button"
+            className={styles.editBtn}
+            onClick={handleEdit}
+            aria-label="编辑角色"
+          >
+            ✏️
+          </button>
+        )}
       </div>
 
       {role.description && <p className={styles.description}>{role.description}</p>}

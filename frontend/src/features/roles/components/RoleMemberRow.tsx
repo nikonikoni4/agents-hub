@@ -10,6 +10,21 @@ export interface RoleMemberRowProps {
   onRemove: (roleName: string) => void;
 }
 
+function AvatarImage({ avatar, fallback }: { avatar: string | null; fallback: string }) {
+  // SVG 内容以 <svg 开头
+  if (avatar && avatar.startsWith('<svg')) {
+    return <div className={styles.avatarSvg} dangerouslySetInnerHTML={{ __html: avatar }} />;
+  }
+
+  // URL 图片
+  if (avatar) {
+    return <img src={avatar} alt="头像" className={styles.avatarImg} />;
+  }
+
+  // 降级：显示首字母
+  return <div className={styles.avatarFallback}>{fallback.charAt(0).toUpperCase()}</div>;
+}
+
 export function RoleMemberRow({ role, onRemove }: RoleMemberRowProps) {
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -21,7 +36,7 @@ export function RoleMemberRow({ role, onRemove }: RoleMemberRowProps) {
   return (
     <div className={styles.row}>
       <div className={styles.avatar}>
-        {role.avatar ? role.avatar.charAt(0).toUpperCase() : role.name.charAt(0).toUpperCase()}
+        <AvatarImage avatar={role.avatar} fallback={role.name} />
       </div>
       <div className={styles.info}>
         <div className={styles.header}>

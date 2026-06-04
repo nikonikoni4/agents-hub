@@ -7,21 +7,37 @@ import { RoleCard } from './RoleCard';
 import { TeamList } from './TeamList';
 import { TeamMemberPanel } from './TeamMemberPanel';
 import { CreateRoleDialog } from './CreateRoleDialog';
+import { EditRoleDialog } from './EditRoleDialog';
 import { AddMemberDialog } from './AddMemberDialog';
 import { useRoles } from '../hooks/useRoles';
 import { useTeams } from '../hooks/useTeams';
 import type { RoleManagementTab } from '../types';
+import type { RoleWithSkills } from '@/shared/adapters/roleAdapter';
 import styles from './RoleManagementPanel.module.css';
 
 export function RoleManagementPanel() {
   const [activeTab, setActiveTab] = useState<RoleManagementTab>('teams');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [editingRole, setEditingRole] = useState<RoleWithSkills | null>(null);
 
   const { roles, loading: rolesLoading, refreshRoles } = useRoles();
   const { teams, selectedTeam, currentTeam, selectTeam, refreshTeams } = useTeams();
 
   const handleCreateRoleSuccess = () => {
+    refreshRoles();
+    if (activeTab === 'teams') {
+      refreshTeams();
+    }
+  };
+
+  const handleEditRole = (role: RoleWithSkills) => {
+    setEditingRole(role);
+    setShowEditDialog(true);
+  };
+
+  const handleEditSuccess = () => {
     refreshRoles();
     if (activeTab === 'teams') {
       refreshTeams();
@@ -80,7 +96,7 @@ export function RoleManagementPanel() {
             ) : (
               <div className={styles.rolesGrid}>
                 {roles.map((role) => (
-                  <RoleCard key={role.name} role={role} />
+                  <RoleCard key={role.name} role={role} onEdit={handleEditRole} />
                 ))}
               </div>
             )}
@@ -92,6 +108,16 @@ export function RoleManagementPanel() {
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSuccess={handleCreateRoleSuccess}
+      />
+
+      <EditRoleDialog
+        isOpen={showEditDialog}
+        role={editingRole}
+        onClose={() => {
+          setShowEditDialog(false);
+          setEditingRole(null);
+        }}
+        onSuccess={handleEditSuccess}
       />
 
       <AddMemberDialog

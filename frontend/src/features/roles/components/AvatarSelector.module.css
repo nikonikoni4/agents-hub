@@ -14,6 +14,7 @@
   background: var(--bg-bubble);
   cursor: pointer;
   transition: all 0.2s;
+  overflow: hidden;
 }
 
 .avatarItem:hover {
@@ -26,7 +27,23 @@
   box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
 }
 
-.avatarPreview {
+.avatarSvg {
+  width: 100%;
+  height: 100%;
+}
+
+.avatarSvg svg {
+  width: 100%;
+  height: 100%;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarFallback {
   width: 100%;
   height: 100%;
   display: flex;

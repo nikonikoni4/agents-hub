@@ -1,5 +1,7 @@
 /**
  * 头像选择器组件
+ *
+ * avatar 字段存储 SVG 内容字符串
  */
 
 import { useAvatars } from '../hooks/useAvatars';
@@ -19,15 +21,19 @@ export function AvatarSelector({ selectedAvatar, onSelect }: AvatarSelectorProps
 
   return (
     <div className={styles.container}>
-      {avatars.map((avatar) => (
+      {avatars.map((avatar, index) => (
         <button
-          key={avatar}
+          key={index}
           type="button"
           className={`${styles.avatarItem} ${selectedAvatar === avatar ? styles.selected : ''}`}
           onClick={() => onSelect(avatar)}
-          aria-label={`选择头像 ${avatar}`}
+          aria-label={`选择头像 ${index + 1}`}
         >
-          <div className={styles.avatarPreview}>{avatar.charAt(0).toUpperCase()}</div>
+          {avatar.startsWith('<svg') ? (
+            <div className={styles.avatarSvg} dangerouslySetInnerHTML={{ __html: avatar }} />
+          ) : (
+            <img src={avatar} alt={`头像 ${index + 1}`} className={styles.avatarImg} />
+          )}
         </button>
       ))}
     </div>

@@ -215,22 +215,63 @@ const MOCK_MESSAGES_DEFAULT: MessageApiItem[] = [
   },
 ];
 
-const MOCK_MEMBERS: GroupChatMemberApiItem[] = [
-  {
-    name: 'Agent1',
-    main_session: 'session-001',
-    btw_session: [],
-    cwd: '/home/user/project',
-    use_docker: false,
-  },
-  {
-    name: 'Agent2',
-    main_session: 'session-002',
-    btw_session: ['session-003'],
-    cwd: '/home/user/project',
-    use_docker: true,
-  },
-];
+const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
+  'mock-chat-001': [
+    {
+      name: 'Leader',
+      main_session: 'session-leader-001',
+      btw_session: [],
+      cwd: '/home/user/projects/frontend-app',
+      use_docker: false,
+    },
+    {
+      name: 'Developer',
+      main_session: 'session-dev-001',
+      btw_session: [],
+      cwd: '/home/user/projects/frontend-app',
+      use_docker: true,
+    },
+  ],
+  'mock-chat-002': [
+    {
+      name: 'Leader',
+      main_session: 'session-leader-002',
+      btw_session: [],
+      cwd: '/home/user/projects/backend-api',
+      use_docker: false,
+    },
+    {
+      name: 'Developer',
+      main_session: 'session-dev-002',
+      btw_session: ['session-dev-002-btw'],
+      cwd: '/home/user/projects/backend-api',
+      use_docker: true,
+    },
+    {
+      name: 'Tester',
+      main_session: 'session-tester-001',
+      btw_session: [],
+      cwd: '/home/user/projects/backend-api',
+      use_docker: false,
+    },
+  ],
+  'mock-chat-003': [
+    {
+      name: 'Leader',
+      main_session: 'session-leader-003',
+      btw_session: [],
+      cwd: '/home/user/projects/legacy-system',
+      use_docker: false,
+    },
+    {
+      name: 'Designer',
+      main_session: 'session-designer-001',
+      btw_session: [],
+      cwd: '/home/user/projects/legacy-system',
+      use_docker: false,
+    },
+  ],
+};
 
 // ==================== API 接口 ====================
 
@@ -318,7 +359,7 @@ export async function getMessages(
 export async function getMembers(chatId: string): Promise<GroupChatMemberApiItem[]> {
   return mockableRequest(
     () => apiClient.get<GroupChatMemberApiItem[]>(`/group-chats/${chatId}/members`),
-    MOCK_MEMBERS
+    MOCK_MEMBERS[chatId] ?? []
   );
 }
 

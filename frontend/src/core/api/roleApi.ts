@@ -15,11 +15,27 @@ import type {
 
 // ==================== Mock 数据 ====================
 
+// SVG 头像内容（存储完整 SVG 字符串）
+const AVATAR_CIRCLE =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#4F46E5"/><circle cx="32" cy="24" r="10" fill="#fff"/><path d="M16 48c0-8.837 7.163-16 16-16s16 7.163 16 16" fill="#fff"/></svg>';
+
+const AVATAR_SQUARE =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="8" fill="#059669"/><circle cx="32" cy="24" r="10" fill="#fff"/><path d="M16 48c0-8.837 7.163-16 16-16s16 7.163 16 16" fill="#fff"/></svg>';
+
+const AVATAR_HEXAGON =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><polygon points="32,2 58,17 58,47 32,62 6,47 6,17" fill="#D97706"/><circle cx="32" cy="24" r="10" fill="#fff"/><path d="M16 48c0-8.837 7.163-16 16-16s16 7.163 16 16" fill="#fff"/></svg>';
+
+const AVATAR_TRIANGLE =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><polygon points="32,4 60,56 4,56" fill="#DC2626"/><circle cx="32" cy="30" r="8" fill="#fff"/><path d="M20 48c0-6.627 5.373-12 12-12s12 5.373 12 12" fill="#fff"/></svg>';
+
+const AVATAR_STAR =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><polygon points="32,2 39,24 62,24 43,38 50,60 32,46 14,60 21,38 2,24 25,24" fill="#7C3AED"/><circle cx="32" cy="28" r="8" fill="#fff"/></svg>';
+
 const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Leader',
     platform: 'claude',
-    avatar: 'avatar-circle.svg',
+    avatar: AVATAR_CIRCLE,
     abilities: ['任务分派', '团队协调', '进度管理'],
     type: 'leader',
     scope: null,
@@ -28,7 +44,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Designer',
     platform: 'claude',
-    avatar: 'avatar-square.svg',
+    avatar: AVATAR_SQUARE,
     abilities: ['UI设计', 'UX设计', '原型制作'],
     type: 'team_member',
     scope: null,
@@ -37,7 +53,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Developer',
     platform: 'codex',
-    avatar: 'avatar-hexagon.svg',
+    avatar: AVATAR_HEXAGON,
     abilities: ['代码编写', '代码审查', '单元测试'],
     type: 'team_member',
     scope: null,
@@ -46,7 +62,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Tester',
     platform: 'claude',
-    avatar: 'avatar-triangle.svg',
+    avatar: AVATAR_TRIANGLE,
     abilities: ['测试用例编写', '缺陷发现', '回归测试'],
     type: 'team_member',
     scope: null,
@@ -69,9 +85,9 @@ const MOCK_ROLE_SKILLS = new Map<string, RoleSkillApiItem[]>([
     'Leader',
     [
       {
-        id: 'skill-brainstorming',
-        name: 'brainstorming',
-        description: '头脑风暴和需求分析',
+        id: 'skill-architecture',
+        name: 'architecture',
+        description: '系统架构分析和设计方案推荐',
       },
     ],
   ],
@@ -79,14 +95,9 @@ const MOCK_ROLE_SKILLS = new Map<string, RoleSkillApiItem[]>([
     'Designer',
     [
       {
-        id: 'skill-ui-design',
-        name: 'ui-design',
-        description: 'UI 设计和视觉设计',
-      },
-      {
-        id: 'skill-prototyping',
-        name: 'prototyping',
-        description: '原型设计和交互设计',
+        id: 'skill-doc-generation',
+        name: 'doc-generation',
+        description: '根据代码自动生成技术文档和API说明',
       },
     ],
   ],
@@ -94,25 +105,25 @@ const MOCK_ROLE_SKILLS = new Map<string, RoleSkillApiItem[]>([
     'Developer',
     [
       {
-        id: 'skill-tdd',
-        name: 'test-driven-development',
-        description: '测试驱动开发',
-      },
-      {
         id: 'skill-code-review',
         name: 'code-review',
-        description: '代码审查',
+        description: '自动化代码质量检查和最佳实践建议',
+      },
+      {
+        id: 'skill-test-writing',
+        name: 'test-writing',
+        description: '智能生成单元测试和集成测试用例',
       },
     ],
   ],
 ]);
 
 const MOCK_AVATARS: string[] = [
-  'avatar-circle.svg',
-  'avatar-square.svg',
-  'avatar-hexagon.svg',
-  'avatar-triangle.svg',
-  'avatar-star.svg',
+  AVATAR_CIRCLE,
+  AVATAR_SQUARE,
+  AVATAR_HEXAGON,
+  AVATAR_TRIANGLE,
+  AVATAR_STAR,
 ];
 
 const MOCK_SKILL: RoleSkillApiItem = {
