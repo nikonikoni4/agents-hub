@@ -36,7 +36,7 @@ class GroupChatContext:
         return self.runtime.state.agent_sessions
 
     @property
-    def agent_session_id(self) -> dict[str, AgentMemberInfo]:
+    def agent_member_info(self) -> dict[str, AgentMemberInfo]:
         """Backward compatibility alias for agent_sessions."""
         return self.runtime.state.agent_sessions
 
@@ -66,7 +66,7 @@ class GroupChatContext:
 
     # ==================== Agent Session 管理 ====================
 
-    async def update_agent_session_id(self, agent_result):
+    async def update_agent_member_info(self, agent_result):
         """
         根据 AgentResult 更新 agent session id 并保存
 

@@ -33,7 +33,7 @@ def mock_group_chat_context():
     """创建 mock GroupChatContext"""
     context = MagicMock(spec=GroupChatContext)
     context.group_chat_id = "gc_test123"
-    context.agent_session_id = {
+    context.agent_member_info = {
         "Manager": MagicMock(token="tok_manager_abc123"),
         "Worker1": MagicMock(token="tok_worker1_def456"),
         "Worker2": MagicMock(token="tok_worker2_ghi789"),

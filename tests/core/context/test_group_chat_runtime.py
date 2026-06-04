@@ -242,7 +242,7 @@ async def test_group_chat_context_uses_runtime_for_message_and_session_commands(
     context = GroupChatContext(runtime)
 
     result = MockAgentResult(agent_name="Worker2", session_id="s2", text="hello from w2")
-    await context.update_agent_session_id(result)
+    await context.update_agent_member_info(result)
     await context.add_message(result)
 
     assert runtime.state.agent_sessions["Worker2"].main_session == "s2"

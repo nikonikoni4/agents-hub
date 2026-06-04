@@ -1230,9 +1230,9 @@ def create_mock_agent(use_docker=False, agent_cwd="local_data", project_path="lo
     agent.group_chat_context.repository = Mock()
     agent.group_chat_context.repository.project_path = project_path
     
-    # Mock agent_session_id
+    # Mock agent_member_info
     session_info = AgentMemberInfo(cwd=agent_cwd, use_docker=use_docker)
-    agent.group_chat_context.agent_session_id = {"test-agent": session_info}
+    agent.group_chat_context.agent_member_info = {"test-agent": session_info}
     
     # 绑定真实方法
     agent._validate_docker_config = Agent._validate_docker_config.__get__(agent)
@@ -1257,7 +1257,7 @@ from agents_hub.core.foundation.exceptions import DockerConfigError
 
     def _validate_docker_config(self):
         """校验 Docker 配置（在 _process_message 中调用）"""
-        session_info = self.group_chat_context.agent_session_id.get(self.name)
+        session_info = self.group_chat_context.agent_member_info.get(self.name)
         if not session_info:
             return
         
@@ -1355,7 +1355,7 @@ async def _process_message(self, msg: AgentMessage, prompt: str) -> AgentResult:
     self._validate_docker_config()
     
     # 2. 读取 use_docker 配置
-    session_info = self.group_chat_context.agent_session_id.get(self.name)
+    session_info = self.group_chat_context.agent_member_info.get(self.name)
     use_docker = getattr(session_info, 'use_docker', False) if session_info else False
     
     self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)

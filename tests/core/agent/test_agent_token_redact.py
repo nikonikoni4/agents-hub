@@ -60,7 +60,7 @@ async def group_chat_context(tmp_path):
     context = GroupChatContext(runtime)
 
     # 添加 agent session info
-    context.agent_session_id["test_agent"] = AgentMemberInfo(
+    context.agent_member_info["test_agent"] = AgentMemberInfo(
         main_session="test_session", token="tok_test123456789012345678901234"
     )
     return context

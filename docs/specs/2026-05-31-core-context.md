@@ -193,14 +193,14 @@ Agent._process_message():
   2. full_prompt = history + render_for_llm(msg)   ← 拼接上下文和新消息
   3. result = await execute(full_prompt)            ← 执行
   4. await group_chat_context.add_message(result)   ← 写回消息
-  5. await group_chat_context.update_agent_session_id(result)  ← 更新 session
+  5. await group_chat_context.update_agent_member_info(result)  ← 更新 session
 ```
 
 ### 资源清理
 
 GroupChatContext.close() 负责释放资源：
 - 关闭 Repository（预留接口，当前 asyncio.Lock 不需要显式释放）
-- 清空内存引用（group_chat_session、agent_session_id）
+- 清空内存引用（group_chat_session、agent_member_info）
 - 幂等可重复调用
 
 ## Out of Spec

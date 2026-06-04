@@ -183,7 +183,7 @@ class TestAgentExecuteDocker:
         )
 
         group_chat_context = MagicMock()
-        group_chat_context.agent_session_id = {
+        group_chat_context.agent_member_info = {
             "test_agent": SimpleNamespace(
                 main_session="session_1",
                 btw_session=[],
@@ -240,7 +240,7 @@ class TestAgentProcessMessageDocker:
         )
 
         group_chat_context = MagicMock()
-        group_chat_context.agent_session_id = {
+        group_chat_context.agent_member_info = {
             "test_agent": SimpleNamespace(
                 main_session="session_1",
                 btw_session=[],
@@ -303,7 +303,7 @@ class TestAgentProcessMessageDocker:
         )
 
         group_chat_context = MagicMock()
-        group_chat_context.agent_session_id = {}  # 空字典
+        group_chat_context.agent_member_info = {}  # 空字典
         group_chat_context.group_chat_id = "gc_test_123"
 
         agent = Agent(

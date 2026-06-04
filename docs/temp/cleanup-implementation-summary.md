@@ -121,7 +121,7 @@ def close(self):
     
     # 清空引用
     self.group_chat_session = None
-    self.agent_session_id.clear()
+    self.agent_member_info.clear()
 ```
 
 ---

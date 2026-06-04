@@ -35,7 +35,7 @@ def create_mock_role(name: str = "test_agent"):
 def mock_deps():
     """提供 Agent 所需的 mock 依赖"""
     group_chat_context = MagicMock()
-    group_chat_context.agent_session_id = {}
+    group_chat_context.agent_member_info = {}
     agent_call_manager = MagicMock()
     message_router = MagicMock()
     return group_chat_context, agent_call_manager, message_router

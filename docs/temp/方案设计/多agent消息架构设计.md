@@ -456,8 +456,8 @@ class Agent:
             self.context.save_group_chat_session()
             
             # 5. 更新 session_id
-            self.context.update_agent_session_id(result)
-            self.context.save_agent_session_id()
+            self.context.update_agent_member_info(result)
+            self.context.save_agent_member_info()
             
             # 6. 标记调用为 COMPLETED
             if call_id:

@@ -318,12 +318,12 @@ class GroupChat:
         new_members = []
 
         # 检查 manager 是否需要初始化
-        if self.manager and self.manager.name not in self.group_chat_context.agent_session_id:
+        if self.manager and self.manager.name not in self.group_chat_context.agent_member_info:
             new_members.append(self.manager)
 
         # 检查 workers 是否需要初始化
         for name, worker in self.works.items():
-            if name not in self.group_chat_context.agent_session_id:
+            if name not in self.group_chat_context.agent_member_info:
                 new_members.append(worker)
 
         # 如果没有新成员，直接返回
@@ -349,10 +349,10 @@ class GroupChat:
 
         # 保存结果
         for result in results:
-            self.group_chat_context.update_agent_session_id(result)
+            self.group_chat_context.update_agent_member_info(result)
             self.group_chat_context.group_chat_session.add_message(result)
 
-        self.group_chat_context.save_agent_session_id()
+        self.group_chat_context.save_agent_member_info()
         self.group_chat_context.save_group_chat_session()
 
     async def start(self):
@@ -452,14 +452,14 @@ class GroupChatContext:
     """
     def __init__(self,group_chat_id : str,project_path:str):
         self.group_chat_id = group_chat_id
-        self.agent_session_id: dict[str, AgentMemberInfo] = {}  # agent_name -> AgentMemberInfo
+        self.agent_member_info: dict[str, AgentMemberInfo] = {}  # agent_name -> AgentMemberInfo
         # 获取当前的聊天历史路径
         sanitized_path = self.sanitize_project_path(project_path)
         self.group_chat_session_path = f"{LOCAL_DATA_PATH}/teams/{sanitized_path}/{group_chat_id}"
         self.messages_file = f"{self.group_chat_session_path}/{group_chat_id}.jsonl"
         self.agent_member_file = f"{self.group_chat_session_path}/agent_member.json" # agent_name : {main_session: , btw_session}
         self.compact_history_file = f"{self.group_chat_session_path}/memory/compact_history.jsonl"
-        self.agent_session_id = self.get_agent_session_id()
+        self.agent_member_info = self.get_agent_member_info()
         self.group_chat_session = self.load_group_chat_session()
 
     def load_group_chat_session(self)->GroupChatSession:
@@ -535,7 +535,7 @@ class GroupChatContext:
             for msg in self.group_chat_session.messages:
                 f.write(json.dumps(msg, ensure_ascii=False) + '\n')
 
-    def get_agent_session_id(self) -> dict[str, AgentMemberInfo]:
+    def get_agent_member_info(self) -> dict[str, AgentMemberInfo]:
         """
         获取 agent session id 映射
 
@@ -565,11 +565,11 @@ class GroupChatContext:
             )
         return result
 
-    def save_agent_session_id(self):
+    def save_agent_member_info(self):
         """
         保存 agent session id 映射到文件
 
-        将 self.agent_session_id 保存到 agent_member.json
+        将 self.agent_member_info 保存到 agent_member.json
         """
         import json
         import os
@@ -579,7 +579,7 @@ class GroupChatContext:
 
         # 转换为可序列化的字典
         data = {}
-        for agent_name, session_info in self.agent_session_id.items():
+        for agent_name, session_info in self.agent_member_info.items():
             data[agent_name] = {
                 'main_session': session_info.main_session,
                 'btw_session': session_info.btw_session
@@ -589,7 +589,7 @@ class GroupChatContext:
         with open(self.agent_member_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-    def update_agent_session_id(self, agent_result: AgentResult):
+    def update_agent_member_info(self, agent_result: AgentResult):
         """
         根据 AgentResult 更新 agent session id
 
@@ -603,13 +603,13 @@ class GroupChatContext:
         session_id = agent_result.session_id
 
         # 如果 agent 不存在，创建新的
-        if agent_name not in self.agent_session_id:
-            self.agent_session_id[agent_name] = AgentMemberInfo(
+        if agent_name not in self.agent_member_info:
+            self.agent_member_info[agent_name] = AgentMemberInfo(
                 main_session=session_id,
                 btw_session=[]
             )
         else:
-            session_info = self.agent_session_id[agent_name]
+            session_info = self.agent_member_info[agent_name]
 
             # 如果是第一次设置 main_session
             if not session_info.main_session:
@@ -863,9 +863,9 @@ class Agent:
     
     @property
     def main_session_id(self):
-        if self.group_chat_context.agent_session_id.get(self.name):
-            if self.group_chat_context.agent_session_id[self.name].main_session:
-                return self.group_chat_context.agent_session_id[self.name].main_session
+        if self.group_chat_context.agent_member_info.get(self.name):
+            if self.group_chat_context.agent_member_info[self.name].main_session:
+                return self.group_chat_context.agent_member_info[self.name].main_session
             else:
                 print(f"warning : {self.name}在当前群聊中无历史记录") # 这里的print 需要替换为具体的logger
         else :
@@ -1192,7 +1192,7 @@ if __name__ == "__main__":
 # 【问题】多个 agent 并发写入文件可能导致数据损坏
 # 【位置】GroupChatContext 类（第 442-784 行）
 # 【说明】
-#   - save_group_chat_session() 和 save_agent_session_id() 直接写文件
+#   - save_group_chat_session() 和 save_agent_member_info() 直接写文件
 #   - 如果多个 agent 同时调用，可能导致文件损坏或数据丢失
 #   - compact_messages() 也有同样的问题
 # 【建议】

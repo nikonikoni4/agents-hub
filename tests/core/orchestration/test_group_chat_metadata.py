@@ -44,19 +44,19 @@ class TestGroupChatMetadataIntegration:
             loaded_metadata = await repository.load_group_metadata()
             default_cwd = loaded_metadata.project_path if loaded_metadata else ""
 
-            # 创建 agent_session_id
-            agent_session_id = {}
-            agent_session_id["Leader"] = AgentMemberInfo(
+            # 创建 agent_member_info
+            agent_member_info = {}
+            agent_member_info["Leader"] = AgentMemberInfo(
                 token="token_leader",
                 cwd=default_cwd,
             )
-            agent_session_id["Worker1"] = AgentMemberInfo(
+            agent_member_info["Worker1"] = AgentMemberInfo(
                 token="token_worker1",
                 cwd=default_cwd,
             )
 
             # 保存 agent session state
-            await repository.save_agent_member(agent_session_id)
+            await repository.save_agent_member(agent_member_info)
 
             # 3. 验证：重新加载，确认 cwd 正确
             loaded_state = await repository.load_agent_member()
@@ -85,8 +85,8 @@ class TestGroupChatMetadataIntegration:
             await repository.save_group_metadata(metadata)
 
             # 模拟已存在的 agent，但 cwd 为空
-            agent_session_id = {}
-            agent_session_id["Leader"] = AgentMemberInfo(
+            agent_member_info = {}
+            agent_member_info["Leader"] = AgentMemberInfo(
                 token="token_leader",
                 cwd="",  # 空 cwd
             )
@@ -96,11 +96,11 @@ class TestGroupChatMetadataIntegration:
             default_cwd = loaded_metadata.project_path if loaded_metadata else ""
 
             # 如果 cwd 为空，则填充 default_cwd
-            if not agent_session_id["Leader"].cwd:
-                agent_session_id["Leader"].cwd = default_cwd
+            if not agent_member_info["Leader"].cwd:
+                agent_member_info["Leader"].cwd = default_cwd
 
             # 验证 cwd 被填充
-            assert agent_session_id["Leader"].cwd == temp_dir
+            assert agent_member_info["Leader"].cwd == temp_dir
 
     @pytest.mark.asyncio
     async def test_metadata_persistence_across_restarts(self):

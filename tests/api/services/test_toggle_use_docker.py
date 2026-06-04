@@ -111,7 +111,7 @@ async def test_toggle_use_docker_creates_session_if_missing(service, mock_group_
     契约：角色无 session_info → 新建 AgentMemberInfo
 
     验证方式：
-    1. mock 群聊存在，但 agent_session_id 中无该角色
+    1. mock 群聊存在，但 agent_member_info 中无该角色
     2. 调用 toggle_use_docker
     3. 断言 runtime 命令已调用
     """

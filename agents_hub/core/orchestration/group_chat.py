@@ -190,7 +190,7 @@ class GroupChat:
 
         # 检查 manager 是否需要初始化
         session_info = (
-            self.group_chat_context.agent_session_id.get(self.manager.name)
+            self.group_chat_context.agent_member_info.get(self.manager.name)
             if self.manager
             else None
         )
@@ -199,7 +199,7 @@ class GroupChat:
 
         # 检查 workers 是否需要初始化
         for name, worker in self.workers.items():
-            session_info = self.group_chat_context.agent_session_id.get(name)
+            session_info = self.group_chat_context.agent_member_info.get(name)
             if not session_info or not session_info.main_session:
                 new_members.append(worker)
 
@@ -222,7 +222,7 @@ class GroupChat:
 
         # 保存结果
         for result in results:
-            await self.group_chat_context.update_agent_session_id(result)
+            await self.group_chat_context.update_agent_member_info(result)
             await self.group_chat_context.add_message(result)
 
     async def compact_history(self):
@@ -332,7 +332,7 @@ class GroupChat:
 
         为 manager 和所有 workers 生成唯一的 token，
         并将 token 注册到 GroupChatManager 的索引中。
-        同时更新 Runtime 中的 agent_session_id。
+        同时更新 Runtime 中的 agent_member_info。
         """
         from .group_chat_manager import group_chat_manager
 

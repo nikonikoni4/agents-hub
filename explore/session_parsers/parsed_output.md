@@ -87,7 +87,7 @@ Launching skill: grill-with-docs
 21	### GroupChatContext（群聊上下文）
 22	- 群聊业务逻辑的核心管理器
 23	- 职责：消息管理、session 管理、上下文压缩
-24	- 属性：group_chat_id、repository、group_chat_session、agent_session_id
+24	- 属性：group_chat_id、repository、group_chat_session、agent_member_info
 25	
 26	### GroupChatSession（群聊会话）
 27	- 管理群聊的消息历史和元数据
@@ -484,7 +484,7 @@ Launching skill: grill-with-docs
 21	### GroupChatContext（群聊上下文）
 22	- 群聊业务逻辑的核心管理器
 23	- 职责：消息管理、session 管理、上下文压缩
-24	- 属性：group_chat_id、repository、group_chat_session、agent_session_id
+24	- 属性：group_chat_id、repository、group_chat_session、agent_member_info
 25	
 26	### GroupChatSession（群聊会话）
 27	- 管理群聊的消息历史和元数据
@@ -1043,7 +1043,7 @@ A1 显然更容易,我推荐 A1。
 **3c. Token 生命周期**:
 - (a) 每次 GroupChat.start() / load() 时**重新生成**所有 agent 的 token,覆盖旧的——简单,但每次重启所有正在运行的 Agent 子进程都会持有过期 token
 - (b) Token **持久化**到磁盘(比如 `agent_member.json` 加一栏 `agent_token`),重启后保留——支持长会话恢复
-- 我推荐 **(b)**,和现有 `agent_session_id` 持久化机制一致
+- 我推荐 **(b)**,和现有 `agent_member_info` 持久化机制一致
 
 **3d. Token 在 prompt 里的位置和形式**:
 我看你已经有 [renderer.py](agents_hub/core/foundation/renderer.py) 的三表面渲染,token 注入应该在 **`render_for_llm`** 这一步之前/之后,加一个 wrapper 标签,比如:

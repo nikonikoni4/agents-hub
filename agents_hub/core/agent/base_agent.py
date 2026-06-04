@@ -53,7 +53,7 @@ class Agent:
         self._run = True
 
         # 从 group_chat_context 获取 agent_token 和 cwd
-        session_info = group_chat_context.agent_session_id.get(self.name)
+        session_info = group_chat_context.agent_member_info.get(self.name)
         self.agent_token: str = session_info.token if session_info else ""
         self.agent_cwd: str = session_info.cwd if session_info else ""
 
@@ -134,9 +134,9 @@ class Agent:
 
     @property
     def main_session_id(self):
-        if self.group_chat_context.agent_session_id.get(self.name):
-            if self.group_chat_context.agent_session_id[self.name].main_session:
-                return self.group_chat_context.agent_session_id[self.name].main_session
+        if self.group_chat_context.agent_member_info.get(self.name):
+            if self.group_chat_context.agent_member_info[self.name].main_session:
+                return self.group_chat_context.agent_member_info[self.name].main_session
             else:
                 print(f"warning : {self.name}在当前群聊中无历史记录")  # TODO 替换为 logger
         else:
@@ -147,7 +147,7 @@ class Agent:
 
     def _validate_docker_config(self):
         """校验 Docker 配置（在 _process_message 中调用）"""
-        session_info = self.group_chat_context.agent_session_id.get(self.name)
+        session_info = self.group_chat_context.agent_member_info.get(self.name)
         if not session_info:
             return
 
@@ -188,7 +188,7 @@ class Agent:
         self._validate_docker_config()
 
         # 2. 读取 use_docker 配置
-        session_info = self.group_chat_context.agent_session_id.get(self.name)
+        session_info = self.group_chat_context.agent_member_info.get(self.name)
         use_docker = getattr(session_info, "use_docker", False) if session_info else False
 
         self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
@@ -228,7 +228,7 @@ class Agent:
 
         # 获取团队成员列表（排除自己）
         team_members = [
-            name for name in self.group_chat_context.agent_session_id if name != self.name
+            name for name in self.group_chat_context.agent_member_info if name != self.name
         ]
         team_members_str = ", ".join(team_members)
 

@@ -819,7 +819,7 @@ sequenceDiagram
     Note over B: 组装 prompt，执行 LLM
 
     B->>GCS: add_message(LLM 结果)
-    B->>GCC: update_agent_session_id()
+    B->>GCC: update_agent_member_info()
     B->>ACM: set_result(call_id, result)
 
     Note over A: 稍后查询

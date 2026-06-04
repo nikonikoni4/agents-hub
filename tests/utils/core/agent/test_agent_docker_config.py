@@ -42,7 +42,7 @@ def create_agent_with_docker_config(
     role = create_mock_role(agent_name)
     group_chat_context = MagicMock()
     group_chat_context.group_chat_id = "gc_test_123"
-    group_chat_context.agent_session_id = {
+    group_chat_context.agent_member_info = {
         agent_name: SimpleNamespace(
             main_session="session_1",
             btw_session=[],
@@ -67,7 +67,7 @@ class TestValidateDockerConfig:
         """契约 1：session_info 不存在时静默跳过"""
         role = create_mock_role("test_agent")
         group_chat_context = MagicMock()
-        group_chat_context.agent_session_id = {}  # 空字典，无 session_info
+        group_chat_context.agent_member_info = {}  # 空字典，无 session_info
 
         agent = Agent(role, group_chat_context, MagicMock(), MagicMock())
 

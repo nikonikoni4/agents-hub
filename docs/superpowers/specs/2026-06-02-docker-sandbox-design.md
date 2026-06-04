@@ -230,7 +230,7 @@ def _validate_docker_config(self):
     Raises:
         DockerConfigError: Docker 配置不合理
     """
-    session_info = self.group_chat_context.agent_session_id.get(self.name)
+    session_info = self.group_chat_context.agent_member_info.get(self.name)
     if not session_info:
         return
     

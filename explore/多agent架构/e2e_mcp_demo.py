@@ -198,7 +198,7 @@ async def test_scenario_1_token_generation(group_chat: GroupChat):
     # 获取所有成员的 token
     tokens = {}
     for member_name in TEAM_MEMBERS:
-        session = group_chat.group_chat_context.agent_session_id.get(member_name)
+        session = group_chat.group_chat_context.agent_member_info.get(member_name)
         if session:
             tokens[member_name] = session.token
             print(f"  {member_name}: {session.token[:20]}...")

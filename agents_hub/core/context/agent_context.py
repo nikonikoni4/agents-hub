@@ -47,7 +47,7 @@ class AgentContext:
         parts: list[str] = []
 
         # 1. 获取 agent 的加载状态
-        agent_session_info = self.group_chat_context.agent_session_id.get(self.agent_name)
+        agent_session_info = self.group_chat_context.agent_member_info.get(self.agent_name)
         if not agent_session_info:
             last_loaded_compact_index = 0
             last_loaded_message_index = 0
@@ -157,10 +157,10 @@ class AgentContext:
             last_loaded_message_index: 已加载到第几条原始消息
         """
         # 如果 agent 不存在，创建新的状态
-        if self.agent_name not in self.group_chat_context.agent_session_id:
+        if self.agent_name not in self.group_chat_context.agent_member_info:
             from .group_chat_session import AgentContextState, AgentMemberInfo
 
-            self.group_chat_context.agent_session_id[self.agent_name] = AgentMemberInfo(
+            self.group_chat_context.agent_member_info[self.agent_name] = AgentMemberInfo(
                 main_session="",
                 btw_session=[],
                 context_state=AgentContextState(
@@ -170,7 +170,7 @@ class AgentContext:
             )
         else:
             # 更新现有状态
-            agent_session_info = self.group_chat_context.agent_session_id[self.agent_name]
+            agent_session_info = self.group_chat_context.agent_member_info[self.agent_name]
             agent_session_info.context_state.last_loaded_compact_index = last_loaded_compact_index
             agent_session_info.context_state.last_loaded_message_index = last_loaded_message_index
 

@@ -777,7 +777,7 @@ async def test_group_chat_context_uses_runtime_for_message_and_session_commands(
     context = GroupChatContext(runtime)
 
     result = MockAgentResult(agent_name="Worker2", session_id="s2", text="hello from w2")
-    await context.update_agent_session_id(result)
+    await context.update_agent_member_info(result)
     await context.add_message(result)
 
     assert runtime.state.agent_sessions["Worker2"].main_session == "s2"
@@ -819,7 +819,7 @@ def agent_sessions(self) -> dict[str, AgentMemberInfo]:
     return self.runtime.state.agent_sessions
 
 @property
-def agent_session_id(self) -> dict[str, AgentMemberInfo]:
+def agent_member_info(self) -> dict[str, AgentMemberInfo]:
     """Backward compatibility alias for agent_sessions."""
     return self.runtime.state.agent_sessions
 
@@ -827,7 +827,7 @@ def get_project_path(self) -> str:
     return self.runtime.get_project_path()
 ```
 
-**Note:** Keep both `agent_sessions` and `agent_session_id` during migration. In Task 8, search for all usages of `agent_session_id` and verify backward compatibility.
+**Note:** Keep both `agent_sessions` and `agent_member_info` during migration. In Task 8, search for all usages of `agent_member_info` and verify backward compatibility.
 
 Replace `load()`:
 
@@ -845,7 +845,7 @@ async def add_message(self, agent_result):
     await self.runtime.add_message(agent_result)
 
 
-async def update_agent_session_id(self, agent_result):
+async def update_agent_member_info(self, agent_result):
     await self.runtime.update_agent_session_from_result(agent_result)
 
 
@@ -1092,7 +1092,7 @@ In the Docker config test file, ensure the mock context has `get_project_path()`
 
 ```python
 context.get_project_path.return_value = "/workspace/main"
-context.agent_session_id = {
+context.agent_member_info = {
     "Worker1": AgentMemberInfo(cwd="/workspace/main", use_docker=True)
 }
 ```
@@ -1436,15 +1436,15 @@ pytest tests/core tests/api -q
 
 Expected: PASS. If unrelated failures appear, record exact failing tests and decide whether they are caused by runtime changes before editing.
 
-- [ ] **Step 5: Verify backward compatibility of agent_session_id**
+- [ ] **Step 5: Verify backward compatibility of agent_member_info**
 
-Search for all usages of `context.agent_session_id` and verify they work with the compatibility property:
+Search for all usages of `context.agent_member_info` and verify they work with the compatibility property:
 
 ```bash
-rg -n "\.agent_session_id" agents_hub/ tests/
+rg -n "\.agent_member_info" agents_hub/ tests/
 ```
 
-For each usage, confirm it accesses the dict correctly. If any code expects `agent_session_id` to be a different type, update that code.
+For each usage, confirm it accesses the dict correctly. If any code expects `agent_member_info` to be a different type, update that code.
 
 - [ ] **Step 6: Update docs if implementation changes accepted contracts**
 
@@ -1512,7 +1512,7 @@ Based on comprehensive code review, the following improvements were made:
 4. **术语统一**：统一使用 "Repository" 而非混用 "Store"
 
 5. **向后兼容性**：
-   - `GroupChatContext` 同时提供 `agent_sessions` 和 `agent_session_id` 属性
+   - `GroupChatContext` 同时提供 `agent_sessions` 和 `agent_member_info` 属性
    - Task 8 增加向后兼容性验证步骤
 
 ### 文档改进

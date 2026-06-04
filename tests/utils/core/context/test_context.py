@@ -239,24 +239,24 @@ class TestGroupChatContextClose:
     """测试 GroupChatContext.close()"""
 
     def test_close_clears_references(self):
-        """契约：close() 清空 group_chat_session 和 agent_session_id"""
+        """契约：close() 清空 group_chat_session 和 agent_member_info"""
         with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
             ctx = GroupChatContext.__new__(GroupChatContext)
             ctx.group_chat_session = GroupChatSession(group_chat_id="gc1")
-            ctx.agent_session_id = {"a": AgentMemberInfo()}
+            ctx.agent_member_info = {"a": AgentMemberInfo()}
             ctx.repository = MagicMock()
 
             ctx.close()
 
             assert ctx.group_chat_session is None
-            assert ctx.agent_session_id == {}
+            assert ctx.agent_member_info == {}
 
     def test_close_idempotent(self):
         """契约：close() 可多次调用不报错"""
         with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
             ctx = GroupChatContext.__new__(GroupChatContext)
             ctx.group_chat_session = GroupChatSession(group_chat_id="gc1")
-            ctx.agent_session_id = {"a": AgentMemberInfo()}
+            ctx.agent_member_info = {"a": AgentMemberInfo()}
             ctx.repository = MagicMock()
 
             ctx.close()
@@ -272,7 +272,7 @@ class TestGroupChatContextAddMessage:
         with patch.object(GroupChatContext, "__init__", lambda self, *a, **kw: None):
             ctx = GroupChatContext.__new__(GroupChatContext)
             ctx.group_chat_session = None
-            ctx.agent_session_id = {}
+            ctx.agent_member_info = {}
             ctx.repository = MagicMock()
 
             with pytest.raises(StateError):

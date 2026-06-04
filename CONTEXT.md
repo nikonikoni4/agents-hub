@@ -31,7 +31,7 @@
 ### GroupChatContext（群聊上下文）
 - 群聊业务逻辑的核心管理器
 - 职责：消息管理、session 管理、上下文压缩
-- 属性：group_chat_id、repository、group_chat_session、agent_session_id
+- 属性：group_chat_id、repository、group_chat_session、agent_member_info
 
 ### GroupChatSession（群聊会话）
 - 管理群聊的消息历史和元数据

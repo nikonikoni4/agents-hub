@@ -46,13 +46,13 @@ class TestGroupChatContextTokenPersistence:
             session_id = "session_123"
             agent_token = "tok_a1b2c3d4e5f6"
 
-            # 模拟 update_agent_session_id
+            # 模拟 update_agent_member_info
             agent_result = MockAgentResult(agent_name, session_id)
-            await context.update_agent_session_id(agent_result)
+            await context.update_agent_member_info(agent_result)
 
             # 手动设置 token
-            context.agent_session_id[agent_name].token = agent_token
-            await runtime.repository.save_agent_member(context.agent_session_id)
+            context.agent_member_info[agent_name].token = agent_token
+            await runtime.repository.save_agent_member(context.agent_member_info)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -60,9 +60,9 @@ class TestGroupChatContextTokenPersistence:
             await context2.load()
 
             # 验证 token 被正确加载
-            assert agent_name in context2.agent_session_id
-            assert context2.agent_session_id[agent_name].token == agent_token
-            assert context2.agent_session_id[agent_name].main_session == session_id
+            assert agent_name in context2.agent_member_info
+            assert context2.agent_member_info[agent_name].token == agent_token
+            assert context2.agent_member_info[agent_name].main_session == session_id
 
             context.close()
             context2.close()
@@ -85,10 +85,10 @@ class TestGroupChatContextTokenPersistence:
 
             for agent_name, session_id, token in agents:
                 agent_result = MockAgentResult(agent_name, session_id)
-                await context.update_agent_session_id(agent_result)
-                context.agent_session_id[agent_name].token = token
+                await context.update_agent_member_info(agent_result)
+                context.agent_member_info[agent_name].token = token
 
-            await runtime.repository.save_agent_member(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_member_info)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -97,9 +97,9 @@ class TestGroupChatContextTokenPersistence:
 
             # 验证所有 token 都被正确加载
             for agent_name, session_id, token in agents:
-                assert agent_name in context2.agent_session_id
-                assert context2.agent_session_id[agent_name].token == token
-                assert context2.agent_session_id[agent_name].main_session == session_id
+                assert agent_name in context2.agent_member_info
+                assert context2.agent_member_info[agent_name].token == token
+                assert context2.agent_member_info[agent_name].main_session == session_id
 
             context.close()
             context2.close()
@@ -117,7 +117,7 @@ class TestGroupChatContextTokenPersistence:
             agent_name = "agent_a"
             session_id = "session_123"
             agent_result = MockAgentResult(agent_name, session_id)
-            await context.update_agent_session_id(agent_result)
+            await context.update_agent_member_info(agent_result)
 
             # 手动修改文件，移除 token 字段（模拟旧文件）
             import json
@@ -139,9 +139,9 @@ class TestGroupChatContextTokenPersistence:
             await context2.load()
 
             # 验证加载成功，token 为空字符串（默认值）
-            assert agent_name in context2.agent_session_id
-            assert context2.agent_session_id[agent_name].token == ""
-            assert context2.agent_session_id[agent_name].main_session == session_id
+            assert agent_name in context2.agent_member_info
+            assert context2.agent_member_info[agent_name].token == ""
+            assert context2.agent_member_info[agent_name].main_session == session_id
 
             context.close()
             context2.close()
@@ -159,10 +159,10 @@ class TestGroupChatContextTokenPersistence:
             agent_name = "agent_a"
             session_id = "session_123"
             agent_result = MockAgentResult(agent_name, session_id)
-            await context.update_agent_session_id(agent_result)
+            await context.update_agent_member_info(agent_result)
 
             # token 默认为空字符串
-            await runtime.repository.save_agent_member(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_member_info)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -170,8 +170,8 @@ class TestGroupChatContextTokenPersistence:
             await context2.load()
 
             # 验证 token 为空字符串
-            assert agent_name in context2.agent_session_id
-            assert context2.agent_session_id[agent_name].token == ""
+            assert agent_name in context2.agent_member_info
+            assert context2.agent_member_info[agent_name].token == ""
 
             context.close()
             context2.close()
@@ -189,15 +189,15 @@ class TestGroupChatContextTokenPersistence:
             agent_name = "agent_a"
             session_id = "session_123"
             agent_result = MockAgentResult(agent_name, session_id)
-            await context.update_agent_session_id(agent_result)
+            await context.update_agent_member_info(agent_result)
 
             # 第一次保存，token 为空
-            await runtime.repository.save_agent_member(context.agent_session_id)
+            await runtime.repository.save_agent_member(context.agent_member_info)
 
             # 更新 token
             new_token = "tok_new_token"
-            context.agent_session_id[agent_name].token = new_token
-            await runtime.repository.save_agent_member(context.agent_session_id)
+            context.agent_member_info[agent_name].token = new_token
+            await runtime.repository.save_agent_member(context.agent_member_info)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -205,7 +205,7 @@ class TestGroupChatContextTokenPersistence:
             await context2.load()
 
             # 验证 token 被更新
-            assert context2.agent_session_id[agent_name].token == new_token
+            assert context2.agent_member_info[agent_name].token == new_token
 
             context.close()
             context2.close()
@@ -223,13 +223,13 @@ class TestGroupChatContextTokenPersistence:
             agent_name = "agent_a"
             session_id = "session_123"
             agent_result = MockAgentResult(agent_name, session_id)
-            await context.update_agent_session_id(agent_result)
+            await context.update_agent_member_info(agent_result)
 
             # 设置 token 和 context_state
-            context.agent_session_id[agent_name].token = "tok_test"
-            context.agent_session_id[agent_name].context_state.last_loaded_compact_index = 5
-            context.agent_session_id[agent_name].context_state.last_loaded_message_index = 10
-            await runtime.repository.save_agent_member(context.agent_session_id)
+            context.agent_member_info[agent_name].token = "tok_test"
+            context.agent_member_info[agent_name].context_state.last_loaded_compact_index = 5
+            context.agent_member_info[agent_name].context_state.last_loaded_message_index = 10
+            await runtime.repository.save_agent_member(context.agent_member_info)
 
             # 创建新的 context 并加载
             runtime2 = GroupChatRuntime(group_chat_id, tmpdir)
@@ -237,9 +237,9 @@ class TestGroupChatContextTokenPersistence:
             await context2.load()
 
             # 验证所有字段都被正确加载
-            assert context2.agent_session_id[agent_name].token == "tok_test"
-            assert context2.agent_session_id[agent_name].context_state.last_loaded_compact_index == 5
-            assert context2.agent_session_id[agent_name].context_state.last_loaded_message_index == 10
+            assert context2.agent_member_info[agent_name].token == "tok_test"
+            assert context2.agent_member_info[agent_name].context_state.last_loaded_compact_index == 5
+            assert context2.agent_member_info[agent_name].context_state.last_loaded_message_index == 10
 
             context.close()
             context2.close()
