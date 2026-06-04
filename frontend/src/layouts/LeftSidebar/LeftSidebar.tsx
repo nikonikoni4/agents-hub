@@ -3,22 +3,35 @@ import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
   collapsed: boolean;
+  onViewModeChange?: (mode: 'chat' | 'role' | 'skill') => void;
 }
 
-export function LeftSidebar({ collapsed }: LeftSidebarProps) {
+export function LeftSidebar({ collapsed, onViewModeChange }: LeftSidebarProps) {
   return (
     <div className={`${styles.leftSidebar} ${collapsed ? styles.collapsed : ''}`}>
       {/* 按钮区 */}
       <div className={styles.sidebarButtons}>
-        <button className={styles.sidebarBtn} aria-label="新建对话">
+        <button
+          className={styles.sidebarBtn}
+          onClick={() => onViewModeChange?.('chat')}
+          aria-label="新建对话"
+        >
           <PlusIcon />
           <span>新对话</span>
         </button>
-        <button className={styles.sidebarBtn} aria-label="角色管理">
+        <button
+          className={styles.sidebarBtn}
+          onClick={() => onViewModeChange?.('role')}
+          aria-label="角色管理"
+        >
           <UsersIcon />
           <span>角色管理</span>
         </button>
-        <button className={styles.sidebarBtn} aria-label="技能广场">
+        <button
+          className={styles.sidebarBtn}
+          onClick={() => onViewModeChange?.('skill')}
+          aria-label="技能广场"
+        >
           <ZapIcon />
           <span>技能广场</span>
         </button>

@@ -1,0 +1,1 @@
+export { SkillDetailModal } from './SkillDetailModal';
