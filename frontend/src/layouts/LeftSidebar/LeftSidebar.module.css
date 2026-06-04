@@ -71,6 +71,10 @@
   cursor: pointer;
   transition: background 0.15s;
   margin-bottom: 2px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
 }
 
 .projectItem:hover {
@@ -105,6 +109,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
 }
 
 .chatItem:hover {
