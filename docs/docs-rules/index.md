@@ -12,13 +12,6 @@
 - 触发规则：写入正式 `spec` 时读取
 - 内容摘要：正式 spec 写入规则，定义 spec 的筛选原则、状态、固定结构、frontmatter 和 CI 抓手。
 
-## plan-write-rules
-
-- updated_at: 2026-04-14
-- path: `docs/docs-rules/plan-write-rules.md`
-- 触发规则：写入正式 `plan` 时读取
-- 内容摘要：正式 plan 写入规则，定义 plan 的最小 frontmatter、状态、正文保留原则和模板。
-
 ## architecture-write-rules
 
 - updated_at: 2026-04-14
