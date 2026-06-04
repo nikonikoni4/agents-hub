@@ -322,6 +322,7 @@ class Agent:
         """持续监听私有队列，处理收到的消息"""
         while self._run:
             # 1. 从队列中取回消息
+            # TODO 当前调用agent的call id 没有发送给send_to 端
             msg: AgentMessage = await self.message_queue.get()
 
             # 2. 检查是否是停止信号
