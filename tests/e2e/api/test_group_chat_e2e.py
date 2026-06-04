@@ -195,7 +195,10 @@ class TestGroupChatE2E:
     def test_99_teardown_cleanup(self):
         """清理手动创建的测试数据目录"""
         if TEAMS_DIR.exists():
-            # 只清理 e2e 测试项目目录，不影响其他数据
             e2e_project_dir = TEAMS_DIR / SANITIZED_PATH
             if e2e_project_dir.exists():
-                shutil.rmtree(e2e_project_dir)
+                try:
+                    shutil.rmtree(e2e_project_dir)
+                except PermissionError:
+                    # Windows 上服务器可能持有日志文件句柄，跳过清理
+                    pass

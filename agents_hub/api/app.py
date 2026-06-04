@@ -53,7 +53,9 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     from agents_hub.bootstrap import initialize_resources
     from agents_hub.mcp.server import mcp
+    from agents_hub.utils import setup_logging
 
+    setup_logging(log_dir=config.data_path / "logs")
     initialize_resources()
 
     mcp_task = asyncio.create_task(
