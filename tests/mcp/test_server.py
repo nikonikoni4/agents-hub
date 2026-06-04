@@ -478,7 +478,7 @@ class TestSpeakInGroupChat:
         group_chat_id = "group_123"
 
         mock_group_chat_manager.resolve_token.return_value = (worker_name, group_chat_id)
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         with patch(
             "agents_hub.mcp.server.broadcast_group_chat_refresh",
@@ -514,7 +514,7 @@ class TestFinishAgentCall:
         call_id = "call_456"
 
         mock_group_chat_manager.resolve_token.return_value = (worker_name, group_chat_id)
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_call = MagicMock()
         mock_call.call_id = call_id
@@ -553,7 +553,7 @@ class TestFinishAgentCall:
         from agents_hub.mcp.server import finish_agent_call
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_call = MagicMock()
         mock_call.call_id = "call_456"
@@ -582,7 +582,7 @@ class TestFinishAgentCall:
         from agents_hub.mcp.server import finish_agent_call
 
         mock_group_chat_manager.resolve_token.return_value = ("other_worker", "group_123")
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_call = MagicMock()
         mock_call.call_id = "call_456"
@@ -611,7 +611,7 @@ class TestFinishAgentCall:
         from agents_hub.mcp.server import finish_agent_call
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
-        mock_group_chat_manager.get_group_chat.return_value = mock_group_chat
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         mock_call = MagicMock()
         mock_call.call_id = "call_456"

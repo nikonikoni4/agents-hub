@@ -49,8 +49,15 @@
 - 触发规则：当设计或修改 WebSocket 连接管理、群聊实时刷新、MCP 工具结束后的前端通知、API/MCP/realtime 依赖边界时阅读
 - 内容摘要：为避免 MCP Server 依赖 API WebSocket 模块导致循环依赖和职责混乱，决定将实时广播能力抽离为独立 realtime 边界；API 与 MCP 共同依赖 realtime，当前只广播 refresh signal，未来预留 message payload 推送
 
+## core-runtime-ssot-choice
+- updated_at: 2026-06-04
+- path: `docs/design-decisions/0009-core-runtime-ssot-choice.md`
+- 状态：decided
+- 触发规则：当设计或修改 core runtime 运行态状态管理、内存与文件同步机制、GroupChat/Context/Runtime 职责划分时阅读
+- 内容摘要：确定运行态 SSOT 以内存为准（文件作为持久化副本），引入 GroupChatRuntime 和 GroupChatRuntimeState 提供统一接口，同步持久化策略，Repository 从业务层穿透访问中退出
+
 ## user-design-summary
-- updated_at: 2026-05-28
+- updated_at: 2026-06-04
 - path: `docs/design-decisions/user-design-summary.md`
 - 触发规则：需要了解用户决策偏好、行为模式或为自主决策提供参考时阅读
 - 内容摘要：记录用户在重大设计决策中的偏好、判断方式和风险倾向，为后续 agent 自主决策提供参考
