@@ -39,9 +39,6 @@ export type {
   // 群聊相关
   GroupChatApiResponse,
   GroupChatMemberApiItem,
-  // 会话相关
-  AgentContextStateApiResponse,
-  AgentSessionInfoApiResponse,
   // 配置相关
   SystemConfigApiResponse,
 } from '@/shared/types/api-schemas';

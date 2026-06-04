@@ -186,38 +186,6 @@ export interface GroupChatMemberApiItem {
   use_docker: boolean;
 }
 
-// ==================== 会话相关 ====================
-
-/**
- * Agent 上下文状态
- * 对应后端: AgentContextState schema
- */
-export interface AgentContextStateApiResponse {
-  /** 最后加载的紧凑索引 */
-  last_loaded_compact_index: number;
-  /** 最后加载的消息索引 */
-  last_loaded_message_index: number;
-}
-
-/**
- * Agent 会话信息
- * 对应后端: AgentSessionInfo schema
- */
-export interface AgentSessionInfoApiResponse {
-  /** 主会话 ID */
-  main_session: string;
-  /** BTW 会话 ID 列表 */
-  btw_session: string[];
-  /** 上下文状态 */
-  context_state: AgentContextStateApiResponse;
-  /** 认证 Token */
-  token: string;
-  /** 当前工作目录 */
-  cwd: string;
-  /** 是否使用 Docker 沙箱 */
-  use_docker: boolean;
-}
-
 // ==================== 团队相关 ====================
 
 /**

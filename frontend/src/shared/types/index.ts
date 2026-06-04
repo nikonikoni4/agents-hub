@@ -18,8 +18,6 @@ export type {
   RoleSkillApiItem,
   GroupChatApiResponse,
   GroupChatMemberApiItem,
-  AgentContextStateApiResponse,
-  AgentSessionInfoApiResponse,
   TeamApiResponse,
   SystemConfigApiResponse,
 } from './api-schemas';
