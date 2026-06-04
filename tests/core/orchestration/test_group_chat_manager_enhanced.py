@@ -348,6 +348,11 @@ class TestCreateGroupChat:
     @pytest.mark.asyncio
     async def test_create_with_custom_name(self, group_chat_manager, sample_team, tmp_path):
         """测试使用自定义名称创建群聊"""
+        from agents_hub.utils.logger import setup_logging
+
+        # 初始化日志系统
+        setup_logging(log_dir=tmp_path / "logs")
+
         project_path = str(tmp_path / "project")
         custom_name = "我的开发团队"
 
@@ -359,7 +364,7 @@ class TestCreateGroupChat:
         )
 
         # 验证 metadata 中的名称
-        metadata = await group_chat.group_chat_context.repository.load_group_metadata()
+        metadata = group_chat.runtime.state.metadata
         assert metadata is not None
         assert metadata.group_chat_name == custom_name
 

@@ -54,12 +54,13 @@ class GroupChat:
         self.manager_task: asyncio.Task | None = None
         self.worker_tasks: list[asyncio.Task] = []
 
-        # 依赖组件
-        self.group_chat_context = GroupChatContext(group_chat_id, project_path)
+        # 依赖组件（按依赖顺序初始化）
+        from agents_hub.core.context import GroupChatRuntime
+
+        self.runtime = GroupChatRuntime(group_chat_id, project_path)
+        self.group_chat_context = GroupChatContext(self.runtime)
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
-
-        # 创建 TaskManager（用于 Agent Runtime 注入）
         self.task_manager = TaskManager(self.group_chat_id, project_path)
 
         # 懒加载标记
@@ -80,19 +81,11 @@ class GroupChat:
         # 1. 加载上下文数据
         await self.group_chat_context.load()
 
-        # 2. 立即保存群聊元数据
-        from datetime import datetime
-
-        from agents_hub.core.context.group_metadata import GroupMetadata
-
-        metadata = GroupMetadata(
-            group_chat_id=self.group_chat_id,
+        # 2. 初始化并保存群聊元数据
+        await self.runtime.initialize_metadata(
             group_chat_name=self.group_chat_name,
-            project_path=self.group_chat_context.repository.project_path,
-            created_at=datetime.now(),
-            group_type=self.group_type.value,
+            group_type=self.group_type,
         )
-        await self.group_chat_context.repository.save_group_metadata(metadata)
 
         # 3-4. 初始化并注册 agents（含 role 验证）
         await self._init_agents()
@@ -340,71 +333,35 @@ class GroupChat:
 
         为 manager 和所有 workers 生成唯一的 token，
         并将 token 注册到 GroupChatManager 的索引中。
-        同时更新 GroupChatContext 中的 agent_session_id。
-        如果 agent_session_id 不存在，则创建新的 AgentSessionInfo。
+        同时更新 Runtime 中的 agent_session_id。
         """
-        from agents_hub.core.context.group_chat_session import AgentSessionInfo
-
         from .group_chat_manager import group_chat_manager
-
-        # 读取 metadata 获取 project_path 作为默认 cwd
-        metadata = await self.group_chat_context.repository.load_group_metadata()
-        default_cwd = metadata.project_path if metadata else ""
 
         # 为 manager 生成并注册 token
         if self.manager:
             token = generate_token()
             group_chat_manager.register_token(token, self.manager.name, self.group_chat_id)
-
-            # 更新 context 中的 token 和 cwd
-            if self.manager.name not in self.group_chat_context.agent_session_id:
-                self.group_chat_context.agent_session_id[self.manager.name] = AgentSessionInfo(
-                    token=token,
-                    cwd=default_cwd,  # 使用 project_path 作为默认值
-                )
-            else:
-                self.group_chat_context.agent_session_id[self.manager.name].token = token
-                # 如果 agent 的 cwd 为空，则使用 project_path
-                if not self.group_chat_context.agent_session_id[self.manager.name].cwd:
-                    self.group_chat_context.agent_session_id[self.manager.name].cwd = default_cwd
+            await self.runtime.set_agent_token_and_default_cwd(self.manager.name, token)
 
         # 为 workers 生成并注册 token
         for worker_name in self.workers:
             token = generate_token()
             group_chat_manager.register_token(token, worker_name, self.group_chat_id)
-
-            # 更新 context 中的 token 和 cwd
-            if worker_name not in self.group_chat_context.agent_session_id:
-                self.group_chat_context.agent_session_id[worker_name] = AgentSessionInfo(
-                    token=token,
-                    cwd=default_cwd,  # 使用 project_path 作为默认值
-                )
-            else:
-                self.group_chat_context.agent_session_id[worker_name].token = token
-                # 如果 agent 的 cwd 为空，则使用 project_path
-                if not self.group_chat_context.agent_session_id[worker_name].cwd:
-                    self.group_chat_context.agent_session_id[worker_name].cwd = default_cwd
-
-        # 保存到磁盘
-        await self.group_chat_context.repository.save_agent_session_state(
-            self.group_chat_context.agent_session_id
-        )
+            await self.runtime.set_agent_token_and_default_cwd(worker_name, token)
 
     async def _restore_and_register_tokens(self) -> None:
         """
         从持久化恢复 token 并注册到 GroupChatManager
 
-        从 GroupChatContext 中读取已保存的 token，
+        从 Runtime 中读取已保存的 token，
         并将它们注册到 GroupChatManager 的索引中。
         如果某个 agent 没有 token，则生成新的 token。
         """
-        from agents_hub.core.context.group_chat_session import AgentSessionInfo
-
         from .group_chat_manager import group_chat_manager
 
         # 恢复 manager 的 token
         if self.manager:
-            session_info = self.group_chat_context.agent_session_id.get(self.manager.name)
+            session_info = self.runtime.state.agent_sessions.get(self.manager.name)
             if session_info and session_info.token:
                 # 恢复已有的 token
                 group_chat_manager.register_token(
@@ -414,16 +371,11 @@ class GroupChat:
                 # 生成新的 token
                 token = generate_token()
                 group_chat_manager.register_token(token, self.manager.name, self.group_chat_id)
-                if session_info:
-                    session_info.token = token
-                else:
-                    self.group_chat_context.agent_session_id[self.manager.name] = AgentSessionInfo(
-                        token=token
-                    )
+                await self.runtime.set_agent_token_and_default_cwd(self.manager.name, token)
 
         # 恢复 workers 的 token
         for worker_name in self.workers:
-            session_info = self.group_chat_context.agent_session_id.get(worker_name)
+            session_info = self.runtime.state.agent_sessions.get(worker_name)
             if session_info and session_info.token:
                 # 恢复已有的 token
                 group_chat_manager.register_token(
@@ -433,14 +385,4 @@ class GroupChat:
                 # 生成新的 token
                 token = generate_token()
                 group_chat_manager.register_token(token, worker_name, self.group_chat_id)
-                if session_info:
-                    session_info.token = token
-                else:
-                    self.group_chat_context.agent_session_id[worker_name] = AgentSessionInfo(
-                        token=token
-                    )
-
-        # 保存到磁盘（如果有新生成的 token）
-        await self.group_chat_context.repository.save_agent_session_state(
-            self.group_chat_context.agent_session_id
-        )
+                await self.runtime.set_agent_token_and_default_cwd(worker_name, token)

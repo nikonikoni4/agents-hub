@@ -165,3 +165,44 @@ class TestGroupChatMetadataIntegration:
             assert loaded_metadata is not None
             assert loaded_metadata.project_path == temp_dir
 
+    @pytest.mark.asyncio
+    async def test_group_chat_exposes_runtime_metadata_after_start(self, monkeypatch, tmp_path):
+        """测试 GroupChat 在 start 后通过 runtime 暴露 metadata"""
+        from agents_hub.core.orchestration import GroupChat
+        from agents_hub.core.orchestration.team import Team
+        from agents_hub.utils.logger import setup_logging
+
+        # 初始化日志系统
+        setup_logging(log_dir=tmp_path / "logs")
+
+        team = Team.model_construct(team_members_name=["Leader"])
+        group_chat = GroupChat(
+            team=team,
+            group_type=GroupChatType.MANAGER_ORCHESTRATE,
+            project_path=str(tmp_path),
+            group_chat_id="gc_runtime_metadata",
+            group_chat_name="Runtime Metadata",
+        )
+
+        async def fake_init_agents():
+            group_chat.manager = None
+            group_chat.workers = {}
+
+        async def fake_generate_tokens():
+            return None
+
+        async def fake_initialize_members():
+            return None
+
+        monkeypatch.setattr(group_chat, "_init_agents", fake_init_agents)
+        monkeypatch.setattr(group_chat, "_generate_and_register_tokens", fake_generate_tokens)
+        monkeypatch.setattr(group_chat, "_initialize_new_members", fake_initialize_members)
+        monkeypatch.setattr(group_chat, "_start_agent_tasks", lambda: None)
+
+        await group_chat.start()
+
+        info = group_chat.runtime.get_info_dict(is_active=True)
+        assert info["group_chat_id"] == "gc_runtime_metadata"
+        assert info["group_chat_name"] == "Runtime Metadata"
+        assert info["project_path"] == str(tmp_path)
+

@@ -43,6 +43,11 @@ class GroupChatContext:
     def get_project_path(self) -> str:
         return self.runtime.project_path
 
+    @property
+    def repository(self):
+        """Backward compatibility accessor - returns runtime.repository."""
+        return self.runtime.repository
+
     async def load(self):
         """加载数据"""
         await self.runtime.load()
