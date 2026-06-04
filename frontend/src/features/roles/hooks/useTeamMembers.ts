@@ -39,7 +39,7 @@ export function useTeamMembers() {
         setSubmitting(false);
       }
     },
-    [updateTeamInStore, fetchTeamWithMembers]
+    [updateTeamInStore, fetchTeamWithMembers, toast]
   );
 
   const removeMemberFromTeam = useCallback(
@@ -60,7 +60,7 @@ export function useTeamMembers() {
         setSubmitting(false);
       }
     },
-    [updateTeamInStore, fetchTeamWithMembers]
+    [updateTeamInStore, fetchTeamWithMembers, toast]
   );
 
   return { addMembersToTeam, removeMemberFromTeam, submitting };
