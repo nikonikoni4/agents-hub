@@ -50,7 +50,7 @@ class GroupChatRuntime:
             GroupChatRuntimeState: 加载后的状态对象
         """
         self.state.group_chat_session = await self.repository.load_group_chat_session()
-        self.state.agent_sessions = await self.repository.load_agent_member()
+        self.state.agent_sessions = await self.repository.load_agent_member_infos()
         self.state.compact_history = await self.repository.load_compact_history()
         self.state.metadata = await self.repository.load_group_metadata()
         return self.state

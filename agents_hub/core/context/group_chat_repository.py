@@ -131,7 +131,7 @@ class GroupChatRepository:
 
     # ==================== Agent Session State 持久化 ====================
 
-    async def load_agent_member(self) -> dict[str, AgentMemberInfo]:
+    async def load_agent_member_infos(self) -> dict[str, AgentMemberInfo]:
         """
         加载 agent session 状态（无锁，读操作）
 

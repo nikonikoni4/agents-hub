@@ -59,7 +59,7 @@ class TestGroupChatMetadataIntegration:
             await repository.save_agent_member(agent_member_info)
 
             # 3. 验证：重新加载，确认 cwd 正确
-            loaded_state = await repository.load_agent_member()
+            loaded_state = await repository.load_agent_member_infos()
             assert loaded_state["Leader"].cwd == temp_dir
             assert loaded_state["Worker1"].cwd == temp_dir
 

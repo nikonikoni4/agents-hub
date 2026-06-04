@@ -32,7 +32,7 @@ class TestAgentSessionCwd:
             await repository.save_agent_member(agent_sessions)
 
             # 重新加载
-            loaded_state = await repository.load_agent_member()
+            loaded_state = await repository.load_agent_member_infos()
 
             # 验证
             assert "agent1" in loaded_state
@@ -70,7 +70,7 @@ class TestAgentSessionCwd:
                 json.dump(old_format_data, f)
 
             # 加载
-            loaded_state = await repository.load_agent_member()
+            loaded_state = await repository.load_agent_member_infos()
 
             # 验证：cwd 字段应该有默认值 ""
             assert "agent1" in loaded_state
@@ -107,7 +107,7 @@ class TestAgentSessionCwd:
             await repository.save_agent_member(agent_sessions)
 
             # 重新加载
-            loaded_state = await repository.load_agent_member()
+            loaded_state = await repository.load_agent_member_infos()
 
             # 验证
             assert loaded_state["agent1"].cwd == "/project/agent1"
@@ -131,7 +131,7 @@ class TestAgentSessionCwd:
             await repository.save_agent_member(agent_sessions)
 
             # 重新加载
-            loaded_state = await repository.load_agent_member()
+            loaded_state = await repository.load_agent_member_infos()
             assert loaded_state["agent1"].cwd == "/original/path"
 
             # 更新 cwd
@@ -139,5 +139,5 @@ class TestAgentSessionCwd:
             await repository.save_agent_member(loaded_state)
 
             # 再次加载验证
-            final_state = await repository.load_agent_member()
+            final_state = await repository.load_agent_member_infos()
             assert final_state["agent1"].cwd == "/updated/path"

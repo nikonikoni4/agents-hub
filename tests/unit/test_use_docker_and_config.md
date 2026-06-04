@@ -6,7 +6,7 @@
 
 **契约点**：
 1. save_agent_member 序列化 use_docker 字段
-2. load_agent_member 反序列化 use_docker 字段
+2. load_agent_member_infos 反序列化 use_docker 字段
 3. use_docker 缺失时默认 False（向后兼容旧数据）
 
 **Bad Cases**：
@@ -78,7 +78,7 @@
 ### 1. use_docker 持久化
 
 #### 向后兼容
-- [ ] `test_load_agent_member_missing_use_docker_defaults_false` - 旧数据无 use_docker 字段时默认 False
+- [ ] `test_load_agent_member_infos_missing_use_docker_defaults_false` - 旧数据无 use_docker 字段时默认 False
 
 #### 正常流程
 - [ ] `test_save_and_load_use_docker_round_trip` - use_docker=True 正确序列化/反序列化

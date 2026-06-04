@@ -26,7 +26,7 @@ class FakeRepository:
         ]
         return session
 
-    async def load_agent_member(self):
+    async def load_agent_member_infos(self):
         return {
             "Worker1": AgentMemberInfo(
                 main_session="s1",

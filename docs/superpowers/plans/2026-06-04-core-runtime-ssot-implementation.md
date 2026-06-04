@@ -255,7 +255,7 @@ Complex method steps:
 
 - `load()`
   1. `state.group_chat_session = await repository.load_group_chat_session()`
-  2. `state.agent_sessions = await repository.load_agent_member()`
+  2. `state.agent_sessions = await repository.load_agent_member_infos()`
   3. `state.compact_history = await repository.load_compact_history()`
   4. `state.metadata = await repository.load_group_metadata()`
   5. Return `state`
@@ -370,7 +370,7 @@ class FakeRepository:
         ]
         return session
 
-    async def load_agent_member(self):
+    async def load_agent_member_infos(self):
         return {
             "Worker1": AgentMemberInfo(
                 main_session="s1",

@@ -31,11 +31,6 @@ class GroupChatContext:
         return self.runtime.state.group_chat_session
 
     @property
-    def agent_sessions(self) -> dict[str, AgentMemberInfo]:
-        """Preferred accessor - returns agent sessions from runtime state."""
-        return self.runtime.state.agent_sessions
-
-    @property
     def agent_member_info(self) -> dict[str, AgentMemberInfo]:
         """Backward compatibility alias for agent_sessions."""
         return self.runtime.state.agent_sessions

@@ -119,7 +119,7 @@ teams/<project_path>/<group_chat_id>/
    - Agent 的 cwd 保持原有值或为空
 
 2. **没有 cwd 字段的旧 agent_member.json**：
-   - `load_agent_member()` 会将 `cwd` 设置为默认值 `""`
+   - `load_agent_member_infos()` 会将 `cwd` 设置为默认值 `""`
    - 向后兼容测试已通过
 
 ---
