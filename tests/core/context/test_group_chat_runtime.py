@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from tests.core.context.conftest import FakeRepository
+from .conftest import FakeRepository
 
 from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 from agents_hub.core.context.group_chat_runtime_state import GroupChatRuntimeState

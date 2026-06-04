@@ -51,14 +51,18 @@ class MockRole:
 async def group_chat_context(tmp_path):
     """创建测试用的 GroupChatContext"""
     from agents_hub.core.context import AgentSessionInfo
+    from agents_hub.core.context.group_chat_repository import GroupChatRepository
+    from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 
-    context = GroupChatContext(group_chat_id="test_group", project_path=str(tmp_path))
+    repository = GroupChatRepository("test_group", str(tmp_path))
+    runtime = GroupChatRuntime("test_group", str(tmp_path), repository=repository)
+    await runtime.load()
+    context = GroupChatContext(runtime)
+
     # 添加 agent session info
     context.agent_session_id["test_agent"] = AgentSessionInfo(
         main_session="test_session", token="tok_test123456789012345678901234"
     )
-    # 加载上下文
-    await context.load()
     return context
 
 
