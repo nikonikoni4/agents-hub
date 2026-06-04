@@ -4,12 +4,19 @@
 
 import { useCallback, useState } from 'react';
 import { useTeamsStore } from '../store/teamsStore';
-import { updateTeam } from '@/core/api/teamApi';
-import { fetchTeamWithMembers } from '@/shared/adapters/teamAdapter';
+import { updateTeam, getTeam } from '@/core/api/teamApi';
+import { aggregateRoleWithSkills } from '@/shared/adapters/roleAdapter';
+import type { TeamWithMembers } from '../types';
 
 export function useTeamMembers() {
   const [submitting, setSubmitting] = useState(false);
   const { updateTeam: updateTeamInStore } = useTeamsStore();
+
+  const fetchTeamWithMembers = useCallback(async (teamName: string): Promise<TeamWithMembers> => {
+    const team = await getTeam(teamName);
+    const members = await Promise.all(team.members.map((name) => aggregateRoleWithSkills(name)));
+    return { name: team.name, members };
+  }, []);
 
   const addMembersToTeam = useCallback(
     async (teamName: string, roleNames: string[]) => {
@@ -23,18 +30,13 @@ export function useTeamMembers() {
 
         const updatedTeam = await fetchTeamWithMembers(teamName);
         updateTeamInStore(teamName, () => updatedTeam);
-
-        return { success: true };
       } catch (err) {
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : '添加成员失败',
-        };
+        console.error('添加成员失败:', err);
       } finally {
         setSubmitting(false);
       }
     },
-    [updateTeamInStore]
+    [updateTeamInStore, fetchTeamWithMembers]
   );
 
   const removeMemberFromTeam = useCallback(
@@ -48,18 +50,13 @@ export function useTeamMembers() {
 
         const updatedTeam = await fetchTeamWithMembers(teamName);
         updateTeamInStore(teamName, () => updatedTeam);
-
-        return { success: true };
       } catch (err) {
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : '移除成员失败',
-        };
+        console.error('移除成员失败:', err);
       } finally {
         setSubmitting(false);
       }
     },
-    [updateTeamInStore]
+    [updateTeamInStore, fetchTeamWithMembers]
   );
 
   return { addMembersToTeam, removeMemberFromTeam, submitting };

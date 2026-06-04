@@ -26,18 +26,12 @@ export function AddMemberDialog({ isOpen, teamName, onClose, onSuccess }: AddMem
 
   const handleSubmit = async () => {
     if (!teamName || selectedRoles.length === 0) {
-      alert('请至少选择一个角色');
       return;
     }
 
-    const result = await addMembersToTeam(teamName, selectedRoles);
-
-    if (result.success) {
-      onSuccess?.();
-      handleClose();
-    } else {
-      alert(result.error);
-    }
+    await addMembersToTeam(teamName, selectedRoles);
+    onSuccess?.();
+    handleClose();
   };
 
   const handleClose = () => {
@@ -46,9 +40,13 @@ export function AddMemberDialog({ isOpen, teamName, onClose, onSuccess }: AddMem
     onClose();
   };
 
-  const handleCreateSuccess = () => {
+  const handleCreateSuccess = async (newRoleName?: string) => {
     setShowCreateDialog(false);
-    onSuccess?.();
+    // 自动将新创建的角色添加到团队
+    if (teamName && newRoleName) {
+      await addMembersToTeam(teamName, [newRoleName]);
+      onSuccess?.();
+    }
   };
 
   const toggleRole = (roleName: string) => {

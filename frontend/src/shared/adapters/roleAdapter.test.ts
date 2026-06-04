@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchRoleWithSkills, fetchAllRolesWithSkills } from './roleAdapter';
+import { aggregateRoleWithSkills, aggregateAllRolesWithSkills } from './roleAdapter';
 import * as roleApi from '@/core/api/roleApi';
 
 vi.mock('@/core/api/roleApi');
@@ -13,7 +13,7 @@ describe('roleAdapter', () => {
     vi.clearAllMocks();
   });
 
-  describe('fetchRoleWithSkills', () => {
+  describe('aggregateRoleWithSkills', () => {
     it('should aggregate role info and skills', async () => {
       const mockRole = {
         name: 'Designer',
@@ -30,7 +30,7 @@ describe('roleAdapter', () => {
       vi.mocked(roleApi.getRoleInfo).mockResolvedValue(mockRole);
       vi.mocked(roleApi.getRoleSkills).mockResolvedValue(mockSkills);
 
-      const result = await fetchRoleWithSkills('Designer');
+      const result = await aggregateRoleWithSkills('Designer');
 
       expect(result).toEqual({ ...mockRole, skills: mockSkills });
       expect(roleApi.getRoleInfo).toHaveBeenCalledWith('Designer');
@@ -38,7 +38,7 @@ describe('roleAdapter', () => {
     });
   });
 
-  describe('fetchAllRolesWithSkills', () => {
+  describe('aggregateAllRolesWithSkills', () => {
     it('should aggregate all roles with skills', async () => {
       const mockRoles = [
         {
@@ -67,7 +67,7 @@ describe('roleAdapter', () => {
       );
       vi.mocked(roleApi.getRoleSkills).mockResolvedValue([]);
 
-      const result = await fetchAllRolesWithSkills();
+      const result = await aggregateAllRolesWithSkills();
 
       expect(result).toHaveLength(2);
       expect(result[0]!.name).toBe('Designer');

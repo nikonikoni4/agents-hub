@@ -12,7 +12,7 @@ import styles from './CreateRoleDialog.module.css';
 export interface CreateRoleDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (newRoleName?: string) => void;
 }
 
 export function CreateRoleDialog({ isOpen, onClose, onSuccess }: CreateRoleDialogProps) {
@@ -29,17 +29,13 @@ export function CreateRoleDialog({ isOpen, onClose, onSuccess }: CreateRoleDialo
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      alert('请输入角色名称');
       return;
     }
 
-    const result = await createRole(formData);
-
-    if (result.success) {
-      onSuccess?.();
+    const success = await createRole(formData);
+    if (success) {
+      onSuccess?.(formData.name);
       handleClose();
-    } else {
-      alert(result.error || '创建失败');
     }
   };
 

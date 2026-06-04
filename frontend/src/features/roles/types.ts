@@ -3,8 +3,15 @@
  */
 
 import type { RoleWithSkills } from '@/shared/adapters/roleAdapter';
-import type { TeamWithMembers } from '@/shared/adapters/teamAdapter';
 import type { AgentPlatform } from '@/shared/types/api-schemas';
+
+/**
+ * 聚合后的团队数据（包含完整的成员角色对象）
+ */
+export interface TeamWithMembers {
+  name: string;
+  members: RoleWithSkills[];
+}
 
 /**
  * 创建角色表单数据
@@ -27,4 +34,4 @@ export type RoleManagementTab = 'teams' | 'roles';
 export type AddMemberMode = 'existing' | 'create';
 
 // Re-export adapter types for convenience
-export type { RoleWithSkills, TeamWithMembers };
+export type { RoleWithSkills };

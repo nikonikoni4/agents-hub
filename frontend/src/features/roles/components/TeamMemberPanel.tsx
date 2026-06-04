@@ -15,12 +15,9 @@ export interface TeamMemberPanelProps {
 export function TeamMemberPanel({ team, onAddMember }: TeamMemberPanelProps) {
   const { removeMemberFromTeam, submitting } = useTeamMembers();
 
-  const handleRemoveMember = async (roleName: string) => {
+  const handleRemoveMember = (roleName: string) => {
     if (!team) return;
-    const result = await removeMemberFromTeam(team.name, roleName);
-    if (!result.success) {
-      alert(result.error);
-    }
+    removeMemberFromTeam(team.name, roleName);
   };
 
   if (!team) {

@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand';
-import type { TeamWithMembers } from '@/shared/adapters/teamAdapter';
+import type { TeamWithMembers } from '../types';
 
 interface TeamsState {
   teams: TeamWithMembers[];

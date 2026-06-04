@@ -5,7 +5,7 @@
 import { useCallback, useState } from 'react';
 import { useRolesStore } from '../store/rolesStore';
 import { createRole } from '@/core/api/roleApi';
-import { fetchRoleWithSkills } from '@/shared/adapters/roleAdapter';
+import { aggregateRoleWithSkills } from '@/shared/adapters/roleAdapter';
 import type { CreateRoleFormData } from '../types';
 
 export function useCreateRole() {
@@ -13,7 +13,7 @@ export function useCreateRole() {
   const { addRole } = useRolesStore();
 
   const handleCreateRole = useCallback(
-    async (formData: CreateRoleFormData) => {
+    async (formData: CreateRoleFormData): Promise<boolean> => {
       setSubmitting(true);
       try {
         await createRole({
@@ -25,15 +25,12 @@ export function useCreateRole() {
           abilities: [],
         });
 
-        const newRole = await fetchRoleWithSkills(formData.name);
+        const newRole = await aggregateRoleWithSkills(formData.name);
         addRole(newRole);
-
-        return { success: true };
+        return true;
       } catch (err) {
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : '创建角色失败',
-        };
+        console.error('创建角色失败:', err);
+        return false;
       } finally {
         setSubmitting(false);
       }
