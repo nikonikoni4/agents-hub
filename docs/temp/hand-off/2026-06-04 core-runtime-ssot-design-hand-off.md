@@ -110,7 +110,7 @@ status: draft
 GroupChatRuntimeState
   - metadata
   - group_chat_session
-  - agent_sessions
+  - agent_member_infos
   - compact_history
   - runtime flags / persistence status
 ```
@@ -262,7 +262,7 @@ GroupChat.start/load
   - update_context_load_state
 
 Agent 会话/配置类
-  - update_agent_session
+  - update_agent_member_info
   - set_agent_cwd
   - set_agent_docker
   - refresh_agent_token

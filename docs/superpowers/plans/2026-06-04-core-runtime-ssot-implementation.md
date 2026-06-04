@@ -73,7 +73,7 @@ All runtime writes must update memory first and synchronously persist the durabl
 | --- | --- | --- |
 | `initialize_metadata()` | `state.metadata` | `group_metadata.json` |
 | `add_message()` | `state.group_chat_session.messages` | `<group_chat_id>.jsonl` |
-| `update_agent_session_from_result()` | `state.agent_member_infos[agent_name]` | `agent_member.json` |
+| `update_agent_member_info_from_result()` | `state.agent_member_infos[agent_name]` | `agent_member.json` |
 | `set_agent_token_and_default_cwd()` | `state.agent_member_infos[agent_name].token/cwd` | `agent_member.json` |
 | `update_context_load_state()` | `state.agent_member_infos[agent_name].context_state` | `agent_member.json` |
 | `set_agent_use_docker()` | `state.agent_member_infos[agent_name].use_docker` | `agent_member.json` |
@@ -120,7 +120,7 @@ class GroupChatRuntimeState:
     group_chat_id: str
     project_path: str
     group_chat_session: GroupChatSession | None = None
-    agent_sessions: dict[str, AgentMemberInfo] = field(default_factory=dict)
+    agent_member_infos: dict[str, AgentMemberInfo] = field(default_factory=dict)
     compact_history: list[dict] = field(default_factory=list)
     metadata: GroupMetadata | None = None
     persistence_error: str | None = None
@@ -203,19 +203,19 @@ class GroupChatRuntime:
     def get_agent_names(self) -> list[str]:
         """Return names present in agent session state."""
 
-    def get_agent_session(self, agent_name: str) -> AgentMemberInfo | None:
+    def get_agent_member_info(self, agent_name: str) -> AgentMemberInfo | None:
         """Return one agent session or None."""
 
-    def get_or_create_agent_session(self, agent_name: str) -> AgentMemberInfo:
+    def get_or_create_agent_member_info(self, agent_name: str) -> AgentMemberInfo:
         """Return existing agent session or create an empty one in memory."""
 
-    async def save_agent_sessions(self) -> None:
+    async def save_agent_member_infos(self) -> None:
         """Persist all agent sessions to agent_member.json."""
 
     async def add_message(self, agent_result) -> None:
         """Append an agent result to memory messages and persist messages jsonl."""
 
-    async def update_agent_session_from_result(self, agent_result) -> AgentMemberInfo:
+    async def update_agent_member_info_from_result(self, agent_result) -> AgentMemberInfo:
         """Update session IDs from AgentResult and persist agent_member.json."""
 
     async def set_agent_token_and_default_cwd(
@@ -268,12 +268,12 @@ Complex method steps:
   5. On exception, set `state.persistence_error = str(e)` and re-raise.
   6. Return metadata.
 
-- `update_agent_session_from_result()`
+- `update_agent_member_info_from_result()`
   1. Read `agent_result.agent_name` and `agent_result.session_id`.
-  2. Get or create `AgentMemberInfo` if absent: `get_or_create_agent_session(agent_name)`.
+  2. Get or create `AgentMemberInfo` if absent: `get_or_create_agent_member_info(agent_name)`.
   3. If existing `main_session` is empty, set it to `session_id`.
   4. If `session_id` differs from `main_session` and is not in `btw_session`, append it.
-  5. Persist all agent sessions with `save_agent_sessions()`.
+  5. Persist all agent sessions with `save_agent_member_infos()`.
   6. Return the updated `AgentMemberInfo`.
 
 - `append_compact_record_and_mark_compacted()`
@@ -519,21 +519,21 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
     ]
 
 
-async def test_get_or_create_agent_session_returns_existing():
+async def test_get_or_create_agent_member_info_returns_existing():
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    session_info = runtime.get_or_create_agent_session("Worker1")
+    session_info = runtime.get_or_create_agent_member_info("Worker1")
     assert session_info.main_session == "s1"
 
 
-async def test_get_or_create_agent_session_creates_new():
+async def test_get_or_create_agent_member_info_creates_new():
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    session_info = runtime.get_or_create_agent_session("Worker2")
+    session_info = runtime.get_or_create_agent_member_info("Worker2")
     assert session_info.main_session is None
     assert session_info.btw_session == []
 
@@ -614,27 +614,27 @@ async def test_runtime_commands_update_memory_then_persist():
     )
 
 
-async def test_update_agent_session_handles_empty_main_session():
+async def test_update_agent_member_info_handles_empty_main_session():
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
     # Create new agent with no main_session
     result = MockAgentResult(agent_name="Worker2", session_id="s2")
-    session_info = await runtime.update_agent_session_from_result(result)
+    session_info = await runtime.update_agent_member_info_from_result(result)
 
     assert session_info.main_session == "s2"
     assert session_info.btw_session == []
 
 
-async def test_update_agent_session_appends_different_session_to_btw():
+async def test_update_agent_member_info_appends_different_session_to_btw():
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
     # Worker1 already has main_session="s1"
     result = MockAgentResult(agent_name="Worker1", session_id="s2")
-    session_info = await runtime.update_agent_session_from_result(result)
+    session_info = await runtime.update_agent_member_info_from_result(result)
 
     assert session_info.main_session == "s1"
     assert "s2" in session_info.btw_session
@@ -814,20 +814,20 @@ def group_chat_session(self) -> GroupChatSession | None:
     return self.runtime.state.group_chat_session
 
 @property
-def agent_sessions(self) -> dict[str, AgentMemberInfo]:
+def agent_member_infos(self) -> dict[str, AgentMemberInfo]:
     """Preferred accessor - returns agent sessions from runtime state."""
     return self.runtime.state.agent_member_infos
 
 @property
 def agent_member_info(self) -> dict[str, AgentMemberInfo]:
-    """Backward compatibility alias for agent_sessions."""
+    """Backward compatibility alias for agent_member_infos."""
     return self.runtime.state.agent_member_infos
 
 def get_project_path(self) -> str:
     return self.runtime.get_project_path()
 ```
 
-**Note:** Keep both `agent_sessions` and `agent_member_info` during migration. In Task 8, search for all usages of `agent_member_info` and verify backward compatibility.
+**Note:** Keep both `agent_member_infos` and `agent_member_info` during migration. In Task 8, search for all usages of `agent_member_info` and verify backward compatibility.
 
 Replace `load()`:
 
@@ -846,7 +846,7 @@ async def add_message(self, agent_result):
 
 
 async def update_agent_member_info(self, agent_result):
-    await self.runtime.update_agent_session_from_result(agent_result)
+    await self.runtime.update_agent_member_info_from_result(agent_result)
 
 
 async def load_compact_history(self) -> list[dict]:
@@ -1029,7 +1029,7 @@ Apply this for manager and each worker.
 In the lifecycle load path (when restoring from disk), use:
 
 ```python
-session_info = self.runtime.get_agent_session(agent_name)
+session_info = self.runtime.get_agent_member_info(agent_name)
 if session_info and session_info.token:
     group_chat_manager.register_token(session_info.token, agent_name, self.group_chat_id)
 else:
@@ -1494,15 +1494,15 @@ Based on comprehensive code review, the following improvements were made:
 ### 建议修复的问题（已解决）
 
 1. **测试覆盖补充**：
-   - 增加 `update_agent_session_from_result()` 边界情况测试（空 main_session、追加到 btw_session）
-   - 增加 `get_or_create_agent_session()` 测试
+   - 增加 `update_agent_member_info_from_result()` 边界情况测试（空 main_session、追加到 btw_session）
+   - 增加 `get_or_create_agent_member_info()` 测试
    - 增加 `get_agent_names()` 测试
    - 增加 `close()` 方法测试
    - 增加持久化失败后的 error flag 测试
 
 2. **实现细节明确**：
    - `get_message_dicts()` 增加实现说明（分页、字段映射）
-   - `update_agent_session_from_result()` 明确使用 `get_or_create_agent_session()`
+   - `update_agent_member_info_from_result()` 明确使用 `get_or_create_agent_member_info()`
    - 持久化失败处理机制说明增强（guard checks）
 
 3. **代码组织优化**：
@@ -1512,7 +1512,7 @@ Based on comprehensive code review, the following improvements were made:
 4. **术语统一**：统一使用 "Repository" 而非混用 "Store"
 
 5. **向后兼容性**：
-   - `GroupChatContext` 同时提供 `agent_sessions` 和 `agent_member_info` 属性
+   - `GroupChatContext` 同时提供 `agent_member_infos` 和 `agent_member_info` 属性
    - Task 8 增加向后兼容性验证步骤
 
 ### 文档改进

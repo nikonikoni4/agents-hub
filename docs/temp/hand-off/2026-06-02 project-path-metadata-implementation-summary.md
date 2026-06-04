@@ -100,7 +100,7 @@ teams/<project_path>/<group_chat_id>/
 ### 测试结果
 
 ✅ 所有 15 个 context 层测试通过
-- `test_agent_session_cwd.py`: 4 个测试通过
+- `test_agent_member_info_cwd.py`: 4 个测试通过
 - `test_group_chat_context.py`: 6 个测试通过
 - `test_group_metadata.py`: 5 个测试通过
 

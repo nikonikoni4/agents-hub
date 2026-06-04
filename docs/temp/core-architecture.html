@@ -506,7 +506,7 @@ classDiagram
 
     class GroupChatSession {
         +messages list
-        +agent_sessions dict
+        +agent_member_infos dict
     }
 
     Agent <|-- Manager
@@ -579,7 +579,7 @@ sequenceDiagram
     GCM->>GC: start()
     GC->>GCC: load()
     GCC->>GCR: read_messages()
-    GCC->>GCR: read_agent_sessions()
+    GCC->>GCR: read_agent_member_infos()
     GCC->>GCR: read_compact_history()
 
     GC->>GC: _init_agents()

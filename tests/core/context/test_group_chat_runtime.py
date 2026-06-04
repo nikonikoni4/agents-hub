@@ -84,21 +84,21 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
     ]
 
 
-async def test_get_or_create_agent_session_returns_existing():
+async def test_get_or_create_agent_member_info_returns_existing():
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    session_info = runtime.get_or_create_agent_session("Worker1")
+    session_info = runtime.get_or_create_agent_member_info("Worker1")
     assert session_info.main_session == "s1"
 
 
-async def test_get_or_create_agent_session_creates_new():
+async def test_get_or_create_agent_member_info_creates_new():
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    session_info = runtime.get_or_create_agent_session("Worker2")
+    session_info = runtime.get_or_create_agent_member_info("Worker2")
     assert session_info.main_session is None
     assert session_info.btw_session == []
 
@@ -174,27 +174,27 @@ async def test_runtime_commands_update_memory_then_persist():
     )
 
 
-async def test_update_agent_session_handles_empty_main_session():
+async def test_update_agent_member_info_handles_empty_main_session():
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
     # Create new agent with no main_session
     result = MockAgentResult(agent_name="Worker2", session_id="s2")
-    session_info = await runtime.update_agent_session_from_result(result)
+    session_info = await runtime.update_agent_member_info_from_result(result)
 
     assert session_info.main_session == "s2"
     assert session_info.btw_session == []
 
 
-async def test_update_agent_session_appends_different_session_to_btw():
+async def test_update_agent_member_info_appends_different_session_to_btw():
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
     # Worker1 already has main_session="s1"
     result = MockAgentResult(agent_name="Worker1", session_id="s2")
-    session_info = await runtime.update_agent_session_from_result(result)
+    session_info = await runtime.update_agent_member_info_from_result(result)
 
     assert session_info.main_session == "s1"
     assert "s2" in session_info.btw_session

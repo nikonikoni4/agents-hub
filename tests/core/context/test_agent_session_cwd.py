@@ -20,7 +20,7 @@ class TestAgentSessionCwd:
             repository = GroupChatRepository("test-group-1", temp_dir)
 
             # 设置 agent session info，包含 cwd
-            agent_sessions = {
+            agent_member_infos = {
                 "agent1": AgentMemberInfo(
                     main_session="session_123",
                     token="token_abc",
@@ -29,7 +29,7 @@ class TestAgentSessionCwd:
             }
 
             # 保存
-            await repository.save_agent_member(agent_sessions)
+            await repository.save_agent_member(agent_member_infos)
 
             # 重新加载
             loaded_state = await repository.load_agent_member_infos()
@@ -85,7 +85,7 @@ class TestAgentSessionCwd:
             repository = GroupChatRepository("test-group-3", temp_dir)
 
             # 设置多个 agent，每个有不同的 cwd
-            agent_sessions = {
+            agent_member_infos = {
                 "agent1": AgentMemberInfo(
                     main_session="session_1",
                     token="token_1",
@@ -104,7 +104,7 @@ class TestAgentSessionCwd:
             }
 
             # 保存
-            await repository.save_agent_member(agent_sessions)
+            await repository.save_agent_member(agent_member_infos)
 
             # 重新加载
             loaded_state = await repository.load_agent_member_infos()
@@ -121,14 +121,14 @@ class TestAgentSessionCwd:
             repository = GroupChatRepository("test-group-4", temp_dir)
 
             # 初始保存
-            agent_sessions = {
+            agent_member_infos = {
                 "agent1": AgentMemberInfo(
                     main_session="session_abc",
                     token="token_def",
                     cwd="/original/path",
                 )
             }
-            await repository.save_agent_member(agent_sessions)
+            await repository.save_agent_member(agent_member_infos)
 
             # 重新加载
             loaded_state = await repository.load_agent_member_infos()

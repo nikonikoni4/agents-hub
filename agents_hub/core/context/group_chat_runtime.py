@@ -121,7 +121,7 @@ class GroupChatRuntime:
             for msg in messages
         ]
 
-    def get_or_create_agent_session(self, agent_name: str) -> AgentMemberInfo:
+    def get_or_create_agent_member_info(self, agent_name: str) -> AgentMemberInfo:
         """
         获取或创建 Agent 会话信息
 
@@ -203,7 +203,7 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        session_info = self.get_or_create_agent_session(agent_name)
+        session_info = self.get_or_create_agent_member_info(agent_name)
         session_info.token = token
         # 设置默认 cwd 为 project_path/agent_name_lowercase
         # Format: first letter + trailing digits (e.g., "Worker1" -> "w1")
@@ -230,7 +230,7 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        session_info = self.get_or_create_agent_session(agent_name)
+        session_info = self.get_or_create_agent_member_info(agent_name)
         session_info.use_docker = use_docker
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
@@ -251,7 +251,7 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        session_info = self.get_or_create_agent_session(agent_name)
+        session_info = self.get_or_create_agent_member_info(agent_name)
         session_info.context_state.last_loaded_compact_index = compact_index
         session_info.context_state.last_loaded_message_index = message_index
         await self._persist(
@@ -287,7 +287,7 @@ class GroupChatRuntime:
         )
         await self._persist(lambda: self.repository.save_group_chat_session(session))
 
-    async def update_agent_session_from_result(self, agent_result) -> AgentMemberInfo:
+    async def update_agent_member_info_from_result(self, agent_result) -> AgentMemberInfo:
         """
         根据 Agent 执行结果更新会话信息
 
@@ -297,7 +297,7 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        session_info = self.get_or_create_agent_session(agent_result.agent_name)
+        session_info = self.get_or_create_agent_member_info(agent_result.agent_name)
 
         # 如果没有 main_session，设置为当前 session_id
         if not session_info.main_session:

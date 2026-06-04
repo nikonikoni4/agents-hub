@@ -32,7 +32,7 @@ class GroupChatContext:
 
     @property
     def agent_member_info(self) -> dict[str, AgentMemberInfo]:
-        """Backward compatibility alias for agent_sessions."""
+        """Backward compatibility alias for agent_member_infos."""
         return self.runtime.state.agent_member_infos
 
     def get_project_path(self) -> str:
@@ -72,7 +72,7 @@ class GroupChatContext:
             agent_result: Agent 执行结果（AgentResult）
                 需要包含: agent_name, session_id
         """
-        await self.runtime.update_agent_session_from_result(agent_result)
+        await self.runtime.update_agent_member_info_from_result(agent_result)
 
     # ==================== 压缩历史管理 ====================
 
