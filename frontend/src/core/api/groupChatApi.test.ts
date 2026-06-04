@@ -57,9 +57,9 @@ describe('groupChatApi', () => {
   });
 
   it('getMembers 返回成员列表', async () => {
-    const result = await getMembers('chat-001');
+    const result = await getMembers('mock-chat-001');
     expect(result).toHaveLength(2);
-    expect(result[0]!.name).toBe('Agent1');
+    expect(result[0]!.name).toBe('Leader');
   });
 
   it('sendMessage 返回发送确认', async () => {

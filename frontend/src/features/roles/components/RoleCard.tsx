@@ -2,6 +2,7 @@
  * 角色卡片组件
  */
 
+import { AvatarImage } from '@/shared/components';
 import type { RoleWithSkills } from '../types';
 import styles from './RoleCard.module.css';
 
@@ -9,21 +10,6 @@ export interface RoleCardProps {
   role: RoleWithSkills;
   onClick?: () => void;
   onEdit?: (role: RoleWithSkills) => void;
-}
-
-function AvatarImage({ avatar, fallback }: { avatar: string | null; fallback: string }) {
-  // SVG 内容以 <svg 开头
-  if (avatar && avatar.startsWith('<svg')) {
-    return <div className={styles.avatarSvg} dangerouslySetInnerHTML={{ __html: avatar }} />;
-  }
-
-  // URL 图片
-  if (avatar) {
-    return <img src={avatar} alt="头像" className={styles.avatarImg} />;
-  }
-
-  // 降级：显示首字母
-  return <div className={styles.avatarFallback}>{fallback.charAt(0).toUpperCase()}</div>;
 }
 
 export function RoleCard({ role, onClick, onEdit }: RoleCardProps) {

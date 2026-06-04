@@ -27,33 +27,6 @@
   box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
 }
 
-.avatarSvg {
-  width: 100%;
-  height: 100%;
-}
-
-.avatarSvg svg {
-  width: 100%;
-  height: 100%;
-}
-
-.avatarImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatarFallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .loading {
   padding: 16px;
   text-align: center;

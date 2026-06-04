@@ -2,27 +2,13 @@
  * 角色成员行组件
  */
 
+import { AvatarImage } from '@/shared/components';
 import type { RoleWithSkills } from '../types';
 import styles from './RoleMemberRow.module.css';
 
 export interface RoleMemberRowProps {
   role: RoleWithSkills;
   onRemove: (roleName: string) => void;
-}
-
-function AvatarImage({ avatar, fallback }: { avatar: string | null; fallback: string }) {
-  // SVG 内容以 <svg 开头
-  if (avatar && avatar.startsWith('<svg')) {
-    return <div className={styles.avatarSvg} dangerouslySetInnerHTML={{ __html: avatar }} />;
-  }
-
-  // URL 图片
-  if (avatar) {
-    return <img src={avatar} alt="头像" className={styles.avatarImg} />;
-  }
-
-  // 降级：显示首字母
-  return <div className={styles.avatarFallback}>{fallback.charAt(0).toUpperCase()}</div>;
 }
 
 export function RoleMemberRow({ role, onRemove }: RoleMemberRowProps) {

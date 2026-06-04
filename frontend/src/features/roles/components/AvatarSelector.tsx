@@ -4,6 +4,7 @@
  * avatar 字段存储 SVG 内容字符串
  */
 
+import { AvatarImage } from '@/shared/components';
 import { useAvatars } from '../hooks/useAvatars';
 import styles from './AvatarSelector.module.css';
 
@@ -29,11 +30,7 @@ export function AvatarSelector({ selectedAvatar, onSelect }: AvatarSelectorProps
           onClick={() => onSelect(avatar)}
           aria-label={`选择头像 ${index + 1}`}
         >
-          {avatar.startsWith('<svg') ? (
-            <div className={styles.avatarSvg} dangerouslySetInnerHTML={{ __html: avatar }} />
-          ) : (
-            <img src={avatar} alt={`头像 ${index + 1}`} className={styles.avatarImg} />
-          )}
+          <AvatarImage avatar={avatar} />
         </button>
       ))}
     </div>

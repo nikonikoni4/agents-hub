@@ -55,7 +55,7 @@ describe('roleApi', () => {
   it('getRoleSkills 返回角色关联的 skills', async () => {
     const result = await getRoleSkills('Leader');
     expect(result).toHaveLength(1);
-    expect(result[0]!.name).toBe('brainstorming');
+    expect(result[0]!.name).toBe('architecture');
   });
 
   it('getRoleSkills 对未知角色返回空数组', async () => {
@@ -76,7 +76,7 @@ describe('roleApi', () => {
   it('listAvatars 返回头像列表', async () => {
     const result = await listAvatars();
     expect(result).toHaveLength(5);
-    expect(result[0]).toBe('avatar-circle.svg');
+    expect(result[0]).toMatch(/^<svg/);
   });
 
   describe('真实 API 调用路径（通过 client）', () => {
