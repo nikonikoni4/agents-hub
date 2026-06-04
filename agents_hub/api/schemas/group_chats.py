@@ -28,6 +28,9 @@ class GroupChatInfo(BaseModel):
     created_at: datetime
     group_type: GroupChatType
     is_active: bool
+    last_speaker: str | None = None
+    last_message: str | None = None
+    last_update_time: str | None = None
 
 
 class GroupChatMember(BaseModel):
