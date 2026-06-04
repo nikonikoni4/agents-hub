@@ -227,7 +227,7 @@
 #### group_chat_repository.py
 - [x] `test_sanitize_project_path_special_chars` - 验证路径清理（已移至 core.utils）
 - [x] `test_sanitize_project_path_consecutive_dashes` - 验证连续横线合并（已移至 core.utils）
-- [x] `test_load_session_file_not_exists` - 验证文件不存在返回空
+- [x] `test_load_agent_member_file_not_exists` - 验证文件不存在返回空
 - [x] `test_save_load_session_roundtrip` - 验证 session 往返
 - [x] `test_save_load_agent_state_roundtrip` - 验证 agent state 往返
 - [x] `test_save_load_compact_history_roundtrip` - 验证 compact history 往返

@@ -903,10 +903,10 @@ runtime = GroupChatRuntime(group_chat_id, tmpdir)
 context = GroupChatContext(runtime)
 ```
 
-When tests access `context.repository.session_file`, replace with:
+When tests access `context.repository.agent_member_file`, replace with:
 
 ```python
-session_file = runtime.repository.session_file
+agent_member_file = runtime.repository.agent_member_file
 ```
 
 - [ ] **Step 8: Run tests and verify pass**

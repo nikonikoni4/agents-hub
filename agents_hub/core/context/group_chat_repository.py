@@ -38,7 +38,7 @@ class GroupChatRepository:
         # 文件路径（集中管理）
         self.group_chat_session_path = str(group_chat_paths.base_dir(group_chat_id, project_path))
         self.messages_file = str(group_chat_paths.messages_file(group_chat_id, project_path))
-        self.session_file = str(
+        self.agent_member_file = str(
             group_chat_paths.agent_member_file_path(group_chat_id, project_path)
         )
         self.compact_history_file = str(
@@ -142,16 +142,18 @@ class GroupChatRepository:
         os.makedirs(self.group_chat_session_path, exist_ok=True)
 
         # 如果文件不存在，返回空 dict
-        if not os.path.exists(self.session_file):
+        if not os.path.exists(self.agent_member_file):
             return {}
 
         # 读取 session 文件
         try:
-            async with aiofiles.open(self.session_file, encoding="utf-8") as f:
+            async with aiofiles.open(self.agent_member_file, encoding="utf-8") as f:
                 content = await f.read()
                 data = json.loads(content)
         except OSError as e:
-            raise FileSystemError(operation="read", path=self.session_file, reason=str(e)) from e
+            raise FileSystemError(
+                operation="read", path=self.agent_member_file, reason=str(e)
+            ) from e
 
         # 转换为 AgentSessionInfo 对象
         result = {}
@@ -206,11 +208,11 @@ class GroupChatRepository:
 
             # 写入文件
             try:
-                async with aiofiles.open(self.session_file, "w", encoding="utf-8") as f:
+                async with aiofiles.open(self.agent_member_file, "w", encoding="utf-8") as f:
                     await f.write(json.dumps(data, ensure_ascii=False, indent=2))
             except OSError as e:
                 raise FileSystemError(
-                    operation="write", path=self.session_file, reason=str(e)
+                    operation="write", path=self.agent_member_file, reason=str(e)
                 ) from e
 
     # ==================== Compact History 持久化 ====================

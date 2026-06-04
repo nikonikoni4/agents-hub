@@ -50,8 +50,8 @@ class TestAgentSessionCwd:
             # 手动创建旧格式的 JSON 文件（没有 cwd 字段）
             import json
 
-            session_file = repository.session_file
-            os.makedirs(os.path.dirname(session_file), exist_ok=True)
+            agent_member_file = repository.agent_member_file
+            os.makedirs(os.path.dirname(agent_member_file), exist_ok=True)
 
             old_format_data = {
                 "agent1": {
@@ -66,7 +66,7 @@ class TestAgentSessionCwd:
                 }
             }
 
-            with open(session_file, "w", encoding="utf-8") as f:
+            with open(agent_member_file, "w", encoding="utf-8") as f:
                 json.dump(old_format_data, f)
 
             # 加载

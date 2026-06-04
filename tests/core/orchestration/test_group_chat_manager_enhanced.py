@@ -276,8 +276,8 @@ class TestLoadGroupChatFromDisk:
             "test_role_1": {"main_session": "sess-1", "btw_session": []},
             "test_role_2": {"main_session": "sess-2", "btw_session": []},
         }
-        session_file = group_dir / "agent_member.json"
-        with open(session_file, "w", encoding="utf-8") as f:
+        agent_member_file = group_dir / "agent_member.json"
+        with open(agent_member_file, "w", encoding="utf-8") as f:
             json.dump(session_state, f)
 
         # 2. 从磁盘加载（需要 mock Team 构造和 GroupChat.load 以绕过角色验证）

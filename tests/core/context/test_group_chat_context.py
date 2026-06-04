@@ -122,15 +122,15 @@ class TestGroupChatContextTokenPersistence:
             # 手动修改文件，移除 token 字段（模拟旧文件）
             import json
 
-            session_file = runtime.repository.session_file
-            with open(session_file, encoding="utf-8") as f:
+            agent_member_file = runtime.repository.agent_member_file
+            with open(agent_member_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             # 移除 token 字段
             if "token" in data[agent_name]:
                 del data[agent_name]["token"]
 
-            with open(session_file, "w", encoding="utf-8") as f:
+            with open(agent_member_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             # 创建新的 context 并加载（应该不报错）

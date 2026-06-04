@@ -438,7 +438,7 @@ local_data/
         └── <project_path>/
             └── <group_chat_id>/
                 ├── <group_chat_id>.jsonl          # 群聊消息历史
-                ├── agent_session_id.json          # Agent session 映射
+                ├── agent_member.json              # Agent session 映射
                 └── memory/
                     └── compact_history.jsonl      # 压缩历史
 ```
@@ -452,7 +452,7 @@ local_data/
 {"agent_name": "小李", "content": "...", "timestamp": "...", "platform": "codex"}
 ```
 
-**agent_session_id.json**：
+**agent_member.json**：
 ```json
 {
   "Leader": {

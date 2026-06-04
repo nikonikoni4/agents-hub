@@ -17,7 +17,7 @@ local_data/
 agents/ <role_name> / <work_rook>
 teams/ <team_name> / team.json # 存放小组成员
 teams / <team_name> / <project_path> / <group_chat_id> / <group_chat_id>.jsonl # 存放group_chat的上下文
-teams / <team_name> / <project_path> / <group_chat_id> / agent_session_id.json # 存放group_chat的上下文
+teams / <team_name> / <project_path> / <group_chat_id> / agent_member.json # 存放group_chat的上下文
 teams / <team_name> / <project_path> / <group_chat_id> / memory / user_memory.md (暂不实现)
 teams / <team_name> / <project_path> / <group_chat_id> / memory / compact_history.jsonl  
 
@@ -30,7 +30,7 @@ teams / <team_name> / <project_path> / <group_chat_id> / memory / compact_histor
     agent_name : , content : ,timestamp:
 }
 
-agent_session_id.json:
+agent_member.json:
 {
     <agent_name> : {
         "main_session" : <session_id>,
@@ -457,7 +457,7 @@ class GroupChatContext:
         sanitized_path = self.sanitize_project_path(project_path)
         self.group_chat_session_path = f"{LOCAL_DATA_PATH}/teams/{sanitized_path}/{group_chat_id}"
         self.messages_file = f"{self.group_chat_session_path}/{group_chat_id}.jsonl"
-        self.session_file = f"{self.group_chat_session_path}/agent_session_id.json" # agent_name : {main_session: , btw_session}
+        self.agent_member_file = f"{self.group_chat_session_path}/agent_member.json" # agent_name : {main_session: , btw_session}
         self.compact_history_file = f"{self.group_chat_session_path}/memory/compact_history.jsonl"
         self.agent_session_id = self.get_agent_session_id()
         self.group_chat_session = self.load_group_chat_session()
@@ -549,11 +549,11 @@ class GroupChatContext:
         os.makedirs(self.group_chat_session_path, exist_ok=True)
 
         # 如果文件不存在，返回空 dict
-        if not os.path.exists(self.session_file):
+        if not os.path.exists(self.agent_member_file):
             return {}
 
         # 读取 session 文件
-        with open(self.session_file, 'r', encoding='utf-8') as f:
+        with open(self.agent_member_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
         # 转换为 AgentSessionInfo 对象
@@ -569,7 +569,7 @@ class GroupChatContext:
         """
         保存 agent session id 映射到文件
 
-        将 self.agent_session_id 保存到 agent_session_id.json
+        将 self.agent_session_id 保存到 agent_member.json
         """
         import json
         import os
@@ -586,7 +586,7 @@ class GroupChatContext:
             }
 
         # 写入文件
-        with open(self.session_file, 'w', encoding='utf-8') as f:
+        with open(self.agent_member_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     def update_agent_session_id(self, agent_result: AgentResult):

@@ -103,7 +103,7 @@ class GroupChat:
         """
         加载已有的群聊（只读，不启动 agent）
 
-        从 agent_session_id.json 加载已有 session，恢复 manager 和 workers，
+        从 agent_member.json 加载已有 session，恢复 manager 和 workers，
         并验证每个 role 是否存在。恢复并注册 token。对新增成员执行初始化（打招呼）。
         不启动 agent.run() 任务，需要发消息时调用 activate()。
         """

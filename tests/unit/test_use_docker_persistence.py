@@ -63,7 +63,7 @@ async def test_save_use_docker_false_round_trip(repo):
     await repo.save_agent_member(state)
 
     # 验证 JSON 文件中显式包含 use_docker 字段
-    with open(repo.session_file, encoding="utf-8") as f:
+    with open(repo.agent_member_file, encoding="utf-8") as f:
         raw = json.load(f)
     assert "use_docker" in raw["agent1"]
     assert raw["agent1"]["use_docker"] is False
@@ -93,7 +93,7 @@ async def test_load_missing_use_docker_defaults_false(repo):
             "cwd": "/workspace",
         }
     }
-    with open(repo.session_file, "w", encoding="utf-8") as f:
+    with open(repo.agent_member_file, "w", encoding="utf-8") as f:
         json.dump(old_data, f)
 
     loaded = await repo.load_agent_member()

@@ -79,7 +79,7 @@
 |---|------|------|------|
 | 12 | WebSocketManager 实现 | ❌ | 无任何 WebSocket 相关代码 |
 | 13 | 团队管理类（TeamManager） | ❌ | 只有 `Team` 数据模型（`team.py`），无管理类 |
-| 14 | GroupChat 配置持久化 | ✅ | `load()` 方法从 `agent_session_id.json` 恢复（2026-05-31 实现） |
+| 14 | GroupChat 配置持久化 | ✅ | `load()` 方法从 `agent_member.json` 恢复（2026-05-31 实现） |
 | 15 | 错误恢复机制（重试） | ❌ | `Agent._process_message` 有 try-except 但无重试逻辑 |
 | 16 | 性能监控和统计 | ❌ | 无任何监控代码 |
 | 17 | 测试用例 | ⚠️ | 有 19 个单元测试通过，但缺少集成测试和通信层测试 |

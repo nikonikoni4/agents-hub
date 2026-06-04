@@ -159,7 +159,7 @@ class TestGroupChatRepositoryLoadSession:
     """测试 load_group_chat_session"""
 
     @pytest.mark.asyncio
-    async def test_load_session_file_not_exists(self, tmp_path):
+    async def test_load_agent_member_file_not_exists(self, tmp_path):
         """契约：文件不存在返回空 session"""
         repo = GroupChatRepository("gc1", "test/project")
         # 覆盖路径到临时目录
@@ -180,7 +180,7 @@ class TestGroupChatRepositoryRoundtrip:
     async def test_save_load_agent_state_roundtrip(self, tmp_path):
         """契约：save/load agent_member 往返一致"""
         repo = GroupChatRepository("gc1", "test/project")
-        repo.session_file = str(tmp_path / "agent_member.json")
+        repo.agent_member_file = str(tmp_path / "agent_member.json")
 
         state = {
             "agent_a": AgentSessionInfo(
