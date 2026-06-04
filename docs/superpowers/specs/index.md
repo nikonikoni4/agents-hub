@@ -33,3 +33,11 @@
 - **路径**：`docs/superpowers/specs/2026-06-04-core-runtime-ssot-design.md`
 - **触发规则**：当设计或规划 core runtime 内存 SSOT、GroupChat 职责收窄、Repository 所有权迁移或 core 对外查询边界时阅读
 - **内容摘要**：Core Runtime 内存 SSOT 重构 brainstorm 设计稿，定义内存作为运行期 SSOT、文件作为 durable copy、Runtime/State/Repository/Context 职责划分和依赖注入方向
+
+## Realtime 边界
+
+### realtime-boundary-design
+- **更新时间**：2026-06-04
+- **路径**：`docs/superpowers/specs/2026-06-04-realtime-boundary-design.md`
+- **触发规则**：当设计或修改 WebSocket 与 MCP、API 的依赖边界，或规划群聊实时刷新/消息推送能力时阅读
+- **内容摘要**：Realtime 边界设计稿，定义 WebSocket 连接管理从 API 内部抽离为独立 realtime 能力，API 与 MCP 共同依赖 realtime；当前只发送 refresh signal，未来预留 message payload 推送

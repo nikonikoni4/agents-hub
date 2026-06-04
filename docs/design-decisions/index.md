@@ -42,6 +42,13 @@
 - 触发规则：当设计或修改 MCP Tool 签名、调用者身份校验逻辑、GroupChatManager 的注册逻辑、agent_member 持久化结构时阅读
 - 内容摘要：MCP Tool 调用者的身份模型选用 Agent Token——Server 维护 token→(agent_name, group_chat_id) 索引，LLM 通过 runtime user prompt 拿到 token 并在 tool 调用时回传。否决了"LLM 自报身份"（伪造）和"每 Agent 一个 MCP Server 子进程"（爆炸）。Token 群聊级生命周期，runtime 注入，剥离过滤兜底
 
+## realtime-boundary
+- updated_at: 2026-06-04
+- path: `docs/design-decisions/0008-realtime-boundary.md`
+- 状态：decided
+- 触发规则：当设计或修改 WebSocket 连接管理、群聊实时刷新、MCP 工具结束后的前端通知、API/MCP/realtime 依赖边界时阅读
+- 内容摘要：为避免 MCP Server 依赖 API WebSocket 模块导致循环依赖和职责混乱，决定将实时广播能力抽离为独立 realtime 边界；API 与 MCP 共同依赖 realtime，当前只广播 refresh signal，未来预留 message payload 推送
+
 ## user-design-summary
 - updated_at: 2026-05-28
 - path: `docs/design-decisions/user-design-summary.md`
