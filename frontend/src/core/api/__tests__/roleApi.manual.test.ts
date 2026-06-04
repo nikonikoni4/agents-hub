@@ -18,7 +18,10 @@ export async function testRoleApiIntegration() {
     // 测试场景 1: 获取角色列表
     console.log('[1] 获取角色列表...');
     const initialRoles = await roleApi.listRoles();
-    console.log(`✅ 共 ${initialRoles.length} 个角色:`, initialRoles.map(r => r.name));
+    console.log(
+      `✅ 共 ${initialRoles.length} 个角色:`,
+      initialRoles.map((r) => r.name)
+    );
 
     // 测试场景 2: 获取头像列表
     console.log('\n[2] 获取头像列表...');
@@ -78,7 +81,7 @@ export async function testRoleApiIntegration() {
     // 测试场景 10: 验证删除
     console.log('\n[10] 验证角色已删除...');
     const finalRoles = await roleApi.listRoles();
-    const exists = finalRoles.some(r => r.name === newRole.name);
+    const exists = finalRoles.some((r) => r.name === newRole.name);
     console.log(exists ? '❌ 角色仍然存在' : '✅ 角色已被删除');
 
     console.log('\n=== ✅ 所有测试通过 ===');
@@ -125,7 +128,9 @@ export async function testErrorHandling() {
     try {
       await roleApi.deleteRole(testName);
       console.log('✅ 测试数据清理完成');
-    } catch {}
+    } catch {
+      // 忽略清理失败，可能数据不存在
+    }
   }
 
   console.log('\n=== ✅ 错误处理测试完成 ===');
@@ -154,13 +159,13 @@ export async function testMockMode() {
 
     console.log('\n[3] 验证 Mock 角色已添加到列表...');
     const updatedRoles = await roleApi.listRoles();
-    const exists = updatedRoles.some(r => r.name === 'mock-test-role');
+    const exists = updatedRoles.some((r) => r.name === 'mock-test-role');
     console.log(exists ? '✅ Mock 数据动态更新正常' : '❌ Mock 数据未更新');
 
     console.log('\n[4] 删除 Mock 角色...');
     await roleApi.deleteRole('mock-test-role');
     const finalRoles = await roleApi.listRoles();
-    const stillExists = finalRoles.some(r => r.name === 'mock-test-role');
+    const stillExists = finalRoles.some((r) => r.name === 'mock-test-role');
     console.log(stillExists ? '❌ Mock 角色未被删除' : '✅ Mock 角色删除成功');
 
     console.log('\n=== ✅ Mock 模式测试通过 ===');

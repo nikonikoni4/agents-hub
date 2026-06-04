@@ -107,10 +107,7 @@ const MOCK_DELETE_RESPONSE: DeleteResponse = {
  * 创建角色
  */
 export async function createRole(data: CreateRoleRequest): Promise<Role> {
-  return mockableRequest(
-    () => apiClient.post<Role>('/roles', data),
-    MOCK_NEW_ROLE
-  );
+  return mockableRequest(() => apiClient.post<Role>('/roles', data), MOCK_NEW_ROLE);
 }
 
 /**
@@ -118,30 +115,21 @@ export async function createRole(data: CreateRoleRequest): Promise<Role> {
  */
 export async function getRoleInfo(name: string): Promise<Role> {
   const mockRole = MOCK_ROLES.find((r) => r.name === name);
-  return mockableRequest(
-    () => apiClient.get<Role>(`/roles/${name}`),
-    mockRole ?? MOCK_ROLES[0]!
-  );
+  return mockableRequest(() => apiClient.get<Role>(`/roles/${name}`), mockRole ?? MOCK_ROLES[0]!);
 }
 
 /**
  * 列出所有角色
  */
 export async function listRoles(): Promise<Role[]> {
-  return mockableRequest(
-    () => apiClient.get<Role[]>('/roles'),
-    MOCK_ROLES
-  );
+  return mockableRequest(() => apiClient.get<Role[]>('/roles'), MOCK_ROLES);
 }
 
 /**
  * 更新角色信息
  */
 export async function updateRole(name: string, data: UpdateRoleRequest): Promise<Role> {
-  return mockableRequest(
-    () => apiClient.patch<Role>(`/roles/${name}`, data),
-    MOCK_ROLES[0]!
-  );
+  return mockableRequest(() => apiClient.patch<Role>(`/roles/${name}`, data), MOCK_ROLES[0]!);
 }
 
 /**
@@ -178,10 +166,7 @@ export async function addSkillToRole(name: string, skillId: string): Promise<Rol
 /**
  * 移除角色的 Skill
  */
-export async function removeSkillFromRole(
-  name: string,
-  skillId: string
-): Promise<DeleteResponse> {
+export async function removeSkillFromRole(name: string, skillId: string): Promise<DeleteResponse> {
   return mockableRequest(
     () => apiClient.delete<DeleteResponse>(`/roles/${name}/skills/${skillId}`),
     MOCK_DELETE_RESPONSE
@@ -192,8 +177,5 @@ export async function removeSkillFromRole(
  * 列出所有可用头像
  */
 export async function listAvatars(): Promise<string[]> {
-  return mockableRequest(
-    () => apiClient.get<string[]>('/roles/avatars'),
-    MOCK_AVATARS
-  );
+  return mockableRequest(() => apiClient.get<string[]>('/roles/avatars'), MOCK_AVATARS);
 }

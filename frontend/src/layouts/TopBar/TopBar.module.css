@@ -1,0 +1,21 @@
+.topBar {
+  height: 40px;
+  background: var(--bg-sidebar);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+}
+
+.topBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topBarRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}

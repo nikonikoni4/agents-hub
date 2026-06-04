@@ -1,0 +1,49 @@
+.rightSidebar {
+  width: 320px;
+  flex-shrink: 0; /* 防止被压缩 */
+  background: var(--bg-right-base);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  padding-top: 12px;
+}
+
+.rightSidebar.collapsed {
+  width: 0;
+  border-left: none;
+  padding: 0;
+}
+
+.rightModule {
+  margin: 12px;
+  padding: 16px;
+  background: var(--bg-right-module);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--bg-right-shadow);
+}
+
+.moduleTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.moduleTitle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.moduleItem {
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
