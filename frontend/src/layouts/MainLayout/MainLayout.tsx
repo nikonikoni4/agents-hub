@@ -3,7 +3,11 @@ import { TopBar } from '../TopBar';
 import { LeftSidebar } from '../LeftSidebar';
 import { ChatArea } from '../ChatArea';
 import { RightSidebar } from '../RightSidebar';
+import { RoleManagement } from '../RoleManagement';
+import { SkillSquare } from '@/features/skills';
 import styles from './MainLayout.module.css';
+
+type ViewMode = 'chat' | 'role' | 'skill';
 
 export interface MainLayoutProps {
   theme: 'light' | 'dark';
@@ -31,6 +35,7 @@ function MoonIcon() {
 export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('chat');
 
   const handleToggleLeftSidebar = useCallback(() => {
     setLeftSidebarCollapsed((prev) => !prev);
@@ -40,13 +45,19 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
     setRightSidebarCollapsed((prev) => !prev);
   }, []);
 
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+  }, []);
+
   return (
     <div className={styles.mainLayout}>
       <TopBar onToggleSidebar={handleToggleLeftSidebar} />
       <div className={styles.mainContainer}>
-        <LeftSidebar collapsed={leftSidebarCollapsed} />
-        <ChatArea onToggleRightSidebar={handleToggleRightSidebar} />
-        <RightSidebar collapsed={rightSidebarCollapsed} />
+        <LeftSidebar collapsed={leftSidebarCollapsed} onViewModeChange={handleViewModeChange} />
+        {viewMode === 'chat' && <ChatArea onToggleRightSidebar={handleToggleRightSidebar} />}
+        {viewMode === 'role' && <RoleManagement />}
+        {viewMode === 'skill' && <SkillSquare />}
+        {viewMode === 'chat' && <RightSidebar collapsed={rightSidebarCollapsed} />}
       </div>
 
       {/* 主题切换按钮 */}

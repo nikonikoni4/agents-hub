@@ -16,5 +16,6 @@ export {
   MoreVerticalIcon,
   CheckCircleIcon,
   SendIcon,
+  XIcon,
 } from './Icon';
 export type { IconProps } from './Icon';
