@@ -232,7 +232,7 @@ orchestration → agent → communication → foundation
 **文件**：
 - `group_chat_session.py`: 群聊会话
   - `GroupChatSession`: 群聊的消息历史、元数据
-  - `AgentSessionInfo`: Agent 会话信息
+  - `AgentMember`: Agent 会话信息
   - `AgentContextState`: Agent 上下文状态
 
 - `group_chat_context.py`: 群聊上下文

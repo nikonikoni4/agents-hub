@@ -6,7 +6,7 @@ from .conftest import FakeRepository
 
 from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 from agents_hub.core.context.group_chat_runtime_state import GroupChatRuntimeState
-from agents_hub.core.context.group_chat_session import AgentSessionInfo, GroupChatSession
+from agents_hub.core.context.group_chat_session import AgentMember, GroupChatSession
 from agents_hub.core.context.group_metadata import GroupMetadata
 from agents_hub.core.foundation import GroupChatType, StateError
 

@@ -155,7 +155,7 @@
 - 职责：只加载未加载的压缩历史和未压缩消息
 - 实现：基于 last_loaded_compact_index 和 last_loaded_message_index 的增量加载
 
-### AgentSessionInfo（会话信息）
+### AgentMember（会话信息）
 - Agent 的会话信息
 - 属性：main_session、btw_session、context_state、token、cwd
 - main_session：主会话 ID
@@ -353,7 +353,7 @@ local_data/
 
 ### CWD 优先级规则
 ```
-Agent 实际使用的 cwd = AgentSessionInfo.cwd (如果非空) 
+Agent 实际使用的 cwd = AgentMember.cwd (如果非空) 
                       OR metadata.project_path 
                       OR None (使用当前工作目录)
 ```

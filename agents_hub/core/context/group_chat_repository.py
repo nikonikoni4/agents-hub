@@ -13,7 +13,7 @@ import aiofiles
 
 from agents_hub.core.foundation import FileSystemError, group_chat_paths
 
-from .group_chat_session import AgentContextState, AgentSessionInfo, GroupChatSession
+from .group_chat_session import AgentContextState, AgentMember, GroupChatSession
 
 
 class GroupChatRepository:
@@ -131,12 +131,12 @@ class GroupChatRepository:
 
     # ==================== Agent Session State 持久化 ====================
 
-    async def load_agent_member(self) -> dict[str, AgentSessionInfo]:
+    async def load_agent_member(self) -> dict[str, AgentMember]:
         """
         加载 agent session 状态（无锁，读操作）
 
         Returns:
-            dict: {agent_name: AgentSessionInfo}
+            dict: {agent_name: AgentMember}
         """
         # 确保目录存在
         os.makedirs(self.group_chat_session_path, exist_ok=True)
@@ -155,7 +155,7 @@ class GroupChatRepository:
                 operation="read", path=self.agent_member_file, reason=str(e)
             ) from e
 
-        # 转换为 AgentSessionInfo 对象
+        # 转换为 AgentMember 对象
         result = {}
         for agent_name, session_data in data.items():
             context_state_data = session_data.get("context_state", {})
@@ -163,7 +163,7 @@ class GroupChatRepository:
             # Convert empty string to None
             if main_session == "":
                 main_session = None
-            result[agent_name] = AgentSessionInfo(
+            result[agent_name] = AgentMember(
                 main_session=main_session,
                 btw_session=session_data.get("btw_session", []),
                 context_state=AgentContextState(
@@ -180,12 +180,12 @@ class GroupChatRepository:
             )
         return result
 
-    async def save_agent_member(self, state: dict[str, AgentSessionInfo]):
+    async def save_agent_member(self, state: dict[str, AgentMember]):
         """
         保存 agent session 状态到文件（加锁）
 
         Args:
-            state: {agent_name: AgentSessionInfo}
+            state: {agent_name: AgentMember}
         """
         async with self._agent_state_lock:
             # 确保目录存在

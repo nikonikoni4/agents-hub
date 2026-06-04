@@ -307,7 +307,7 @@ Agent 会话/配置类
 - 不建议把 `GroupChat` 做成状态大仓库。
 - 不建议把文件定义为运行期 SSOT。
 - 不建议让 api/service 直接依赖 `GroupChatContext.repository`。
-- 不建议 core 对外暴露 `AgentSessionInfo`、`GroupChatSession` 等内部模型。
+- 不建议 core 对外暴露 `AgentMember`、`GroupChatSession` 等内部模型。
 - 不建议第一阶段引入复杂 Event Sourcing/WAL。
 - 不建议现在固化具体 query dict 字段，应先把职责和依赖边界定稳。
 

@@ -7,7 +7,7 @@
 4. 全局 use_docker=False + 请求开启 → ValidationError
 5. Docker 未启动 → DockerNotAvailableError
 6. 关闭 use_docker → 跳过 Docker 检查
-7. 角色无 session_info → 新建 AgentSessionInfo
+7. 角色无 session_info → 新建 AgentMember
 """
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -16,7 +16,7 @@ import pytest
 
 from agents_hub.api.schemas.group_chats import GroupChatMember
 from agents_hub.api.services.group_chat_service import GroupChatService
-from agents_hub.core.context.group_chat_session import AgentSessionInfo
+from agents_hub.core.context.group_chat_session import AgentMember
 from agents_hub.core.foundation.exceptions import DockerNotAvailableError
 from agents_hub.core.foundation import GroupChatNotFoundError
 from agents_hub.exceptions import ResourceNotFoundError, ValidationError
@@ -41,7 +41,7 @@ def _make_mock_group_chat(members=None, manager_name=None):
         gc.manager.name = manager_name
     gc.runtime = Mock()
     gc.runtime.set_agent_use_docker = AsyncMock(
-        return_value=AgentSessionInfo(main_session="s1", use_docker=True)
+        return_value=AgentMember(main_session="s1", use_docker=True)
     )
     return gc
 
@@ -61,7 +61,7 @@ async def test_toggle_use_docker_enable_success(service, mock_group_chat_manager
     """
     mock_gc = _make_mock_group_chat()
     mock_gc.runtime.set_agent_use_docker = AsyncMock(
-        return_value=AgentSessionInfo(main_session="s1", cwd="/path", use_docker=True)
+        return_value=AgentMember(main_session="s1", cwd="/path", use_docker=True)
     )
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_gc)
 
@@ -92,7 +92,7 @@ async def test_toggle_use_docker_disable_success(service, mock_group_chat_manage
     """
     mock_gc = _make_mock_group_chat()
     mock_gc.runtime.set_agent_use_docker = AsyncMock(
-        return_value=AgentSessionInfo(main_session="s1", cwd="/path", use_docker=False)
+        return_value=AgentMember(main_session="s1", cwd="/path", use_docker=False)
     )
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_gc)
 
@@ -108,7 +108,7 @@ async def test_toggle_use_docker_disable_success(service, mock_group_chat_manage
 @pytest.mark.asyncio
 async def test_toggle_use_docker_creates_session_if_missing(service, mock_group_chat_manager):
     """
-    契约：角色无 session_info → 新建 AgentSessionInfo
+    契约：角色无 session_info → 新建 AgentMember
 
     验证方式：
     1. mock 群聊存在，但 agent_session_id 中无该角色
@@ -117,7 +117,7 @@ async def test_toggle_use_docker_creates_session_if_missing(service, mock_group_
     """
     mock_gc = _make_mock_group_chat()
     mock_gc.runtime.set_agent_use_docker = AsyncMock(
-        return_value=AgentSessionInfo(main_session=None, cwd=None, use_docker=True)
+        return_value=AgentMember(main_session=None, cwd=None, use_docker=True)
     )
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_gc)
 
@@ -237,7 +237,7 @@ async def test_toggle_use_docker_disable_skips_docker_check(service, mock_group_
     """
     mock_gc = _make_mock_group_chat()
     mock_gc.runtime.set_agent_use_docker = AsyncMock(
-        return_value=AgentSessionInfo(main_session="s1", cwd="/path", use_docker=False)
+        return_value=AgentMember(main_session="s1", cwd="/path", use_docker=False)
     )
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_gc)
 

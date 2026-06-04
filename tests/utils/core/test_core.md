@@ -86,7 +86,7 @@
 
 **契约点**：
 - AgentContextState 默认值正确
-- AgentSessionInfo 默认值正确
+- AgentMember 默认值正确
 - GroupChatSession 默认值正确
 - GroupChatSession.add_message() 追加消息
 - GroupChatSession.get_uncompact_messages() 返回从 last_compacted_loc 开始的消息

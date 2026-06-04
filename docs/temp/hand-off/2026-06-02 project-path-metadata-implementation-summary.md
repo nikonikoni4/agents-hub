@@ -1,7 +1,7 @@
 # 实施总结：project_path 持久化和 group_metadata.json
 
 **日期**：2026-06-02  
-**任务**：为 AgentSessionInfo 添加 cwd 参数，并设计群聊元数据持久化方案
+**任务**：为 AgentMember 添加 cwd 参数，并设计群聊元数据持久化方案
 
 ---
 
@@ -73,7 +73,7 @@ teams/<project_path>/<group_chat_id>/
    - `GroupChatSession` 只关注消息历史
 4. **CWD 优先级规则**：
    ```
-   Agent 实际使用的 cwd = AgentSessionInfo.cwd (如果非空) 
+   Agent 实际使用的 cwd = AgentMember.cwd (如果非空) 
                          OR project_path (从 group_metadata.json 读取)
                          OR None (使用当前工作目录)
    ```

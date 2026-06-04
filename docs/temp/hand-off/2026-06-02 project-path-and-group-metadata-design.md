@@ -1,14 +1,14 @@
 # 交接文档：project_path 持久化和 group_metadata 设计
 
 **日期**：2026-06-02  
-**任务背景**：为 AgentSessionInfo 添加 cwd 参数，并设计群聊元数据持久化方案
+**任务背景**：为 AgentMember 添加 cwd 参数，并设计群聊元数据持久化方案
 
 ---
 
 ## 1. 原始需求
 
 用户想要：
-1. 在 `AgentSessionInfo` 上添加 `cwd` 参数，表示每个 role 的 CLI 命令启动位置
+1. 在 `AgentMember` 上添加 `cwd` 参数，表示每个 role 的 CLI 命令启动位置
 2. `agents_bridge` 已经添加了 `cwd` 参数支持
 3. 需要一个群聊级别的根目录配置，作为所有 agent 的默认 cwd
 
@@ -62,7 +62,7 @@ teams/
 
 4. **CWD 优先级规则**
 ```
-Agent 实际使用的 cwd = AgentSessionInfo.cwd (如果非空) 
+Agent 实际使用的 cwd = AgentMember.cwd (如果非空) 
                       OR project_path (从 group_metadata.json 读取)
                       OR None (使用当前工作目录)
 ```
@@ -73,7 +73,7 @@ Agent 实际使用的 cwd = AgentSessionInfo.cwd (如果非空)
 
 ### 3.1 数据模型修改
 ✅ `GroupChatSession` 添加了 `group_cwd` 字段（后来废弃，因为用户决定用 `group_metadata.json`）
-✅ `AgentSessionInfo` 已有 `cwd` 字段（由 `agents_bridge` 已支持）
+✅ `AgentMember` 已有 `cwd` 字段（由 `agents_bridge` 已支持）
 
 ### 3.2 持久化层修改
 ✅ `GroupChatRepository`:
@@ -82,7 +82,7 @@ Agent 实际使用的 cwd = AgentSessionInfo.cwd (如果非空)
 
 ### 3.3 业务逻辑修改
 ✅ `GroupChat._generate_and_register_tokens()`:
-   - 创建新 `AgentSessionInfo` 时，使用 `group_chat_session.group_cwd` 作为默认 `cwd`
+   - 创建新 `AgentMember` 时，使用 `group_chat_session.group_cwd` 作为默认 `cwd`
    - 对已存在的 agent，如果 `cwd` 为空，则填充 `group_cwd`
 
 **注意**：这部分代码需要调整，因为 `group_cwd` 废弃了，应该从 `group_metadata.json` 中读取 `project_path`
@@ -142,8 +142,8 @@ async def start(self):
 metadata = await self.group_chat_context.repository.load_group_metadata()
 default_cwd = metadata.project_path
 
-# 创建 AgentSessionInfo 时使用
-AgentSessionInfo(token=token, cwd=default_cwd)
+# 创建 AgentMember 时使用
+AgentMember(token=token, cwd=default_cwd)
 ```
 
 ### 4.2 中优先级：GroupChatManager 增强
@@ -277,7 +277,7 @@ async def create_group_chat(
 
 ## 8. 代码位置参考
 
-- `agents_hub/core/context/group_chat_session.py` - AgentSessionInfo, GroupChatSession
+- `agents_hub/core/context/group_chat_session.py` - AgentMember, GroupChatSession
 - `agents_hub/core/context/group_chat_repository.py` - 持久化层
 - `agents_hub/core/context/group_chat_context.py` - 业务逻辑
 - `agents_hub/core/orchestration/group_chat.py` - GroupChat 主逻辑

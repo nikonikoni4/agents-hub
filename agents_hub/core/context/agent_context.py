@@ -158,9 +158,9 @@ class AgentContext:
         """
         # 如果 agent 不存在，创建新的状态
         if self.agent_name not in self.group_chat_context.agent_session_id:
-            from .group_chat_session import AgentContextState, AgentSessionInfo
+            from .group_chat_session import AgentContextState, AgentMember
 
-            self.group_chat_context.agent_session_id[self.agent_name] = AgentSessionInfo(
+            self.group_chat_context.agent_session_id[self.agent_name] = AgentMember(
                 main_session="",
                 btw_session=[],
                 context_state=AgentContextState(
