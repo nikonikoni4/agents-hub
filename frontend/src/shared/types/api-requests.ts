@@ -15,7 +15,7 @@ import type { AgentPlatform, RoleType } from './api-schemas';
 export interface CreateGroupChatRequest {
   team_members: string[]; // 团队成员角色名列表（至少1个）
   project_path: string; // 项目路径
-  group_chat_name?: string; // 群聊名称，不提供则使用 group_chat_id
+  group_chat_name?: string | null; // 群聊名称，不提供则使用 group_chat_id
 }
 
 /**
@@ -40,19 +40,21 @@ export interface UpdateDockerModeRequest {
 /**
  * 创建角色请求
  * 对应后端 RoleCreateRequest
+ *
+ * 注意：除 name 和 platform 外，其他字段在后端有默认值，前端可不传
  */
 export interface CreateRoleRequest {
-  name: string;
-  platform: AgentPlatform;
-  avatar?: string | null;
-  abilities?: string[];
-  type?: RoleType | null;
-  scope?: string[] | null;
-  description?: string | null;
+  name: string; // 必填
+  platform: AgentPlatform; // 必填
+  avatar?: string | null; // 可选，默认 null
+  abilities?: string[]; // 可选，默认 []
+  type?: RoleType | null; // 可选，默认 null
+  scope?: string[] | null; // 可选，默认 null
+  description?: string | null; // 可选，默认 null
 }
 
 /**
- * 更新角色请求
+ * 更新角色请求（所有字段都是可选的）
  * 对应后端 RoleUpdateRequest
  */
 export interface UpdateRoleRequest {
@@ -79,6 +81,26 @@ export interface CreateSkillRequest {
   url: string; // skill 的网络地址
 }
 
+// ==================== 团队相关 ====================
+
+/**
+ * 创建团队请求
+ * 对应后端 TeamCreateRequest
+ */
+export interface CreateTeamRequest {
+  name: string; // 团队名称（唯一标识）
+  members: string[]; // 成员角色名称列表
+}
+
+/**
+ * 更新团队请求
+ * 对应后端 TeamUpdateRequest
+ */
+export interface UpdateTeamRequest {
+  name?: string | null; // 团队名称
+  members?: string[] | null; // 成员角色名称列表
+}
+
 // ==================== 配置相关 ====================
 
 /**
@@ -87,10 +109,9 @@ export interface CreateSkillRequest {
  */
 export interface UpdateConfigRequest {
   data_path?: string | null;
-  mcp_port?: number; // 1-65535
-  default_user_name?: string;
-  use_docker?: boolean;
-  docker_image?: string;
+  mcp_port?: number | null; // 1-65535
+  default_user_name?: string | null;
+  use_docker?: boolean | null;
 }
 
 // ==================== 通用响应 ====================

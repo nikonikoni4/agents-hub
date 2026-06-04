@@ -235,6 +235,19 @@ export interface AgentSessionInfoApiResponse {
   use_docker: boolean;
 }
 
+// ==================== 团队相关 ====================
+
+/**
+ * 团队信息（完整响应）
+ * 对应后端: TeamResponse schema
+ */
+export interface TeamApiResponse {
+  /** 团队名称（唯一标识） */
+  name: string;
+  /** 成员角色名称列表 */
+  members: string[];
+}
+
 // ==================== 配置相关 ====================
 
 /**
