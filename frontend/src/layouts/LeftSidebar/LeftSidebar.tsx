@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { PlusIcon, UsersIcon, ZapIcon, SettingsIcon } from '@/shared/components';
-import { SessionList } from '@/features/session';
+import { SessionList, CreateGroupChatDialog } from '@/features/session';
 import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
@@ -8,13 +9,15 @@ export interface LeftSidebarProps {
 }
 
 export function LeftSidebar({ collapsed, onViewModeChange }: LeftSidebarProps) {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
   return (
     <div className={`${styles.leftSidebar} ${collapsed ? styles.collapsed : ''}`}>
       {/* 按钮区 */}
       <div className={styles.sidebarButtons}>
         <button
           className={styles.sidebarBtn}
-          onClick={() => onViewModeChange?.('chat')}
+          onClick={() => setShowCreateDialog(true)}
           aria-label="新建对话"
         >
           <PlusIcon />
@@ -50,6 +53,12 @@ export function LeftSidebar({ collapsed, onViewModeChange }: LeftSidebarProps) {
           <span>设置</span>
         </button>
       </div>
+
+      <CreateGroupChatDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onSuccess={() => onViewModeChange?.('chat')}
+      />
     </div>
   );
 }

@@ -12,7 +12,7 @@
  * - 不包含 UI 逻辑
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { storage } from '@/core/storage';
 import { listGroupChatInfos, getMembers } from '@/core/api';
@@ -22,56 +22,44 @@ import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
 export function useSessionList() {
   const { projectGroups, setProjectGroups } = useSessionStore();
 
-  useEffect(() => {
-    async function fetchSessions() {
-      try {
-        // 1. 并行获取数据
-        const [chats, lastViewRecords] = await Promise.all([
-          listGroupChatInfos(),
-          storage.getLastViewRecords(),
+  const refreshSessions = useCallback(async () => {
+    try {
+      const [chats, lastViewRecords] = await Promise.all([
+        listGroupChatInfos(),
+        storage.getLastViewRecords(),
+      ]);
+
+      const groups = groupSessionsByProject(chats, lastViewRecords);
+
+      const allSessionIds = groups.flatMap((g) => g.sessions.map((s) => s.id));
+
+      if (allSessionIds.length > 0) {
+        const [roleAvatarMap, ...memberResults] = await Promise.all([
+          buildRoleAvatarMap(),
+          ...allSessionIds.map((id) => getMembers(id).catch(() => [])),
         ]);
 
-        // 2. 聚合数据
-        const groups = groupSessionsByProject(chats, lastViewRecords);
-
-        // 3. 聚合成员头像
-        const allSessionIds = groups.flatMap((g) => g.sessions.map((s) => s.id));
-
-        if (allSessionIds.length > 0) {
-          const [roleAvatarMap, ...memberResults] = await Promise.all([
-            buildRoleAvatarMap(),
-            ...allSessionIds.map((id) => getMembers(id).catch(() => [])),
-          ]);
-
-          let idx = 0;
-          for (const group of groups) {
-            for (const session of group.sessions) {
-              const members = memberResults[idx++] ?? [];
-              session.memberAvatars = members
-                .slice(0, 4)
-                .map((m) => roleAvatarMap.get(m.name) ?? null);
-              session.memberCount = members.length;
-            }
+        let idx = 0;
+        for (const group of groups) {
+          for (const session of group.sessions) {
+            const members = memberResults[idx++] ?? [];
+            session.memberAvatars = members
+              .slice(0, 4)
+              .map((m) => roleAvatarMap.get(m.name) ?? null);
+            session.memberCount = members.length;
           }
         }
-
-        // 4. 更新 store
-        setProjectGroups(groups);
-      } catch (error) {
-        console.error('Failed to fetch sessions:', error);
       }
+
+      setProjectGroups(groups);
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error);
     }
-
-    fetchSessions();
-
-    // TODO: 监听 WebSocket 更新
-    // const unsubscribe = wsManager.on('message', (data) => {
-    //   if (data.type === 'chat_updated') {
-    //     fetchSessions(); // 简化实现：重新获取全部
-    //   }
-    // });
-    // return unsubscribe;
   }, [setProjectGroups]);
 
-  return { projectGroups };
+  useEffect(() => {
+    refreshSessions();
+  }, [refreshSessions]);
+
+  return { projectGroups, refreshSessions };
 }
