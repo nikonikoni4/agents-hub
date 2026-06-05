@@ -603,7 +603,7 @@ async def test_send_message_success(service, mock_group_chat_manager):
 
     mock_group_chat = Mock()
     mock_group_chat.agent_call_manager.create_call.return_value = Mock(call_id="call_123")
-    mock_group_chat.message_router = Mock()
+    mock_group_chat.send_message_to_agent = AsyncMock()
     mock_group_chat_manager.activate_group_chat = AsyncMock()
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
@@ -617,7 +617,7 @@ async def test_send_message_success(service, mock_group_chat_manager):
     # Assert
     mock_group_chat_manager.activate_group_chat.assert_called_once_with(group_chat_id)
     mock_group_chat.agent_call_manager.create_call.assert_called_once()
-    mock_group_chat.message_router.send_message.assert_called_once()
+    mock_group_chat.send_message_to_agent.assert_called_once()
 
 
 async def test_send_message_group_not_found(service, mock_group_chat_manager):

@@ -94,22 +94,6 @@ class Agent:
             # 队列满了也没关系，_run=False 会让循环在处理完当前消息后退出
             pass
 
-    def send_message_to_agent(self, call_id: str, send_to: str, content: str):
-        """投递消息给指定 agent。
-
-        约束：content 必须是原始内容（不预渲染包络），
-        渲染由接收方 run() 通过 render_for_llm 统一处理。
-        """
-        message = AgentMessage(
-            call_id=call_id,
-            send_from=self.name,
-            send_to=send_to,
-            content=content,
-            session_type=SessionType.MAIN,
-            message_type=MessageType.NOTIFICATION,
-        )
-        self.message_router.send_message(message)
-
     async def execute(
         self, prompt, use_docker: bool = False, group_chat_id: str | None = None
     ) -> AgentResult:
@@ -249,7 +233,7 @@ class Agent:
                 str(e),
             )
             self.agent_call_manager.update_status(msg.call_id, CallStatus.FAILED)
-            self.agent_call_manager.set_error(msg.call_id, str(e))
+            self.agent_call_manager.set_error(msg.call_id, str(e), exc=e)
             raise AgentExecutionError(
                 agent_name=self.name,
                 reason=str(e),

@@ -170,19 +170,20 @@ class AgentCallManager:
             # 更新持久化
             self._persist_call(call)
 
-    def set_error(self, call_id: str, error: str):
+    def set_error(self, call_id: str, error: str, exc: BaseException | None = None):
         """
         设置调用错误
 
         Args:
             call_id: 调用 ID
             error: 错误信息
+            exc: 原始异常对象（用于保留完整 traceback）
         """
         if call := self._calls.get(call_id):
             call.error = error
             call.status = CallStatus.FAILED
             call.completed_at = datetime.now()
-            self.logger.error(f"调用 {call_id} 失败: {error}")
+            self.logger.error(f"调用 {call_id} 失败: {error}", exc_info=exc)
 
             # 更新持久化
             self._persist_call(call)
@@ -214,7 +215,7 @@ class AgentCallManager:
     def _load_from_persistence(self):
         """从持久化文件加载历史调用记录"""
         if not self._persistence_path.exists():
-            self.logger.info("持久化文件不存在，跳过加载")
+            self.logger.debug("持久化文件不存在，跳过加载")
             return
 
         try:

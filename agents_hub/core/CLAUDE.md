@@ -57,15 +57,19 @@ if call.send_from == "user":
 **禁止**：
 - ❌ 直接向另一个 Agent 的 `message_queue` put 消息
 - ❌ 绕过 `AgentCallManager` 投递需要追踪的任务
-- ❌ 把 `finish_agent_call` 给 Agent 的完成通知写入群聊历史
+- ❌ 直接调用 `message_router.send_message()`（必须通过 `GroupChat.send_message_to_agent()` 统一包装）
 
 **示例**：
 ```python
 # ✅ 正确
 call = group_chat.agent_call_manager.create_call(...)
-group_chat.message_router.send_message(message)
+await group_chat.send_message_to_agent(message)
 
-# ❌ 错误
+# ❌ 错误：绕过 GroupChat 包装层
+call = group_chat.agent_call_manager.create_call(...)
+await group_chat.message_router.send_message(message)
+
+# ❌ 错误：直接操作队列
 target_agent.message_queue.put_nowait(message)
 ```
 
@@ -81,7 +85,7 @@ target_agent.message_queue.put_nowait(message)
 |------|------|
 | 查询已加载群聊信息 | 用 `group_chat.runtime.get_*` |
 | 修改群聊状态并持久化 | 给 `GroupChatRuntime` 增加 command 方法 |
-| Agent 调用另一个 Agent | 创建 `AgentCall` 后通过 `MessageRouter` 投递 |
+| Agent 调用另一个 Agent | 创建 `AgentCall` 后通过 `GroupChat.send_message_to_agent()` 投递并保存 |
 | 判断调用方是否是前端用户 | 用 `config.is_user_name(name)` |
 | user 调用的 TASK 完成 | 写入群聊历史并触发 refresh |
 | Agent 调用的 TASK 完成 | 投递 `NOTIFICATION` 唤醒原调用方 |

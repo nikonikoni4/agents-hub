@@ -3,8 +3,7 @@ Agent 层单元测试
 
 契约：
 1. stop() 设置 _run=False 并发送哨兵消息
-2. send_message_to_agent() 通过 router 投递消息
-3. Manager/Worker 是 Agent 子类
+2. Manager/Worker 是 Agent 子类
 """
 
 import asyncio
@@ -69,27 +68,6 @@ class TestAgentStop:
         assert msg.send_from == "__SYSTEM__"
         assert msg.send_to == "agent_a"
         assert msg.content == "__STOP__"
-
-
-class TestAgentSendMessage:
-    """测试 Agent.send_message_to_agent()"""
-
-    def test_send_message_delegates_to_router(self, mock_deps):
-        """契约：send_message_to_agent() 通过 router 投递消息"""
-        role = create_mock_role("agent_a")
-        gcc, acm, router = mock_deps
-        agent = Agent(role, gcc, acm, router)
-
-        agent.send_message_to_agent("call_1", "agent_b", "hello")
-
-        router.send_message.assert_called_once()
-        sent_msg = router.send_message.call_args[0][0]
-        assert sent_msg.send_from == "agent_a"
-        assert sent_msg.send_to == "agent_b"
-        assert sent_msg.content == "hello"
-        assert sent_msg.call_id == "call_1"
-        assert sent_msg.session_type == SessionType.MAIN
-        assert sent_msg.message_type == MessageType.NOTIFICATION
 
 
 class TestManagerWorkerInheritance:

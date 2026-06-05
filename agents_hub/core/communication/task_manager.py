@@ -275,7 +275,7 @@ class TaskManager:
     def _load_from_persistence(self):
         """从持久化文件加载历史任务列表"""
         if not self._persistence_path.exists():
-            self.logger.info("持久化文件不存在，跳过加载")
+            self.logger.debug("持久化文件不存在，跳过加载")
             return
 
         try:

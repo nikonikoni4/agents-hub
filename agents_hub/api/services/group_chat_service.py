@@ -448,7 +448,7 @@ class GroupChatService:
             message_type=MessageType.TASK,
         )
         logger.debug("投递消息到 MessageRouter: call_id=%s, to=%s", call.call_id, send_to)
-        group_chat.message_router.send_message(message)
+        await group_chat.send_message_to_agent(message)
         logger.info("消息已发送: group=%s, to=%s, call_id=%s", group_chat_id, send_to, call.call_id)
 
     @staticmethod

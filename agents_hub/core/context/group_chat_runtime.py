@@ -80,6 +80,7 @@ class GroupChatRuntime:
             "group_chat_id": self.group_chat_id,
             "group_chat_name": metadata.group_chat_name,
             "project_path": self.project_path,
+            "created_at": metadata.created_at,
             "group_type": metadata.group_type,
             "is_active": is_active,
         }

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>消息流转与持久化规格</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --ink-light: #555;
+      --ink-muted: #888;
+      --bg: #f8f6f1;
+      --bg-card: #ffffff;
+      --accent-1: #c04a1a;
+      --accent-2: #2d6a4f;
+      --accent-3: #1d3557;
+      --accent-4: #7b2d8b;
+      --accent-5: #b5651d;
+      --border: #e0dcd4;
+      --shadow: 0 2px 20px rgba(0,0,0,0.06);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 2rem 1rem 1.5rem;
+    }
+    .hero-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--accent-3);
+      color: #fff;
+      padding: 0.3rem 1rem;
+      border-radius: 2rem;
+      margin-bottom: 0.8rem;
+    }
+    .hero h1 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+    .hero p {
+      color: var(--ink-light);
+      font-size: 0.95rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .section-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Serif SC', serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .section-title-block h2 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    .section-title-block .subtitle {
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+    }
+    .section-body { padding: 1.5rem; }
+
+    /* Diagram */
+    .diagram-section {
+      background: #fafaf8;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    .diagram-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+
+    /* Info blocks */
+    .info-block {
+      border-left: 3px solid var(--border);
+      padding: 0.8rem 1rem;
+      margin: 0.8rem 0;
+      background: #fafaf8;
+      border-radius: 0 6px 6px 0;
+    }
+    .info-block.blue   { border-color: var(--accent-3); background: rgba(29,53,87,0.04); }
+    .info-block.green  { border-color: var(--accent-2); background: rgba(45,106,79,0.04); }
+    .info-block.orange { border-color: var(--accent-1); background: rgba(192,74,26,0.04); }
+    .info-block.purple { border-color: var(--accent-4); background: rgba(123,45,139,0.04); }
+
+    .info-block-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+    .info-block p, .info-block ul {
+      font-size: 0.88rem;
+      color: var(--ink-light);
+    }
+    .info-block ul { padding-left: 1.2rem; }
+    .info-block li { margin-bottom: 0.3rem; }
+
+    /* Legend grid */
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    @media (max-width: 640px) {
+      .legend-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Principle list */
+    .principle-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.5rem 0;
+    }
+    .principle-list li {
+      padding: 0.4rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      font-size: 0.9rem;
+    }
+    .principle-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.7rem;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .principle-list.do li::before { background: var(--accent-2); }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 1.5rem; }
+      .section-header { padding: 1rem; }
+      .section-body { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-badge">spec v1.1</div>
+      <h1>消息流转与持久化规格</h1>
+      <p>所有消息通过 GroupChat 统一包装投递并保存，MessageRouter 为纯投递层</p>
+    </div>
+
+    <!-- Core Principles -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-3);">1</div>
+        <div class="section-title-block">
+          <h2>核心原则</h2>
+          <div class="subtitle">三条不可违反的设计约束</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <ul class="principle-list do">
+          <li><strong>MessageRouter 是纯投递层</strong> — 只负责将消息投递到目标 Agent 的队列，不承担业务逻辑</li>
+          <li><strong>GroupChat 提供统一包装方法</strong> — 所有通过 MessageRouter 投递的消息都通过 <code>GroupChat.send_message_to_agent()</code> 完成投递和保存</li>
+          <li><strong>所有消息都保存到群聊历史</strong> — 确保完整的消息记录供前端展示和上下文管理</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-2);">2</div>
+        <div class="section-title-block">
+          <h2>消息流转全局视图</h2>
+          <div class="subtitle">user → agent、agent → agent、群聊公开发言三条路径</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="diagram-section">
+          <div class="diagram-title">Flowchart</div>
+          <div class="mermaid">
+flowchart TB
+    User([User])
+    API([HTTP API])
+    GC([GroupChat<br/>send_message_to_agent])
+    MR([MessageRouter<br/>纯投递层])
+    AgentA([Agent A])
+    AgentB([Agent B])
+    Ctx([GroupChatContext<br/>add_message])
+    FC([finish_agent_call])
+    SPK([speak_in_group_chat])
+
+    %% ① user → agent
+    User -->|"发送消息"| API
+    API -->|"调用"| GC
+    GC -->|"① 投递"| MR
+    GC -->|"② 保存 user 消息"| Ctx
+    MR -->|"投递到 queue"| AgentA
+    AgentA -->|"处理完成"| FC
+    FC -->|"is_user → 保存回复"| Ctx
+
+    %% ② agent → agent
+    AgentA -->|"call_agent"| GC
+    GC -->|"① 投递 TASK"| MR
+    GC -->|"② 保存 TASK"| Ctx
+    MR -->|"投递到 queue"| AgentB
+    AgentB -->|"处理完成"| FC
+    FC -->|"is_agent → NOTIFICATION"| GC
+    GC -->|"① 投递通知"| MR
+    GC -->|"② 保存通知"| Ctx
+    MR -->|"通知回到"| AgentA
+
+    %% ③ 公开发言
+    AgentA -->|"speak_in_group_chat"| SPK
+    SPK -->|"直接保存"| Ctx
+    SPK -.-x|"不经过"| MR
+
+    %% styles
+    style GC fill:#2d6a4f,color:#fff,stroke:#2d6a4f
+    style MR fill:#1d3557,color:#fff,stroke:#1d3557
+    style Ctx fill:#c04a1a,color:#fff,stroke:#c04a1a
+    style FC fill:#7b2d8b,color:#fff,stroke:#7b2d8b
+    style SPK fill:#b5651d,color:#fff,stroke:#b5651d
+    style User fill:#e0dcd4,color:#1a1a1a,stroke:#bbb
+    style API fill:#e0dcd4,color:#1a1a1a,stroke:#bbb
+    style AgentA fill:#e8f4f0,color:#1a1a1a,stroke:#2d6a4f
+    style AgentB fill:#e8f4f0,color:#1a1a1a,stroke:#2d6a4f
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-grid">
+          <div class="info-block blue">
+            <div class="info-block-title">① user → agent</div>
+            <p>前端 → API → <code>GroupChat.send_message_to_agent()</code> 投递+保存 user 消息 → Agent 处理 → <code>finish_agent_call</code> 保存回复</p>
+          </div>
+          <div class="info-block purple">
+            <div class="info-block-title">② agent → agent</div>
+            <p>Agent A → <code>call_agent</code> → <code>GroupChat.send_message_to_agent()</code> 投递+保存 TASK → Agent B 处理 → NOTIFICATION 通过同一包装方法投递+保存</p>
+          </div>
+          <div class="info-block orange">
+            <div class="info-block-title">③ 群聊公开发言</div>
+            <p><code>speak_in_group_chat</code> 直接调用 <code>add_message()</code>，不经过 MessageRouter</p>
+          </div>
+          <div class="info-block green">
+            <div class="info-block-title">统一规则</div>
+            <p><strong>所有消息都保存到群聊历史</strong>。投递由 MessageRouter 负责，保存由 GroupChat 包装层统一处理。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MessageRouter Boundary -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-icon" style="background: var(--accent-5);">3</div>
+        <div class="section-title-block">
+          <h2>MessageRouter 职责边界</h2>
+          <div class="subtitle">纯投递层的 do / don't</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="info-block green">
+            <div class="info-block-title">只负责</div>
+            <ul>
+              <li>验证消息格式（内容非空、发送方和接收方已注册）</li>
+              <li>投递消息到目标 Agent 的队列</li>
+              <li>处理投递失败（队列满、目标不存在）</li>
+            </ul>
+          </div>
+          <div class="info-block orange">
+            <div class="info-block-title">不负责</div>
+            <ul>
+              <li>决定哪些消息需要保存到群聊历史</li>
+              <li>调用 <code>GroupChatContext.add_message()</code></li>
+              <li>区分消息类型（TASK / NOTIFICATION）</li>
+              <li>判断调用方是 user 还是 agent</li>
+              <li>依赖 <code>GroupChatContext</code> 或任何业务层组件</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        primaryColor: '#1d3557',
+        primaryTextColor: '#fff',
+        primaryBorderColor: '#1d3557',
+        lineColor: '#555',
+        secondaryColor: '#f4f2ed',
+        tertiaryColor: '#fff',
+        fontSize: '14px',
+        fontFamily: 'Noto Sans SC, sans-serif'
+      },
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis',
+        nodeSpacing: 40,
+        rankSpacing: 50
+      }
+    });
+  </script>
+</body>
+</html>

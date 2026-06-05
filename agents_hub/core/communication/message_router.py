@@ -43,7 +43,7 @@ class MessageRouter:
         """
         self._agents_queue.pop(name, None)
 
-    def send_message(self, message: AgentMessage):
+    async def send_message(self, message: AgentMessage):
         """
         发送消息到目标 Agent 的队列
 

@@ -15,7 +15,7 @@ from agents_hub.config.types import RoleType
 from agents_hub.core.agent import Agent, Manager, Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
 from agents_hub.core.context import GroupChatContext, GroupChatRuntime
-from agents_hub.core.foundation import GroupChatType, StateError
+from agents_hub.core.foundation import AgentMessage, GroupChatType, StateError
 from agents_hub.core.foundation.token import generate_token
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_logger
@@ -264,6 +264,51 @@ class GroupChat:
             agent_info[name] = worker_role.get_role_config().description or "团队成员"
 
         await self.group_chat_context.compact_messages(agent_info)
+
+    async def send_message_to_agent(self, message: AgentMessage):
+        """
+        发送消息到目标 Agent 并保存到群聊历史
+
+        包装 MessageRouter.send_message() 和消息保存逻辑，
+        确保所有通过控制面投递的消息都被记录。
+
+        Args:
+            message: 要发送的消息
+
+        Raises:
+            InvalidMessageError: 消息格式错误
+            AgentNotFoundError: Agent 不存在
+            MessageDeliveryError: 消息投递失败
+        """
+        from datetime import datetime
+
+        from agents_hub.agent_bridge.models import AgentResult
+        from agents_hub.config.types import AgentPlatform
+
+        # 1. 投递消息
+        await self.message_router.send_message(message)
+
+        # 2. 获取发送方的 platform
+        sender_agent = self._find_agent(message.send_from)
+        platform = sender_agent.role_config.platform if sender_agent else AgentPlatform.CLAUDE
+
+        # 3. 构造 AgentResult 并保存（只需要 agent_name, text, timestamp, platform）
+        role_type = getattr(sender_agent, "role_type", RoleType.TEAM_MEMBER)
+        sender_result = AgentResult(
+            text=message.content,
+            session_id="",
+            timestamp=datetime.now().isoformat(),
+            agent_name=message.send_from,
+            platform=platform,
+            role_type=role_type,
+        )
+        await self.group_chat_context.add_message(sender_result)
+
+    def _find_agent(self, agent_name: str):
+        """查找 agent 实例（manager 或 worker）"""
+        if self.manager and self.manager.name == agent_name:
+            return self.manager
+        return self.workers.get(agent_name)
 
     async def stop(self):
         """停止群聊，停止所有 agent 的 run() 任务。 暂时不要使用这个方法"""

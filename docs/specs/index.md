@@ -69,3 +69,9 @@
  - path: `docs/superpowers/specs/2026-06-03-team-management-design.md`
  - 触发规则：当设计、修改或扩展 teams 团队管理模块时阅读
  - 内容摘要：teams 团队管理模块规格，定义团队 CRUD、成员验证机制、持久化策略和 HTTP API 契约
+
+## message-flow-and-persistence
+ - updated_at : 2026-06-05
+ - path: `docs/specs/2026-06-05-message-flow-and-persistence.md`
+ - 触发规则：当设计、修改消息传递流程、MessageRouter 职责、GroupChat.send_message_to_agent() 方法或消息持久化策略时阅读
+ - 内容摘要：消息流转与持久化规格，定义 user/agent 之间的消息传递路径、MessageRouter 职责边界（纯投递层，不保存消息）、GroupChat.send_message_to_agent() 统一包装投递和保存、所有消息都保存到群聊历史的规则

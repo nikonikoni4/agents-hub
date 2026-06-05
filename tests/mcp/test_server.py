@@ -46,6 +46,7 @@ def mock_group_chat():
     """Mock GroupChat 实例"""
     mock = MagicMock()
     mock.message_router = MagicMock()
+    mock.send_message_to_agent = AsyncMock()
     mock.task_manager = MagicMock()
     mock.agent_call_manager = MagicMock()
     mock.team = MagicMock()
@@ -102,7 +103,7 @@ class TestCallAgent:
         mock_group_chat_manager.resolve_token.assert_called_once_with(token)
         mock_group_chat_manager.load_group_chat.assert_called_once_with(group_chat_id)
         mock_group_chat.agent_call_manager.create_call.assert_called_once()
-        mock_group_chat.message_router.send_message.assert_called_once()
+        mock_group_chat.send_message_to_agent.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_call_agent_invalid_token(self, mock_group_chat_manager):
@@ -177,7 +178,7 @@ class TestCallAgent:
 
         mock_group_chat_manager.resolve_token.return_value = ("worker1", "group_123")
         mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
-        mock_group_chat.message_router.send_message.side_effect = AgentNotFoundError("worker2")
+        mock_group_chat.send_message_to_agent.side_effect = AgentNotFoundError("worker2")
 
         result = await call_agent(
             agent_token="test_token",
@@ -553,8 +554,8 @@ class TestFinishAgentCall:
             message_type=MessageType.NOTIFICATION,
             timeout_seconds=None,
         )
-        mock_group_chat.message_router.send_message.assert_called_once()
-        sent_message = mock_group_chat.message_router.send_message.call_args.args[0]
+        mock_group_chat.send_message_to_agent.assert_called_once()
+        sent_message = mock_group_chat.send_message_to_agent.call_args.args[0]
         assert isinstance(sent_message, AgentMessage)
         assert sent_message.call_id == response_call_id
         assert sent_message.send_from == worker_name
@@ -608,7 +609,7 @@ class TestFinishAgentCall:
         assert mock_group_chat.agent_call_manager.create_call.call_args.kwargs[
             "content"
         ] == safe_content
-        sent_message = mock_group_chat.message_router.send_message.call_args.args[0]
+        sent_message = mock_group_chat.send_message_to_agent.call_args.args[0]
         assert sent_message.send_from == worker_name
         assert sent_message.send_to == "worker2"
         assert sent_message.content == safe_content
@@ -653,7 +654,7 @@ class TestFinishAgentCall:
         assert result == {"call_id": "call_456", "status": CallStatus.COMPLETED.value}
         mock_group_chat.agent_call_manager.mark_agent_response.assert_called_once()
         mock_group_chat.agent_call_manager.create_call.assert_not_called()
-        mock_group_chat.message_router.send_message.assert_not_called()
+        mock_group_chat.send_message_to_agent.assert_not_called()
         mock_group_chat.group_chat_context.add_message.assert_awaited_once()
         agent_result = mock_group_chat.group_chat_context.add_message.call_args.args[0]
         assert agent_result.agent_name == worker_name

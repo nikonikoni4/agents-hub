@@ -92,7 +92,7 @@ def _make_chat_result(group_chat, agent_name: str, content: str) -> AgentResult:
     )
 
 
-def _send_agent_call_completion_notification(
+async def _send_agent_call_completion_notification(
     group_chat: GroupChat,
     send_from: str,
     send_to: str,
@@ -113,7 +113,7 @@ def _send_agent_call_completion_notification(
         message_type=MessageType.NOTIFICATION,
         call_id=response_call.call_id,
     )
-    group_chat.message_router.send_message(message)
+    await group_chat.send_message_to_agent(message)
 
 
 # ============================================================================
@@ -182,7 +182,7 @@ async def call_agent(
             call_id=call.call_id,
         )
 
-        group_chat.message_router.send_message(message)
+        await group_chat.send_message_to_agent(message)
 
         # 5. 返回 call_id
         return {"call_id": call.call_id}
@@ -563,7 +563,7 @@ async def finish_agent_call(
                 )
             )
         else:
-            _send_agent_call_completion_notification(
+            await _send_agent_call_completion_notification(
                 group_chat=group_chat,
                 send_from=agent_name,
                 send_to=call.send_from,
