@@ -117,6 +117,78 @@
   font-size: 13px;
 }
 
+.skillsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skillsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skillItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-bubble);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.skillName {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.removeSkillBtn {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.removeSkillBtn:hover {
+  background: var(--bg-shadow);
+  color: var(--text-primary);
+}
+
+.noSkills {
+  padding: 12px;
+  background: var(--bg-bubble);
+  border-radius: 6px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.addSkillBtn {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addSkillBtn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
 .actions {
   display: flex;
   gap: 12px;

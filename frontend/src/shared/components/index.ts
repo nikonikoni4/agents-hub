@@ -3,4 +3,5 @@ export * from './Button';
 export * from './CompositeAvatar';
 export * from './Icon';
 export * from './Input';
+export * from './SkillSelectorModal';
 export * from './Toast';

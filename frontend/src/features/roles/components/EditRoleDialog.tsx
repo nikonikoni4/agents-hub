@@ -4,17 +4,20 @@
  * 职责：
  * - 编辑角色描述
  * - 更换角色头像
+ * - 管理角色技能
  */
 
 import { useState, useEffect } from 'react';
 import { AvatarSelector } from './AvatarSelector';
 import { useUpdateRole } from '../hooks/useUpdateRole';
-import type { RoleApiResponse } from '@/shared/types';
-import styles from './CreateRoleDialog.module.css'; // 复用创建弹窗的样式
+import { useRoleSkills } from '../hooks/useRoleSkills';
+import { SkillSelectorModal } from '@/shared/components';
+import type { RoleWithSkills } from '@/shared/adapters/roleAdapter';
+import styles from './CreateRoleDialog.module.css';
 
 export interface EditRoleDialogProps {
   isOpen: boolean;
-  role: RoleApiResponse | null;
+  role: RoleWithSkills | null;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -22,8 +25,10 @@ export interface EditRoleDialogProps {
 export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDialogProps) {
   const [description, setDescription] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [showSkillSelector, setShowSkillSelector] = useState(false);
 
   const { updateRole, loading } = useUpdateRole();
+  const { skills: roleSkills, addSkill, removeSkill } = useRoleSkills(role?.name ?? null);
 
   // 当 role 变化时重置表单
   useEffect(() => {
@@ -44,9 +49,26 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
     });
   };
 
+  const handleAddSkill = async (skill: { name: string }) => {
+    try {
+      await addSkill(skill.name);
+    } catch (err) {
+      console.error('Failed to add skill:', err);
+    }
+  };
+
+  const handleRemoveSkill = async (skillId: string) => {
+    try {
+      await removeSkill(skillId);
+    } catch (err) {
+      console.error('Failed to remove skill:', err);
+    }
+  };
+
   const handleClose = () => {
     setDescription('');
     setAvatar(null);
+    setShowSkillSelector(false);
     onClose();
   };
 
@@ -84,6 +106,38 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
             />
           </div>
 
+          <div className={styles.field}>
+            <label>技能列表</label>
+            <div className={styles.skillsContainer}>
+              {roleSkills.length > 0 ? (
+                <div className={styles.skillsList}>
+                  {roleSkills.map((skill) => (
+                    <div key={skill.id} className={styles.skillItem}>
+                      <span className={styles.skillName}>{skill.name}</span>
+                      <button
+                        type="button"
+                        className={styles.removeSkillBtn}
+                        onClick={() => handleRemoveSkill(skill.id)}
+                        aria-label={`移除 ${skill.name}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={styles.noSkills}>暂无技能</div>
+              )}
+              <button
+                type="button"
+                className={styles.addSkillBtn}
+                onClick={() => setShowSkillSelector(true)}
+              >
+                + 添加技能
+              </button>
+            </div>
+          </div>
+
           <div className={styles.actions}>
             <button type="button" onClick={handleClose} className={styles.cancelBtn}>
               取消
@@ -94,6 +148,13 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
           </div>
         </form>
       </div>
+
+      <SkillSelectorModal
+        isOpen={showSkillSelector}
+        onClose={() => setShowSkillSelector(false)}
+        onSelect={handleAddSkill}
+        excludeNames={roleSkills.map((s) => s.name)}
+      />
     </div>
   );
 }

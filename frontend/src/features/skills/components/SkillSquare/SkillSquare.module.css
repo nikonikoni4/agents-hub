@@ -51,21 +51,17 @@
 .searchBox {
   display: flex;
   align-items: center;
-  background: var(--bg-main);
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  gap: 10px;
+  border-radius: 16px;
+  padding: 12px 16px;
+  gap: 12px;
   transition: all 0.2s ease;
 }
 
 .searchBox:focus-within {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
-}
-
-html[data-theme='dark'] .searchBox:focus-within {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 2px 12px rgba(74, 158, 255, 0.15);
 }
 
 .searchBox svg {
