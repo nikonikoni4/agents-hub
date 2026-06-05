@@ -31,22 +31,31 @@
   min-width: 0;
 }
 
-.editBtn {
+.actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  align-self: flex-start;
+}
+
+.card:hover .actions {
+  opacity: 1;
+}
+
+.editBtn,
+.deleteBtn {
   background: none;
   border: none;
   padding: 4px;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.2s;
   font-size: 14px;
-  align-self: flex-start;
+  border-radius: 4px;
+  transition: transform 0.2s;
 }
 
-.card:hover .editBtn {
-  opacity: 1;
-}
-
-.editBtn:hover {
+.editBtn:hover,
+.deleteBtn:hover {
   transform: scale(1.1);
 }
 

@@ -18,6 +18,11 @@ export function RoleCard({ role, onClick, onEdit }: RoleCardProps) {
     onEdit?.(role);
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    alert('当前不支持删除');
+  };
+
   return (
     <div className={styles.card} onClick={onClick}>
       <div className={styles.header}>
@@ -33,16 +38,26 @@ export function RoleCard({ role, onClick, onEdit }: RoleCardProps) {
             </span>
           </div>
         </div>
-        {onEdit && (
+        <div className={styles.actions}>
+          {onEdit && (
+            <button
+              type="button"
+              className={styles.editBtn}
+              onClick={handleEdit}
+              aria-label="编辑角色"
+            >
+              ✏️
+            </button>
+          )}
           <button
             type="button"
-            className={styles.editBtn}
-            onClick={handleEdit}
-            aria-label="编辑角色"
+            className={styles.deleteBtn}
+            onClick={handleDelete}
+            aria-label="删除角色"
           >
-            ✏️
+            🗑️
           </button>
-        )}
+        </div>
       </div>
 
       {role.description && <p className={styles.description}>{role.description}</p>}

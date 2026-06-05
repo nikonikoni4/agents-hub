@@ -63,7 +63,7 @@ describe('groupChatApi', () => {
   });
 
   it('sendMessage 返回发送确认', async () => {
-    const result = await sendMessage('chat-001', { content: 'Hello', send_to: 'Agent1' });
+    const result = await sendMessage('chat-001', { content: 'Hello', members: ['Agent1'] });
     expect(result.message).toContain('sent successfully');
   });
 

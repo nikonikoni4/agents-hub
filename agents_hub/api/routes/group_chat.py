@@ -97,7 +97,7 @@ async def send_message(
     await service.send_message(
         group_chat_id,
         content=request.content,
-        send_to=request.send_to,
+        members=request.members,
     )
     return {"message": "消息已发送"}
 

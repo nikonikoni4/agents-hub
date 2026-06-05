@@ -383,31 +383,27 @@ class GroupChatService:
         self,
         group_chat_id: str,
         content: str,
-        send_to: str,
+        members: list[str],
     ) -> None:
         """向群聊发送消息
 
         Args:
             group_chat_id: 群聊 ID
             content: 消息内容
-            send_to: 目标角色名
+            members: 群聊中所有 agent 名称列表
 
         Raises:
             ResourceNotFoundError: 群聊不存在
-            ValidationError: send_to 不是群成员，或 content 中包含 @
+            ValidationError: 解析出的 send_to 不是群成员
         """
+        # 1. 从 content 中解析 send_to
+        send_to = self._resolve_send_to(content, members)
         logger.info(
             "发送消息: group=%s, to=%s, content_len=%d", group_chat_id, send_to, len(content)
         )
 
-        # 1. content 中不能有 @
-        if "@" in content:
-            raise ValidationError(
-                "消息内容中不能包含 @ 符号",
-                details={"content": content},
-            )
-
         # 2. 激活群聊（懒加载）
+        logger.debug("激活群聊: group=%s", group_chat_id)
         try:
             await self.group_chat_manager.activate_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
@@ -416,25 +412,32 @@ class GroupChatService:
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
             ) from e
+        logger.debug("群聊已激活: group=%s", group_chat_id)
 
-        # 3. 获取 GroupChat 实例并校验 send_to 是群聊成员
-        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
-        members = list(group_chat.team_members_name)
-        if group_chat.manager:
-            members.append(group_chat.manager.name)
+        # 3. 校验 send_to 是群聊成员
         if send_to not in members:
+            logger.debug(
+                "目标角色校验失败: send_to='%s', available=%s",
+                send_to,
+                members,
+            )
             raise ValidationError(
                 f"目标角色 '{send_to}' 不是群聊成员",
                 details={"send_to": send_to, "available_members": members},
             )
 
+        # 4. 获取 GroupChat 实例
+        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+
         # 4. 创建 AgentCall
+        logger.debug("创建 AgentCall: from=%s, to=%s", config.default_user_name, send_to)
         call = group_chat.agent_call_manager.create_call(
             send_from=config.default_user_name,
             send_to=send_to,
             content=content,
             message_type=MessageType.TASK,
         )
+        logger.debug("AgentCall 已创建: call_id=%s", call.call_id)
 
         # 5. 构建并发送 AgentMessage
         message = AgentMessage(
@@ -444,8 +447,26 @@ class GroupChatService:
             send_to=send_to,
             message_type=MessageType.TASK,
         )
+        logger.debug("投递消息到 MessageRouter: call_id=%s, to=%s", call.call_id, send_to)
         group_chat.message_router.send_message(message)
         logger.info("消息已发送: group=%s, to=%s, call_id=%s", group_chat_id, send_to, call.call_id)
+
+    @staticmethod
+    def _resolve_send_to(content: str, members: list[str]) -> str:
+        """从消息内容中解析发送目标。
+
+        规则：
+        1. 如果 content 中有 @member，提取第一个匹配的 member 作为 send_to
+        2. 否则 send_to 为 default_manager_name（通常是 'manager'）
+        """
+        import re
+
+        # 找到所有 @xxx，其中 xxx 是 members 中的某个成员
+        for member in members:
+            if re.search(rf"@{re.escape(member)}\b", content):
+                return member
+
+        return config.default_manager_name
 
     async def toggle_use_docker(
         self,

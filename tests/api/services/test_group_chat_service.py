@@ -516,3 +516,136 @@ async def test_get_group_chat_members_missing_fields_use_defaults(service, mock_
     assert result[0].btw_session == []  # 默认空列表
     assert result[0].cwd is None
     assert result[0].use_docker is False  # 默认 False
+
+
+# Task 9: get_messages 测试
+
+async def test_get_messages_success(service, mock_group_chat_manager):
+    """测试成功获取消息历史"""
+    # Arrange
+    group_chat_id = "gc_msgs"
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.get_message_dicts.return_value = [
+        {
+            "speaker": "user",
+            "content": "你好",
+            "timestamp": "2026-06-05T10:00:00",
+            "platform": "web",
+        },
+        {
+            "speaker": "manager",
+            "content": "收到",
+            "timestamp": "2026-06-05T10:00:01",
+            "platform": "web",
+        },
+    ]
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    # Act
+    result = await service.get_messages(group_chat_id, limit=10, offset=0)
+
+    # Assert
+    assert len(result) == 2
+    assert result[0].speaker == "user"
+    assert result[0].content == "你好"
+    assert result[1].speaker == "manager"
+    mock_group_chat.runtime.get_message_dicts.assert_called_once_with(limit=10, offset=0)
+
+
+async def test_get_messages_not_found(service, mock_group_chat_manager):
+    """测试获取不存在群聊的消息"""
+    from agents_hub.core.foundation import GroupChatNotFoundError
+    mock_group_chat_manager.load_group_chat = AsyncMock(
+        side_effect=GroupChatNotFoundError("群聊不存在")
+    )
+
+    with pytest.raises(ResourceNotFoundError):
+        await service.get_messages("gc_nonexistent")
+
+
+# Task 10: _resolve_send_to 测试
+
+def test_resolve_send_to_with_at_mention():
+    """测试 @提及 解析"""
+    content = "@测试 请帮我写个测试"
+    members = ["测试", "manager", "E2E测试角色"]
+    result = GroupChatService._resolve_send_to(content, members)
+    assert result == "测试"
+
+
+def test_resolve_send_to_no_mention_falls_back_to_manager():
+    """测试无 @提及 时回退到 manager"""
+    content = "请帮我写个测试"
+    members = ["测试", "manager", "E2E测试角色"]
+    with patch("agents_hub.api.services.group_chat_service.config") as mock_config:
+        mock_config.default_manager_name = "manager"
+        result = GroupChatService._resolve_send_to(content, members)
+    assert result == "manager"
+
+
+def test_resolve_send_to_first_member_match_wins():
+    """测试多个 @提及时，按 members 列表顺序匹配第一个"""
+    content = "@manager @测试 请帮我看看"
+    members = ["测试", "manager"]
+    # 遍历 members 列表，"测试" 先匹配到 content 中的 @测试
+    result = GroupChatService._resolve_send_to(content, members)
+    assert result == "测试"
+
+
+# Task 11: send_message 测试
+
+async def test_send_message_success(service, mock_group_chat_manager):
+    """测试成功发送消息"""
+    # Arrange
+    group_chat_id = "gc_send"
+    content = "@测试 请帮我写个测试"
+    members = ["测试", "manager"]
+
+    mock_group_chat = Mock()
+    mock_group_chat.agent_call_manager.create_call.return_value = Mock(call_id="call_123")
+    mock_group_chat.message_router = Mock()
+    mock_group_chat_manager.activate_group_chat = AsyncMock()
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.config") as mock_config:
+        mock_config.default_user_name = "user"
+        mock_config.default_manager_name = "manager"
+
+        # Act
+        await service.send_message(group_chat_id, content, members)
+
+    # Assert
+    mock_group_chat_manager.activate_group_chat.assert_called_once_with(group_chat_id)
+    mock_group_chat.agent_call_manager.create_call.assert_called_once()
+    mock_group_chat.message_router.send_message.assert_called_once()
+
+
+async def test_send_message_group_not_found(service, mock_group_chat_manager):
+    """测试向不存在的群聊发送消息"""
+    from agents_hub.core.foundation import GroupChatNotFoundError
+    mock_group_chat_manager.activate_group_chat = AsyncMock(
+        side_effect=GroupChatNotFoundError("群聊不存在")
+    )
+
+    with patch("agents_hub.api.services.group_chat_service.config") as mock_config:
+        mock_config.default_user_name = "user"
+        mock_config.default_manager_name = "manager"
+
+        with pytest.raises(ResourceNotFoundError):
+            await service.send_message("gc_nonexistent", "hello", ["manager"])
+
+
+async def test_send_message_invalid_target(service, mock_group_chat_manager):
+    """测试 @提及非群成员时回退到 manager，manager 也不在 members 则抛 ValidationError"""
+    mock_group_chat = Mock()
+    mock_group_chat_manager.activate_group_chat = AsyncMock()
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.config") as mock_config:
+        mock_config.default_user_name = "user"
+        mock_config.default_manager_name = "manager"
+
+        # members 中没有 manager，_resolve_send_to 回退到 manager，不在 members 中
+        with pytest.raises(ValidationError) as exc_info:
+            await service.send_message("gc_test", "你好", ["测试", "E2E测试角色"])
+        assert "不是群聊成员" in str(exc_info.value)

@@ -24,7 +24,7 @@ export interface CreateGroupChatRequest {
  */
 export interface SendMessageRequest {
   content: string; // 消息内容（非空）
-  send_to: string; // 目标角色名
+  members: string[]; // 群聊中所有 agent 名称列表
 }
 
 /**

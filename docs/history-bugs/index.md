@@ -33,3 +33,9 @@
  - path: docs/history-bugs/2026-06-05-windows-asyncio-subprocess-notimplementederror.md
  - 触发规则：Windows 平台创建群聊返回 409 Conflict，实际是 asyncio.create_subprocess_exec() 抛出 NotImplementedError
  - 内容摘要：Windows 的 SelectorEventLoop 不支持 subprocess，必须使用 ProactorEventLoop。uvicorn reload 模式会导致子进程重置事件循环策略。修复：模块顶部设置 WindowsProactorEventLoopPolicy + 禁用 reload 模式
+
+## set_agent_token_and_default_cwd 中 AI 自作主张的目录拼接规则
+ - updated_at : 2026-06-05
+ - path: docs/history-bugs/2026-06-05-agent-cwd-unspeced-logic.md
+ - 触发规则：新建群聊后 Agent 的 cwd 路径末尾多出 `/m`、`/测` 等无意义子目录
+ - 内容摘要：spec/plan 未定义 cwd 规则，AI 自行发明「首字母+末尾数字」拼接逻辑导致路径错误。教训：spec 没说的不要自己编。修复：直接使用 project_path 作为 cwd

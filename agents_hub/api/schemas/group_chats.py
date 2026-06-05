@@ -53,7 +53,7 @@ class MessageCreate(BaseModel):
     """发送消息请求"""
 
     content: str = Field(..., min_length=1, description="消息内容")
-    send_to: str = Field(..., description="目标角色名（如 'manager' 或具体 worker）")
+    members: list[str] = Field(..., min_length=1, description="群聊中所有 agent 名称列表")
 
 
 class MessageInfo(BaseModel):

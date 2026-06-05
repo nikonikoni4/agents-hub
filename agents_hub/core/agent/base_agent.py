@@ -27,6 +27,7 @@ from agents_hub.core.foundation import (
     render_for_llm,
 )
 from agents_hub.core.foundation.exceptions import DockerConfigError
+from agents_hub.utils.logger import get_logger
 
 
 class Agent:
@@ -48,6 +49,7 @@ class Agent:
         self.agent_call_manager = agent_call_manager
         self.task_manager = task_manager
         self._run = True
+        self.logger = get_logger(f"agent.{self.name}")
 
     @property
     def agent_token(self) -> str:
@@ -186,6 +188,15 @@ class Agent:
             msg: 原始 AgentMessage（content 不可变）
             prompt: 已通过 render_for_llm 渲染好的 LLM 输入字符串
         """
+        self.logger.debug(
+            "_process_message 入口: call_id=%s, from=%s, type=%s, session=%s, content_len=%d",
+            msg.call_id,
+            msg.send_from,
+            msg.message_type,
+            msg.session_type,
+            len(msg.content) if msg.content else 0,
+        )
+
         # 1. Docker 配置校验
         self._validate_docker_config()
 
@@ -194,8 +205,19 @@ class Agent:
         use_docker = getattr(agent_member_info, "use_docker", False) if agent_member_info else False
 
         self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
+        self.logger.debug(
+            "状态更新为 RUNNING: call_id=%s, agent=%s",
+            msg.call_id,
+            self.name,
+        )
         try:
             if msg.session_type == SessionType.MAIN:
+                self.logger.debug(
+                    "执行 MAIN 会话: agent=%s, call_id=%s, use_docker=%s",
+                    self.name,
+                    msg.call_id,
+                    use_docker,
+                )
                 history = await self.agent_context.get_context()
                 full_prompt = f"{history}\n{prompt}" if history else prompt
                 result = await self.execute(
@@ -204,11 +226,28 @@ class Agent:
                     group_chat_id=self.group_chat_context.group_chat_id,
                 )
             else:
+                self.logger.debug(
+                    "执行单聊会话: agent=%s, call_id=%s",
+                    self.name,
+                    msg.call_id,
+                )
                 result = await self.btw_execute(prompt)
             if msg.message_type != MessageType.TASK:
                 self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)
+            self.logger.debug(
+                "执行完成: agent=%s, call_id=%s, result_len=%d",
+                self.name,
+                msg.call_id,
+                len(result.text) if result.text else 0,
+            )
             return result
         except Exception as e:
+            self.logger.debug(
+                "执行异常: agent=%s, call_id=%s, error=%s",
+                self.name,
+                msg.call_id,
+                str(e),
+            )
             self.agent_call_manager.update_status(msg.call_id, CallStatus.FAILED)
             self.agent_call_manager.set_error(msg.call_id, str(e))
             raise AgentExecutionError(
@@ -355,6 +394,9 @@ class Agent:
 
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
+        self.logger.debug(
+            "Agent run() 启动: %s, 队列剩余=%d", self.name, self.message_queue.qsize()
+        )
         while self._run:
             # 1. 从队列中取回消息
             # TODO 当前调用agent的call id 没有发送给send_to 端
@@ -362,14 +404,24 @@ class Agent:
 
             # 2. 检查是否是停止信号
             if msg.call_id == "__STOP__":
+                self.logger.debug("Agent 收到停止信号: %s", self.name)
                 break
+
+            self.logger.debug(
+                "Agent 收到消息: agent=%s, call_id=%s, from=%s, type=%s, content_preview=%s",
+                self.name,
+                msg.call_id,
+                msg.send_from,
+                msg.message_type,
+                msg.content[:50] if msg.content else "",
+            )
 
             # 3. 注入 runtime 到 CLAUDE.md/AGENTS.md
             try:
                 self._inject_runtime_to_files(self.task_manager)
             except Exception as e:
                 # 注入失败不应该影响消息处理
-                print(f"Warning: Runtime injection failed for {self.name}: {e}")
+                self.logger.debug("Runtime 注入失败: agent=%s, error=%s", self.name, str(e))
 
             # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)

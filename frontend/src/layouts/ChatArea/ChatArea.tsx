@@ -8,7 +8,7 @@ import {
   AvatarImage,
 } from '@/shared/components';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
-import { sendMessage } from '@/core/api/groupChatApi';
+import { sendMessage, getMembers } from '@/core/api/groupChatApi';
 import type { MessageApiItem } from '@/shared/types';
 import styles from './ChatArea.module.css';
 
@@ -72,7 +72,9 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
     setInputValue('');
 
     try {
-      await sendMessage(activeSessionId, { content: text, send_to: '' });
+      const members = await getMembers(activeSessionId);
+      const memberNames = members.map((m) => m.name);
+      await sendMessage(activeSessionId, { content: text, members: memberNames });
     } catch (err) {
       console.error('Failed to send message:', err);
     }
