@@ -126,12 +126,6 @@ const MOCK_AVATARS: string[] = [
   AVATAR_STAR,
 ];
 
-const MOCK_SKILL: RoleSkillApiItem = {
-  id: 'mock-skill',
-  name: 'Mock Skill',
-  description: 'A mock skill for testing',
-};
-
 const MOCK_DELETE_RESPONSE: DeleteResponse = {
   message: 'Successfully deleted',
 };
@@ -193,14 +187,21 @@ export async function getRoleSkills(name: string): Promise<RoleSkillApiItem[]> {
   );
 }
 
+let mockSkillCounter = 0;
+
 /**
  * 为角色添加 Skill
  */
 export async function addSkillToRole(name: string, skillId: string): Promise<RoleSkillApiItem> {
   const requestData: AddSkillRequest = { skill_id: skillId };
+  const mockSkill: RoleSkillApiItem = {
+    id: `mock-skill-${++mockSkillCounter}`,
+    name: skillId,
+    description: `Mock skill: ${skillId}`,
+  };
   return mockableRequest(
     () => apiClient.post<RoleSkillApiItem>(`/roles/${name}/skills`, requestData),
-    MOCK_SKILL
+    mockSkill
   );
 }
 
