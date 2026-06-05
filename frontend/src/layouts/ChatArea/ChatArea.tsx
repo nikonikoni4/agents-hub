@@ -5,6 +5,7 @@ import {
   PlusIcon,
   CheckCircleIcon,
   SendIcon,
+  AvatarImage,
 } from '@/shared/components';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { sendMessage } from '@/core/api/groupChatApi';
@@ -15,12 +16,21 @@ export interface ChatAreaProps {
   onToggleRightSidebar?: () => void;
 }
 
-function MessageBubble({ msg }: { msg: MessageApiItem }) {
+function MessageBubble({ msg, avatar }: { msg: MessageApiItem; avatar?: string | null }) {
   const isUser = msg.speaker === 'user';
 
   return (
     <div className={`${styles.message} ${isUser ? styles.messageUser : styles.messageAgent}`}>
-      {!isUser && <span className={styles.speakerName}>{msg.speaker}</span>}
+      {!isUser && (
+        <div className={styles.messageHeader}>
+          {avatar && (
+            <div className={styles.messageAvatar}>
+              <AvatarImage avatar={avatar} fallback={msg.speaker} />
+            </div>
+          )}
+          <span className={styles.speakerName}>{msg.speaker}</span>
+        </div>
+      )}
       <div className={`${styles.messageBubble} ${isUser ? styles.bubbleUser : styles.bubbleAgent}`}>
         <p>{msg.content}</p>
       </div>
@@ -29,7 +39,7 @@ function MessageBubble({ msg }: { msg: MessageApiItem }) {
 }
 
 export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
-  const { messages, loading, activeTitle, activeSessionId } = useChatMessages();
+  const { messages, loading, activeTitle, activeSessionId, roleAvatarMap } = useChatMessages();
   const [inputValue, setInputValue] = useState('');
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -109,7 +119,13 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
         {loading && allMessages.length === 0 ? (
           <div className={styles.loadingText}>加载中...</div>
         ) : (
-          allMessages.map((msg, i) => <MessageBubble key={i} msg={msg} />)
+          allMessages.map((msg, i) => (
+            <MessageBubble
+              key={i}
+              msg={msg}
+              avatar={msg.speaker !== 'user' ? roleAvatarMap.get(msg.speaker) : undefined}
+            />
+          ))
         )}
         <div ref={messagesEndRef} />
       </div>

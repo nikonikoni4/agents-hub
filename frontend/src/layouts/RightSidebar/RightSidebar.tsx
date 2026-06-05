@@ -1,4 +1,5 @@
 import { useMembers, MemberWithRole } from '@/features/chat/hooks';
+import { AvatarImage } from '@/shared/components';
 import styles from './RightSidebar.module.css';
 
 export interface RightSidebarProps {
@@ -36,11 +37,11 @@ function MaximizeIcon() {
 }
 
 function MemberItem({ member }: { member: MemberWithRole }) {
-  const initial = member.name.charAt(0).toUpperCase();
-
   return (
     <div className={styles.memberItem}>
-      <div className={styles.memberAvatar}>{initial}</div>
+      <div className={styles.memberAvatar}>
+        <AvatarImage avatar={member.role?.avatar ?? null} fallback={member.name} />
+      </div>
       <div className={styles.memberInfo}>
         <div className={styles.memberName}>{member.name}</div>
         <div className={styles.memberRole}>

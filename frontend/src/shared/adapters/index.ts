@@ -6,6 +6,7 @@
 
 // 角色相关 Adapter
 export * from './roleAdapter';
+export * from './roleAvatarAdapter';
 
 // 群聊相关 Adapter
 export * from './chatAdapter';

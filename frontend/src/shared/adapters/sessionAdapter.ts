@@ -34,6 +34,8 @@ export interface SessionItem {
   memberCount: number;
   /** 项目路径 */
   projectPath: string;
+  /** 成员头像列表（最多 4 个 SVG 字符串） */
+  memberAvatars: (string | null)[];
 }
 
 /**
@@ -88,6 +90,7 @@ export function groupSessionsByProject(
         ),
         memberCount: 0, // 后端暂未提供，先设为 0
         projectPath: chat.project_path,
+        memberAvatars: [], // 由 useSessionList hook 填充
       };
 
       acc[projectName]!.sessions.push(sessionItem);

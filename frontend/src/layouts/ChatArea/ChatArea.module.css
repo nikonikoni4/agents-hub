@@ -76,11 +76,25 @@
   align-self: flex-end;
 }
 
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 4px;
+}
+
+.messageAvatar {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
 .speakerName {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-tertiary);
-  padding-left: 4px;
 }
 
 .messageBubble {
@@ -140,6 +154,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  transition: all 0.2s ease;
 }
 
 .chatInput {
@@ -149,11 +164,6 @@
   outline: none;
   font-size: 14px;
   color: var(--text-primary);
-}
-
-.chatInput:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
 }
 
 .chatInput::placeholder {
