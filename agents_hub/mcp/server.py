@@ -27,11 +27,24 @@ MCP Server 和 6 个工具
 from datetime import datetime
 
 from fastmcp import FastMCP
+from mcp.types import JSONRPCMessage
 
-from agents_hub.agent_bridge.models import AgentResult
-from agents_hub.config import config
-from agents_hub.config.types import AgentPlatform, RoleType
-from agents_hub.core.foundation import (
+# Monkey-patch: MCP 库默认 ensure_ascii=True 导致中文变成 \xe6\xb4\xbe...，
+# 覆盖 model_dump_json 使其输出可读的 UTF-8 字符。
+_original_model_dump_json = JSONRPCMessage.model_dump_json
+
+
+def _model_dump_json_utf8(self, **kwargs):
+    kwargs.setdefault("ensure_ascii", False)
+    return _original_model_dump_json(self, **kwargs)
+
+
+JSONRPCMessage.model_dump_json = _model_dump_json_utf8  # type: ignore[method-assign]
+
+from agents_hub.agent_bridge.models import AgentResult  # noqa: E402
+from agents_hub.config import config  # noqa: E402
+from agents_hub.config.types import AgentPlatform, RoleType  # noqa: E402
+from agents_hub.core.foundation import (  # noqa: E402
     AgentMessage,
     AgentNotFoundError,
     CallStatus,
@@ -39,10 +52,10 @@ from agents_hub.core.foundation import (
     MessageType,
     render_for_chat,
 )
-from agents_hub.core.foundation.token import redact_token
-from agents_hub.core.orchestration import group_chat_manager
-from agents_hub.core.orchestration.group_chat import GroupChat
-from agents_hub.mcp.errors import (
+from agents_hub.core.foundation.token import redact_token  # noqa: E402
+from agents_hub.core.orchestration import group_chat_manager  # noqa: E402
+from agents_hub.core.orchestration.group_chat import GroupChat  # noqa: E402
+from agents_hub.mcp.errors import (  # noqa: E402
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
     GROUP_CHAT_NOT_FOUND,
@@ -52,8 +65,9 @@ from agents_hub.mcp.errors import (
     PERMISSION_DENIED,
     make_error_response,
 )
-from agents_hub.realtime.dependencies import broadcast_group_chat_refresh
+from agents_hub.utils import get_logger  # noqa: E402
 
+logger = get_logger(__name__)
 # ============================================================================
 # FastMCP 实例
 # ============================================================================
@@ -459,7 +473,6 @@ async def speak_in_group_chat(agent_token: str, content: str, send_to: str | Non
         await group_chat.group_chat_context.add_message(
             _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)
         )
-        await broadcast_group_chat_refresh(group_chat_id)
         return {"ok": True}
 
     except Exception as e:
@@ -548,6 +561,7 @@ async def finish_agent_call(
         # TODO : [DESIGN] 这里会把结果发在result中，但是当前也会在直接发送给agent信息，
         # 如果agent调用check_agent_call，实际上会得到2份结果，但是这里先不管
         # 一个可行的方法是使用 “agent call结束，具体内容{agent_name}会直接发送信息给你”
+        logger.debug(f"finish_agent_call :call_id:{call_id} {success} {safe_content}")
         group_chat.agent_call_manager.mark_agent_response(
             call_id=call_id,
             content=safe_content,  #  “agent call结束，具体内容{agent_name}会直接发送信息给你”
@@ -569,7 +583,6 @@ async def finish_agent_call(
                 send_to=call.send_from,
                 content=safe_content,
             )
-        await broadcast_group_chat_refresh(group_chat_id)
 
         status = CallStatus.COMPLETED if success else CallStatus.FAILED
         return {"call_id": call_id, "status": status.value}

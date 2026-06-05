@@ -37,6 +37,7 @@ class GroupChatSession:
     用于管理群聊的消息历史，对于每个 agent 的单聊和具体内容由各自的平台管理。
     """
 
+    # TODO 缺乏锁
     group_chat_id: str = field(default_factory=lambda: str(uuid4()))
     name: str = field(default_factory=lambda: f"session_{datetime.now().strftime('%Y%m%d%H%M')}")
     messages: list[dict[str, str]] = field(default_factory=list)

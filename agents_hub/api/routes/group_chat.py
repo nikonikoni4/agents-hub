@@ -11,12 +11,9 @@ from agents_hub.api.schemas.group_chats import (
     UseDockerUpdate,
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
-from agents_hub.core.orchestration import GroupChatManager
+from agents_hub.core.orchestration import group_chat_manager as _group_chat_manager
 
 router = APIRouter(prefix="/group-chats", tags=["group-chats"])
-
-# 全局单例
-_group_chat_manager = GroupChatManager()
 
 
 def get_group_chat_service() -> GroupChatService:

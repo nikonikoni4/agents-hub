@@ -3,17 +3,23 @@ Orchestration 层单元测试
 
 契约：
 1. GroupChatManager: register, load_group_chat, unregister 幂等性
-2. Team: 空成员列表抛 ValueError
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from agents_hub.core.foundation import GroupChatNotFoundError
 from agents_hub.core.orchestration.group_chat import GroupChat
 from agents_hub.core.orchestration.group_chat_manager import GroupChatManager
-from agents_hub.core.orchestration.team import Team
+
+
+@pytest.fixture(autouse=True)
+def _reset_singleton():
+    """每个测试前重置单例状态"""
+    GroupChatManager._reset_instance()
+    yield
+    GroupChatManager._reset_instance()
 
 
 # ==================== GroupChatManager ====================
@@ -95,17 +101,3 @@ class TestGroupChatManagerUnregister:
         await mgr.unregister("gc_1", timeout=5.0)
 
         mock_gc.cleanup.assert_called_once_with(timeout=5.0)
-
-
-# ==================== Team ====================
-
-
-class TestTeam:
-    """测试 Team 验证"""
-
-    def test_empty_members_raises(self):
-        """契约：空 team_members_name 抛 ValueError"""
-        with patch("agents_hub.core.orchestration.team.RoleManager") as mock_rm:
-            mock_rm.return_value.list_role_names.return_value = ["a", "b"]
-            with pytest.raises(ValueError, match="team_members 不能为空"):
-                Team(team_members_name=[])

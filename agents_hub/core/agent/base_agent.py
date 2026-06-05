@@ -259,9 +259,8 @@ class Agent:
         ]
         team_members_str = ", ".join(team_members)
 
-        # 构建基础内容
+        # 构建基础内容（不含外层 <AGENT_RUNTIME> 标签，由 replace_marked_section 包裹）
         content_parts = [
-            "<AGENT_RUNTIME>",
             "<identity>",
             f"你的名字：{self.name}",
             f"群聊ID：{self.group_chat_context.group_chat_id}",
@@ -314,8 +313,6 @@ class Agent:
                         f"request={call.content}"
                     )
             content_parts.append("</active_agent_calls>")
-
-        content_parts.append("</AGENT_RUNTIME>")
 
         return "\n".join(content_parts)
 

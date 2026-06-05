@@ -25,13 +25,34 @@ class GroupChatManager:
     """
     管理所有 GroupChat 实例的全局注册表
 
+    全局单例：通过 __new__ 保证整个进程只有一个实例。
     线程安全：token 索引操作使用 RLock 保护，确保在 FastMCP HTTP 多线程环境下的正确性。
     """
 
+    _instance: "GroupChatManager | None" = None
+    _initialized: bool = False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
+        if GroupChatManager._initialized:
+            return
         self._group_chats: dict[str, GroupChat] = {}
         self._tokens: dict[str, tuple[str, str]] = {}  # token → (agent_name, group_chat_id)
         self._token_lock = threading.RLock()  # 保护 _tokens 字典的并发访问
+        GroupChatManager._initialized = True
+
+    @classmethod
+    def _reset_instance(cls):
+        """重置单例状态，仅供测试使用"""
+        if cls._instance is not None:
+            cls._instance._group_chats.clear()
+            cls._instance._tokens.clear()
+        cls._instance = None
+        cls._initialized = False
 
     def register(self, group_chat_id: str, group_chat: GroupChat):
         """注册一个 GroupChat"""

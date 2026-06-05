@@ -45,3 +45,15 @@
  - path: docs/history-bugs/2026-06-05-agent-call-status-duplicate-logging.md
  - 触发规则：日志中出现大量 "running -> running" 状态变更记录，每次更新触发 MCP transport 重建
  - 内容摘要：AgentCallManager.update_status() 缺少状态检查，即使新旧状态相同也会执行日志记录、持久化和触发下游逻辑。修复：在 update_status 开头检查状态是否变化，相同则跳过更新
+
+## API 路由创建独立 GroupChatManager 实例导致双 Manager 状态分裂
+ - updated_at : 2026-06-06
+ - path: docs/history-bugs/2026-06-06-api-route-created-separate-group-chat-manager.md
+ - 触发规则：API 路由中直接 `GroupChatManager()` 创建新实例而非使用全局单例，导致重启后两套 Agent 并行运行、消息路由分裂
+ - 内容摘要：API 路由单独创建 Manager 实例，与 Core 全局单例各自从磁盘加载出独立的 GroupChat，消息投递到错误队列、Token 索引不一致、Agent 重复启动。调试耗时约 6 小时。教训：全局单例需防呆机制，AI 倾向就近实例化
+
+## GroupChatRuntimeState 状态改变与并发问题
+ - updated_at : 2026-06-05
+ - path: docs/history-bugs/2026-06-05-group-chat-runtime-state-concurrency.md
+ - 触发规则：多协程并发访问 GroupChatRuntime 的 command 方法（如 add_message、append_compact_record），或 AgentCallManager 后台清理与主流程竞态
+ - 内容摘要：Runtime 层 read-modify-write 序列缺乏锁保护，Repository 层文件锁无法覆盖内存状态竞态。涉及 6 处代码位置，核心方案是在 Runtime 层添加 asyncio.Lock

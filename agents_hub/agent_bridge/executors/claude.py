@@ -50,10 +50,19 @@ class ClaudeExecutor:
             raise CLINotFoundError(platform="Claude", command=CLAUDE_COMMAND) from e
 
         assert process.stdout is not None
-        async for line in process.stdout:
-            decoded = line.decode("utf-8").strip()
-            if decoded:
-                yield decoded
+        buffer = ""
+        while True:
+            chunk = await process.stdout.read(256 * 1024)  # 256KB
+            if not chunk:
+                break
+            buffer += chunk.decode("utf-8")
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                decoded = line.strip()
+                if decoded:
+                    yield decoded
+        if buffer.strip():
+            yield buffer.strip()
 
         # 等待进程结束并检查返回码
         await process.wait()

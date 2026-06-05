@@ -4,7 +4,17 @@
 
 import threading
 
+import pytest
+
 from agents_hub.core.orchestration.group_chat_manager import GroupChatManager
+
+
+@pytest.fixture(autouse=True)
+def _reset_singleton():
+    """每个测试前重置单例状态"""
+    GroupChatManager._reset_instance()
+    yield
+    GroupChatManager._reset_instance()
 
 
 class TestGroupChatManagerTokens:
@@ -87,15 +97,18 @@ class TestGroupChatManagerTokens:
         result = manager.resolve_token(token)
         assert result == ("agent_b", "chat_002")
 
-    def test_token_isolation_between_managers(self):
-        """测试不同 manager 实例的 token 隔离"""
-        manager1 = GroupChatManager()
-        manager2 = GroupChatManager()
+    def test_token_isolation_between_group_chats(self):
+        """测试不同 group_chat 的 token 隔离"""
+        manager = GroupChatManager()
 
-        manager1.register_token("token_1", "agent_a", "chat_001")
+        manager.register_token("token_1", "agent_a", "chat_001")
+        manager.register_token("token_2", "agent_b", "chat_002")
 
-        # manager2 不应该能解析 manager1 的 token
-        assert manager2.resolve_token("token_1") is None
+        # 注销 chat_001 不影响 chat_002
+        manager.unregister_tokens("chat_001")
+
+        assert manager.resolve_token("token_1") is None
+        assert manager.resolve_token("token_2") == ("agent_b", "chat_002")
 
     def test_token_thread_safety(self):
         """测试 token 操作的线程安全性"""

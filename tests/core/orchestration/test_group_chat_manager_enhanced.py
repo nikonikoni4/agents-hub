@@ -43,7 +43,9 @@ def sample_team():
 @pytest.fixture
 def group_chat_manager():
     """创建 GroupChatManager 实例"""
-    return GroupChatManager()
+    GroupChatManager._reset_instance()
+    yield GroupChatManager()
+    GroupChatManager._reset_instance()
 
 
 class TestListAllGroupChats:
@@ -193,7 +195,7 @@ class TestLoadGroupChatFromDisk:
     @pytest.mark.asyncio
     async def test_group_chat_not_found(self, group_chat_manager):
         """测试群聊不存在时抛出异常"""
-        with pytest.raises(FileNotFoundError, match="找不到群聊"):
+        with pytest.raises(FileNotFoundError, match="找不到GroupChat"):
             await group_chat_manager.load_group_chat_from_disk(
                 group_chat_id="non-existent",
             )
@@ -229,7 +231,7 @@ class TestLoadGroupChatFromDisk:
             json.dump(metadata.to_dict(), f)
 
         # 尝试加载 - 直接传入 base_path
-        with pytest.raises(FileNotFoundError, match="找不到群聊"):
+        with pytest.raises(FileNotFoundError, match="找不到GroupChat"):
             await group_chat_manager.load_group_chat_from_disk(
                 group_chat_id=group_chat_id,
                 base_path=str(test_base_path),

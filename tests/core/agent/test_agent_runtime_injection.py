@@ -153,9 +153,9 @@ class TestAgentRuntimeContentGeneration:
         # 生成 runtime 内容
         content = manager_agent._generate_runtime_content(mock_task_manager)
 
-        # 验证内容格式
-        assert "<AGENT_RUNTIME>" in content
-        assert "</AGENT_RUNTIME>" in content
+        # 验证内容格式（不含外层 <AGENT_RUNTIME> 标签，由 replace_marked_section 包裹）
+        assert "<AGENT_RUNTIME>" not in content
+        assert "</AGENT_RUNTIME>" not in content
 
         # 验证 identity 部分
         assert "<identity>" in content
@@ -191,9 +191,9 @@ class TestAgentRuntimeContentGeneration:
         # 生成 runtime 内容
         content = worker_agent._generate_runtime_content(mock_task_manager)
 
-        # 验证内容格式
-        assert "<AGENT_RUNTIME>" in content
-        assert "</AGENT_RUNTIME>" in content
+        # 验证内容格式（不含外层 <AGENT_RUNTIME> 标签）
+        assert "<AGENT_RUNTIME>" not in content
+        assert "</AGENT_RUNTIME>" not in content
 
         # 验证 identity 部分
         assert "<identity>" in content

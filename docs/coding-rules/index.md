@@ -7,6 +7,12 @@
 
 
 
+## 后端单例规则
+ - updated_at: 2026-06-06
+ - path: docs/coding-rules/backend-singleton.md
+ - 触发规则：编写后端代码需要使用 config、group_chat_paths、group_chat_manager 等全局实例时，或需要新增全局单例时
+ - 内容摘要：列出系统中唯一的 3 个全局单例（config、group_chat_paths、group_chat_manager），禁止自行实例化单例类，必须通过 import 使用已有实例
+
 ## core runtime 边界规则
  - updated_at: 2026-06-04
  - path: docs/coding-rules/core-runtime-boundary.md

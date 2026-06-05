@@ -61,9 +61,6 @@ def _mock_team_validation():
     mock_bridge.execute = AsyncMock(side_effect=_execute_side_effect)
 
     with patch(
-        "agents_hub.core.orchestration.team.RoleManager",
-        return_value=mock_role_manager,
-    ), patch(
         "agents_hub.core.orchestration.group_chat.RoleManager",
         return_value=mock_role_manager,
     ), patch(

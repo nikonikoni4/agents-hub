@@ -82,7 +82,7 @@ _global_log_dir: Path | None = None
 _initialized = False
 
 
-def setup_logging(log_dir: Path, global_log_filename: str = "agents_hub.log", level=logging.INFO):
+def setup_logging(log_dir: Path, global_log_filename: str = "agents_hub.log", level=logging.DEBUG):
     """
     初始化全局日志系统
 
