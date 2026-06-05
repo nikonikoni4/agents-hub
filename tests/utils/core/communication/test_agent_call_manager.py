@@ -124,6 +124,26 @@ class TestAgentCallManagerUpdateStatus:
         """契约：更新不存在的调用静默处理"""
         manager.update_status("nonexistent", CallStatus.RUNNING)  # 不应报错
 
+    def test_update_same_status_skips_update(self, manager):
+        """契约：相同状态的更新会被跳过，不触发持久化和时间戳更新"""
+        call = manager.create_call(
+            send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
+        )
+        # 第一次更新为 RUNNING
+        manager.update_status(call.call_id, CallStatus.RUNNING)
+        first_started_at = call.started_at
+
+        # 等待一小段时间确保时间戳会不同
+        import time
+        time.sleep(0.01)
+
+        # 再次更新为 RUNNING（相同状态）
+        manager.update_status(call.call_id, CallStatus.RUNNING)
+
+        # 验证：时间戳未被更新（说明跳过了更新）
+        assert call.started_at == first_started_at, "相同状态不应更新时间戳"
+        assert call.status == CallStatus.RUNNING
+
 
 class TestAgentCallManagerResultSet:
     """测试 set_result() 和 set_error()"""

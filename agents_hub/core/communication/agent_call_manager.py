@@ -142,6 +142,12 @@ class AgentCallManager:
         """
         if call := self._calls.get(call_id):
             old_status = call.status
+
+            # 如果状态没有变化，跳过更新
+            if old_status == status:
+                self.logger.debug(f"调用 {call_id} 状态未变化，跳过更新: {status.value}")
+                return
+
             call.status = status
             if status == CallStatus.RUNNING:
                 call.started_at = datetime.now()

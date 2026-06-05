@@ -7,6 +7,7 @@
 
 from pathlib import Path
 
+from agents_hub.config import config
 from agents_hub.core.utils import sanitize_project_path
 
 
@@ -33,20 +34,21 @@ class GroupChatPaths:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def base_dir(
-        self, group_chat_id: str, project_path: str, base_path: str = "local_data/teams"
-    ) -> Path:
+    def base_dir(self, group_chat_id: str, project_path: str, base_path: str | None = None) -> Path:
         """
         群聊基础目录
 
         Args:
             group_chat_id: 群聊唯一标识
             project_path: 项目路径，会被 sanitize 为安全的目录名
-            base_path: 群聊数据根目录，默认 "local_data/teams"
+            base_path: 群聊数据根目录，默认 config.data_path / "teams"
 
         Returns:
             <base_path>/<sanitized_project>/<group_chat_id>/
         """
+        if base_path is None:
+            base_path = str(config.data_path / "teams")
+
         sanitized = sanitize_project_path(project_path)
         return Path(base_path) / sanitized / group_chat_id
 
@@ -68,7 +70,7 @@ class GroupChatPaths:
         return self.base_dir(group_chat_id, project_path) / f"{group_chat_id}.jsonl"
 
     def agent_member_file_path(
-        self, group_chat_id: str, project_path: str, base_path: str = "local_data/teams"
+        self, group_chat_id: str, project_path: str, base_path: str | None = None
     ) -> Path:
         """
         Agent session 状态文件
@@ -107,7 +109,7 @@ class GroupChatPaths:
         return self.base_dir(group_chat_id, project_path) / "memory" / "compact_history.jsonl"
 
     def metadata_file(
-        self, group_chat_id: str, project_path: str, base_path: str = "local_data/teams"
+        self, group_chat_id: str, project_path: str, base_path: str | None = None
     ) -> Path:
         """
         群聊元数据文件
@@ -163,21 +165,24 @@ class GroupChatPaths:
         return self.base_dir(group_chat_id, project_path) / "agent_calls.jsonl"
 
     def find_project_path_by_group_chat_id(
-        self, group_chat_id: str, base_path: str = "local_data/teams"
+        self, group_chat_id: str, base_path: str | None = None
     ) -> str | None:
         """
         通过 group_chat_id 查找对应的 project_path
 
-        扫描 local_data/teams/ 目录结构，找到包含指定 group_chat_id 的项目路径。
+        扫描 teams/ 目录结构，找到包含指定 group_chat_id 的项目路径。
 
         Args:
             group_chat_id: 群聊 ID
-            base_path: 群聊数据根目录，默认 "local_data/teams"
+            base_path: 群聊数据根目录，默认 config.data_path / "teams"
 
         Returns:
             找到的 project_path，未找到返回 None
         """
         import json
+
+        if base_path is None:
+            base_path = str(config.data_path / "teams")
 
         base = Path(base_path)
         if not base.exists():

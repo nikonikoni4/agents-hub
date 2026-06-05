@@ -39,3 +39,9 @@
  - path: docs/history-bugs/2026-06-05-agent-cwd-unspeced-logic.md
  - 触发规则：新建群聊后 Agent 的 cwd 路径末尾多出 `/m`、`/测` 等无意义子目录
  - 内容摘要：spec/plan 未定义 cwd 规则，AI 自行发明「首字母+末尾数字」拼接逻辑导致路径错误。教训：spec 没说的不要自己编。修复：直接使用 project_path 作为 cwd
+
+## AgentCall 状态重复更新导致日志泛滥和 MCP 连接重建
+ - updated_at : 2026-06-05
+ - path: docs/history-bugs/2026-06-05-agent-call-status-duplicate-logging.md
+ - 触发规则：日志中出现大量 "running -> running" 状态变更记录，每次更新触发 MCP transport 重建
+ - 内容摘要：AgentCallManager.update_status() 缺少状态检查，即使新旧状态相同也会执行日志记录、持久化和触发下游逻辑。修复：在 update_status 开头检查状态是否变化，相同则跳过更新
