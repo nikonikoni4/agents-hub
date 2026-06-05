@@ -101,10 +101,23 @@ class GroupChatService:
                 },
             )
 
-        # 3. 生成 group_chat_id
+        # 3. 校验项目路径
+        path = Path(project_path)
+        if not path.is_absolute():
+            raise ValidationError(
+                "项目路径必须是绝对路径",
+                details={"project_path": project_path},
+            )
+        if not path.exists():
+            raise ResourceNotFoundError(
+                f"项目路径不存在: {project_path}",
+                details={"project_path": project_path},
+            )
+
+        # 4. 生成 group_chat_id
         group_chat_id = str(uuid4())
 
-        # 4. 创建 GroupChat 实例
+        # 5. 创建 GroupChat 实例
         group_chat = GroupChat(
             team_members_name=team_members,
             group_type=GroupChatType.MANAGER_ORCHESTRATE,
@@ -113,7 +126,7 @@ class GroupChatService:
             group_chat_name=group_chat_name,
         )
 
-        # 5. 调用 GroupChat.start()
+        # 6. 调用 GroupChat.start()
         try:
             await group_chat.start()
         except Exception as e:
@@ -125,10 +138,10 @@ class GroupChatService:
                 },
             ) from e
 
-        # 6. 注册到 GroupChatManager
+        # 7. 注册到 GroupChatManager
         self.group_chat_manager.register(group_chat_id, group_chat)
 
-        # 7. 返回 GroupChatInfo
+        # 8. 返回 GroupChatInfo
         return await self._build_group_chat_info_from_instance(group_chat)
 
     async def load_group_chat(self, group_chat_id: str) -> GroupChatInfo:

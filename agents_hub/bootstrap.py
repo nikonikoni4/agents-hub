@@ -46,3 +46,28 @@ def initialize_resources() -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         logger.info(f"已初始化资源文件: {target}")
+
+
+def initialize_default_roles() -> None:
+    """初始化默认角色
+
+    创建系统必需的默认角色（如 manager），如果不存在则创建。
+    """
+    from agents_hub.config.types import AgentPlatform
+    from agents_hub.roles.role_manager import RoleManager
+
+    role_manager = RoleManager()
+
+    # manager 角色：系统默认的管理者角色
+    manager_role_name = "manager"
+    if manager_role_name not in role_manager.list_role_names():
+        try:
+            role_manager.create_role(
+                name=manager_role_name,
+                platform=AgentPlatform.CLAUDE,
+                type="leader",
+                description="系统默认的管理者角色，负责协调团队成员",
+            )
+            logger.info(f"已创建默认角色: {manager_role_name}")
+        except Exception as e:
+            logger.warning(f"创建默认角色 {manager_role_name} 失败: {e}")

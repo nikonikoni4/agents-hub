@@ -9,8 +9,10 @@ import { TeamMemberPanel } from './TeamMemberPanel';
 import { CreateRoleDialog } from './CreateRoleDialog';
 import { EditRoleDialog } from './EditRoleDialog';
 import { AddMemberDialog } from './AddMemberDialog';
+import { CreateTeamDialog } from './CreateTeamDialog';
 import { useRoles } from '../hooks/useRoles';
 import { useTeams } from '../hooks/useTeams';
+import { useTeamActions } from '../hooks/useTeamActions';
 import type { RoleManagementTab } from '../types';
 import type { RoleWithSkills } from '@/shared/adapters/roleAdapter';
 import styles from './RoleManagementPanel.module.css';
@@ -20,10 +22,12 @@ export function RoleManagementPanel() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [showCreateTeamDialog, setShowCreateTeamDialog] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleWithSkills | null>(null);
 
   const { roles, loading: rolesLoading, refreshRoles } = useRoles();
   const { teams, selectedTeam, currentTeam, selectTeam, refreshTeams } = useTeams();
+  const { handleDeleteTeam } = useTeamActions();
 
   const handleCreateRoleSuccess = () => {
     refreshRoles();
@@ -74,7 +78,13 @@ export function RoleManagementPanel() {
       <div className={styles.content}>
         {activeTab === 'teams' ? (
           <div className={styles.teamsView}>
-            <TeamList teams={teams} selectedTeam={selectedTeam} onSelectTeam={selectTeam} />
+            <TeamList
+              teams={teams}
+              selectedTeam={selectedTeam}
+              onSelectTeam={selectTeam}
+              onCreateTeam={() => setShowCreateTeamDialog(true)}
+              onDeleteTeam={handleDeleteTeam}
+            />
             <TeamMemberPanel team={currentTeam} onAddMember={() => setShowAddMemberDialog(true)} />
           </div>
         ) : (
@@ -125,6 +135,12 @@ export function RoleManagementPanel() {
         teamName={selectedTeam}
         onClose={() => setShowAddMemberDialog(false)}
         onSuccess={handleAddMemberSuccess}
+      />
+
+      <CreateTeamDialog
+        isOpen={showCreateTeamDialog}
+        onClose={() => setShowCreateTeamDialog(false)}
+        onSuccess={refreshTeams}
       />
     </div>
   );

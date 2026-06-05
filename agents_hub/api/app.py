@@ -51,12 +51,13 @@ def _resolve_status(exc: AgentsHubError) -> int:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
-    from agents_hub.bootstrap import initialize_resources
+    from agents_hub.bootstrap import initialize_default_roles, initialize_resources
     from agents_hub.mcp.server import mcp
     from agents_hub.utils import setup_logging
 
     setup_logging(log_dir=config.data_path / "logs")
     initialize_resources()
+    initialize_default_roles()
 
     mcp_task = asyncio.create_task(
         mcp.run_async(
@@ -92,11 +93,15 @@ async def agents_hub_error_handler(request: Request, exc: AgentsHubError) -> JSO
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """兜底：捕获所有未处理异常，防止内部信息泄露"""
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    # 开发环境下返回详细错误信息
+    import os
+
+    is_dev = os.getenv("ENV", "development") == "development"
     return JSONResponse(
         status_code=500,
         content={
             "error_code": "INTERNAL_ERROR",
-            "message": "服务器内部错误",
+            "message": str(exc) if is_dev else "服务器内部错误",
             "type": "InternalError",
         },
     )
@@ -106,3 +111,9 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
 async def health_check():
     """健康检查端点"""
     return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("agents_hub.api.app:app", host="0.0.0.0", port=8099, reload=True)

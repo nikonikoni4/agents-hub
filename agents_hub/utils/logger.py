@@ -9,7 +9,7 @@ import logging
 import os
 from pathlib import Path
 
-MAX_LOG_MESSAGE_LENGTH = 2000
+MAX_LOG_MESSAGE_LENGTH = 10000
 MAX_LOG_FILE_SIZE = 500 * 1024  # 500KB
 
 

@@ -7,6 +7,9 @@
 }
 
 .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
 }
@@ -16,6 +19,22 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.addBtn {
+  padding: 4px 10px;
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent-color);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addBtn:hover {
+  background: var(--accent-color);
+  color: white;
 }
 
 .list {
@@ -69,4 +88,63 @@
   font-size: 11px;
   color: var(--text-tertiary);
   margin-top: 2px;
+}
+
+.deleteBtn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.item:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.deleteConfirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.confirmText {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.confirmYes,
+.confirmNo {
+  padding: 2px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirmYes {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.confirmYes:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+.confirmNo:hover {
+  background: var(--bg-shadow);
 }

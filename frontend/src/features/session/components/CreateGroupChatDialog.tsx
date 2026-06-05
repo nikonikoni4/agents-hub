@@ -195,10 +195,12 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                     onChange={(e) => setProjectPath(e.target.value)}
                     placeholder="/home/user/projects/your-project"
                   />
-                  <button type="button" className={styles.browseBtn} onClick={handleBrowse}>
-                    <FolderIcon />
-                    浏览
-                  </button>
+                  {import.meta.env.PROD && (
+                    <button type="button" className={styles.browseBtn} onClick={handleBrowse}>
+                      <FolderIcon />
+                      浏览
+                    </button>
+                  )}
                 </div>
               </div>
             </>
