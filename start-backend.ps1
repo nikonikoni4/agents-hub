@@ -1,1 +1,1 @@
-uvicorn agents_hub.api.app:app --reload --port 8099
+uvicorn agents_hub.api.app:app --port 8099

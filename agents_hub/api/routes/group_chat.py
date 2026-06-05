@@ -11,7 +11,8 @@ from agents_hub.api.schemas.group_chats import (
     UseDockerUpdate,
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
-from agents_hub.core.orchestration import GroupChatManager
+from agents_hub.core.foundation import GroupChatType
+from agents_hub.core.orchestration import GroupChat, GroupChatManager
 
 router = APIRouter(prefix="/group-chats", tags=["group-chats"])
 
@@ -110,3 +111,84 @@ async def toggle_use_docker(
 ):
     """切换指定成员的 Docker 沙箱开关"""
     return await service.toggle_use_docker(group_chat_id, role_name, request.use_docker)
+
+
+@router.post("/test/create-and-start", response_model=dict[str, str])
+async def test_create_and_start_group_chat():
+    """测试端点：直接创建 GroupChat 并启动"""
+    # 1. 设置参数
+    team_members = ["测试", "E2E测试角色", "manager"]
+    project_path = r"D:\desktop\软件开发\agents-hub\.claude\worktrees\feat_group_chat"
+    group_chat_name = "测试群聊"
+
+    # 2. 直接创建 GroupChat 实例
+    group_chat = GroupChat(
+        team_members_name=team_members,
+        group_type=GroupChatType.MANAGER_ORCHESTRATE,
+        project_path=project_path,
+        group_chat_name=group_chat_name,
+    )
+
+    # 3. 启动群聊
+    await group_chat.start()
+
+    return {
+        "group_chat_id": group_chat.group_chat_id,
+        "group_chat_name": group_chat.group_chat_name,
+        "is_active": str(group_chat._activated),
+    }
+
+
+@router.post("/test/bridge-execute", response_model=dict[str, str])
+async def test_bridge_execute():
+    """测试端点：直接调用 bridge 执行"""
+    from agents_hub.agent_bridge.bridge import AgentBridge
+    from agents_hub.roles.role_manager import RoleManager
+
+    # 1. 获取角色
+    role_manager = RoleManager()
+    role = role_manager.get_role("测试")
+    config = role.get_role_config()
+
+    # 2. 调用 bridge
+    bridge = AgentBridge()
+    result = await bridge.execute(
+        prompt="请简单介绍一下你自己",
+        config=config,
+        cwd=r"D:\desktop\软件开发\agents-hub\.claude\worktrees\feat_group_chat",
+    )
+
+    return {
+        "agent_name": result.agent_name,
+        "text": result.text[:200],  # 截断前200字符
+        "session_id": result.session_id,
+    }
+
+
+@router.post("/test/subprocess", response_model=dict[str, str])
+async def test_subprocess():
+    """测试端点：测试 asyncio.create_subprocess_exec"""
+    import asyncio
+
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "cmd",
+            "/c",
+            "echo hello",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        return {
+            "status": "success",
+            "returncode": str(process.returncode),
+            "stdout": stdout.decode().strip(),
+            "event_loop": type(asyncio.get_event_loop()).__name__,
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error_type": type(e).__name__,
+            "error": str(e),
+            "event_loop": type(asyncio.get_event_loop()).__name__,
+        }

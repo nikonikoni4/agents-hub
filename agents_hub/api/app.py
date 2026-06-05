@@ -6,11 +6,29 @@ FastAPI 应用
 
 import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
+
+# Windows: 必须在导入 FastAPI 之前设置 ProactorEventLoop
+# uvicorn 会在启动时检查当前的事件循环策略
+if sys.platform == "win32":
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from agents_hub.api.routes import (
+    config_router,
+    group_chats_router,
+    roles_router,
+    skills_router,
+    teams_router,
+    websocket_router,
+)
 from agents_hub.config.config import config
 from agents_hub.exceptions import (
     AgentsHubError,
@@ -18,15 +36,6 @@ from agents_hub.exceptions import (
     ResourceNotFoundError,
     StateError,
     ValidationError,
-)
-
-from .routes import (
-    config_router,
-    group_chats_router,
-    roles_router,
-    skills_router,
-    teams_router,
-    websocket_router,
 )
 
 logger = logging.getLogger(__name__)
@@ -116,4 +125,7 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("agents_hub.api.app:app", host="0.0.0.0", port=8099, reload=True)
+    # 注意：reload=True 会导致子进程重置事件循环策略
+    # 在开发环境中如果需要 reload，使用命令行：uvicorn agents_hub.api.app:app --reload
+    # 但这样会导致 Windows 上 subprocess 失败
+    uvicorn.run(app, host="0.0.0.0", port=8099, reload=False)

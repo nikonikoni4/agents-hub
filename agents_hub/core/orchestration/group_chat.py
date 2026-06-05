@@ -18,6 +18,9 @@ from agents_hub.core.context import GroupChatContext, GroupChatRuntime
 from agents_hub.core.foundation import GroupChatType, StateError
 from agents_hub.core.foundation.token import generate_token
 from agents_hub.roles import RoleManager
+from agents_hub.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class GroupChat:
@@ -75,6 +78,13 @@ class GroupChat:
         6. 对第一次进入群聊的成员执行初始化（打招呼）
         7. 启动所有 agent 的 run() 任务
         """
+        logger.info(
+            "启动群聊: id=%s, name=%s, members=%s",
+            self.group_chat_id,
+            self.group_chat_name,
+            self.team_members_name,
+        )
+
         # 1. 加载上下文数据
         await self.group_chat_context.load()
 
@@ -96,6 +106,7 @@ class GroupChat:
         # 7. 启动所有 agent 的 run() 任务
         self._start_agent_tasks()
         self._activated = True
+        logger.info("群聊启动完成: id=%s", self.group_chat_id)
 
     async def load(self):
         """
@@ -105,6 +116,8 @@ class GroupChat:
         并验证每个 role 是否存在。恢复并注册 token。对新增成员执行初始化（打招呼）。
         不启动 agent.run() 任务，需要发消息时调用 activate()。
         """
+        logger.info("加载群聊: id=%s", self.group_chat_id)
+
         # 1. 加载上下文数据
         await self.group_chat_context.load()
 
@@ -116,6 +129,7 @@ class GroupChat:
 
         # 4. 初始化新成员（第一次会话的成员）
         await self._initialize_new_members()
+        logger.info("群聊加载完成: id=%s", self.group_chat_id)
 
     async def activate(self):
         """
@@ -126,6 +140,7 @@ class GroupChat:
         """
         if self._activated:
             return
+        logger.info("激活群聊: id=%s", self.group_chat_id)
         self._start_agent_tasks()
         self._activated = True
 
@@ -142,6 +157,7 @@ class GroupChat:
 
         RoleManager.get_role() 会验证 role 是否存在，不存在则抛出 RoleNotFoundError。
         """
+        logger.debug("初始化 agents: id=%s, members=%s", self.group_chat_id, self.team_members_name)
         role_manager = RoleManager()
 
         # 初始化 manager
@@ -204,6 +220,10 @@ class GroupChat:
         if not new_members:
             return
 
+        logger.info(
+            "初始化新成员: id=%s, new_members=%s", self.group_chat_id, [m.name for m in new_members]
+        )
+
         async def start_conversation(agent: Agent):
             if agent.role_type == RoleType.LEADER:
                 return await agent.execute(
@@ -229,6 +249,7 @@ class GroupChat:
 
         将未压缩的消息进行压缩，生成摘要和针对每个 agent 的专门信息
         """
+        logger.info("压缩群聊历史: id=%s", self.group_chat_id)
         agent_info = {}
 
         # 添加 manager 信息
@@ -246,6 +267,7 @@ class GroupChat:
 
     async def stop(self):
         """停止群聊，停止所有 agent 的 run() 任务。 暂时不要使用这个方法"""
+        logger.info("停止群聊: id=%s", self.group_chat_id)
         # 设置所有 agent 停止
         if self.manager:
             self.manager.set_run(False)
@@ -278,6 +300,8 @@ class GroupChat:
         - 超时后会强制取消任务
         - 清理过程中的异常不会阻止其他资源清理
         """
+        logger.info("清理群聊资源: id=%s", self.group_chat_id)
+
         # 1. 停止所有 Agent（发送停止信号）
         if self.manager:
             await self.manager.stop()
@@ -323,6 +347,7 @@ class GroupChat:
         self.manager = None
         self.manager_task = None
         self.worker_tasks.clear()
+        logger.info("群聊资源清理完成: id=%s", self.group_chat_id)
 
     async def _generate_and_register_tokens(self) -> None:
         """
@@ -334,6 +359,7 @@ class GroupChat:
         """
         from .group_chat_manager import group_chat_manager
 
+        logger.debug("生成并注册 tokens: id=%s", self.group_chat_id)
         # 为 manager 生成并注册 token
         if self.manager:
             token = generate_token()
@@ -356,6 +382,7 @@ class GroupChat:
         """
         from .group_chat_manager import group_chat_manager
 
+        logger.debug("恢复并注册 tokens: id=%s", self.group_chat_id)
         # 恢复 manager 的 token
         if self.manager:
             agent_member_info = self.runtime.state.agent_member_infos.get(self.manager.name)

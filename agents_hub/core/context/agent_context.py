@@ -156,25 +156,7 @@ class AgentContext:
             last_loaded_compact_index: 已加载到第几条压缩历史
             last_loaded_message_index: 已加载到第几条原始消息
         """
-        # 如果 agent 不存在，创建新的状态
-        if self.agent_name not in self.group_chat_context.agent_member_info:
-            from .group_chat_session import AgentContextState, AgentMemberInfo
-
-            self.group_chat_context.agent_member_info[self.agent_name] = AgentMemberInfo(
-                main_session="",
-                btw_session=[],
-                context_state=AgentContextState(
-                    last_loaded_compact_index=last_loaded_compact_index,
-                    last_loaded_message_index=last_loaded_message_index,
-                ),
-            )
-        else:
-            # 更新现有状态
-            agent_member_info = self.group_chat_context.agent_member_info[self.agent_name]
-            agent_member_info.context_state.last_loaded_compact_index = last_loaded_compact_index
-            agent_member_info.context_state.last_loaded_message_index = last_loaded_message_index
-
-        # 保存到文件
+        # update_context_load_state 内部使用 get_or_create，确保 cwd 默认为 project_path
         await self.group_chat_context.runtime.update_context_load_state(
             self.agent_name,
             last_loaded_compact_index,

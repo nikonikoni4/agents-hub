@@ -36,6 +36,9 @@ from agents_hub.exceptions import (
     ValidationError,
 )
 from agents_hub.roles import RoleManager
+from agents_hub.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class GroupChatService:
@@ -81,6 +84,10 @@ class GroupChatService:
             ResourceNotFoundError: role 不存在或 project_path 不存在
             StateError: 启动失败
         """
+        logger.info(
+            "创建群聊: members=%s, project=%s, name=%s", team_members, project_path, group_chat_name
+        )
+
         # 1. 验证 team_members 非空
         if not team_members:
             raise ValidationError(
@@ -130,6 +137,7 @@ class GroupChatService:
         try:
             await group_chat.start()
         except Exception as e:
+            logger.error("群聊启动失败: id=%s, error=%s", group_chat_id, e)
             raise StateError(
                 f"群聊启动失败: {e}",
                 details={
@@ -140,6 +148,7 @@ class GroupChatService:
 
         # 7. 注册到 GroupChatManager
         self.group_chat_manager.register(group_chat_id, group_chat)
+        logger.info("群聊创建成功: id=%s, name=%s", group_chat_id, group_chat_name)
 
         # 8. 返回 GroupChatInfo
         return await self._build_group_chat_info_from_instance(group_chat)
@@ -158,25 +167,30 @@ class GroupChatService:
             ResourceNotFoundError: 群聊不存在或 role 已被删除
             StateError: 加载失败
         """
+        logger.debug("加载群聊: id=%s", group_chat_id)
         try:
             group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
+            logger.warning("群聊不存在: id=%s", group_chat_id)
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
             ) from e
         except ValueError as e:
             # role 验证失败（role 已被删除）
+            logger.warning("群聊加载失败，role 不存在: id=%s, error=%s", group_chat_id, e)
             raise ResourceNotFoundError(
                 f"群聊加载失败，role 不存在: {e}",
                 details={"group_chat_id": group_chat_id},
             ) from e
         except Exception as e:
+            logger.error("群聊加载失败: id=%s, error=%s", group_chat_id, e)
             raise StateError(
                 f"群聊加载失败: {e}",
                 details={"group_chat_id": group_chat_id},
             ) from e
 
+        logger.debug("群聊加载成功: id=%s", group_chat_id)
         return await self._build_group_chat_info_from_instance(group_chat)
 
     async def delete_group_chat(self, group_chat_id: str, keep_data: bool = False) -> None:
@@ -190,6 +204,7 @@ class GroupChatService:
             ResourceNotFoundError: 群聊不存在（仅当 keep_data=False 且磁盘也不存在时）
             ExternalServiceError: 文件删除失败
         """
+        logger.info("删除群聊: id=%s, keep_data=%s", group_chat_id, keep_data)
         project_path = None
 
         # 1. 如果 keep_data=False，先读取 project_path（在 unregister 之前）
@@ -215,7 +230,9 @@ class GroupChatService:
                 group_chat_dir = Path(group_chat_paths.base_dir(group_chat_id, project_path))
                 if group_chat_dir.exists():
                     shutil.rmtree(group_chat_dir)
+                    logger.info("群聊磁盘数据已删除: id=%s, dir=%s", group_chat_id, group_chat_dir)
             except (PermissionError, OSError) as e:
+                logger.error("群聊文件删除失败: id=%s, error=%s", group_chat_id, e)
                 raise ExternalServiceError(
                     f"文件删除失败: {e}",
                     details={
@@ -223,6 +240,8 @@ class GroupChatService:
                         "group_chat_dir": str(group_chat_dir),
                     },
                 ) from e
+
+        logger.info("群聊删除成功: id=%s", group_chat_id)
 
     async def list_group_chats(self, is_active_only: bool = False) -> list[GroupChatInfo]:
         """列出所有群聊
@@ -239,6 +258,7 @@ class GroupChatService:
                 - group_type: GroupChatType, 编排模式
                 - is_active: bool, agent 是否已激活（run() 任务是否在运行）
         """
+        logger.debug("列出群聊: is_active_only=%s", is_active_only)
         # 1. 调用 GroupChatManager.list_all_group_chats()
         all_metadata = self.group_chat_manager.list_all_group_chats()
 
@@ -266,6 +286,7 @@ class GroupChatService:
                 )
             )
 
+        logger.debug("群聊列表返回 %d 条结果", len(result))
         return result
 
     async def get_group_chat_info(self, group_chat_id: str) -> GroupChatInfo:
@@ -375,6 +396,10 @@ class GroupChatService:
             ResourceNotFoundError: 群聊不存在
             ValidationError: send_to 不是群成员，或 content 中包含 @
         """
+        logger.info(
+            "发送消息: group=%s, to=%s, content_len=%d", group_chat_id, send_to, len(content)
+        )
+
         # 1. content 中不能有 @
         if "@" in content:
             raise ValidationError(
@@ -386,6 +411,7 @@ class GroupChatService:
         try:
             await self.group_chat_manager.activate_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
+            logger.warning("发送消息失败，群聊不存在: id=%s", group_chat_id)
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
@@ -419,6 +445,7 @@ class GroupChatService:
             message_type=MessageType.TASK,
         )
         group_chat.message_router.send_message(message)
+        logger.info("消息已发送: group=%s, to=%s, call_id=%s", group_chat_id, send_to, call.call_id)
 
     async def toggle_use_docker(
         self,
@@ -443,10 +470,18 @@ class GroupChatService:
             DockerNotAvailableError: Docker 未运行或镜像不存在
             ExternalServiceError: 镜像构建失败
         """
+        logger.info(
+            "切换 Docker 沙箱: group=%s, role=%s, use_docker=%s",
+            group_chat_id,
+            role_name,
+            use_docker,
+        )
+
         # 1. 加载群聊，获取 group_chat 实例
         try:
             group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
+            logger.warning("切换 Docker 失败，群聊不存在: id=%s", group_chat_id)
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
@@ -488,6 +523,12 @@ class GroupChatService:
 
         # 5. 使用 runtime 命令更新 use_docker
         updated_info = await group_chat.runtime.set_agent_use_docker(role_name, use_docker)
+        logger.info(
+            "Docker 沙箱切换成功: group=%s, role=%s, use_docker=%s",
+            group_chat_id,
+            role_name,
+            use_docker,
+        )
         return GroupChatMember(
             name=role_name,
             main_session=updated_info.main_session or None,

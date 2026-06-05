@@ -49,10 +49,15 @@ class Agent:
         self.task_manager = task_manager
         self._run = True
 
-        # 从 group_chat_context 获取 agent_token 和 cwd
-        agent_member_info = group_chat_context.agent_member_info.get(self.name)
-        self.agent_token: str = agent_member_info.token if agent_member_info else ""
-        self.agent_cwd: str = agent_member_info.cwd if agent_member_info else ""
+    @property
+    def agent_token(self) -> str:
+        info = self.group_chat_context.agent_member_info.get(self.name)
+        return info.token if info else ""
+
+    @property
+    def agent_cwd(self) -> str:
+        info = self.group_chat_context.agent_member_info.get(self.name)
+        return info.cwd if info else ""
 
     def set_run(self, run: bool):
         """设置该agent是否工作"""

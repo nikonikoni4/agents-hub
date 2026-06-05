@@ -147,7 +147,7 @@ class GroupChatRuntime:
             AgentMemberInfo: Agent 会话信息
         """
         if agent_name not in self.state.agent_member_infos:
-            self.state.agent_member_infos[agent_name] = AgentMemberInfo()
+            self.state.agent_member_infos[agent_name] = AgentMemberInfo(cwd=self.project_path)
         return self.state.agent_member_infos[agent_name]
 
     def get_agent_names(self) -> list[str]:
@@ -220,15 +220,7 @@ class GroupChatRuntime:
         """
         agent_member_info = self.get_or_create_agent_member_info(agent_name)
         agent_member_info.token = token
-        # 设置默认 cwd 为 project_path/agent_name_lowercase
-        # Format: first letter + trailing digits (e.g., "Worker1" -> "w1")
-        agent_lower = agent_name.lower()
-        # Extract first letter and any trailing digits
-        first_char = agent_lower[0] if agent_lower else ""
-        trailing_digits = "".join(c for c in reversed(agent_lower) if c.isdigit())
-        trailing_digits = trailing_digits[::-1]  # Reverse back to correct order
-        agent_dir = first_char + trailing_digits
-        agent_member_info.cwd = f"{self.project_path}/{agent_dir}"
+        agent_member_info.cwd = self.project_path
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )

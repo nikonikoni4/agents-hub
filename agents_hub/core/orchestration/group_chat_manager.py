@@ -14,8 +14,11 @@ from agents_hub.core.foundation import (
     GroupChatType,
 )
 from agents_hub.core.foundation.paths import group_chat_paths
+from agents_hub.utils.logger import get_logger
 
 from .group_chat import GroupChat
+
+logger = get_logger(__name__)
 
 
 class GroupChatManager:
@@ -37,6 +40,7 @@ class GroupChatManager:
         if not isinstance(group_chat, GroupChat):
             raise ValueError("无效的 group_chat 类型")
         self._group_chats[group_chat_id] = group_chat
+        logger.info("GroupChat 已注册: id=%s", group_chat_id)
 
     def is_active_group(self, group_chat_id: str) -> bool:
         """检查群聊的 agent 是否已激活（run() 任务是否在运行）"""
@@ -73,12 +77,15 @@ class GroupChatManager:
         # 1. 优先从内存获取
         group_chat = self._group_chats.get(group_chat_id)
         if group_chat:
+            logger.debug("从内存加载群聊: id=%s", group_chat_id)
             return group_chat
 
         # 2. 从磁盘加载
+        logger.debug("内存未命中，从磁盘加载群聊: id=%s", group_chat_id)
         try:
             return await self.load_group_chat_from_disk(group_chat_id)
         except FileNotFoundError as e:
+            logger.warning("群聊不存在: id=%s", group_chat_id)
             raise GroupChatNotFoundError(group_chat_id) from e
 
     async def activate_group_chat(self, group_chat_id: str) -> None:
@@ -94,6 +101,7 @@ class GroupChatManager:
             GroupChatNotFoundError: 群聊不存在
         """
         group_chat = await self.load_group_chat(group_chat_id)
+        logger.info("激活群聊: id=%s", group_chat_id)
         await group_chat.activate()
 
     async def unregister(self, group_chat_id: str, timeout: float = 10.0):
@@ -113,12 +121,14 @@ class GroupChatManager:
         """
         group_chat = self._group_chats.get(group_chat_id)
         if group_chat:
+            logger.info("注销群聊: id=%s", group_chat_id)
             # 先清理资源
             await group_chat.cleanup(timeout=timeout)
             # 再删除引用
             self._group_chats.pop(group_chat_id, None)
             # 清理该群聊的所有 token
             self.unregister_tokens(group_chat_id)
+            logger.info("群聊注销完成: id=%s", group_chat_id)
 
     def register_token(self, token: str, agent_name: str, group_chat_id: str):
         """
@@ -260,6 +270,8 @@ class GroupChatManager:
         """
         import json
 
+        logger.info("从磁盘加载群聊: id=%s", group_chat_id)
+
         if base_path is None:
             base_path = str(config.data_path / "teams")
 
@@ -317,6 +329,7 @@ class GroupChatManager:
         # 7. 注册到 GroupChatManager
         self.register(group_chat_id, group_chat)
 
+        logger.info("磁盘加载群聊完成: id=%s, members=%s", group_chat_id, team_members_name)
         return group_chat
 
     async def create_group_chat(
@@ -347,6 +360,10 @@ class GroupChatManager:
         """
         from uuid import uuid4
 
+        logger.info(
+            "创建群聊: members=%s, type=%s, project=%s", team_members_name, group_type, project_path
+        )
+
         # 1. 创建 GroupChat 实例
         if group_chat_id is None:
             group_chat_id = str(uuid4())
@@ -365,6 +382,7 @@ class GroupChatManager:
         # 4. 注册到 GroupChatManager
         self.register(group_chat_id, group_chat)
 
+        logger.info("群聊创建完成: id=%s", group_chat_id)
         return group_chat
 
 
