@@ -7,7 +7,8 @@ import pytest
 from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.core.agent.base_agent import Agent
 from agents_hub.core.communication import AgentCallManager, MessageRouter
-from agents_hub.core.context import AgentSessionInfo, GroupChatContext
+from agents_hub.core.context import GroupChatContext, GroupChatRuntime
+from agents_hub.core.context.group_chat_session import AgentMemberInfo
 from agents_hub.core.foundation import (
     AgentMessage,
     AgentResult,
@@ -40,8 +41,9 @@ class MockRole:
 
 @pytest.fixture
 async def group_chat_context(tmp_path):
-    context = GroupChatContext(group_chat_id="gc_explicit_finish", project_path=str(tmp_path))
-    context.agent_session_id["worker"] = AgentSessionInfo(
+    runtime = GroupChatRuntime(group_chat_id="gc_explicit_finish", project_path=str(tmp_path))
+    context = GroupChatContext(runtime)
+    runtime.state.agent_member_infos["worker"] = AgentMemberInfo(
         main_session="session_worker",
         token="tok_worker",
     )
@@ -87,7 +89,7 @@ def make_result(text: str = "internal execution text") -> AgentResult:
 async def test_run_does_not_write_process_result_to_group_chat(agent, agent_call_manager, monkeypatch):
     """契约：_process_message 的普通结果不再通过出口 A 自动写入群聊"""
 
-    async def mock_execute(prompt, role_config, session_id, cwd=None):
+    async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
         return make_result("this should stay private")
 
     monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
@@ -130,7 +132,7 @@ async def test_unfinished_task_sends_system_prompt_to_finish_call(
 ):
     """契约：TASK 执行结束但未显式回复时，系统提示 Agent 调用 finish_agent_call"""
 
-    async def mock_execute(prompt, role_config, session_id, cwd=None):
+    async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
         return make_result("private draft")
 
     monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
@@ -178,7 +180,7 @@ async def test_unfinished_task_sends_system_prompt_to_finish_call(
 async def test_finished_task_does_not_send_system_prompt(agent, agent_call_manager, monkeypatch):
     """契约：TASK 已通过 finish_agent_call 闭环时，不再发送系统提示"""
 
-    async def mock_execute(prompt, role_config, session_id, cwd=None):
+    async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
         call.has_agent_response = True
         call.status = CallStatus.COMPLETED
         return make_result("private draft")
@@ -223,7 +225,7 @@ async def test_failed_finished_task_status_is_not_overwritten(
 ):
     """契约：TASK 已显式失败闭环时，_process_message 不应覆盖为 COMPLETED"""
 
-    async def mock_execute(prompt, role_config, session_id, cwd=None):
+    async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
         call.has_agent_response = True
         call.status = CallStatus.FAILED
         return make_result("private draft")
@@ -261,3 +263,164 @@ async def test_failed_finished_task_status_is_not_overwritten(
 
     assert call.status == CallStatus.FAILED
     assert agent.message_queue.empty()
+
+
+@pytest.mark.asyncio
+async def test_consecutive_no_finish_increments_counter(agent, agent_call_manager, monkeypatch):
+    """契约：连续 TASK 未闭环时，_consecutive_no_finish_count 递增"""
+
+    async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
+        return make_result("internal")
+
+    monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
+
+    agent.max_consecutive_no_finish = 5  # 降低阈值便于测试
+
+    for i in range(3):
+        call = agent_call_manager.create_call(
+            send_from="Leader",
+            send_to="worker",
+            content=f"task {i}",
+            message_type=MessageType.TASK,
+        )
+        await agent.message_queue.put(
+            AgentMessage(
+                call_id=call.call_id,
+                send_from="Leader",
+                send_to="worker",
+                content=f"task {i}",
+                session_type=SessionType.MAIN,
+                message_type=MessageType.TASK,
+            )
+        )
+        # 处理消息但不闭环，counter 应递增
+        msg = await agent.message_queue.get()
+        prompt = f"process {i}"
+        await agent._process_message(msg, prompt)
+        if agent._needs_finish_agent_call_reminder(msg):
+            agent._enqueue_finish_agent_call_reminder(msg)
+            agent._consecutive_no_finish_count += 1
+        else:
+            agent._consecutive_no_finish_count = 0
+
+    assert agent._consecutive_no_finish_count == 3
+    assert agent._run is True  # 未达阈值，仍在运行
+
+
+@pytest.mark.asyncio
+async def test_consecutive_no_finish_stops_agent(agent, agent_call_manager, monkeypatch):
+    """契约：连续未闭环达到阈值时，Agent 自动停止"""
+
+    async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
+        return make_result("internal")
+
+    monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
+
+    agent.max_consecutive_no_finish = 3
+
+    for i in range(3):
+        call = agent_call_manager.create_call(
+            send_from="Leader",
+            send_to="worker",
+            content=f"task {i}",
+            message_type=MessageType.TASK,
+        )
+        await agent.message_queue.put(
+            AgentMessage(
+                call_id=call.call_id,
+                send_from="Leader",
+                send_to="worker",
+                content=f"task {i}",
+                session_type=SessionType.MAIN,
+                message_type=MessageType.TASK,
+            )
+        )
+
+    # 放入停止信号（agent 可能因阈值自动停止，也可能收到信号停止）
+    await agent.message_queue.put(
+        AgentMessage(
+            call_id="__STOP__",
+            send_from="__SYSTEM__",
+            send_to="worker",
+            content="__STOP__",
+            session_type=SessionType.MAIN,
+            message_type=MessageType.NOTIFICATION,
+        )
+    )
+
+    await agent.run()
+
+    assert agent._consecutive_no_finish_count >= 3
+    assert agent._run is False
+
+
+@pytest.mark.asyncio
+async def test_successful_finish_resets_counter(agent, agent_call_manager, monkeypatch):
+    """契约：TASK 成功闭环时，连续未闭环计数重置为 0"""
+
+    call_counter = {"n": 0}
+
+    async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
+        call_counter["n"] += 1
+        # 第 3 次调用时模拟成功闭环
+        if call_counter["n"] == 3:
+            call3.has_agent_response = True
+            call3.status = CallStatus.COMPLETED
+        return make_result("internal")
+
+    monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
+
+    agent.max_consecutive_no_finish = 10
+
+    # 前 2 个 TASK 未闭环
+    for i in range(2):
+        call = agent_call_manager.create_call(
+            send_from="Leader",
+            send_to="worker",
+            content=f"task {i}",
+            message_type=MessageType.TASK,
+        )
+        await agent.message_queue.put(
+            AgentMessage(
+                call_id=call.call_id,
+                send_from="Leader",
+                send_to="worker",
+                content=f"task {i}",
+                session_type=SessionType.MAIN,
+                message_type=MessageType.TASK,
+            )
+        )
+
+    # 第 3 个 TASK 将成功闭环
+    call3 = agent_call_manager.create_call(
+        send_from="Leader",
+        send_to="worker",
+        content="task 2",
+        message_type=MessageType.TASK,
+    )
+    await agent.message_queue.put(
+        AgentMessage(
+            call_id=call3.call_id,
+            send_from="Leader",
+            send_to="worker",
+            content="task 2",
+            session_type=SessionType.MAIN,
+            message_type=MessageType.TASK,
+        )
+    )
+
+    await agent.message_queue.put(
+        AgentMessage(
+            call_id="__STOP__",
+            send_from="__SYSTEM__",
+            send_to="worker",
+            content="__STOP__",
+            session_type=SessionType.MAIN,
+            message_type=MessageType.NOTIFICATION,
+        )
+    )
+
+    await agent.run()
+
+    # 成功闭环后计数应重置
+    assert agent._consecutive_no_finish_count == 0

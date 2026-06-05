@@ -1,19 +1,23 @@
 :root {
   /* 浅色主题 */
-  --bg-sidebar: rgb(246, 246, 246);
-  --bg-shadow: rgb(234, 234, 234);
-  --bg-main: rgb(255, 255, 255);
-  --bg-bubble: rgb(246, 246, 246);
+  --bg-sidebar: #f7f7f8;
+  --bg-shadow: rgb(240, 240, 240);
+  --bg-main: #fcfcfc;
+  --bg-bubble: rgb(248, 248, 248);
   --bg-right-base: rgb(255, 255, 255);
-  --bg-right-module: rgb(246, 246, 246);
+  --bg-right-module: rgb(248, 248, 248);
   --bg-right-shadow: rgb(233, 234, 234);
   --bg-input: rgb(255, 255, 255);
+  --bg-hover: rgb(238, 238, 238);
+  --bg-input-wrapper: rgb(245, 245, 245);
+  --bg-input-wrapper-focus: rgb(250, 250, 250);
 
   --text-primary: rgb(30, 30, 30);
-  --text-secondary: rgb(100, 100, 100);
+  --text-secondary: #666666;
   --text-tertiary: rgb(150, 150, 150);
   --border-color: rgb(220, 220, 220);
-  --accent-color: rgb(74, 158, 255);
+  --accent-color: #f57c00;
+  --text-placeholder: #999999;
 
   /* 圆角系统 */
   --radius-sm: 4px;
@@ -28,6 +32,8 @@
   --spacing-3: 12px;
   --spacing-4: 16px;
   --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
 }
 
 html[data-theme='dark'] {
@@ -40,6 +46,9 @@ html[data-theme='dark'] {
   --bg-right-module: rgb(20, 20, 20);
   --bg-right-shadow: rgb(36, 36, 36);
   --bg-input: rgb(45, 45, 45);
+  --bg-hover: rgb(38, 38, 38);
+  --bg-input-wrapper: rgb(35, 35, 35);
+  --bg-input-wrapper-focus: rgb(40, 40, 40);
 
   --text-primary: rgb(230, 230, 230);
   --text-secondary: rgb(180, 180, 180);

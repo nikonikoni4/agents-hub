@@ -19,6 +19,8 @@ interface SessionState {
   projectGroups: ProjectGroup[];
   /** 当前活跃的 session ID */
   activeSessionId: string | null;
+  /** 最近一次选择 session 的时间戳 */
+  lastSelectedAt: number;
 
   // Actions
   /** 设置项目分组 */
@@ -32,10 +34,11 @@ interface SessionState {
 export const useSessionStore = create<SessionState>((set) => ({
   projectGroups: [],
   activeSessionId: null,
+  lastSelectedAt: 0,
 
   setProjectGroups: (groups) => set({ projectGroups: groups }),
 
-  selectSession: (sessionId) => set({ activeSessionId: sessionId }),
+  selectSession: (sessionId) => set({ activeSessionId: sessionId, lastSelectedAt: Date.now() }),
 
   updateSession: (sessionId, updates) =>
     set((state) => ({

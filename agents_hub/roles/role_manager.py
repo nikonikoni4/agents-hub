@@ -171,7 +171,7 @@ class RoleManager:
         if not assets_dir.exists():
             return []
 
-        image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+        image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
         return [
             f.name
             for f in assets_dir.iterdir()

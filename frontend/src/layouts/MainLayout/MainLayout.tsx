@@ -40,13 +40,14 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
 
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const lastSelectedAt = useSessionStore((s) => s.lastSelectedAt);
 
   // 当 session 被选中时，自动切换到 chat 视图
   useEffect(() => {
     if (activeSessionId) {
       setViewMode('chat');
     }
-  }, [activeSessionId]);
+  }, [lastSelectedAt]);
 
   const handleToggleLeftSidebar = useCallback(() => {
     setLeftSidebarCollapsed((prev) => !prev);

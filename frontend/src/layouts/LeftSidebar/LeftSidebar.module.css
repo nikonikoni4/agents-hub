@@ -1,5 +1,5 @@
 .leftSidebar {
-  width: 280px;
+  width: 220px;
   flex-shrink: 0; /* 防止被压缩 */
   background: var(--bg-sidebar);
   display: flex;
@@ -16,10 +16,10 @@
 
 /* 按钮区 */
 .sidebarButtons {
-  padding: 12px;
+  padding: 16px 12px 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -27,12 +27,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
   font-size: 13px;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s ease;
   border: none;
   background: transparent;
   width: 100%;
@@ -40,6 +41,7 @@
 
 .sidebarBtn:hover {
   background: var(--bg-shadow);
+  color: var(--text-primary);
 }
 
 .sidebarBtn svg {
@@ -53,10 +55,11 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  padding: 4px 0;
 }
 
 /* 设置按钮 */
 .sidebarFooter {
-  padding: 12px;
+  padding: 16px 12px;
   border-top: 1px solid var(--border-color);
 }

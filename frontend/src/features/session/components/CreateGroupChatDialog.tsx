@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { FolderIcon } from '@/shared/components';
+import { FolderIcon, AvatarImage } from '@/shared/components';
 import { useCreateGroupChat } from '../hooks/useCreateGroupChat';
 import { useSessionStore } from '../store/sessionStore';
 import styles from './CreateGroupChatDialog.module.css';
@@ -139,12 +139,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                           checked={selectedLeader === role.name}
                           onChange={() => setSelectedLeader(role.name)}
                         />
-                        {role.avatar && (
-                          <span
-                            className={styles.roleAvatar}
-                            dangerouslySetInnerHTML={{ __html: role.avatar }}
-                          />
-                        )}
+                        <span className={styles.roleAvatar}>
+                          <AvatarImage avatar={role.avatar} fallback={role.name} />
+                        </span>
                         {role.name}
                       </label>
                     ))}
@@ -171,12 +168,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                           checked={selectedWorkers.includes(role.name)}
                           onChange={() => toggleWorker(role.name)}
                         />
-                        {role.avatar && (
-                          <span
-                            className={styles.roleAvatar}
-                            dangerouslySetInnerHTML={{ __html: role.avatar }}
-                          />
-                        )}
+                        <span className={styles.roleAvatar}>
+                          <AvatarImage avatar={role.avatar} fallback={role.name} />
+                        </span>
                         {role.name}
                       </label>
                     ))}

@@ -8,6 +8,7 @@ GroupChat 群聊管理
 """
 
 import asyncio
+import contextlib
 from uuid import uuid4
 
 from agents_hub.config import config
@@ -15,7 +16,13 @@ from agents_hub.config.types import RoleType
 from agents_hub.core.agent import Agent, Manager, Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
 from agents_hub.core.context import GroupChatContext, GroupChatRuntime
-from agents_hub.core.foundation import AgentMessage, GroupChatType, StateError
+from agents_hub.core.foundation import (
+    AgentMessage,
+    GroupChatType,
+    MessageType,
+    SessionType,
+    StateError,
+)
 from agents_hub.core.foundation.token import generate_token
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_logger
@@ -62,6 +69,10 @@ class GroupChat:
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
         self.task_manager = TaskManager(self.group_chat_id, project_path)
+
+        # Heartbeat 定时任务
+        self._heartbeat_task: asyncio.Task | None = None
+        self._heartbeat_interval: int = 1200  # 20 分钟 = 1200 秒
 
         # 懒加载标记
         self._activated = False
@@ -150,6 +161,7 @@ class GroupChat:
             raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())
         self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
+        self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
     async def _init_agents(self):
         """
@@ -193,6 +205,8 @@ class GroupChat:
             self.message_router.register(worker.name, worker.message_queue)
         # 注册 user 伪 agent，支持用户通过 API 发送消息
         self.message_router.register(config.default_user_name, asyncio.Queue())
+        # 注册 heartbeat 系统身份，用于定时唤醒 manager
+        self.message_router.register("__HEARTBEAT__", asyncio.Queue())
 
     async def _initialize_new_members(self):
         """
@@ -353,6 +367,13 @@ class GroupChat:
         for worker in self.workers.values():
             await worker.stop()
 
+        # 1.5 停止 heartbeat
+        if self._heartbeat_task and not self._heartbeat_task.done():
+            self._heartbeat_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._heartbeat_task
+            self._heartbeat_task = None
+
         # 2. 等待所有任务完成（设置超时）
         tasks = []
         if self.manager_task and not self.manager_task.done():
@@ -455,3 +476,37 @@ class GroupChat:
                 token = generate_token()
                 group_chat_manager.register_token(token, worker_name, self.group_chat_id)
                 await self.runtime.set_agent_token_and_default_cwd(worker_name, token)
+
+    async def _heartbeat_loop(self):
+        """定时唤醒 Manager 检查任务进度"""
+        heartbeat_logger = get_logger(f"heartbeat.{self.group_chat_id}")
+        heartbeat_logger.info("Heartbeat 启动: interval=%ds", self._heartbeat_interval)
+        while self._activated:
+            try:
+                await asyncio.sleep(self._heartbeat_interval)
+                if not self._activated or self.manager is None:
+                    break
+                # 检查是否有 worker 连续失败已停止
+                stopped_workers = [name for name, w in self.workers.items() if not w._run]
+                if stopped_workers:
+                    content = (
+                        f"[Heartbeat] 以下 Worker 已因连续失败自动停止: {stopped_workers}。"
+                        "请评估是否需要重新分配任务或重启它们。"
+                    )
+                else:
+                    content = "[Heartbeat] 定时检查：请查看当前任务进度。"
+                heartbeat_msg = AgentMessage(
+                    call_id=f"heartbeat_{self.group_chat_id}",
+                    send_from="__HEARTBEAT__",
+                    send_to=self.manager.name,
+                    content=content,
+                    session_type=SessionType.MAIN,
+                    message_type=MessageType.NOTIFICATION,
+                )
+                await self.message_router.send_message(heartbeat_msg)
+                heartbeat_logger.info("Heartbeat 发送: %s", content[:80])
+            except asyncio.CancelledError:
+                heartbeat_logger.info("Heartbeat 被取消")
+                break
+            except Exception as e:
+                heartbeat_logger.error("Heartbeat 异常: %s", str(e), exc_info=True)

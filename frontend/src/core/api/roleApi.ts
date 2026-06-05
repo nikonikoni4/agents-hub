@@ -13,29 +13,27 @@ import type {
   DeleteResponse,
 } from '@/shared/types/api-requests';
 
+// ==================== 头像 URL 构建 ====================
+
+const AVATAR_BASE_PATH = '/roles/avatars/files';
+
+/**
+ * 根据头像文件名构建完整的访问 URL
+ *
+ * 后端返回文件名（如 "circle-blue.svg"），前端通过此函数拼接完整 URL。
+ */
+export function buildAvatarUrl(filename: string): string {
+  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+  return `${baseURL}${AVATAR_BASE_PATH}/${filename}`;
+}
+
 // ==================== Mock 数据 ====================
-
-// SVG 头像内容（存储完整 SVG 字符串）
-const AVATAR_CIRCLE =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#4F46E5"/><circle cx="32" cy="24" r="10" fill="#fff"/><path d="M16 48c0-8.837 7.163-16 16-16s16 7.163 16 16" fill="#fff"/></svg>';
-
-const AVATAR_SQUARE =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="8" fill="#059669"/><circle cx="32" cy="24" r="10" fill="#fff"/><path d="M16 48c0-8.837 7.163-16 16-16s16 7.163 16 16" fill="#fff"/></svg>';
-
-const AVATAR_HEXAGON =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><polygon points="32,2 58,17 58,47 32,62 6,47 6,17" fill="#D97706"/><circle cx="32" cy="24" r="10" fill="#fff"/><path d="M16 48c0-8.837 7.163-16 16-16s16 7.163 16 16" fill="#fff"/></svg>';
-
-const AVATAR_TRIANGLE =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><polygon points="32,4 60,56 4,56" fill="#DC2626"/><circle cx="32" cy="30" r="8" fill="#fff"/><path d="M20 48c0-6.627 5.373-12 12-12s12 5.373 12 12" fill="#fff"/></svg>';
-
-const AVATAR_STAR =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><polygon points="32,2 39,24 62,24 43,38 50,60 32,46 14,60 21,38 2,24 25,24" fill="#7C3AED"/><circle cx="32" cy="28" r="8" fill="#fff"/></svg>';
 
 const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Leader',
     platform: 'claude',
-    avatar: AVATAR_CIRCLE,
+    avatar: 'circle-blue.svg',
     abilities: ['任务分派', '团队协调', '进度管理'],
     type: 'leader',
     scope: null,
@@ -44,7 +42,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Designer',
     platform: 'claude',
-    avatar: AVATAR_SQUARE,
+    avatar: 'square-green.svg',
     abilities: ['UI设计', 'UX设计', '原型制作'],
     type: 'team_member',
     scope: null,
@@ -53,7 +51,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Developer',
     platform: 'codex',
-    avatar: AVATAR_HEXAGON,
+    avatar: 'hexagon-amber.svg',
     abilities: ['代码编写', '代码审查', '单元测试'],
     type: 'team_member',
     scope: null,
@@ -62,7 +60,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
   {
     name: 'Tester',
     platform: 'claude',
-    avatar: AVATAR_TRIANGLE,
+    avatar: 'triangle-red.svg',
     abilities: ['测试用例编写', '缺陷发现', '回归测试'],
     type: 'team_member',
     scope: null,
@@ -119,11 +117,11 @@ const MOCK_ROLE_SKILLS = new Map<string, RoleSkillApiItem[]>([
 ]);
 
 const MOCK_AVATARS: string[] = [
-  AVATAR_CIRCLE,
-  AVATAR_SQUARE,
-  AVATAR_HEXAGON,
-  AVATAR_TRIANGLE,
-  AVATAR_STAR,
+  'circle-blue.svg',
+  'square-green.svg',
+  'hexagon-amber.svg',
+  'triangle-red.svg',
+  'star-purple.svg',
 ];
 
 const MOCK_DELETE_RESPONSE: DeleteResponse = {

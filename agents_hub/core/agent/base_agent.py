@@ -49,6 +49,8 @@ class Agent:
         self.agent_call_manager = agent_call_manager
         self.task_manager = task_manager
         self._run = True
+        self._consecutive_no_finish_count: int = 0  # 连续未闭环计数
+        self.max_consecutive_no_finish: int = 30  # 阈值
         self.logger = get_logger(f"agent.{self.name}")
 
     @property
@@ -410,3 +412,14 @@ class Agent:
             # 5. TASK 必须由 finish_agent_call 显式闭环；普通执行文本默认私下保留。
             if self._needs_finish_agent_call_reminder(msg):
                 self._enqueue_finish_agent_call_reminder(msg)
+                self._consecutive_no_finish_count += 1
+                if self._consecutive_no_finish_count >= self.max_consecutive_no_finish:
+                    self.logger.warning(
+                        "Agent %s 连续 %d 次未闭环 TASK，自动停止",
+                        self.name,
+                        self._consecutive_no_finish_count,
+                    )
+                    self._run = False
+            else:
+                # 成功闭环或非 TASK 消息，重置计数
+                self._consecutive_no_finish_count = 0

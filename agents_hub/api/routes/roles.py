@@ -1,6 +1,7 @@
 """角色 API 路由"""
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import FileResponse
 
 from agents_hub.api.schemas.roles import (
     RoleCreateRequest,
@@ -33,6 +34,14 @@ def list_roles(service: RoleService = Depends(get_role_service)):
 def list_avatars(service: RoleService = Depends(get_role_service)):
     """列出可用头像"""
     return service.list_avatars()
+
+
+@router.get("/avatars/files/{filename}")
+def get_avatar_file(filename: str, service: RoleService = Depends(get_role_service)):
+    """获取头像文件"""
+    file_path = service.get_avatar_file_path(filename)
+    media_type = "image/svg+xml" if filename.endswith(".svg") else None
+    return FileResponse(file_path, media_type=media_type)
 
 
 @router.get("/{name}", response_model=RoleResponse)

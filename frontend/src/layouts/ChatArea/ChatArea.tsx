@@ -8,6 +8,7 @@ import {
   AvatarImage,
 } from '@/shared/components';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
+import { useMembers } from '@/features/chat/hooks/useMembers';
 import { sendMessage, getMembers } from '@/core/api/groupChatApi';
 import type { MessageApiItem } from '@/shared/types';
 import styles from './ChatArea.module.css';
@@ -40,9 +41,21 @@ function MessageBubble({ msg, avatar }: { msg: MessageApiItem; avatar?: string |
 
 export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   const { messages, loading, activeTitle, activeSessionId, roleAvatarMap } = useChatMessages();
+  const { members } = useMembers();
   const [inputValue, setInputValue] = useState('');
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // @成员选择状态
+  const [showMention, setShowMention] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0);
+
+  // 过滤匹配的成员
+  const filteredMembers = mentionQuery
+    ? members.filter((m) => m.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+    : members;
 
   // 合并 API 消息和本地发送的消息
   const allMessages = [...messages, ...localMessages];
@@ -57,6 +70,14 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
     setLocalMessages([]);
   }, [activeSessionId]);
 
+  // 自动调整 textarea 高度
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+  }, []);
+
   const handleSend = useCallback(async () => {
     const text = inputValue.trim();
     if (!text || !activeSessionId) return;
@@ -70,6 +91,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
     };
     setLocalMessages((prev) => [...prev, optimisticMsg]);
     setInputValue('');
+    setShowMention(false);
 
     try {
       const members = await getMembers(activeSessionId);
@@ -80,15 +102,98 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
     }
   }, [inputValue, activeSessionId]);
 
+  // 选择成员后插入 @name
+  const handleMentionSelect = useCallback(
+    (name: string) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      const cursorPos = textarea.selectionStart;
+      const before = inputValue.slice(0, cursorPos);
+      const after = inputValue.slice(cursorPos);
+      // 找到 @ 的位置
+      const atIndex = before.lastIndexOf('@');
+      const newValue = before.slice(0, atIndex) + `@${name} ` + after;
+      setInputValue(newValue);
+      setShowMention(false);
+      // 重新聚焦并设置光标
+      requestAnimationFrame(() => {
+        textarea.focus();
+        const newPos = atIndex + name.length + 2;
+        textarea.setSelectionRange(newPos, newPos);
+      });
+    },
+    [inputValue]
+  );
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+
+    // 检测 @ 触发
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const atIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (atIndex !== -1) {
+      const charBeforeAt = atIndex > 0 ? textBeforeCursor[atIndex - 1] : ' ';
+      // @ 前面必须是空格或行首
+      if (charBeforeAt === ' ' || charBeforeAt === '\n' || atIndex === 0) {
+        const query = textBeforeCursor.slice(atIndex + 1);
+        // 查询中不能有空格（否则说明已经离开了 @ 上下文）
+        if (!query.includes(' ') && !query.includes('\n')) {
+          setMentionQuery(query);
+          setMentionIndex(0);
+          setShowMention(true);
+          return;
+        }
+      }
+    }
+    setShowMention(false);
+  }, []);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // @成员选择导航
+      if (showMention && filteredMembers.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setMentionIndex((prev) => (prev + 1) % filteredMembers.length);
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setMentionIndex((prev) => (prev - 1 + filteredMembers.length) % filteredMembers.length);
+          return;
+        }
+        if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          const selected = filteredMembers[mentionIndex];
+          if (selected) handleMentionSelect(selected.name);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setShowMention(false);
+          return;
+        }
+      }
+
+      // Enter 发送，Shift+Enter 换行
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
     },
-    [handleSend]
+    [handleSend, showMention, filteredMembers, mentionIndex, handleMentionSelect]
   );
+
+  // 点击外部关闭 mention 下拉框
+  useEffect(() => {
+    if (!showMention) return;
+    const handleClickOutside = () => setShowMention(false);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showMention]);
 
   // 未选择会话时的空态
   if (!activeSessionId) {
@@ -134,18 +239,39 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
 
       {/* 输入区 */}
       <div className={styles.chatInputContainer}>
-        <div className={styles.chatInputWrapper}>
+        <div className={styles.chatInputWrapper} style={{ position: 'relative' }}>
+          {/* @成员选择下拉框 */}
+          {showMention && filteredMembers.length > 0 && (
+            <div className={styles.mentionDropdown} onClick={(e) => e.stopPropagation()}>
+              {filteredMembers.map((member, i) => (
+                <div
+                  key={member.name}
+                  className={styles.mentionItem}
+                  style={i === mentionIndex ? { background: 'var(--bg-hover)' } : undefined}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleMentionSelect(member.name);
+                  }}
+                  onMouseEnter={() => setMentionIndex(i)}
+                >
+                  <span>{member.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <button className={styles.iconBtn} aria-label="添加附件">
             <PlusIcon />
           </button>
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
+            rows={1}
             className={styles.chatInput}
-            placeholder="输入消息..."
+            placeholder="输入消息... (输入 @ 提及成员)"
             aria-label="输入消息"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onInput={adjustTextareaHeight}
           />
           <button className={styles.iconBtn} aria-label="确认">
             <CheckCircleIcon />

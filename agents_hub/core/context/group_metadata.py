@@ -36,10 +36,17 @@ class GroupMetadata:
     @classmethod
     def from_dict(cls, data: dict) -> "GroupMetadata":
         """从字典构造"""
+        # 兼容处理:旧数据可能存储为枚举 name (大写),统一转为 value (小写)
+        group_type = data.get("group_type", "manager_orchestrate")
+        if group_type == "MANAGER_ORCHESTRATE":
+            group_type = "manager_orchestrate"
+        elif group_type == "SEQUENCE_EXECUTE":
+            group_type = "sequence_execute"
+
         return cls(
             group_chat_id=data["group_chat_id"],
             group_chat_name=data["group_chat_name"],
             project_path=data["project_path"],
             created_at=datetime.fromisoformat(data["created_at"]),
-            group_type=data.get("group_type", "manager_orchestrate"),
+            group_type=group_type,
         )

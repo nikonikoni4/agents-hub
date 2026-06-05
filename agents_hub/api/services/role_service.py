@@ -1,5 +1,7 @@
 """Roles 应用服务层"""
 
+from pathlib import Path
+
 from agents_hub.api.schemas.roles import RoleCreateRequest, RoleUpdateRequest
 from agents_hub.config.types import AgentPlatform
 from agents_hub.roles.exceptions import ValidationError
@@ -82,3 +84,21 @@ class RoleService:
     def list_avatars(self) -> list[str]:
         """列出可用头像"""
         return self.role_manager.list_avatars()
+
+    def get_avatar_file_path(self, filename: str) -> Path:
+        """获取头像文件的绝对路径，做安全校验"""
+        assets_dir = self.role_manager.agents_dir / "assets"
+        file_path = (assets_dir / filename).resolve()
+        if not file_path.is_relative_to(assets_dir.resolve()):
+            raise ValidationError(
+                message="无效的头像文件名",
+                error_code="INVALID_AVATAR_PATH",
+                details={"filename": filename},
+            )
+        if not file_path.exists():
+            raise ValidationError(
+                message=f"头像文件 '{filename}' 不存在",
+                error_code="AVATAR_NOT_FOUND",
+                details={"filename": filename},
+            )
+        return file_path
