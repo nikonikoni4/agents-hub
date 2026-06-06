@@ -95,6 +95,19 @@ class ResourceNotFoundError(AgentsHubError):
     pass
 
 
+class MessageNotFoundError(ResourceNotFoundError):
+    """消息不存在错误
+
+    特征：请求的消息（通过 speaker + timestamp）在群聊历史中不存在
+    处理策略：返回 404 类错误
+
+    示例：
+    - 尝试 pin 一条不存在的消息
+    """
+
+    pass
+
+
 class StateError(AgentsHubError):
     """状态错误
 

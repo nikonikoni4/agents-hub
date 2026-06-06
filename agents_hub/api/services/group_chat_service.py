@@ -9,9 +9,14 @@ GroupChatService 业务编排层
 - 异常统一转换为 exceptions 模块中的 API 异常，对上层屏蔽核心层细节
 """
 
+import asyncio
+import json
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
+
+import aiofiles
 
 from agents_hub.api.schemas.group_chats import (
     GroupChatInfo,
@@ -31,6 +36,7 @@ from agents_hub.core.foundation.exceptions import DockerNotAvailableError
 from agents_hub.core.orchestration import GroupChat, GroupChatManager
 from agents_hub.exceptions import (
     ExternalServiceError,
+    MessageNotFoundError,
     ResourceNotFoundError,
     StateError,
     ValidationError,
@@ -47,6 +53,8 @@ class GroupChatService:
     轻量业务编排层，不持有状态，所有状态在 GroupChatManager 中。
     生命周期：create → (内存+磁盘) → get/list/load → (内存) → delete → (可选保留磁盘)
     """
+
+    _pins_locks: dict[str, asyncio.Lock] = {}  # 按 group_chat_id 隔离的锁
 
     def __init__(self, group_chat_manager: GroupChatManager):
         """
@@ -562,3 +570,124 @@ class GroupChatService:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""
         info = group_chat.runtime.get_info_dict(is_active=group_chat._activated)
         return GroupChatInfo(**info)
+
+    # ==================== Pin Message Methods ====================
+
+    def _get_pins_path(self, group_chat_id: str) -> Path:
+        """获取 pins.json 文件路径（与群聊其他数据文件同级）"""
+        group_chat = self.group_chat_manager._group_chats.get(group_chat_id)
+        if not group_chat:
+            raise ResourceNotFoundError(
+                f"群聊不存在或未加载: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            )
+        # 群聊基础目录 = runtime 的 repository group_chat_session_path
+        base_dir = Path(group_chat.runtime.repository.group_chat_session_path)
+        return base_dir / "pins.json"
+
+    def _get_pins_lock(self, group_chat_id: str) -> asyncio.Lock:
+        """获取按 group_chat_id 隔离的 asyncio.Lock"""
+        if group_chat_id not in self._pins_locks:
+            self._pins_locks[group_chat_id] = asyncio.Lock()
+        return self._pins_locks[group_chat_id]
+
+    async def _read_pins(self, pins_path: Path) -> list[dict]:
+        """从 pins.json 读取 pin 列表，文件不存在返回空列表"""
+        if not pins_path.exists():
+            return []
+        async with aiofiles.open(pins_path, encoding="utf-8") as f:
+            content = await f.read()
+            return json.loads(content) if content.strip() else []
+
+    async def _write_pins(self, pins_path: Path, pins: list[dict]) -> None:
+        """将 pin 列表写入 pins.json"""
+        pins_path.parent.mkdir(parents=True, exist_ok=True)
+        async with aiofiles.open(pins_path, "w", encoding="utf-8") as f:
+            await f.write(json.dumps(pins, ensure_ascii=False, indent=2))
+
+    async def get_pinned_messages(self, group_chat_id: str) -> list[dict]:
+        """获取已置顶消息列表，按 pinned_at 升序
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            list[dict]: 置顶消息列表
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        await self.group_chat_manager.load_group_chat(group_chat_id)  # 验证群聊存在
+        pins_path = self._get_pins_path(group_chat_id)
+        lock = self._get_pins_lock(group_chat_id)
+        async with lock:
+            pins = await self._read_pins(pins_path)
+        return sorted(pins, key=lambda p: p.get("pinned_at", ""))
+
+    async def pin_message(self, group_chat_id: str, speaker: str, timestamp: str) -> None:
+        """置顶一条消息。幂等：已 pin 则跳过。422：消息不存在。
+
+        Args:
+            group_chat_id: 群聊 ID
+            speaker: 发送者名称
+            timestamp: 消息时间戳
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+            MessageNotFoundError: 消息不存在
+        """
+        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        # 从消息历史中查找目标消息
+        messages = group_chat.runtime.get_message_dicts()
+        target = None
+        for msg in messages:
+            if msg.get("speaker") == speaker and msg.get("timestamp") == timestamp:
+                target = msg
+                break
+        if target is None:
+            raise MessageNotFoundError(
+                f"Message not found: speaker={speaker}, timestamp={timestamp}",
+                details={"speaker": speaker, "timestamp": timestamp},
+            )
+        # 读取现有 pins
+        pins_path = self._get_pins_path(group_chat_id)
+        lock = self._get_pins_lock(group_chat_id)
+        async with lock:
+            pins = await self._read_pins(pins_path)
+            # 幂等检查：已存在则跳过
+            for p in pins:
+                if p["speaker"] == speaker and p["timestamp"] == timestamp:
+                    return
+            # 保存快照
+            pins.append(
+                {
+                    "speaker": target.get("speaker", speaker),
+                    "content": target.get("content", ""),
+                    "timestamp": target.get("timestamp", timestamp),
+                    "platform": target.get("platform", ""),
+                    "pinned_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            await self._write_pins(pins_path, pins)
+
+    async def unpin_message(self, group_chat_id: str, speaker: str, timestamp: str) -> None:
+        """取消置顶。幂等：未 pin 则跳过。不要求消息存在于历史中。
+
+        Args:
+            group_chat_id: 群聊 ID
+            speaker: 发送者名称
+            timestamp: 消息时间戳
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        await self.group_chat_manager.load_group_chat(group_chat_id)  # 验证群聊存在
+        pins_path = self._get_pins_path(group_chat_id)
+        lock = self._get_pins_lock(group_chat_id)
+        async with lock:
+            pins = await self._read_pins(pins_path)
+            new_pins = [
+                p for p in pins if not (p["speaker"] == speaker and p["timestamp"] == timestamp)
+            ]
+            if len(new_pins) != len(pins):
+                await self._write_pins(pins_path, new_pins)
