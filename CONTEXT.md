@@ -27,16 +27,42 @@
   - Manager：始终由系统默认加载（使用 `config.default_manager_name`），不依赖 `team_members_name` 中是否包含
   - Worker：遍历 `team_members_name`，跳过与 `default_manager_name` 同名的成员后，逐一创建
 - **不变量**：每个 GroupChat 有且仅有一个 Manager，由系统自动注入，不需要显式列入 `team_members_name` 也不会导致异常
+- **TeamInfo**（Pydantic 模型）：属性 name、members，位于 `agents_hub/teams/models.py`
 
 ### GroupChatContext（群聊上下文）
-- 群聊业务逻辑的核心管理器
-- 职责：消息管理、session 管理、上下文压缩
+- 群聊上下文 Facade，对外暴露统一访问接口
+- 底层委托给 GroupChatRuntime 实现
 - 属性：group_chat_id、repository、group_chat_session、agent_member_info
 
 ### GroupChatSession（群聊会话）
 - 管理群聊的消息历史和元数据
 - 属性：group_chat_id、name、messages、created_at、updated_at、last_compacted_loc
 - 支持消息压缩和增量加载
+
+### GroupChatRuntime（群聊运行时）
+- 群聊运行时 Facade，管理 State（内存状态）和 Repository（持久化层）
+- 职责：消息读写、session 管理、成员信息查询、压缩历史管理
+- 位于 `agents_hub/core/context/group_chat_runtime.py`
+
+### GroupChatRuntimeState（群聊运行时状态）
+- 群聊运行时内存状态，dataclass 结构
+- 属性：group_chat_id、project_path、group_chat_session、agent_member_infos、compact_history
+- 位于 `agents_hub/core/context/group_chat_runtime_state.py`
+
+### GroupChat（群聊管理）
+- 群聊管理主类，负责初始化 agents、管理消息路由和生命周期
+- 职责：创建群聊、启动 Agent、发送消息、管理 AgentCall
+- 位于 `agents_hub/core/orchestration/group_chat.py`
+
+### GroupChatManager（群聊管理器）
+- 全局 GroupChat 注册表（单例），管理所有 GroupChat 实例和 token 索引
+- 职责：加载/创建群聊、token 验证、活跃群聊查询
+- 位于 `agents_hub/core/orchestration/group_chat_manager.py`
+
+### TaskManager（任务管理器）
+- 负责 Task 的 CRUD 和持久化
+- 核心方法：get_active_task_list()、assign_tasks()、update_task_status()
+- 位于 `agents_hub/core/communication/task_manager.py`
 
 ## 通信系统
 
@@ -195,26 +221,70 @@
 - LEADER：领导者角色，负责任务分派和协调
 - TEAM_MEMBER：团队成员角色，执行具体任务
 
+### GroupChatType（群聊类型）
+- SEQUENCE_EXECUTE：流水线顺序执行
+- MANAGER_ORCHESTRATE：由 Team manager 动态决定安排
+
+### TaskStatus（任务状态）
+- PENDING：待执行
+- RUNNING：执行中
+- COMPLETED：已完成
+- FAILED：执行失败
+
+### TaskListStatus（任务列表状态）
+- ACTIVE：激活（当前使用）
+- ARCHIVED：已归档
+
 ## 异常体系
 
-### AgentsHubError（基类）
-- 所有 agents-hub 错误的基类
-- 属性：message、error_code、details
-- 方法：to_mcp_response() 转换为 MCP Tool 错误响应格式
+### 异常层次结构
 
-### 业务异常
+```
+AgentsHubError (agents_hub/exceptions.py)  ← 顶层基类
+├── ValidationError（验证错误：输入参数不符合要求）
+│   └── DockerConfigError（Docker 配置不合理）
+├── ResourceNotFoundError（资源不存在）
+├── StateError（状态错误：在错误的状态下执行操作）
+├── ExternalServiceError（外部服务调用失败）
+│   ├── DockerNotAvailableError（Docker Engine 不可用）
+│   └── DockerStartError（Docker 容器启动失败）
+└── RecoverableError（可恢复错误，用于重试逻辑）
+
+AgentsHubError (agents_hub/core/foundation/exceptions.py)  ← 继承顶层基类
+├── AgentNotFoundError
+├── GroupChatNotFoundError
+├── MessageDeliveryError
+├── AgentExecutionError
+├── AgentTimeoutError
+├── ValidationError
+├── ExternalServiceError
+├── InvalidMessageError
+├── FileSystemError
+└── CompactionError
+```
+
+### 顶层通用异常（agents_hub/exceptions.py）
+- **AgentsHubError**：所有 agents-hub 错误的基类，属性：message、error_code、details
+- **ValidationError**：验证错误，输入参数不符合要求
+- **ResourceNotFoundError**：资源不存在
+- **StateError**：状态错误，在错误的状态下执行操作
+- **ExternalServiceError**：外部服务调用失败
+- **RecoverableError**：可恢复错误，用于重试逻辑
+
+### 业务异常（agents_hub/core/foundation/exceptions.py）
 - AgentNotFoundError：Agent 不存在
 - GroupChatNotFoundError：GroupChat 不存在
 - MessageDeliveryError：消息投递失败
 - AgentExecutionError：Agent 执行失败
 - AgentTimeoutError：Agent 执行超时
-
-### 验证异常
 - InvalidMessageError：消息格式错误
-
-### 系统异常
 - FileSystemError：文件系统错误
 - CompactionError：压缩失败
+
+### Docker 异常（agents_hub/core/foundation/exceptions.py）
+- DockerConfigError（继承 ValidationError）：Docker 配置不合理
+- DockerNotAvailableError（继承 ExternalServiceError）：Docker Engine 不可用
+- DockerStartError（继承 ExternalServiceError）：Docker 容器启动失败
 
 ## 常量定义
 
@@ -254,9 +324,10 @@
 
 ### core（核心层）
 - **foundation**：基础层（零依赖），提供数据模型、枚举、异常类和常量
-- **agent**：智能体层，定义 Agent、Manager、Worker
-- **communication**：通信层，提供消息路由、调用管理
+- **communication**：通信层，提供消息路由、调用管理、任务管理
 - **context**：上下文层，管理群聊上下文、会话状态、持久化
+- **agent**：智能体层，定义 Agent、Manager、Worker
+- **orchestration**：编排层，管理 GroupChat 生命周期和 Agent 协调
 
 ### agent_bridge（桥接层）
 - 负责调用 CLI 工具（Claude Code、Codex）
