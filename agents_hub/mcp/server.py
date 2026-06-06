@@ -129,6 +129,7 @@ async def _send_agent_call_completion_notification(
         call_id=response_call.call_id,
     )
     await group_chat.send_message_to_agent(message)
+    await broadcast_group_chat_refresh(group_chat.group_chat_id)
 
 
 # ============================================================================
@@ -198,6 +199,7 @@ async def call_agent(
         )
 
         await group_chat.send_message_to_agent(message)
+        await broadcast_group_chat_refresh(group_chat_id)
 
         # 5. 返回 call_id
         return {"call_id": call.call_id}
