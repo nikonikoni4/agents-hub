@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   SendIcon,
   AvatarImage,
+  MarkdownRenderer,
 } from '@/shared/components';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
@@ -33,18 +34,28 @@ function MessageBubble({ msg, avatar }: { msg: MessageApiItem; avatar?: string |
         </div>
       )}
       <div className={`${styles.messageBubble} ${isUser ? styles.bubbleUser : styles.bubbleAgent}`}>
-        <p>{msg.content}</p>
+        <MarkdownRenderer content={msg.content} />
       </div>
     </div>
   );
 }
 
 export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
-  const { messages, loading, activeTitle, activeSessionId, roleAvatarMap } = useChatMessages();
+  const {
+    messages,
+    loading,
+    activeTitle,
+    activeSessionId,
+    roleAvatarMap,
+    hasMore,
+    loadingMore,
+    loadMore,
+  } = useChatMessages();
   const { members } = useMembers();
   const [inputValue, setInputValue] = useState('');
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // @成员选择状态
@@ -64,6 +75,21 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [allMessages.length]);
+
+  // 滚动到顶部时加载更多
+  const handleScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container || loadingMore || !hasMore) return;
+    if (container.scrollTop < 50) {
+      const prevHeight = container.scrollHeight;
+      loadMore().then(() => {
+        // 加载后保持滚动位置
+        requestAnimationFrame(() => {
+          container.scrollTop = container.scrollHeight - prevHeight;
+        });
+      });
+    }
+  }, [loadingMore, hasMore, loadMore]);
 
   // 切换 session 时清空本地消息
   useEffect(() => {
@@ -222,7 +248,8 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
       </div>
 
       {/* 消息区域 */}
-      <div className={styles.chatMessages}>
+      <div className={styles.chatMessages} ref={messagesContainerRef} onScroll={handleScroll}>
+        {loadingMore && <div className={styles.loadingText}>加载更多消息...</div>}
         {loading && allMessages.length === 0 ? (
           <div className={styles.loadingText}>加载中...</div>
         ) : (
@@ -264,7 +291,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
           </button>
           <textarea
             ref={textareaRef}
-            rows={1}
+            rows={2}
             className={styles.chatInput}
             placeholder="输入消息... (输入 @ 提及成员)"
             aria-label="输入消息"

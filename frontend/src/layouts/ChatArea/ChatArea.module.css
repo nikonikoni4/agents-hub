@@ -2,21 +2,21 @@
   flex: 1;
   min-width: 0;
   background: var(--bg-main);
-  border-radius: 16px 0 0 16px;
+  border-radius: 12px 0 0 12px;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: -1px 0 8px rgba(0, 0, 0, 0.03);
 }
 
 .chatHeader {
-  height: 56px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  background: rgba(0, 0, 0, 0.01);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: var(--bg-main);
 }
 
 .chatTitle {
@@ -114,6 +114,20 @@
   margin: 0;
 }
 
+/* 用户气泡内的 Markdown 代码块适配深色文字 */
+.bubbleUser pre {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.bubbleUser :not(pre) > code {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.bubbleUser a {
+  color: #fff;
+  text-decoration: underline;
+}
+
 /* Agent 气泡：灰色背景 */
 .bubbleAgent {
   background: var(--bg-bubble);
@@ -176,7 +190,7 @@
   font-size: 14px;
   color: var(--text-primary);
   resize: none;
-  min-height: 28px;
+  min-height: 48px;
   max-height: 120px;
   line-height: 1.5;
 }
