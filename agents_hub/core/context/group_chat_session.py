@@ -6,6 +6,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 from uuid import uuid4
 
 
@@ -40,10 +41,11 @@ class GroupChatSession:
     # TODO 缺乏锁
     group_chat_id: str = field(default_factory=lambda: str(uuid4()))
     name: str = field(default_factory=lambda: f"session_{datetime.now().strftime('%Y%m%d%H%M')}")
-    messages: list[dict[str, str]] = field(default_factory=list)
+    messages: list[dict[str, Any]] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
     last_compacted_loc: int = 0  # 上一次 compact 的位置
+    next_message_id: int = 1  # 下一个可用的消息 id
 
     def add_message(self, agent_result):
         """
@@ -55,12 +57,14 @@ class GroupChatSession:
         """
         self.messages.append(
             {
+                "id": self.next_message_id,
                 "agent_name": agent_result.agent_name,
                 "content": agent_result.text,
                 "timestamp": agent_result.timestamp,
                 "platform": agent_result.platform.value,
             }
         )
+        self.next_message_id += 1
 
     def get_uncompact_messages(self) -> list[dict]:
         """

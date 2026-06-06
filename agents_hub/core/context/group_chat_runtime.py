@@ -140,6 +140,7 @@ class GroupChatRuntime:
         # 映射 agent_name -> speaker
         return [
             {
+                "id": msg.get("id"),
                 "speaker": msg["agent_name"],
                 "content": msg["content"],
                 "timestamp": msg.get("timestamp", ""),

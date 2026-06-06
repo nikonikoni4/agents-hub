@@ -79,6 +79,11 @@ class GroupChatRepository:
         except OSError as e:
             raise FileSystemError(operation="read", path=self.messages_file, reason=str(e)) from e
 
+        # 为旧消息补全 id（向后兼容）
+        for i, msg in enumerate(messages):
+            if "id" not in msg:
+                msg["id"] = i + 1
+
         # 构建 GroupChatSession
         session = GroupChatSession(group_chat_id=self.group_chat_id)
         session.messages = messages
@@ -91,6 +96,8 @@ class GroupChatRepository:
                 session.updated_at = datetime.fromisoformat(meta_data["updated_at"])
             if "name" in meta_data:
                 session.name = meta_data["name"]
+            # 加载 next_message_id，旧数据默认为 len(messages) + 1
+            session.next_message_id = meta_data.get("next_message_id", len(messages) + 1)
 
         return session
 
@@ -115,6 +122,7 @@ class GroupChatRepository:
                     meta_data = {
                         "_type": "meta_data",
                         "last_compact_loc": session.last_compacted_loc,
+                        "next_message_id": session.next_message_id,
                         "created_at": session.created_at.isoformat(),
                         "updated_at": session.updated_at.isoformat(),
                         "name": session.name,
