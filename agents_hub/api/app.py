@@ -28,6 +28,7 @@ from agents_hub.api.routes import (
     skills_router,
     teams_router,
 )
+from agents_hub.api.websocket.endpoint import router as websocket_router
 from agents_hub.config.config import config
 from agents_hub.exceptions import (
     AgentsHubError,
@@ -82,6 +83,7 @@ app = FastAPI(title="Agents Hub API", version="0.1.0", lifespan=lifespan)
 
 # 注册路由
 
+app.include_router(websocket_router, prefix="/api/v1")
 app.include_router(skills_router, prefix="/api/v1")
 app.include_router(group_chats_router, prefix="/api/v1")
 app.include_router(roles_router, prefix="/api/v1")
