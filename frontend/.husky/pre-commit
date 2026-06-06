@@ -1,1 +1,1 @@
-npm test
+npm run type-check && npm test
