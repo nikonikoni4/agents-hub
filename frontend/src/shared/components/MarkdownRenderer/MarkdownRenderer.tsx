@@ -1,3 +1,4 @@
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize from 'rehype-sanitize';
@@ -8,10 +9,10 @@ interface MarkdownRendererProps {
   content: string;
 }
 
-export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) => {
   return (
     <div className={styles.markdown}>
       <ReactMarkdown rehypePlugins={[rehypeSanitize, rehypeHighlight]}>{content}</ReactMarkdown>
     </div>
   );
-}
+});
