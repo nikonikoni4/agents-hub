@@ -298,6 +298,7 @@ class GroupChat:
 
         from agents_hub.agent_bridge.models import AgentResult
         from agents_hub.config.types import AgentPlatform
+        from agents_hub.core.foundation import render_for_chat
 
         # 1. 投递消息
         await self.message_router.send_message(message)
@@ -306,10 +307,15 @@ class GroupChat:
         sender_agent = self._find_agent(message.send_from)
         platform = sender_agent.role_config.platform if sender_agent else AgentPlatform.CLAUDE
 
-        # 3. 构造 AgentResult 并保存（只需要 agent_name, text, timestamp, platform）
+        # 3. 格式化消息内容（如果还没有 @ 前缀）
+        content = message.content
+        if not content.startswith(f"@{message.send_to}"):
+            content = render_for_chat(message.send_from, message.send_to, content)
+
+        # 4. 构造 AgentResult 并保存（只需要 agent_name, text, timestamp, platform）
         role_type = getattr(sender_agent, "role_type", RoleType.TEAM_MEMBER)
         sender_result = AgentResult(
-            text=message.content,
+            text=content,
             session_id="",
             timestamp=datetime.now().isoformat(),
             agent_name=message.send_from,

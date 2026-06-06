@@ -6,13 +6,6 @@
 
 ## 待开始
 
-### 1. 提示词优化 - 群聊工具使用
-- **来源**：idea #3
-- **状态**：⏳ 待开始
-- **创建时间**：2026-06-06
-- **描述**：编写如何使用 speak in the group 和 finish agent call 两个工具的使用场景，明确写在提示词里边。目前主要针对如何使用信息以及让系统回答更流畅。
-- **优先级**：1
-
 ### 2. 提示词优化 - 任务执行
 - **来源**：idea #4
 - **状态**：⏳ 待开始
@@ -20,12 +13,12 @@
 - **描述**：针对完成特定任务，对系统进行专门的提示词优化
 - **优先级**：1
 
-### 3. 群聊信息显示问题排查
-- **来源**：idea #2
+### 4. WebSocket 群聊实时刷新
+- **来源**：idea #1
 - **状态**：⏳ 待开始
 - **创建时间**：2026-06-06
-- **描述**：排查当前群聊数据在群里面显示的问题。正常流程应该是 users @ manager，manager @ worker。每个 worker 应该先在群里说收到任务并开始执行，结束时使用 finish agent call @ manager 说任务已完成。当前有些地方没有 @，内容缺失。
-- **优先级**：2
+- **描述**：正式使用 WebSocket，每次添加群聊时都向前端发送消息，让前端刷新群聊信息
+- **优先级**：3
 
 ### 4. WebSocket 群聊实时刷新
 - **来源**：idea #1
@@ -112,4 +105,42 @@
 
 ## 已完成
 
-（暂无）
+### 1. 提示词优化 - 群聊工具使用
+- **来源**：idea #3
+- **状态**：✅ 已完成
+- **创建时间**：2026-06-06
+- **完成时间**：2026-06-06
+- **描述**：编写如何使用 speak in the group 和 finish agent call 两个工具的使用场景，明确写在提示词里边。目前主要针对如何使用信息以及让系统回答更流畅。
+- **优先级**：1
+- **完成内容**：
+  - 在 `base_agent.py` 中添加了 `_generate_tool_usage_content` 方法，区分 Manager/Worker 生成不同的工具使用说明
+  - 添加了 `_inject_tool_usage_to_files` 方法，将工具使用说明注入到 CLAUDE.md/AGENTS.md 的 TOOL_USAGE 标记中
+  - Manager 说明所有工具，Worker 只说明 speak_in_group_chat 和 finish_agent_call
+  - 说明了群聊消息显示规则和工具使用场景
+
+### 3. 群聊信息显示问题排查
+- **来源**：idea #2
+- **状态**：✅ 已完成
+- **创建时间**：2026-06-06
+- **完成时间**：2026-06-06
+- **描述**：排查当前群聊数据在群里面显示的问题。正常流程应该是 users @ manager，manager @ worker。每个 worker 应该先在群里说收到任务并开始执行，结束时使用 finish agent call @ manager 说任务已完成。当前有些地方没有 @，内容缺失。
+- **优先级**：2
+- **完成内容**：
+  - 修改了 `group_chat.py` 的 `send_message_to_agent` 方法
+  - 在保存消息前判断是否已有 @ 前缀，如果没有则调用 `render_for_chat` 格式化
+  - 确保所有通过 `send_message_to_agent` 发送的消息都会被正确格式化
+
+### 单元测试 - 注入函数幂等性测试
+- **来源**：用户要求
+- **状态**：✅ 已完成
+- **创建时间**：2026-06-06
+- **完成时间**：2026-06-06
+- **描述**：为注入函数编写单元测试，重点测试幂等性，确保多次注入不会重复添加标签
+- **完成内容**：
+  - 创建了 `tests/core/agent/test_tool_usage_injection.py`
+  - 测试了 `_generate_tool_usage_content` 生成内容（Manager/Worker）
+  - 测试了 `_inject_tool_usage_to_files` 注入到文件
+  - 测试了注入幂等性：多次注入不会重复添加标签
+  - 测试了 `send_message_to_agent` 消息格式化逻辑
+  - 测试了 `markdown_injector.replace_marked_section` 的幂等性
+  - 所有 18 个测试通过

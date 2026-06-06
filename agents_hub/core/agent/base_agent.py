@@ -318,6 +318,98 @@ class Agent:
 
         return "\n".join(content_parts)
 
+    def _generate_tool_usage_content(self) -> str:
+        """生成工具使用说明内容。
+
+        根据角色类型生成不同的工具使用说明：
+        - Manager/Leader：说明所有工具
+        - Worker/Team Member：只说明 speak_in_group_chat 和 finish_agent_call
+
+        Returns:
+            XML 格式的工具使用说明字符串
+        """
+        from agents_hub.config.types import RoleType
+
+        content_parts = [
+            "<tool_usage>",
+            "## 工具使用说明",
+            "",
+        ]
+
+        if self.role_type == RoleType.LEADER:
+            # Manager 需要了解所有工具
+            content_parts.extend(
+                [
+                    "### 作为 Manager，你可以使用以下工具：",
+                    "",
+                    "#### 1. call_agent - 派活给团队成员",
+                    "当你需要分配任务给团队成员时使用。",
+                    "参数：send_to（目标 Agent 名称）、content（任务内容）",
+                    "返回：call_id（用于后续查询状态）",
+                    "",
+                    "#### 2. assign_tasks_to_team - 更新任务列表",
+                    "覆盖式更新任务列表，用于管理团队任务。",
+                    "参数：tasks（任务列表）",
+                    "",
+                    "#### 3. archive_task_list - 归档任务列表",
+                    "归档当前 ACTIVE 任务列表。",
+                    "",
+                    "#### 4. check_agent_call - 查询调用状态",
+                    "查询 AgentCall 的状态，了解任务执行进度。",
+                    "参数：call_id（AgentCall ID）",
+                    "",
+                    "#### 5. speak_in_group_chat - 群聊公开发言",
+                    "在群聊中公开发言，所有 agent 都会看到。",
+                    "使用场景：汇报状态、宣布决定、与团队沟通",
+                    "参数：content（发言内容）、send_to（可选，@ 某个 agent）",
+                    "注意：不要在任务结束时使用此工具，任务结束应使用 finish_agent_call",
+                    "",
+                    "#### 6. finish_agent_call - 完成任务调用",
+                    "结束一个需要回复的 TASK 调用。",
+                    "使用场景：任务完成、任务失败、无法继续",
+                    "参数：call_id（AgentCall ID）、content（完成说明）、success（是否成功）",
+                    "重要：此消息会显示在群聊中，并激活你所发送的那个 agent",
+                    "",
+                ]
+            )
+        else:
+            # Worker 只需要了解 speak_in_group_chat 和 finish_agent_call
+            content_parts.extend(
+                [
+                    "### 作为 Worker，你可以使用以下工具：",
+                    "",
+                    "#### 1. speak_in_group_chat - 群聊公开发言",
+                    "在群聊中公开发言，所有 agent 都会看到。",
+                    "使用场景：",
+                    "- 收到任务时，汇报'收到任务，开始执行'",
+                    "- 执行过程中，汇报进度或遇到的问题",
+                    "参数：content（发言内容）、send_to（可选，@ 某个 agent）",
+                    "注意：不要在任务结束时使用此工具，任务结束应使用 finish_agent_call",
+                    "",
+                    "#### 2. finish_agent_call - 完成任务调用",
+                    "结束一个需要回复的 TASK 调用。",
+                    "使用场景：任务完成、任务失败、无法继续",
+                    "参数：call_id（AgentCall ID）、content（完成说明）、success（是否成功）",
+                    "重要：此消息会显示在群聊中，并激活你所发送的那个 agent",
+                    "",
+                ]
+            )
+
+        content_parts.extend(
+            [
+                "## 群聊消息显示规则",
+                "",
+                "1. **speak_in_group_chat**：所有 agent 都会看到，但只有被调用和激活时才会传给它",
+                "2. **finish_agent_call**：会显示在群聊中，并激活目标 agent",
+                "3. **不要同时调用 speak_in_group_chat 和 finish_agent_call**",
+                "4. **任务结束时使用 finish_agent_call，不要使用 speak_in_group_chat**",
+                "",
+                "</tool_usage>",
+            ]
+        )
+
+        return "\n".join(content_parts)
+
     def _format_runtime_call_instruction(self, message_type: MessageType) -> str:
         """生成 runtime 中针对不同 AgentCall 类型的操作提示。"""
         if message_type == MessageType.TASK:
@@ -351,6 +443,33 @@ class Agent:
         agents_md = work_root / "AGENTS.md"
         if agents_md.exists():
             replace_marked_section(agents_md, "AGENT_RUNTIME", runtime_content)
+
+    def _inject_tool_usage_to_files(self):
+        """注入工具使用说明到 CLAUDE.md 和 AGENTS.md。
+
+        根据角色类型生成不同的工具使用说明，注入到 TOOL_USAGE 标记中。
+        """
+        from pathlib import Path
+
+        from agents_hub.core.utils.markdown_injector import replace_marked_section
+
+        # 生成工具使用说明内容
+        tool_usage_content = self._generate_tool_usage_content()
+
+        # 获取 work_root
+        if not self.role_config.work_root:
+            return
+        work_root = Path(self.role_config.work_root)
+
+        # 注入到 CLAUDE.md
+        claude_md = work_root / "CLAUDE.md"
+        if claude_md.exists():
+            replace_marked_section(claude_md, "TOOL_USAGE", tool_usage_content)
+
+        # 注入到 AGENTS.md
+        agents_md = work_root / "AGENTS.md"
+        if agents_md.exists():
+            replace_marked_section(agents_md, "TOOL_USAGE", tool_usage_content)
 
     def _enqueue_finish_agent_call_reminder(self, msg: AgentMessage):
         """提醒 Agent 使用 finish_agent_call 显式闭环当前任务调用。"""
@@ -399,9 +518,10 @@ class Agent:
                 msg.content[:50] if msg.content else "",
             )
 
-            # 3. 注入 runtime 到 CLAUDE.md/AGENTS.md
+            # 3. 注入 runtime 和工具使用说明到 CLAUDE.md/AGENTS.md
             try:
                 self._inject_runtime_to_files(self.task_manager)
+                self._inject_tool_usage_to_files()
             except Exception as e:
                 # 注入失败不应该影响消息处理
                 self.logger.debug("Runtime 注入失败: agent=%s, error=%s", self.name, str(e))
