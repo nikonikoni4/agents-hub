@@ -49,8 +49,8 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
     roleAvatarMap,
     hasMore,
     loadingMore,
-    setLoadingMore,
-    loadMore,
+    isRestoringScroll,
+    loadMoreWithRestore,
   } = useChatMessages();
   const { members } = useMembers();
   const [inputValue, setInputValue] = useState('');
@@ -58,8 +58,6 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const loadMoreCooldownRef = useRef(false);
-  const scrollRestoreRef = useRef(false);
 
   // @成员选择状态
   const [showMention, setShowMention] = useState(false);
@@ -76,37 +74,21 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
 
   // 自动滚动到底部（loadMore 恢复滚动位置期间跳过）
   useEffect(() => {
-    if (loadingMore || scrollRestoreRef.current) return;
+    if (loadingMore || isRestoringScroll) return;
     const container = messagesContainerRef.current;
     if (container) {
       container.scrollTop = container.scrollHeight;
     }
-  }, [allMessages.length, loadingMore]);
+  }, [allMessages.length, loadingMore, isRestoringScroll]);
 
   // 滚动到顶部时加载更多
   const handleScroll = useCallback(() => {
     const container = messagesContainerRef.current;
-    if (!container || loadingMore || loadMoreCooldownRef.current || !hasMore) return;
+    if (!container || loadingMore || !hasMore) return;
     if (container.scrollTop < 50) {
-      loadMoreCooldownRef.current = true;
-      scrollRestoreRef.current = true;
-      const prevHeight = container.scrollHeight;
-      loadMore().then(() => {
-        requestAnimationFrame(() => {
-          container.scrollTop = container.scrollHeight - prevHeight;
-          setLoadingMore(false);
-          setTimeout(() => {
-            scrollRestoreRef.current = false;
-            loadMoreCooldownRef.current = false;
-          }, 100);
-        });
-      }).catch(() => {
-        setLoadingMore(false);
-        scrollRestoreRef.current = false;
-        loadMoreCooldownRef.current = false;
-      });
+      loadMoreWithRestore(container);
     }
-  }, [loadingMore, hasMore, loadMore, setLoadingMore]);
+  }, [loadingMore, hasMore, loadMoreWithRestore]);
 
   // 切换 session 时清空本地消息
   useEffect(() => {

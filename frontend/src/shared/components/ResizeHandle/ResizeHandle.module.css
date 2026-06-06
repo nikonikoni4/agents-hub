@@ -1,0 +1,21 @@
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.handle:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.handle[data-direction='left'] {
+  right: -3px;
+}
+
+.handle[data-direction='right'] {
+  left: -3px;
+}
