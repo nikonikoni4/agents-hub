@@ -162,7 +162,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                     ))}
                   </div>
                   {selectedTeam && (
-                    <span className={styles.emptyHint}>已选择「{selectedTeam}」的成员，可在下方调整</span>
+                    <span className={styles.emptyHint}>
+                      已选择「{selectedTeam}」的成员，可在下方调整
+                    </span>
                   )}
                 </div>
               )}
