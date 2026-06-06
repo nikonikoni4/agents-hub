@@ -73,7 +73,7 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
         }
     ]
 
-    messages = runtime.get_message_dicts(limit=10, offset=0)
+    messages = runtime.get_message_dicts(limit=10)
     assert messages == [
         {
             "speaker": "Worker1",
@@ -82,6 +82,38 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
             "platform": "claude",
         }
     ]
+
+
+async def test_get_message_dicts_with_before_cursor():
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    # 添加更多消息用于测试游标分页
+    runtime.state.group_chat_session.messages.extend([
+        {"agent_name": "Worker1", "content": "msg2", "timestamp": "2026-06-04T10:01:00", "platform": "claude"},
+        {"agent_name": "Worker1", "content": "msg3", "timestamp": "2026-06-04T10:02:00", "platform": "claude"},
+    ])
+
+    # 无游标：返回最新 1 条
+    latest = runtime.get_message_dicts(limit=1)
+    assert len(latest) == 1
+    assert latest[0]["content"] == "msg3"
+
+    # before=msg3 的时间戳：返回 msg3 之前的消息
+    older = runtime.get_message_dicts(limit=10, before="2026-06-04T10:02:00")
+    assert len(older) == 2
+    assert older[0]["content"] == "hello"
+    assert older[1]["content"] == "msg2"
+
+    # before=msg2 的时间戳：只返回最老的 1 条
+    oldest = runtime.get_message_dicts(limit=10, before="2026-06-04T10:01:00")
+    assert len(oldest) == 1
+    assert oldest[0]["content"] == "hello"
+
+    # before 比所有消息都老：返回空
+    empty = runtime.get_message_dicts(limit=10, before="2020-01-01T00:00:00")
+    assert empty == []
 
 
 async def test_get_or_create_agent_member_info_returns_existing():

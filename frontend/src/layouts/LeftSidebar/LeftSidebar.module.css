@@ -1,17 +1,15 @@
 .leftSidebar {
   width: 220px;
-  flex-shrink: 0; /* 防止被压缩 */
+  flex-shrink: 0;
   background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
   overflow: hidden;
-  border-right: 1px solid var(--border-color);
 }
 
 .leftSidebar.collapsed {
   width: 0;
-  border-right: none;
 }
 
 /* 按钮区 */
@@ -20,7 +18,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border-bottom: 1px solid var(--border-color);
 }
 
 .sidebarBtn {
@@ -44,6 +41,11 @@
   color: var(--text-primary);
 }
 
+.sidebarBtn.active {
+  background: var(--bg-selected);
+  color: var(--text-primary);
+}
+
 .sidebarBtn svg {
   width: 18px;
   height: 18px;
@@ -55,7 +57,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 4px 0;
+  padding: 4px 8px;
 }
 
 /* 设置按钮 */

@@ -336,18 +336,18 @@ export async function listGroupChatInfos(
  * 获取消息历史
  *
  * @param chatId - 群聊 ID
- * @param limit - 返回消息数量上限（1-200，默认 50）
- * @param offset - 跳过前 N 条消息（默认 0）
+ * @param limit - 返回消息数量上限（1-500，默认 30）
+ * @param before - 游标时间戳，返回此时间之前的消息
  */
 export async function getMessages(
   chatId: string,
-  limit: number = 50,
-  offset: number = 0
+  limit: number = 30,
+  before?: string
 ): Promise<MessageApiItem[]> {
   return mockableRequest(
     () =>
       apiClient.get<MessageApiItem[]>(`/group-chats/${chatId}/messages`, {
-        params: { limit, offset },
+        params: { limit, ...(before ? { before } : {}) },
       }),
     MOCK_MESSAGES_BY_CHAT[chatId] ?? MOCK_MESSAGES_DEFAULT
   );

@@ -44,18 +44,19 @@
 
 .addBtn {
   padding: 8px 16px;
-  border: none;
-  background: var(--accent-color);
-  color: white;
+  border: 1px solid var(--accent-color);
+  background: transparent;
+  color: var(--accent-color);
   font-size: 13px;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.15s;
 }
 
 .addBtn:hover:not(:disabled) {
-  opacity: 0.9;
+  background: var(--accent-color);
+  color: white;
 }
 
 .addBtn:disabled {

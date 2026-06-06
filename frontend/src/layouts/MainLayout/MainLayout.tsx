@@ -65,7 +65,11 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
     <div className={styles.mainLayout}>
       <TopBar onToggleSidebar={handleToggleLeftSidebar} />
       <div className={styles.mainContainer}>
-        <LeftSidebar collapsed={leftSidebarCollapsed} onViewModeChange={handleViewModeChange} />
+        <LeftSidebar
+          collapsed={leftSidebarCollapsed}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+        />
         {viewMode === 'chat' && <ChatArea onToggleRightSidebar={handleToggleRightSidebar} />}
         {viewMode === 'role' && <RoleManagement />}
         {viewMode === 'skill' && <SkillSquare />}

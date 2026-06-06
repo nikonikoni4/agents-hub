@@ -112,27 +112,35 @@ class GroupChatRuntime:
             )
         return members
 
-    def get_message_dicts(self, limit: int = 100, offset: int = 0) -> list[dict]:
+    def get_message_dicts(self, limit: int = 30, before: str | None = None) -> list[dict]:
         """
-        获取消息字典列表（支持分页）
+        获取消息字典列表（支持游标分页，返回最新消息）
 
         Args:
             limit: 返回的最大消息数
-            offset: 偏移量
+            before: 游标时间戳，返回此时间之前的消息（严格小于）
 
         Returns:
             list[dict]: 消息列表，字段映射 agent_name -> speaker
         """
         session = self.state.require_session()
-        messages = session.messages[offset : offset + limit]
+
+        if before is not None:
+            candidates = [msg for msg in session.messages if msg.get("timestamp", "") < before]
+        else:
+            candidates = session.messages
+
+        # 取末尾 limit 条（最新的）
+        start = max(0, len(candidates) - limit)
+        messages = candidates[start:]
 
         # 映射 agent_name -> speaker
         return [
             {
                 "speaker": msg["agent_name"],
                 "content": msg["content"],
-                "timestamp": msg["timestamp"],
-                "platform": msg["platform"],
+                "timestamp": msg.get("timestamp", ""),
+                "platform": msg.get("platform", ""),
             }
             for msg in messages
         ]

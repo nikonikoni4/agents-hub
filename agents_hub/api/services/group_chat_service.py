@@ -347,14 +347,14 @@ class GroupChatService:
         self,
         group_chat_id: str,
         limit: int = 50,
-        offset: int = 0,
+        before: str | None = None,
     ) -> list[MessageInfo]:
         """获取群聊消息历史
 
         Args:
             group_chat_id: 群聊 ID
             limit: 返回消息数量上限（默认 50）
-            offset: 跳过前 N 条消息（默认 0）
+            before: 游标时间戳，返回此时间之前的消息
 
         Returns:
             list[MessageInfo]（消息列表）:
@@ -376,7 +376,7 @@ class GroupChatService:
 
         return [
             MessageInfo(**message)
-            for message in group_chat.runtime.get_message_dicts(limit=limit, offset=offset)
+            for message in group_chat.runtime.get_message_dicts(limit=limit, before=before)
         ]
 
     async def send_message(

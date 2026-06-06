@@ -39,16 +39,16 @@ def main():
         screenshot(page, "main.png")
 
         # # 2. 技能广场
-        # page.locator('button[aria-label="技能广场"]').click()
-        # screenshot(page, "skill_square.png")
+        page.locator('button[aria-label="技能广场"]').click()
+        screenshot(page, "skill_square.png")
 
         # # 3. 角色管理 - 团队管理（默认 tab）
-        # page.locator('button[aria-label="角色管理"]').click()
-        # screenshot(page, "role_management_teams.png")
+        page.locator('button[aria-label="角色管理"]').click()
+        screenshot(page, "role_management_teams.png")
 
         # # 4. 角色管理 - 角色面板
-        # page.locator('text=角色管理').last.click()
-        # screenshot(page, "role_management_roles.png")
+        page.locator('text=角色管理').last.click()
+        screenshot(page, "role_management_roles.png")
 
         browser.close()
 

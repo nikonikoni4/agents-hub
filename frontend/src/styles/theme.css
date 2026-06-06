@@ -16,7 +16,8 @@
   --text-secondary: #666666;
   --text-tertiary: rgb(150, 150, 150);
   --border-color: rgb(220, 220, 220);
-  --accent-color: #f57c00;
+  --accent-color: #8ba5bf;
+  --bg-selected: rgb(232, 232, 232);
   --text-placeholder: #999999;
 
   /* 圆角系统 */
@@ -54,4 +55,6 @@ html[data-theme='dark'] {
   --text-secondary: rgb(180, 180, 180);
   --text-tertiary: rgb(120, 120, 120);
   --border-color: rgb(60, 60, 60);
+  --accent-color: #96b0cc;
+  --bg-selected: rgb(40, 40, 40);
 }

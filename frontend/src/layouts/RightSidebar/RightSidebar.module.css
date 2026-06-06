@@ -1,18 +1,19 @@
 .rightSidebar {
   width: 220px;
-  flex-shrink: 0; /* 防止被压缩 */
-  background: var(--bg-right-base);
-  border-left: 1px solid var(--border-color);
+  flex-shrink: 0;
+  background: var(--bg-main);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
   overflow: hidden;
   padding-top: 16px;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
 }
 
 .rightSidebar.collapsed {
   width: 0;
-  border-left: none;
+  box-shadow: none;
   padding: 0;
 }
 

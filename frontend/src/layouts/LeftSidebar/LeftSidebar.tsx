@@ -5,10 +5,11 @@ import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
   collapsed: boolean;
+  viewMode?: 'chat' | 'role' | 'skill';
   onViewModeChange?: (mode: 'chat' | 'role' | 'skill') => void;
 }
 
-export function LeftSidebar({ collapsed, onViewModeChange }: LeftSidebarProps) {
+export function LeftSidebar({ collapsed, viewMode, onViewModeChange }: LeftSidebarProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   return (
@@ -24,7 +25,7 @@ export function LeftSidebar({ collapsed, onViewModeChange }: LeftSidebarProps) {
           <span>新对话</span>
         </button>
         <button
-          className={styles.sidebarBtn}
+          className={`${styles.sidebarBtn} ${viewMode === 'role' ? styles.active : ''}`}
           onClick={() => onViewModeChange?.('role')}
           aria-label="角色管理"
         >
@@ -32,7 +33,7 @@ export function LeftSidebar({ collapsed, onViewModeChange }: LeftSidebarProps) {
           <span>角色管理</span>
         </button>
         <button
-          className={styles.sidebarBtn}
+          className={`${styles.sidebarBtn} ${viewMode === 'skill' ? styles.active : ''}`}
           onClick={() => onViewModeChange?.('skill')}
           aria-label="技能广场"
         >

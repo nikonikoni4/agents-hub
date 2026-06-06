@@ -28,7 +28,7 @@ export function SessionItem({ session, isActive = false }: SessionItemProps) {
       onClick={() => handleSelectSession(session.id)}
     >
       {session.memberAvatars.length > 0 && (
-        <CompositeAvatar avatars={session.memberAvatars} size={36} />
+        <CompositeAvatar avatars={session.memberAvatars} size={40} />
       )}
       <div className="session-content">
         <div className="session-title">{session.title}</div>

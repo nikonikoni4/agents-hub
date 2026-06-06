@@ -1,5 +1,5 @@
 .topBar {
-  height: 40px;
+  height: 32px;
   background: var(--bg-sidebar);
   display: flex;
   align-items: center;

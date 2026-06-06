@@ -160,14 +160,14 @@ class RoleManager:
         return [role.name for role in self.list_roles()]
 
     def list_avatars(self) -> list[str]:
-        """列出 assets/ 目录下所有可用头像文件名。
+        """列出 avatars/ 目录下所有可用头像文件名。
 
-        扫描 agents/assets/ 目录，返回所有图片文件的文件名列表。
+        扫描 data_path/avatars/ 目录，返回所有图片文件的文件名列表。
 
         Returns:
             头像文件名列表，如果目录不存在或为空则返回空列表。
         """
-        assets_dir = self.agents_dir / "assets"
+        assets_dir = self.agents_dir.parent / "avatars"
         if not assets_dir.exists():
             return []
 

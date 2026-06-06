@@ -9,7 +9,8 @@
   display: flex;
   flex: 1;
   overflow: hidden;
-  padding: 8px 8px 8px 8px;
+  padding: 0 6px 6px 0;
+  gap: 0;
   background: var(--bg-sidebar);
 }
 

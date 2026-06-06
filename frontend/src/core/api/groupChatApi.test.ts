@@ -90,14 +90,25 @@ describe('groupChatApi', () => {
       });
     });
 
-    it('getMessages 带分页参数', async () => {
+    it('getMessages 带游标分页参数', async () => {
       const { mockableRequest } = await import('./client');
       vi.mocked(mockableRequest).mockImplementation(async (real) => real());
       mockedClient.get.mockResolvedValue([]);
 
-      await getMessages('chat-001', 20, 10);
+      await getMessages('chat-001', 20, '2026-06-04T10:00:00');
       expect(mockedClient.get).toHaveBeenCalledWith('/group-chats/chat-001/messages', {
-        params: { limit: 20, offset: 10 },
+        params: { limit: 20, before: '2026-06-04T10:00:00' },
+      });
+    });
+
+    it('getMessages 无游标时只传 limit', async () => {
+      const { mockableRequest } = await import('./client');
+      vi.mocked(mockableRequest).mockImplementation(async (real) => real());
+      mockedClient.get.mockResolvedValue([]);
+
+      await getMessages('chat-001', 30);
+      expect(mockedClient.get).toHaveBeenCalledWith('/group-chats/chat-001/messages', {
+        params: { limit: 30 },
       });
     });
 

@@ -3,8 +3,8 @@
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  border-radius: 6px;
-  transition: background 0.2s;
+  border-radius: 8px;
+  transition: all 0.15s;
 }
 
 .row:hover {
@@ -43,10 +43,11 @@
 
 .badge {
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .badge.type {
@@ -73,8 +74,8 @@
   font-size: 20px;
   color: var(--text-tertiary);
   cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s;
+  border-radius: 6px;
+  transition: all 0.15s;
   flex-shrink: 0;
 }
 

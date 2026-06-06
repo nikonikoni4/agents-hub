@@ -75,12 +75,12 @@ async def get_group_chat_members(
 @router.get("/{group_chat_id}/messages", response_model=list[MessageInfo])
 async def get_messages(
     group_chat_id: str,
-    limit: int = Query(50, ge=1, le=200, description="返回消息数量上限"),
-    offset: int = Query(0, ge=0, description="跳过前 N 条消息"),
+    limit: int = Query(30, ge=1, le=500, description="返回消息数量上限"),
+    before: str | None = Query(None, description="游标时间戳，返回此时间之前的消息"),
     service: GroupChatService = Depends(get_group_chat_service),
 ):
     """获取群聊消息历史"""
-    return await service.get_messages(group_chat_id, limit=limit, offset=offset)
+    return await service.get_messages(group_chat_id, limit=limit, before=before)
 
 
 @router.post("/{group_chat_id}/messages", response_model=dict[str, str])
