@@ -41,20 +41,23 @@ export function useCreateGroupChat() {
     };
   }, []);
 
-  const createChat = useCallback(async (data: CreateGroupChatRequest): Promise<string | null> => {
-    setSubmitting(true);
-    try {
-      const result = await createGroupChat(data);
-      // 创建成功后立即刷新群聊列表
-      await refreshSessions();
-      return result.group_chat_id;
-    } catch (err) {
-      console.error('Failed to create group chat:', err);
-      return null;
-    } finally {
-      setSubmitting(false);
-    }
-  }, [refreshSessions]);
+  const createChat = useCallback(
+    async (data: CreateGroupChatRequest): Promise<string | null> => {
+      setSubmitting(true);
+      try {
+        const result = await createGroupChat(data);
+        // 创建成功后立即刷新群聊列表
+        await refreshSessions();
+        return result.group_chat_id;
+      } catch (err) {
+        console.error('Failed to create group chat:', err);
+        return null;
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [refreshSessions]
+  );
 
   const leaders = roles.filter((r) => r.type === 'leader');
   const workers = roles.filter((r) => r.type === 'team_member');

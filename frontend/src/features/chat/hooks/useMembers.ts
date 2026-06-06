@@ -10,9 +10,9 @@
  * - 通过 store 订阅 activeSessionId（不直接 import session feature）
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
-import { getMembers, getRoleInfo } from '@/core/api';
+import { getMembers, getRoleInfo, updateMemberDockerMode } from '@/core/api';
 import type { GroupChatMemberApiItem, RoleApiResponse } from '@/shared/types';
 
 /**
@@ -31,48 +31,66 @@ export function useMembers() {
   const [members, setMembers] = useState<MemberWithRole[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchMembers = useCallback(async () => {
     if (!activeSessionId) {
       setMembers([]);
       return;
     }
 
-    let cancelled = false;
     setLoading(true);
+    try {
+      // 1. 获取成员列表
+      const memberList = await getMembers(activeSessionId);
 
-    async function fetchMembers() {
-      try {
-        // 1. 获取成员列表
-        const memberList = await getMembers(activeSessionId!);
+      // 2. 并行获取所有角色信息
+      const rolePromises = memberList.map(
+        (m) => getRoleInfo(m.name).catch(() => null) // 角色不存在时返回 null
+      );
+      const roles = await Promise.all(rolePromises);
 
-        // 2. 并行获取所有角色信息
-        const rolePromises = memberList.map(
-          (m) => getRoleInfo(m.name).catch(() => null) // 角色不存在时返回 null
-        );
-        const roles = await Promise.all(rolePromises);
-
-        // 3. 聚合数据
-        if (!cancelled) {
-          const membersWithRole: MemberWithRole[] = memberList.map((member, index) => ({
-            ...member,
-            role: roles[index] ?? null,
-            isOnline: member.main_session !== null,
-          }));
-          setMembers(membersWithRole);
-        }
-      } catch (err) {
-        console.error('Failed to load members:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      // 3. 聚合数据
+      const membersWithRole: MemberWithRole[] = memberList.map((member, index) => ({
+        ...member,
+        role: roles[index] ?? null,
+        isOnline: member.main_session !== null,
+      }));
+      setMembers(membersWithRole);
+    } catch (err) {
+      console.error('Failed to load members:', err);
+    } finally {
+      setLoading(false);
     }
-
-    fetchMembers();
-
-    return () => {
-      cancelled = true;
-    };
   }, [activeSessionId]);
 
-  return { members, loading };
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  const toggleDockerMode = useCallback(
+    async (memberName: string) => {
+      if (!activeSessionId) return;
+
+      const currentMember = members.find((m) => m.name === memberName);
+      if (!currentMember) return;
+
+      const newValue = !currentMember.use_docker;
+
+      // 乐观更新
+      setMembers((prev) =>
+        prev.map((m) => (m.name === memberName ? { ...m, use_docker: newValue } : m))
+      );
+
+      try {
+        await updateMemberDockerMode(activeSessionId, memberName, newValue);
+      } catch (error) {
+        console.error('Failed to toggle docker mode:', error);
+        // 失败时回滚
+        await fetchMembers();
+        throw error;
+      }
+    },
+    [activeSessionId, members, fetchMembers]
+  );
+
+  return { members, loading, refresh: fetchMembers, toggleDockerMode };
 }

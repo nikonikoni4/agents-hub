@@ -488,8 +488,7 @@ export async function addGroupChatMembers(
   data: AddMembersRequest
 ): Promise<GroupChatMemberApiItem[]> {
   return mockableRequest(
-    () =>
-      apiClient.post<GroupChatMemberApiItem[]>(`/group-chats/${chatId}/members`, data),
+    () => apiClient.post<GroupChatMemberApiItem[]>(`/group-chats/${chatId}/members`, data),
     []
   );
 }
@@ -503,9 +502,7 @@ export async function removeGroupChatMember(
 ): Promise<GroupChatMemberApiItem[]> {
   return mockableRequest(
     () =>
-      apiClient.delete<GroupChatMemberApiItem[]>(
-        `/group-chats/${chatId}/members/${memberName}`
-      ),
+      apiClient.delete<GroupChatMemberApiItem[]>(`/group-chats/${chatId}/members/${memberName}`),
     []
   );
 }

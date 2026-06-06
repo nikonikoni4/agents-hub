@@ -8,11 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  getMembers,
-  addGroupChatMembers,
-  removeGroupChatMember,
-} from '@/core/api/groupChatApi';
+import { getMembers, addGroupChatMembers, removeGroupChatMember } from '@/core/api/groupChatApi';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import type { GroupChatMemberApiItem, RefreshSignal } from '@/shared/types';
 
