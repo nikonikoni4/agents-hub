@@ -23,6 +23,10 @@ export type {
   AgentSessionInfoApiResponse,
   TeamApiResponse,
   SystemConfigApiResponse,
+  PinnedMessageInfo,
+  PinMessageRequest,
+  PinOperationResponse,
+  LastViewRecord,
 } from './api-schemas';
 
 // API 请求类型

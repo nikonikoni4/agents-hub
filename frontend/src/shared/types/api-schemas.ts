@@ -292,3 +292,45 @@ export interface LastViewRecord {
   /** 最后查看时间（ISO 8601 格式） */
   last_view_at: string;
 }
+
+// ==================== 置顶消息相关 ====================
+
+/**
+ * 置顶消息信息
+ * 对应后端: PinnedMessageInfo schema
+ * GET /pinned-messages 响应列表项
+ */
+export interface PinnedMessageInfo {
+  /** 发送者名称（agent 角色名或 'user'） */
+  speaker: string;
+  /** 消息内容 */
+  content: string;
+  /** 消息时间戳（ISO 8601 格式） */
+  timestamp: string;
+  /** 来源平台 */
+  platform: string;
+  /** 置顶时间（ISO 8601 格式） */
+  pinned_at: string;
+}
+
+/**
+ * 置顶消息请求
+ * 对应后端: PinMessageRequest schema
+ * POST /pinned-messages 请求体
+ */
+export interface PinMessageRequest {
+  /** 发送者名称（agent 角色名或 'user'） */
+  speaker: string;
+  /** 消息时间戳（ISO 8601 格式） */
+  timestamp: string;
+}
+
+/**
+ * 置顶操作响应
+ * 对应后端: PinOperationResponse schema
+ * POST/DELETE /pinned-messages 成功响应
+ */
+export interface PinOperationResponse {
+  /** 操作是否成功 */
+  ok: boolean;
+}
