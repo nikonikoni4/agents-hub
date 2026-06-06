@@ -119,41 +119,49 @@ export function useChatMessages() {
       }
 
       const prevHeight = container.scrollHeight;
+      let rafId: number | null = null;
+      let timerId: number | null = null;
+
+      // 组合 cleanup 函数：清理 rAF 和 setTimeout
+      const cleanup = () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        if (timerId !== null) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+        setIsRestoringScroll(false);
+        loadMoreCooldownRef.current = false;
+      };
+      pendingCleanupRef.current = cleanup;
+
       try {
         const didLoad = await loadMoreInternal();
         if (didLoad) {
           // 等 DOM 更新后恢复滚动位置
-          const rafId = requestAnimationFrame(() => {
+          rafId = requestAnimationFrame(() => {
+            rafId = null; // rAF 已执行，标记为 null
             container.scrollTop = container.scrollHeight - prevHeight;
             // 滚动恢复完成（~16ms），立即允许自动滚动
             setIsRestoringScroll(false);
 
             // 冷却期继续生效（防止 loadMore 重复触发）
-            const timerId = window.setTimeout(() => {
+            timerId = window.setTimeout(() => {
+              timerId = null; // setTimeout 已执行，标记为 null
               loadMoreCooldownRef.current = false;
+              pendingCleanupRef.current = null; // 全部完成，清空 cleanup
             }, LOAD_MORE_COOLDOWN_MS);
-
-            // 保存 cleanup 函数
-            pendingCleanupRef.current = () => {
-              clearTimeout(timerId);
-              loadMoreCooldownRef.current = false;
-            };
           });
-
-          // 保存 rAF cleanup
-          pendingCleanupRef.current = () => {
-            cancelAnimationFrame(rafId);
-            setIsRestoringScroll(false);
-            loadMoreCooldownRef.current = false;
-          };
         } else {
-          setIsRestoringScroll(false);
-          loadMoreCooldownRef.current = false;
+          cleanup();
+          pendingCleanupRef.current = null;
         }
       } catch (err) {
         console.error('Failed to load more messages:', err);
-        setIsRestoringScroll(false);
-        loadMoreCooldownRef.current = false;
+        cleanup();
+        pendingCleanupRef.current = null;
       }
     },
     [loadMoreInternal]
