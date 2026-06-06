@@ -14,6 +14,9 @@ import type {
   SendMessageRequest,
   UpdateDockerModeRequest,
   SuccessResponse,
+  PinnedMessageInfo,
+  PinMessageRequest,
+  PinOperationResponse,
 } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
@@ -273,6 +276,10 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
   ],
 };
 
+const MOCK_PINNED_MESSAGES: PinnedMessageInfo[] = [];
+
+const MOCK_PIN_OPERATION: PinOperationResponse = { ok: true };
+
 // ==================== API 接口 ====================
 
 /**
@@ -418,5 +425,44 @@ export async function deleteGroupChat(
         params: { keep_data: keepData },
       }),
     { message: `Group chat ${chatId} deleted successfully` }
+  );
+}
+
+/**
+ * 获取置顶消息列表
+ */
+export async function getPinnedMessages(chatId: string): Promise<PinnedMessageInfo[]> {
+  return mockableRequest(
+    () => apiClient.get<PinnedMessageInfo[]>(`/group-chats/${chatId}/pinned-messages`),
+    MOCK_PINNED_MESSAGES
+  );
+}
+
+/**
+ * 置顶消息
+ */
+export async function pinMessage(
+  chatId: string,
+  data: PinMessageRequest
+): Promise<PinOperationResponse> {
+  return mockableRequest(
+    () => apiClient.post<PinOperationResponse>(`/group-chats/${chatId}/pinned-messages`, data),
+    MOCK_PIN_OPERATION
+  );
+}
+
+/**
+ * 取消置顶消息
+ */
+export async function unpinMessage(
+  chatId: string,
+  data: PinMessageRequest
+): Promise<PinOperationResponse> {
+  return mockableRequest(
+    () =>
+      apiClient.delete<PinOperationResponse>(`/group-chats/${chatId}/pinned-messages`, {
+        params: data,
+      }),
+    MOCK_PIN_OPERATION
   );
 }
