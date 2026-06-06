@@ -208,6 +208,84 @@ class GroupChat:
         # 注册 heartbeat 系统身份，用于定时唤醒 manager
         self.message_router.register("__HEARTBEAT__", asyncio.Queue())
 
+    async def add_member(self, role_name: str) -> None:
+        """增量添加单个成员（热重载安全）
+
+        此方法实现增量式添加：只创建新 Agent，不影响现有 Agent。
+        确保运行时状态不丢失，并立即持久化新成员信息。
+
+        Args:
+            role_name: 角色名称
+
+        Raises:
+            RoleNotFoundError: 角色不存在
+        """
+        # 1. 验证角色存在
+        role_manager = RoleManager()
+        role = role_manager.get_role(role_name)  # 不存在会抛出异常
+
+        # 2. 幂等检查
+        if role_name in self.workers:
+            logger.debug("成员已存在，跳过添加: %s", role_name)
+            return
+
+        # 3. 创建新 Worker（共享 group_chat_context）
+        new_worker = Worker(
+            role,
+            self.group_chat_context,  # ⭐ 所有 Agent 共享同一个 context
+            self.agent_call_manager,
+            self.message_router,
+            self.task_manager,
+        )
+
+        # 4. 注册到 MessageRouter
+        self.message_router.register(role_name, new_worker.message_queue)
+
+        # 5. 添加到 workers 字典
+        self.workers[role_name] = new_worker
+
+        # 6. ⭐ 关键：立即创建并持久化空条目（防止崩溃后丢失）
+        self.runtime.get_or_create_agent_member_info(role_name)
+        await self.runtime.repository.save_agent_member(self.runtime.state.agent_member_infos)
+
+        # 7. 生成并注册 token
+        from .group_chat_manager import group_chat_manager
+
+        token = generate_token()
+        group_chat_manager.register_token(token, role_name, self.group_chat_id)
+        await self.runtime.set_agent_token_and_default_cwd(role_name, token)
+
+        # 8. 如果群聊已激活，启动新 Worker 的任务
+        if self._activated:
+            new_task = asyncio.create_task(new_worker.run())
+            self.worker_tasks.append(new_task)
+            logger.debug("新成员任务已启动: %s", role_name)
+
+        # 9. 更新 team_members_name（运行时使用）
+        self.team_members_name.append(role_name)
+
+        # 10. 初始化新成员（打招呼）
+        await self._initialize_single_member(new_worker)
+
+        logger.info("成员添加成功: group=%s, member=%s", self.group_chat_id, role_name)
+
+    async def _initialize_single_member(self, agent: Agent) -> None:
+        """初始化单个新成员（打招呼）
+
+        Args:
+            agent: 要初始化的 Agent
+        """
+        if agent.role_type == RoleType.LEADER:
+            prompt = f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己"
+        else:
+            other_members = [name for name in self.team_members_name if name != agent.name]
+            manager_name = self.manager.name if self.manager else "manager"
+            prompt = f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{manager_name},你使用一句话简单介绍一下自己"
+
+        result = await agent.execute(prompt)
+        await self.group_chat_context.update_agent_member_info(result)
+        await self.group_chat_context.add_message(result)
+
     async def _initialize_new_members(self):
         """
         初始化新成员（第一次进入群聊的成员）
