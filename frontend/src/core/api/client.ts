@@ -83,7 +83,8 @@ apiClient.interceptors.request.use(
 
     // 开发模式下打印请求日志
     if (import.meta.env.DEV && import.meta.env.VITE_DEBUG === 'true') {
-      console.log('[API Request]', config.method?.toUpperCase(), config.url, config.data);
+      // eslint-disable-next-line no-console
+      console.info('[API Request]', config.method?.toUpperCase(), config.url, config.data);
     }
 
     return config;
@@ -99,7 +100,8 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     // 开发模式下打印响应日志
     if (import.meta.env.DEV && import.meta.env.VITE_DEBUG === 'true') {
-      console.log('[API Response]', response.config.url, response.data);
+      // eslint-disable-next-line no-console
+      console.info('[API Response]', response.config.url, response.data);
     }
 
     // 直接返回 data，简化调用

@@ -68,7 +68,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
   const handleBrowse = async () => {
     if ('showDirectoryPicker' in window) {
       try {
-        const handle = await (window as any).showDirectoryPicker();
+        const handle = await (
+          window as { showDirectoryPicker: () => Promise<{ name: string }> }
+        ).showDirectoryPicker();
         setProjectPath(handle.name);
       } catch {
         // 用户取消选择

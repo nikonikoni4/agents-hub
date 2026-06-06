@@ -20,7 +20,7 @@ class WebSocketManager {
   private static instance: WebSocketManager;
   private ws: WebSocket | null = null;
   private listeners: Map<string, Set<WebSocketEventCallback>> = new Map();
-  private messageQueue: any[] = [];
+  private messageQueue: unknown[] = [];
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private reconnectTimeouts: number[] = [1000, 2000, 4000, 8000, 16000]; // 指数退避
@@ -48,7 +48,8 @@ class WebSocketManager {
   connect(chatId: string): void {
     // 如果已连接到同一个群聊，不重复连接
     if (this.ws && this.currentChatId === chatId && this.ws.readyState === WebSocket.OPEN) {
-      console.log('[WebSocket] Already connected to', chatId);
+      // eslint-disable-next-line no-console
+      console.info('[WebSocket] Already connected to', chatId);
       return;
     }
 
@@ -87,7 +88,7 @@ class WebSocketManager {
   /**
    * 发送消息
    */
-  send(data: any): void {
+  send(data: unknown): void {
     const message = JSON.stringify(data);
 
     // 如果连接正常，直接发送
@@ -149,7 +150,8 @@ class WebSocketManager {
     const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000/api/v1';
     const wsUrl = `${wsBaseUrl}/ws/group_chat/${chatId}`;
 
-    console.log('[WebSocket] Connecting to', wsUrl);
+    // eslint-disable-next-line no-console
+    console.info('[WebSocket] Connecting to', wsUrl);
 
     try {
       this.ws = new WebSocket(wsUrl);
@@ -168,7 +170,8 @@ class WebSocketManager {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.log('[WebSocket] Connected');
+      // eslint-disable-next-line no-console
+      console.info('[WebSocket] Connected');
       this.reconnectAttempts = 0;
       this._emit('connected');
 
@@ -179,7 +182,8 @@ class WebSocketManager {
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[WebSocket] Message received:', data);
+        // eslint-disable-next-line no-console
+        console.info('[WebSocket] Message received:', data);
 
         // 根据消息类型触发不同事件
         if (data.type === 'refresh') {
@@ -198,7 +202,8 @@ class WebSocketManager {
     };
 
     this.ws.onclose = (event) => {
-      console.log('[WebSocket] Closed:', event.code, event.reason);
+      // eslint-disable-next-line no-console
+      console.info('[WebSocket] Closed:', event.code, event.reason);
       this.ws = null;
 
       // 如果不是主动断开，尝试重连
@@ -221,7 +226,8 @@ class WebSocketManager {
     const delay = this.reconnectTimeouts[this.reconnectAttempts] || 16000;
     this.reconnectAttempts++;
 
-    console.log(
+    // eslint-disable-next-line no-console
+    console.info(
       `[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
     );
 
@@ -238,7 +244,8 @@ class WebSocketManager {
   private _flushMessageQueue(): void {
     if (this.messageQueue.length === 0) return;
 
-    console.log(`[WebSocket] Flushing ${this.messageQueue.length} queued messages`);
+    // eslint-disable-next-line no-console
+    console.info(`[WebSocket] Flushing ${this.messageQueue.length} queued messages`);
 
     while (this.messageQueue.length > 0) {
       const data = this.messageQueue.shift();
@@ -249,7 +256,7 @@ class WebSocketManager {
   /**
    * 触发事件
    */
-  private _emit(event: WebSocketEventType, data?: any): void {
+  private _emit(event: WebSocketEventType, data?: unknown): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       callbacks.forEach((callback) => {
