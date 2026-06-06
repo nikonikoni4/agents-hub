@@ -105,3 +105,9 @@
  - path: `docs/specs/2026-06-06-frontend-features.md`
  - 触发规则：当设计、修改或扩展前端 features 层（chat/session/roles/skills）时阅读，包括模块职责划分、状态管理模式、模块间通信规则或 shared 层定位
  - 内容摘要：前端功能层规格，定义 chat/session/roles/skills 四个业务模块的职责边界、Zustand 独立 store 状态管理模式、跨 feature 通信规则（store 订阅/props/core 中转）、shared 层分层职责（types 定义契约、adapters 转换数据、components 提供复用）
+
+## pinned-messages
+ - updated_at : 2026-06-06
+ - path: `docs/specs/2026-06-06-pinned-messages.md`
+ - 触发规则：当设计、修改或扩展消息置顶功能时阅读，包括 pin/unpin API、右侧栏 Pinned 模块、hover pin 按钮交互
+ - 内容摘要：消息置顶功能规格，定义 RESTful 端点（GET/POST/DELETE pinned-messages）、使用 timestamp+speaker 复合键标识消息、hover 气泡底部 pin 按钮交互、右侧栏 Pinned 模块展示和取消置顶操作

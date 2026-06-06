@@ -63,3 +63,36 @@ class MessageInfo(BaseModel):
     content: str = Field(..., description="消息内容")
     timestamp: str = Field(..., description="时间戳")
     platform: str = Field(..., description="来源平台")
+
+
+# --- Pin Messages Schemas ---
+
+
+class PinMessageRequest(BaseModel):
+    """POST /pinned-messages 请求体"""
+
+    speaker: str = Field(..., min_length=1, description="消息发送者名称")
+    timestamp: str = Field(..., description="消息时间戳（ISO 8601）")
+
+
+class PinnedMessageInfo(BaseModel):
+    """GET /pinned-messages 响应列表项"""
+
+    speaker: str = Field(..., description="消息发送者名称")
+    content: str = Field(..., description="消息完整内容（快照）")
+    timestamp: str = Field(..., description="消息原始时间戳")
+    platform: str = Field(..., description="消息来源平台")
+    pinned_at: str = Field(..., description="置顶操作时间")
+
+
+class PinOperationResponse(BaseModel):
+    """POST/DELETE /pinned-messages 成功响应"""
+
+    ok: bool = Field(default=True, description="操作是否成功")
+
+
+class PinErrorResponse(BaseModel):
+    """错误响应的统一格式"""
+
+    error_code: str = Field(..., description="错误码")
+    message: str = Field(..., description="人类可读的错误描述")
