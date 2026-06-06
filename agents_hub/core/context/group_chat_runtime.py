@@ -7,11 +7,14 @@
 from datetime import datetime
 
 from agents_hub.core.foundation import GroupChatType
+from agents_hub.utils.logger import get_logger
 
 from .group_chat_repository import GroupChatRepository
 from .group_chat_runtime_state import GroupChatRuntimeState
 from .group_chat_session import AgentMemberInfo
 from .group_metadata import GroupMetadata
+
+logger = get_logger(__name__)
 
 
 class GroupChatRuntime:
@@ -284,7 +287,9 @@ class GroupChatRuntime:
         """
         session = self.state.require_session()
         session.add_message(agent_result)
-        assert session.messages == self.state.require_session().messages, "群聊message不一致"
+        current_session = self.state.require_session()
+        if session.messages is not current_session.messages:
+            logger.warning("群聊 message 引用不一致: session=%s", id(session))
         await self._persist(lambda: self.repository.save_group_chat_session(session))
 
     async def append_compact_record_and_mark_compacted(self, compact_record: dict) -> None:

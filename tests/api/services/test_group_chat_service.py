@@ -542,14 +542,14 @@ async def test_get_messages_success(service, mock_group_chat_manager):
     mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
     # Act
-    result = await service.get_messages(group_chat_id, limit=10, offset=0)
+    result = await service.get_messages(group_chat_id, limit=10)
 
     # Assert
     assert len(result) == 2
     assert result[0].speaker == "user"
     assert result[0].content == "你好"
     assert result[1].speaker == "manager"
-    mock_group_chat.runtime.get_message_dicts.assert_called_once_with(limit=10, offset=0)
+    mock_group_chat.runtime.get_message_dicts.assert_called_once_with(limit=10, before=None)
 
 
 async def test_get_messages_not_found(service, mock_group_chat_manager):

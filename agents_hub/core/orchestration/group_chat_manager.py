@@ -25,16 +25,19 @@ class GroupChatManager:
     """
     管理所有 GroupChat 实例的全局注册表
 
-    全局单例：通过 __new__ 保证整个进程只有一个实例。
+    全局单例：通过 __new__ + 锁保证整个进程只有一个实例。
     线程安全：token 索引操作使用 RLock 保护，确保在 FastMCP HTTP 多线程环境下的正确性。
     """
 
     _instance: "GroupChatManager | None" = None
     _initialized: bool = False
+    _creation_lock: threading.Lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            with cls._creation_lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
