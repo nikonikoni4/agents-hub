@@ -122,13 +122,15 @@ def test_get_role_success(service, mock_role_manager):
         abilities=[],
         type=RoleType.TEAM_MEMBER,
     )
+    mock_role.list_skills.return_value = []
     mock_role_manager.get_role.return_value = mock_role
 
     # 执行
-    result = service.get_role("test-role")
+    role_info, skills = service.get_role("test-role")
 
     # 验证
-    assert result.name == "test-role"
+    assert role_info.name == "test-role"
+    assert skills == []
     mock_role_manager.get_role.assert_called_once_with("test-role")
 
 
@@ -210,16 +212,18 @@ def test_update_role_success(service, mock_role_manager):
         abilities=["coding"],
         type=RoleType.TEAM_MEMBER,
     )
+    mock_role.list_skills.return_value = []
     mock_role_manager.get_role.return_value = mock_role
 
     request = RoleUpdateRequest(avatar="new-avatar.png", abilities=["coding"])
 
     # 执行
-    result = service.update_role("test-role", request)
+    role_info, skills = service.update_role("test-role", request)
 
     # 验证
-    assert result.avatar == "new-avatar.png"
-    assert result.abilities == ["coding"]
+    assert role_info.avatar == "new-avatar.png"
+    assert role_info.abilities == ["coding"]
+    assert skills == []
     mock_role.update_avatar.assert_called_once_with("new-avatar.png")
     mock_role.update_abilities.assert_called_once_with(["coding"])
 

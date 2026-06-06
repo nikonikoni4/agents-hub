@@ -165,8 +165,7 @@ class Role:
     def add_skill(self, skill_id: str, global_skills_dir: Path | None = None) -> None:
         """添加 skill 到角色。
 
-        优先通过符号链接（symlink）将全局 skill 链接到角色的 work_root/skills/ 目录，
-        链接失败时降级为复制目录。不修改 role.json。
+        将全局 skill 目录复制到角色的 work_root/skills/ 目录。不修改 role.json。
 
         Args:
             skill_id: skill 的唯一标识符。
@@ -177,7 +176,7 @@ class Role:
             SkillNotFoundError: skill 在全局库中不存在。
         """
         target_dir = self._work_root / "skills" / skill_id
-        if target_dir.exists() or target_dir.is_symlink():
+        if target_dir.exists():
             role_name = self._read_role_json()["name"]
             raise SkillAlreadyExistsError(skill_id=skill_id, role_name=role_name)
 
@@ -188,10 +187,7 @@ class Role:
         if not global_skill_dir.exists():
             raise SkillNotFoundError(skill_id=skill_id)
 
-        try:
-            target_dir.symlink_to(global_skill_dir, target_is_directory=True)
-        except OSError:
-            shutil.copytree(global_skill_dir, target_dir)
+        shutil.copytree(global_skill_dir, target_dir)
 
     def remove_skill(self, skill_id: str) -> None:
         """从角色中移除 skill。
@@ -206,13 +202,10 @@ class Role:
             SkillNotFoundError: skill 不存在于角色中。
         """
         skill_dir = self._work_root / "skills" / skill_id
-        if not skill_dir.exists() and not skill_dir.is_symlink():
+        if not skill_dir.exists():
             raise SkillNotFoundError(skill_id=skill_id)
 
-        if skill_dir.is_symlink():
-            skill_dir.unlink()
-        else:
-            shutil.rmtree(skill_dir)
+        shutil.rmtree(skill_dir)
 
     def get_role_config(self) -> RoleConfig:
         """构造给 agent_bridge 使用的 RoleConfig。

@@ -18,14 +18,19 @@ class RoleService:
     def __init__(self, role_manager: RoleManager | None = None):
         self.role_manager = role_manager or RoleManager()
 
-    def list_roles(self) -> list[RoleInfo]:
-        """获取所有角色"""
-        return self.role_manager.list_roles()
+    def list_roles(self) -> list[tuple[RoleInfo, list[SkillInfo]]]:
+        """获取所有角色（含 skills）"""
+        roles_info = self.role_manager.list_roles()
+        result = []
+        for info in roles_info:
+            role = self.role_manager.get_role(info.name)
+            result.append((info, role.list_skills()))
+        return result
 
-    def get_role(self, name: str) -> RoleInfo:
-        """获取单个角色"""
+    def get_role(self, name: str) -> tuple[RoleInfo, list[SkillInfo]]:
+        """获取单个角色（含 skills）"""
         role = self.role_manager.get_role(name)
-        return role.get_info()
+        return role.get_info(), role.list_skills()
 
     def create_role(self, request: RoleCreateRequest) -> RoleInfo:
         """创建角色"""
@@ -44,7 +49,9 @@ class RoleService:
         """删除角色"""
         self.role_manager.delete_role(name)
 
-    def update_role(self, name: str, request: RoleUpdateRequest) -> RoleInfo:
+    def update_role(
+        self, name: str, request: RoleUpdateRequest
+    ) -> tuple[RoleInfo, list[SkillInfo]]:
         """更新角色信息"""
         role = self.role_manager.get_role(name)
         if request.avatar is not None:
@@ -53,7 +60,7 @@ class RoleService:
             role.update_abilities(request.abilities)
         if request.description is not None:
             role.update_description(request.description)
-        return role.get_info()
+        return role.get_info(), role.list_skills()
 
     def list_role_skills(self, name: str) -> list[SkillInfo]:
         """列出角色的 skills"""

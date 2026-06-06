@@ -43,9 +43,12 @@ class RoleResponse(BaseModel):
     type: Literal["leader", "team_member"] | None = None
     scope: list[str] | None = None
     description: str | None = None
+    skills: list["RoleSkillResponse"] = []
 
     @classmethod
-    def from_domain(cls, role_info: RoleInfo) -> "RoleResponse":
+    def from_domain(
+        cls, role_info: RoleInfo, skills: list[SkillInfo] | None = None
+    ) -> "RoleResponse":
         """从领域模型转换"""
         return cls(
             name=role_info.name,
@@ -55,6 +58,7 @@ class RoleResponse(BaseModel):
             type=role_info.type.value if role_info.type else None,
             scope=role_info.scope,
             description=role_info.description,
+            skills=[RoleSkillResponse.from_domain(s) for s in (skills or [])],
         )
 
 

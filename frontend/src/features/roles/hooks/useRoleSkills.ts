@@ -5,10 +5,12 @@
  * - 获取指定角色的技能列表
  * - 添加技能到角色
  * - 从角色移除技能
+ *
+ * 增删操作后通过 getRoleInfo 刷新角色数据，保持 store 同步。
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getRoleSkills, addSkillToRole, removeSkillFromRole } from '@/core/api';
+import { getRoleInfo, addSkillToRole, removeSkillFromRole } from '@/core/api';
 import { useRolesStore } from '../store/rolesStore';
 import type { RoleSkillApiItem } from '@/shared/types';
 
@@ -27,8 +29,8 @@ export function useRoleSkills(roleName: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const data = await getRoleSkills(roleName);
-      setSkills(data);
+      const role = await getRoleInfo(roleName);
+      setSkills(role.skills);
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载技能失败');
     } finally {
@@ -36,21 +38,28 @@ export function useRoleSkills(roleName: string | null) {
     }
   }, [roleName]);
 
+  const refreshRole = useCallback(
+    async (name: string) => {
+      const role = await getRoleInfo(name);
+      setSkills(role.skills);
+      updateRoleInStore(name, role);
+    },
+    [updateRoleInStore]
+  );
+
   const addSkill = useCallback(
     async (skillId: string) => {
       if (!roleName) return;
 
       try {
-        const newSkill = await addSkillToRole(roleName, skillId);
-        setSkills((prev) => [...prev, newSkill]);
-        // 同步更新 rolesStore 中的 role 数据
-        updateRoleInStore(roleName, { skills: [...skills, newSkill] });
+        await addSkillToRole(roleName, skillId);
+        await refreshRole(roleName);
       } catch (err) {
         setError(err instanceof Error ? err.message : '添加技能失败');
         throw err;
       }
     },
-    [roleName, skills, updateRoleInStore]
+    [roleName, refreshRole]
   );
 
   const removeSkill = useCallback(
@@ -59,16 +68,13 @@ export function useRoleSkills(roleName: string | null) {
 
       try {
         await removeSkillFromRole(roleName, skillId);
-        const updatedSkills = skills.filter((s) => s.id !== skillId);
-        setSkills(updatedSkills);
-        // 同步更新 rolesStore 中的 role 数据
-        updateRoleInStore(roleName, { skills: updatedSkills });
+        await refreshRole(roleName);
       } catch (err) {
         setError(err instanceof Error ? err.message : '移除技能失败');
         throw err;
       }
     },
-    [roleName, skills, updateRoleInStore]
+    [roleName, refreshRole]
   );
 
   useEffect(() => {

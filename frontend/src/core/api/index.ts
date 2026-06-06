@@ -25,7 +25,6 @@ export {
   listRoles,
   updateRole,
   deleteRole,
-  getRoleSkills,
   addSkillToRole,
   removeSkillFromRole,
   listAvatars,

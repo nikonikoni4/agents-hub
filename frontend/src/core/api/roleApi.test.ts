@@ -12,7 +12,6 @@ import {
   listRoles,
   updateRole,
   deleteRole,
-  getRoleSkills,
   addSkillToRole,
   removeSkillFromRole,
   listAvatars,
@@ -50,17 +49,6 @@ describe('roleApi', () => {
   it('deleteRole 返回删除确认', async () => {
     const result = await deleteRole('Leader');
     expect(result.message).toBe('Successfully deleted');
-  });
-
-  it('getRoleSkills 返回角色关联的 skills', async () => {
-    const result = await getRoleSkills('Leader');
-    expect(result).toHaveLength(1);
-    expect(result[0]!.name).toBe('architecture');
-  });
-
-  it('getRoleSkills 对未知角色返回空数组', async () => {
-    const result = await getRoleSkills('Unknown');
-    expect(result).toEqual([]);
   });
 
   it('addSkillToRole 返回添加的 skill', async () => {

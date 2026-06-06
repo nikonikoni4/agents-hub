@@ -496,8 +496,8 @@ class GroupChat:
                 stopped_workers = [name for name, w in self.workers.items() if not w._run]
                 if stopped_workers:
                     content = (
-                        f"[Heartbeat] 以下 Worker 已因连续失败自动停止: {stopped_workers}。"
-                        "请评估是否需要重新分配任务或重启它们。"
+                        f"[Heartbeat] 以下成员已因连续执行失败自动停止: {', '.join(stopped_workers)}。"
+                        "当前没有自动重启机制，请通过 speak_in_group_chat 向 user 说明情况。"
                     )
                 else:
                     content = "[Heartbeat] 定时检查：请查看当前任务进度。"

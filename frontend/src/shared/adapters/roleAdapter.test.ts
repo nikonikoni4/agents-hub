@@ -14,7 +14,7 @@ describe('roleAdapter', () => {
   });
 
   describe('aggregateRoleWithSkills', () => {
-    it('should aggregate role info and skills', async () => {
+    it('should return role with embedded skills', async () => {
       const mockRole = {
         name: 'Designer',
         platform: 'claude' as const,
@@ -23,23 +23,21 @@ describe('roleAdapter', () => {
         type: 'team_member' as const,
         scope: null,
         description: '前端设计师',
+        skills: [{ id: 'skill-1', name: 'design', description: '设计技能' }],
       };
 
-      const mockSkills = [{ id: 'skill-1', name: 'design', description: '设计技能' }];
-
       vi.mocked(roleApi.getRoleInfo).mockResolvedValue(mockRole);
-      vi.mocked(roleApi.getRoleSkills).mockResolvedValue(mockSkills);
 
       const result = await aggregateRoleWithSkills('Designer');
 
-      expect(result).toEqual({ ...mockRole, skills: mockSkills });
+      expect(result).toEqual(mockRole);
+      expect(result.skills).toHaveLength(1);
       expect(roleApi.getRoleInfo).toHaveBeenCalledWith('Designer');
-      expect(roleApi.getRoleSkills).toHaveBeenCalledWith('Designer');
     });
   });
 
   describe('aggregateAllRolesWithSkills', () => {
-    it('should aggregate all roles with skills', async () => {
+    it('should return all roles with embedded skills', async () => {
       const mockRoles = [
         {
           name: 'Designer',
@@ -49,6 +47,7 @@ describe('roleAdapter', () => {
           type: 'team_member' as const,
           scope: null,
           description: 'A',
+          skills: [],
         },
         {
           name: 'Developer',
@@ -58,20 +57,18 @@ describe('roleAdapter', () => {
           type: 'team_member' as const,
           scope: null,
           description: 'B',
+          skills: [{ id: 'skill-1', name: 'code-review', description: '代码审查' }],
         },
       ];
 
       vi.mocked(roleApi.listRoles).mockResolvedValue(mockRoles);
-      vi.mocked(roleApi.getRoleInfo).mockImplementation((name) =>
-        Promise.resolve(mockRoles.find((r) => r.name === name)!)
-      );
-      vi.mocked(roleApi.getRoleSkills).mockResolvedValue([]);
 
       const result = await aggregateAllRolesWithSkills();
 
       expect(result).toHaveLength(2);
       expect(result[0]!.name).toBe('Designer');
       expect(result[0]!.skills).toEqual([]);
+      expect(result[1]!.skills).toHaveLength(1);
     });
   });
 });

@@ -11,7 +11,7 @@
  * - 通过 store 订阅 activeSessionId（不直接 import session feature）
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { getMessages } from '@/core/api/groupChatApi';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
@@ -29,6 +29,7 @@ export function useChatMessages() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
 
   // 从 store 中查找当前 session 的标题
   const activeTitle =
@@ -68,7 +69,8 @@ export function useChatMessages() {
 
   // 加载更多（向上滚动时调用）
   const loadMore = useCallback(async () => {
-    if (!activeSessionId || !hasMore || loadingMore || messages.length === 0) return;
+    if (!activeSessionId || !hasMore || loadingMoreRef.current || messages.length === 0) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const cursor = messages[0]?.timestamp;
@@ -82,9 +84,10 @@ export function useChatMessages() {
     } catch (err) {
       console.error('Failed to load more messages:', err);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [activeSessionId, hasMore, loadingMore, messages]);
+  }, [activeSessionId, hasMore, messages]);
 
   return {
     messages,

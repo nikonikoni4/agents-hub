@@ -57,6 +57,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const loadMoreCooldownRef = useRef(false);
 
   // @成员选择状态
   const [showMention, setShowMention] = useState(false);
@@ -71,10 +72,11 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   // 合并 API 消息和本地发送的消息
   const allMessages = [...messages, ...localMessages];
 
-  // 自动滚动到底部
+  // 自动滚动到底部（loadMore 期间跳过，避免级联加载和破坏滚动位置保持）
   useEffect(() => {
+    if (loadingMore) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [allMessages.length]);
+  }, [allMessages.length, loadingMore]);
 
   // 滚动到顶部时加载更多
   const handleScroll = useCallback(() => {

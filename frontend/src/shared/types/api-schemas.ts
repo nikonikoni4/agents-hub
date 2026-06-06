@@ -122,6 +122,8 @@ export interface RoleApiResponse {
   scope: string[] | null;
   /** 角色描述 */
   description: string | null;
+  /** 关联的 Skills */
+  skills: RoleSkillApiItem[];
 }
 
 /**

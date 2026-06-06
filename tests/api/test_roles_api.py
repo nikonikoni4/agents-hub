@@ -66,19 +66,25 @@ def mock_role_service():
 def test_list_roles_success(client, mock_role_service):
     """测试：成功列出角色"""
     mock_role_service.list_roles.return_value = [
-        RoleInfo(
-            name="role-1",
-            platform=AgentPlatform.CLAUDE,
-            avatar=None,
-            abilities=[],
-            type=RoleType.TEAM_MEMBER,
+        (
+            RoleInfo(
+                name="role-1",
+                platform=AgentPlatform.CLAUDE,
+                avatar=None,
+                abilities=[],
+                type=RoleType.TEAM_MEMBER,
+            ),
+            [],
         ),
-        RoleInfo(
-            name="role-2",
-            platform=AgentPlatform.CODEX,
-            avatar="avatar.png",
-            abilities=["coding"],
-            type=RoleType.LEADER,
+        (
+            RoleInfo(
+                name="role-2",
+                platform=AgentPlatform.CODEX,
+                avatar="avatar.png",
+                abilities=["coding"],
+                type=RoleType.LEADER,
+            ),
+            [SkillInfo(id="skill-1", name="Skill 1", description="Desc")],
         ),
     ]
 
@@ -88,11 +94,14 @@ def test_list_roles_success(client, mock_role_service):
     assert len(data) == 2
     assert data[0]["name"] == "role-1"
     assert data[0]["platform"] == "claude"
+    assert data[0]["skills"] == []
     assert data[1]["name"] == "role-2"
     assert data[1]["platform"] == "codex"
     assert data[1]["avatar"] == "avatar.png"
     assert data[1]["abilities"] == ["coding"]
     assert data[1]["type"] == "leader"
+    assert len(data[1]["skills"]) == 1
+    assert data[1]["skills"][0]["id"] == "skill-1"
 
 
 def test_list_roles_empty(client, mock_role_service):
@@ -107,12 +116,15 @@ def test_list_roles_empty(client, mock_role_service):
 
 def test_get_role_success(client, mock_role_service):
     """测试：成功获取角色"""
-    mock_role_service.get_role.return_value = RoleInfo(
-        name="test-role",
-        platform=AgentPlatform.CLAUDE,
-        avatar=None,
-        abilities=[],
-        type=RoleType.TEAM_MEMBER,
+    mock_role_service.get_role.return_value = (
+        RoleInfo(
+            name="test-role",
+            platform=AgentPlatform.CLAUDE,
+            avatar=None,
+            abilities=[],
+            type=RoleType.TEAM_MEMBER,
+        ),
+        [],
     )
 
     response = client.get("/api/v1/roles/test-role")
@@ -121,6 +133,7 @@ def test_get_role_success(client, mock_role_service):
     assert data["name"] == "test-role"
     assert data["platform"] == "claude"
     assert data["type"] == "team_member"
+    assert data["skills"] == []
 
 
 def test_get_role_not_found(client, mock_role_service):
@@ -199,12 +212,15 @@ def test_delete_role_not_found(client, mock_role_service):
 
 def test_update_role_success(client, mock_role_service):
     """测试：成功更新角色"""
-    mock_role_service.update_role.return_value = RoleInfo(
-        name="test-role",
-        platform=AgentPlatform.CLAUDE,
-        avatar="new-avatar.png",
-        abilities=["coding"],
-        type=RoleType.TEAM_MEMBER,
+    mock_role_service.update_role.return_value = (
+        RoleInfo(
+            name="test-role",
+            platform=AgentPlatform.CLAUDE,
+            avatar="new-avatar.png",
+            abilities=["coding"],
+            type=RoleType.TEAM_MEMBER,
+        ),
+        [],
     )
 
     response = client.patch(
@@ -227,37 +243,6 @@ def test_update_role_not_found(client, mock_role_service):
         "/api/v1/roles/nonexistent",
         json={"avatar": "new-avatar.png"},
     )
-    assert response.status_code == 404
-    data = response.json()
-    assert data["error_code"] == "ROLE_NOT_FOUND"
-
-
-# ========== GET /roles/{name}/skills ==========
-
-
-def test_list_role_skills_success(client, mock_role_service):
-    """测试：成功列出角色 skills"""
-    mock_role_service.list_role_skills.return_value = [
-        SkillInfo(id="skill-1", name="Skill 1", description="Description 1"),
-        SkillInfo(id="skill-2", name="Skill 2", description="Description 2"),
-    ]
-
-    response = client.get("/api/v1/roles/test-role/skills")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 2
-    assert data[0]["id"] == "skill-1"
-    assert data[0]["name"] == "Skill 1"
-    assert data[1]["id"] == "skill-2"
-
-
-def test_list_role_skills_role_not_found(client, mock_role_service):
-    """测试：列出不存在角色的 skills -> 404"""
-    mock_role_service.list_role_skills.side_effect = RoleNotFoundError(
-        role_name="nonexistent"
-    )
-
-    response = client.get("/api/v1/roles/nonexistent/skills")
     assert response.status_code == 404
     data = response.json()
     assert data["error_code"] == "ROLE_NOT_FOUND"

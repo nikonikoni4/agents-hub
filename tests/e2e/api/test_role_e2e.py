@@ -118,9 +118,11 @@ class TestRoleE2E:
         assert resp.status_code == 201, f"添加技能失败: {resp.text}"
 
     def test_10_get_leader_skills(self, api):
-        """GET /roles/e2e_leader/skills -> 200"""
-        resp = api.get("/roles/e2e_leader/skills")
+        """GET /roles/e2e_leader -> 200，验证 skills 字段存在"""
+        resp = api.get("/roles/e2e_leader")
         assert resp.status_code == 200
+        data = resp.json()
+        assert "skills" in data
 
     def test_11_remove_skill_from_leader(self, api):
         """DELETE /roles/e2e_leader/skills/deep-answer -> 200"""

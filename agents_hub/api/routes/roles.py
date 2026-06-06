@@ -27,7 +27,7 @@ def get_role_service() -> RoleService:
 def list_roles(service: RoleService = Depends(get_role_service)):
     """获取所有角色"""
     roles = service.list_roles()
-    return [RoleResponse.from_domain(r) for r in roles]
+    return [RoleResponse.from_domain(r, skills) for r, skills in roles]
 
 
 @router.get("/avatars", response_model=list[str])
@@ -47,15 +47,15 @@ def get_avatar_file(filename: str, service: RoleService = Depends(get_role_servi
 @router.get("/{name}", response_model=RoleResponse)
 def get_role(name: str, service: RoleService = Depends(get_role_service)):
     """获取单个角色"""
-    role = service.get_role(name)
-    return RoleResponse.from_domain(role)
+    role, skills = service.get_role(name)
+    return RoleResponse.from_domain(role, skills)
 
 
 @router.post("", response_model=RoleResponse, status_code=201)
 def create_role(request: RoleCreateRequest, service: RoleService = Depends(get_role_service)):
     """创建角色"""
     role = service.create_role(request)
-    return RoleResponse.from_domain(role)
+    return RoleResponse.from_domain(role, skills=[])
 
 
 @router.delete("/{name}", response_model=dict[str, str])
@@ -75,18 +75,11 @@ def update_role(
     service: RoleService = Depends(get_role_service),
 ):
     """更新角色信息"""
-    role = service.update_role(name, request)
-    return RoleResponse.from_domain(role)
+    role, skills = service.update_role(name, request)
+    return RoleResponse.from_domain(role, skills)
 
 
 # ========== 角色 Skill 管理 ==========
-
-
-@router.get("/{name}/skills", response_model=list[RoleSkillResponse])
-def list_role_skills(name: str, service: RoleService = Depends(get_role_service)):
-    """列出角色的 skills"""
-    skills = service.list_role_skills(name)
-    return [RoleSkillResponse.from_domain(s) for s in skills]
 
 
 @router.post("/{name}/skills", response_model=RoleSkillResponse, status_code=201)

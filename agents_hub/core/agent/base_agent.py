@@ -478,8 +478,9 @@ class Agent:
             send_from="__SYSTEM__",
             send_to=self.name,
             content=(
-                "系统提醒：你刚刚处理的是一个需要回复的 TASK 调用，但该调用尚未闭环。"
-                f"请调用 finish_agent_call，传入 call_id={msg.call_id}，"
+                f"系统提醒：你刚刚处理了来自 [{msg.send_from}] 的 TASK 调用（call_id={msg.call_id}），"
+                f"原始请求：{msg.content[:100]}{'...' if len(msg.content) > 100 else ''}。"
+                "该调用尚未闭环，请调用 finish_agent_call，传入对应的 call_id，"
                 "并用 content 说明任务完成、失败或无法继续的结果。"
             ),
             session_type=SessionType.MAIN,

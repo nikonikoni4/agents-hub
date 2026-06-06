@@ -38,6 +38,13 @@ const MOCK_ROLES: RoleApiResponse[] = [
     type: 'leader',
     scope: null,
     description: '团队领导者，负责任务分配和协调',
+    skills: [
+      {
+        id: 'skill-architecture',
+        name: 'architecture',
+        description: '系统架构分析和设计方案推荐',
+      },
+    ],
   },
   {
     name: 'Designer',
@@ -47,6 +54,13 @@ const MOCK_ROLES: RoleApiResponse[] = [
     type: 'team_member',
     scope: null,
     description: '设计师，负责界面和交互设计',
+    skills: [
+      {
+        id: 'skill-doc-generation',
+        name: 'doc-generation',
+        description: '根据代码自动生成技术文档和API说明',
+      },
+    ],
   },
   {
     name: 'Developer',
@@ -56,52 +70,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
     type: 'team_member',
     scope: null,
     description: '开发工程师，负责代码实现',
-  },
-  {
-    name: 'Tester',
-    platform: 'claude',
-    avatar: 'triangle-red.svg',
-    abilities: ['测试用例编写', '缺陷发现', '回归测试'],
-    type: 'team_member',
-    scope: null,
-    description: '测试工程师，负责质量保障',
-  },
-];
-
-const MOCK_NEW_ROLE: RoleApiResponse = {
-  name: 'New Role',
-  platform: 'claude',
-  avatar: null,
-  abilities: [],
-  type: 'team_member',
-  scope: null,
-  description: 'Newly created role',
-};
-
-const MOCK_ROLE_SKILLS = new Map<string, RoleSkillApiItem[]>([
-  [
-    'Leader',
-    [
-      {
-        id: 'skill-architecture',
-        name: 'architecture',
-        description: '系统架构分析和设计方案推荐',
-      },
-    ],
-  ],
-  [
-    'Designer',
-    [
-      {
-        id: 'skill-doc-generation',
-        name: 'doc-generation',
-        description: '根据代码自动生成技术文档和API说明',
-      },
-    ],
-  ],
-  [
-    'Developer',
-    [
+    skills: [
       {
         id: 'skill-code-review',
         name: 'code-review',
@@ -113,8 +82,29 @@ const MOCK_ROLE_SKILLS = new Map<string, RoleSkillApiItem[]>([
         description: '智能生成单元测试和集成测试用例',
       },
     ],
-  ],
-]);
+  },
+  {
+    name: 'Tester',
+    platform: 'claude',
+    avatar: 'triangle-red.svg',
+    abilities: ['测试用例编写', '缺陷发现', '回归测试'],
+    type: 'team_member',
+    scope: null,
+    description: '测试工程师，负责质量保障',
+    skills: [],
+  },
+];
+
+const MOCK_NEW_ROLE: RoleApiResponse = {
+  name: 'New Role',
+  platform: 'claude',
+  avatar: null,
+  abilities: [],
+  type: 'team_member',
+  scope: null,
+  description: 'Newly created role',
+  skills: [],
+};
 
 const MOCK_AVATARS: string[] = [
   'circle-blue.svg',
@@ -172,16 +162,6 @@ export async function deleteRole(name: string): Promise<DeleteResponse> {
   return mockableRequest(
     () => apiClient.delete<DeleteResponse>(`/roles/${name}`),
     MOCK_DELETE_RESPONSE
-  );
-}
-
-/**
- * 列出角色关联的 Skills
- */
-export async function getRoleSkills(name: string): Promise<RoleSkillApiItem[]> {
-  return mockableRequest(
-    () => apiClient.get<RoleSkillApiItem[]>(`/roles/${name}/skills`),
-    MOCK_ROLE_SKILLS.get(name) ?? []
   );
 }
 

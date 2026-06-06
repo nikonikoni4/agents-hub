@@ -1,29 +1,25 @@
 /**
- * 角色适配器 - 聚合角色和技能数据
+ * 角色适配器 - API 响应直接包含 skills，无需聚合
  */
 
-import { getRoleInfo, getRoleSkills, listRoles } from '@/core/api/roleApi';
-import type { RoleApiResponse, RoleSkillApiItem } from '@/shared/types/api-schemas';
+import { getRoleInfo, listRoles } from '@/core/api/roleApi';
+import type { RoleApiResponse } from '@/shared/types/api-schemas';
 
 /**
- * 聚合后的角色数据（包含技能列表）
+ * 聚合后的角色数据（API 已包含 skills，直接透传）
  */
-export interface RoleWithSkills extends RoleApiResponse {
-  skills: RoleSkillApiItem[];
-}
+export type RoleWithSkills = RoleApiResponse;
 
 /**
- * 聚合单个角色及其技能
+ * 获取单个角色（含 skills）
  */
 export async function aggregateRoleWithSkills(roleName: string): Promise<RoleWithSkills> {
-  const [role, skills] = await Promise.all([getRoleInfo(roleName), getRoleSkills(roleName)]);
-  return { ...role, skills };
+  return getRoleInfo(roleName);
 }
 
 /**
- * 聚合所有角色及其技能
+ * 获取所有角色（含 skills）
  */
 export async function aggregateAllRolesWithSkills(): Promise<RoleWithSkills[]> {
-  const roles = await listRoles();
-  return Promise.all(roles.map((role) => aggregateRoleWithSkills(role.name)));
+  return listRoles();
 }
