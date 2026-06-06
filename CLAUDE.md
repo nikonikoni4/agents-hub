@@ -16,6 +16,7 @@
 | **编码规则** | `docs/coding-rules/` | 编写代码时必须遵守的规范、约束、触发场景 |
 | **文档规则** | `docs/docs-rules/` | 编写 docs 时必须遵守的规范、约束、触发场景 |
 | **产品规格** | `docs/specs/` | 对于正式 `spec`,承载业务意图、业务规则、领域概念,以及规范性技术契约,是了解系统某个功能的重要文档 |
+| **使用指南** | `docs/guides/` | 面向用户的使用指南，说明如何配置和使用系统功能（如 Docker 沙箱） |
 | **架构决策** | `docs/design-decisions/` | 记录对于长期具有重要的作用的修改决定 |
 | **重要bug历史记录**  | `docs/history-bugs`      | 存放可复用的bug经验   |
 | **superpower文件夹** | `docs/superpowers/` | superpower 插件下skill专用的文件夹，包括`docs/superpower/specs` 和 `docs/superpower/plans` |
