@@ -1,4 +1,6 @@
 import { useMembers, MemberWithRole } from '@/features/chat/hooks';
+import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
+import { useSessionStore } from '@/features/session/store/sessionStore';
 import { AvatarImage, ResizeHandle } from '@/shared/components';
 import styles from './RightSidebar.module.css';
 
@@ -68,6 +70,8 @@ export function RightSidebar({
   onResizeEnd,
 }: RightSidebarProps) {
   const { members, loading } = useMembers();
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const { pinnedMessages, unpin } = usePinnedMessages(activeSessionId);
 
   return (
     <div
@@ -115,6 +119,34 @@ export function RightSidebar({
           Diff
         </div>
         <div className={styles.moduleItem}>无代码差异</div>
+      </div>
+
+      <div className={styles.rightModule}>
+        <div className={styles.moduleTitle}>
+          <span>📌</span>
+          <span>Pinned</span>
+        </div>
+        {pinnedMessages.length === 0 ? (
+          <div className={styles.emptyText}>暂无置顶消息</div>
+        ) : (
+          <div className={styles.pinnedList}>
+            {pinnedMessages.map((p) => (
+              <div key={`${p.speaker}:${p.timestamp}`} className={styles.pinnedItem}>
+                <div className={styles.pinnedContent}>
+                  <span className={styles.pinnedSpeaker}>{p.speaker}</span>
+                  <span className={styles.pinnedText}>{p.content}</span>
+                </div>
+                <button
+                  className={styles.pinnedRemove}
+                  onClick={() => unpin(p.speaker, p.timestamp)}
+                  title="取消置顶"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
