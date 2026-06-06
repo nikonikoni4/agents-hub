@@ -164,9 +164,9 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
         {loading && allMessages.length === 0 ? (
           <div className={styles.loadingText}>加载中...</div>
         ) : (
-          allMessages.map((msg, i) => (
+          allMessages.map((msg) => (
             <MessageBubble
-              key={i}
+              key={msg.timestamp}
               msg={msg}
               avatar={roleAvatarMap.get(msg.speaker)}
               pinned={isPinned(msg.speaker, msg.timestamp)}

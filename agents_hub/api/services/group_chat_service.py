@@ -42,6 +42,7 @@ from agents_hub.exceptions import (
     StateError,
     ValidationError,
 )
+from agents_hub.realtime import broadcast_group_chat_refresh
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_logger
 
@@ -459,6 +460,10 @@ class GroupChatService:
         )
         logger.debug("投递消息到 MessageRouter: call_id=%s, to=%s", call.call_id, send_to)
         await group_chat.send_message_to_agent(message)
+        try:
+            await broadcast_group_chat_refresh(group_chat_id)
+        except Exception:
+            logger.warning("广播刷新信号失败: group=%s", group_chat_id, exc_info=True)
         logger.info("消息已发送: group=%s, to=%s, call_id=%s", group_chat_id, send_to, call.call_id)
 
     @staticmethod

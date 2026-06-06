@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
+import { wsManager } from '@/core/websocket/WebSocketManager';
 import { getMessages } from '@/core/api/groupChatApi';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
 import type { MessageApiItem } from '@/shared/types';
@@ -77,6 +78,36 @@ export function useChatMessages() {
 
     return () => {
       cancelled = true;
+    };
+  }, [activeSessionId]);
+
+  // WebSocket refresh: 当前 session 收到新消息时，追加新消息（不覆盖已加载的历史）
+  useEffect(() => {
+    if (!activeSessionId) return;
+
+    const handleRefresh = (data?: unknown) => {
+      const signal = data as { group_chat_id?: string };
+      if (signal?.group_chat_id === activeSessionId) {
+        getMessages(activeSessionId, PAGE_SIZE, undefined)
+          .then((newestMessages) => {
+            setMessages((prev) => {
+              if (prev.length === 0) return newestMessages;
+              const existingKeys = new Set(prev.map((m) => `${m.speaker}:${m.timestamp}`));
+              const appended = newestMessages.filter(
+                (m) => !existingKeys.has(`${m.speaker}:${m.timestamp}`)
+              );
+              return appended.length > 0 ? [...prev, ...appended] : prev;
+            });
+          })
+          .catch((err) => {
+            console.error('Failed to refresh messages:', err);
+          });
+      }
+    };
+
+    wsManager.on('refresh', handleRefresh);
+    return () => {
+      wsManager.off('refresh', handleRefresh);
     };
   }, [activeSessionId]);
 

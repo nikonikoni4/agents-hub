@@ -65,6 +65,7 @@ from agents_hub.mcp.errors import (  # noqa: E402
     PERMISSION_DENIED,
     make_error_response,
 )
+from agents_hub.realtime import broadcast_group_chat_refresh  # noqa: E402
 from agents_hub.utils import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
@@ -473,6 +474,7 @@ async def speak_in_group_chat(agent_token: str, content: str, send_to: str | Non
         await group_chat.group_chat_context.add_message(
             _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)
         )
+        await broadcast_group_chat_refresh(group_chat_id)
         return {"ok": True}
 
     except Exception as e:
@@ -576,6 +578,7 @@ async def finish_agent_call(
                     content=render_for_chat(agent_name, call.send_from, safe_content),
                 )
             )
+            await broadcast_group_chat_refresh(group_chat_id)
         else:
             await _send_agent_call_completion_notification(
                 group_chat=group_chat,
