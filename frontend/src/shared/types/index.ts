@@ -4,6 +4,7 @@
 
 // API Schemas 类型（后端契约）
 export type {
+  AddMembersRequest,
   AgentPlatform,
   RoleType,
   GroupChatType,

@@ -336,3 +336,15 @@ export interface PinOperationResponse {
   /** 操作是否成功 */
   ok: boolean;
 }
+
+// ==================== 群成员管理相关 ====================
+
+/**
+ * 添加群成员请求
+ * 对应后端: AddMembersRequest schema
+ * POST /group-chats/{id}/members 请求体
+ */
+export interface AddMembersRequest {
+  /** 成员角色名列表 */
+  member_names: string[];
+}

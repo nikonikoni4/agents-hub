@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from agents_hub.api.schemas.group_chats import (
+    AddMembersRequest,
     GroupChatCreate,
     GroupChatInfo,
     GroupChatMember,
@@ -160,3 +161,35 @@ async def unpin_message(
     """取消置顶消息"""
     await service.unpin_message(group_chat_id, message_id)
     return PinOperationResponse()
+
+
+@router.post(
+    "/{group_chat_id}/members",
+    response_model=list[GroupChatMember],
+    responses={
+        404: {"description": "群聊不存在或角色不存在"},
+    },
+)
+async def add_group_chat_members(
+    group_chat_id: str,
+    request: AddMembersRequest,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """添加群成员"""
+    return await service.add_group_chat_members(group_chat_id, request.member_names)
+
+
+@router.delete(
+    "/{group_chat_id}/members/{member_name}",
+    response_model=list[GroupChatMember],
+    responses={
+        404: {"description": "群聊不存在"},
+    },
+)
+async def remove_group_chat_member(
+    group_chat_id: str,
+    member_name: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """删除群成员"""
+    return await service.remove_group_chat_member(group_chat_id, member_name)

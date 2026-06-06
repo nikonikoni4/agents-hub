@@ -6,6 +6,7 @@
 
 import apiClient, { mockableRequest } from './client';
 import type {
+  AddMembersRequest,
   GroupChatApiResponse,
   GroupChatInfoApiResponse,
   GroupChatMemberApiItem,
@@ -476,5 +477,35 @@ export async function unpinMessage(
         params: data,
       }),
     MOCK_PIN_OPERATION
+  );
+}
+
+/**
+ * 添加群成员
+ */
+export async function addGroupChatMembers(
+  chatId: string,
+  data: AddMembersRequest
+): Promise<GroupChatMemberApiItem[]> {
+  return mockableRequest(
+    () =>
+      apiClient.post<GroupChatMemberApiItem[]>(`/group-chats/${chatId}/members`, data),
+    []
+  );
+}
+
+/**
+ * 删除群成员
+ */
+export async function removeGroupChatMember(
+  chatId: string,
+  memberName: string
+): Promise<GroupChatMemberApiItem[]> {
+  return mockableRequest(
+    () =>
+      apiClient.delete<GroupChatMemberApiItem[]>(
+        `/group-chats/${chatId}/members/${memberName}`
+      ),
+    []
   );
 }

@@ -718,3 +718,88 @@ class GroupChatService:
             if len(new_pins) != len(pins):
                 await self._write_pins(pins_path, new_pins)
         await broadcast_group_chat_refresh(group_chat_id)
+
+    # ==================== Group Chat Members Methods ====================
+
+    async def add_group_chat_members(
+        self, group_chat_id: str, member_names: list[str]
+    ) -> list[GroupChatMember]:
+        """添加群成员
+
+        Args:
+            group_chat_id: 群聊 ID
+            member_names: 成员角色名列表
+
+        Returns:
+            list[GroupChatMember]: 更新后的成员列表
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在或角色不存在
+        """
+        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+
+        # 验证角色存在
+        role_manager = RoleManager()
+        for name in member_names:
+            role_manager.get_role(name)  # 不存在会抛出异常
+
+        # 添加到 team_members_name
+        for name in member_names:
+            if name not in group_chat.team_members_name:
+                group_chat.team_members_name.append(name)
+
+        # 重新初始化 agents
+        await group_chat._init_agents()
+
+        # 保存元数据
+        await group_chat.runtime.initialize_metadata(
+            group_chat_name=group_chat.group_chat_name,
+            group_type=group_chat.group_type,
+        )
+
+        # 广播刷新信号
+        try:
+            await broadcast_group_chat_refresh(group_chat_id)
+        except Exception:
+            logger.warning("广播刷新信号失败: group=%s", group_chat_id, exc_info=True)
+
+        return [GroupChatMember(**m) for m in group_chat.runtime.get_member_dicts()]
+
+    async def remove_group_chat_member(
+        self, group_chat_id: str, member_name: str
+    ) -> list[GroupChatMember]:
+        """删除群成员
+
+        Args:
+            group_chat_id: 群聊 ID
+            member_name: 成员角色名
+
+        Returns:
+            list[GroupChatMember]: 更新后的成员列表
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+
+        # 从 team_members_name 移除
+        if member_name in group_chat.team_members_name:
+            group_chat.team_members_name.remove(member_name)
+
+        # 重新初始化 agents
+        await group_chat._init_agents()
+
+        # 保存元数据
+        await group_chat.runtime.initialize_metadata(
+            group_chat_name=group_chat.group_chat_name,
+            group_type=group_chat.group_type,
+        )
+
+        # 广播刷新信号
+        try:
+            await broadcast_group_chat_refresh(group_chat_id)
+        except Exception:
+            logger.warning("广播刷新信号失败: group=%s", group_chat_id, exc_info=True)
+
+        return [GroupChatMember(**m) for m in group_chat.runtime.get_member_dicts()]
+

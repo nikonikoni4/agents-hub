@@ -97,3 +97,12 @@ class PinErrorResponse(BaseModel):
 
     error_code: str = Field(..., description="错误码")
     message: str = Field(..., description="人类可读的错误描述")
+
+
+# --- Group Chat Members Schemas ---
+
+
+class AddMembersRequest(BaseModel):
+    """添加群成员请求"""
+
+    member_names: list[str] = Field(..., min_length=1, description="成员角色名列表")

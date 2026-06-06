@@ -8,6 +8,7 @@ import {
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
+import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
 import { sendMessage, getMembers } from '@/core/api/groupChatApi';
 import type { MessageApiItem } from '@/shared/types';
 import { ChatInput } from './ChatInput';
@@ -79,6 +80,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   const { members } = useMembers();
   const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
+  const [showManageMembers, setShowManageMembers] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -150,7 +152,11 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
       <div className={styles.chatHeader}>
         <div className={styles.chatTitle}>{activeTitle ?? '会话'}</div>
         <div className={styles.chatActions}>
-          <button className={styles.iconBtn} aria-label="更多操作">
+          <button
+            className={styles.iconBtn}
+            onClick={() => setShowManageMembers(true)}
+            aria-label="管理群成员"
+          >
             <MoreVerticalIcon />
           </button>
           <button className={styles.iconBtn} onClick={onToggleRightSidebar} aria-label="切换右侧栏">
@@ -158,6 +164,13 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
           </button>
         </div>
       </div>
+
+      {/* 管理群成员弹窗 */}
+      <ManageMembersDialog
+        isOpen={showManageMembers}
+        chatId={activeSessionId}
+        onClose={() => setShowManageMembers(false)}
+      />
 
       {/* 消息区域 */}
       <div className={styles.chatMessages} ref={messagesContainerRef} onScroll={handleScroll}>
