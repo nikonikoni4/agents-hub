@@ -42,7 +42,6 @@ from agents_hub.exceptions import (
     StateError,
     ValidationError,
 )
-from agents_hub.realtime import broadcast_group_chat_refresh
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_logger
 
@@ -161,13 +160,7 @@ class GroupChatService:
         self.group_chat_manager.register(group_chat_id, group_chat)
         logger.info("群聊创建成功: id=%s, name=%s", group_chat_id, group_chat_name)
 
-        # 8. 广播刷新信号
-        try:
-            await broadcast_group_chat_refresh(group_chat_id)
-        except Exception:
-            logger.warning("广播刷新信号失败: group=%s", group_chat_id, exc_info=True)
-
-        # 9. 返回 GroupChatInfo
+        # 8. 返回 GroupChatInfo
         return await self._build_group_chat_info_from_instance(group_chat)
 
     async def load_group_chat(self, group_chat_id: str) -> GroupChatInfo:
@@ -466,10 +459,6 @@ class GroupChatService:
         )
         logger.debug("投递消息到 MessageRouter: call_id=%s, to=%s", call.call_id, send_to)
         await group_chat.send_message_to_agent(message)
-        try:
-            await broadcast_group_chat_refresh(group_chat_id)
-        except Exception:
-            logger.warning("广播刷新信号失败: group=%s", group_chat_id, exc_info=True)
         logger.info("消息已发送: group=%s, to=%s, call_id=%s", group_chat_id, send_to, call.call_id)
 
     @staticmethod
@@ -697,7 +686,6 @@ class GroupChatService:
                 }
             )
             await self._write_pins(pins_path, pins)
-        await broadcast_group_chat_refresh(group_chat_id)
 
     async def unpin_message(self, group_chat_id: str, message_id: int) -> None:
         """取消置顶。幂等：未 pin 则跳过。不要求消息存在于历史中。
@@ -717,7 +705,6 @@ class GroupChatService:
             new_pins = [p for p in pins if p.get("message_id") != message_id]
             if len(new_pins) != len(pins):
                 await self._write_pins(pins_path, new_pins)
-        await broadcast_group_chat_refresh(group_chat_id)
 
     # ==================== Group Chat Members Methods ====================
 
@@ -752,11 +739,5 @@ class GroupChatService:
             group_chat_name=group_chat.group_chat_name,
             group_type=group_chat.group_type,
         )
-
-        # 广播刷新信号
-        try:
-            await broadcast_group_chat_refresh(group_chat_id)
-        except Exception:
-            logger.warning("广播刷新信号失败: group=%s", group_chat_id, exc_info=True)
 
         return [GroupChatMember(**m) for m in group_chat.runtime.get_member_dicts()]

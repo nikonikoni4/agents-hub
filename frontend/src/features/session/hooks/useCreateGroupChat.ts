@@ -13,6 +13,7 @@ import { createGroupChat } from '@/core/api/groupChatApi';
 import { aggregateAllTeams } from '@/shared/adapters/teamAdapter';
 import type { RoleApiResponse } from '@/shared/types/api-schemas';
 import type { CreateGroupChatRequest } from '@/shared/types/api-requests';
+import { useSessionList } from './useSessionList';
 
 export interface TeamOption {
   name: string;
@@ -24,6 +25,7 @@ export function useCreateGroupChat() {
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const { refreshSessions } = useSessionList();
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +45,8 @@ export function useCreateGroupChat() {
     setSubmitting(true);
     try {
       const result = await createGroupChat(data);
+      // 创建成功后立即刷新群聊列表
+      await refreshSessions();
       return result.group_chat_id;
     } catch (err) {
       console.error('Failed to create group chat:', err);
@@ -50,7 +54,7 @@ export function useCreateGroupChat() {
     } finally {
       setSubmitting(false);
     }
-  }, []);
+  }, [refreshSessions]);
 
   const leaders = roles.filter((r) => r.type === 'leader');
   const workers = roles.filter((r) => r.type === 'team_member');
