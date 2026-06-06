@@ -3,25 +3,34 @@
  *
  * 职责：
  * - 获取可选角色列表（区分 Leader / Worker）
+ * - 获取团队列表（用于预选团队成员）
  * - 调用创建群聊 API
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { listRoles } from '@/core/api/roleApi';
 import { createGroupChat } from '@/core/api/groupChatApi';
+import { aggregateAllTeams } from '@/shared/adapters/teamAdapter';
 import type { RoleApiResponse } from '@/shared/types/api-schemas';
 import type { CreateGroupChatRequest } from '@/shared/types/api-requests';
 
+export interface TeamOption {
+  name: string;
+  members: string[];
+}
+
 export function useCreateGroupChat() {
   const [roles, setRoles] = useState<RoleApiResponse[]>([]);
+  const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    listRoles().then((data) => {
+    Promise.all([listRoles(), aggregateAllTeams()]).then(([roleData, teamData]) => {
       if (!cancelled) {
-        setRoles(data);
+        setRoles(roleData);
+        setTeams(teamData.map((t) => ({ name: t.name, members: t.members })));
         setLoading(false);
       }
     });
@@ -46,5 +55,5 @@ export function useCreateGroupChat() {
   const leaders = roles.filter((r) => r.type === 'leader');
   const workers = roles.filter((r) => r.type === 'team_member');
 
-  return { roles, leaders, workers, loading, submitting, createChat };
+  return { roles, leaders, workers, teams, loading, submitting, createChat };
 }

@@ -22,8 +22,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const [projectPath, setProjectPath] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 
-  const { leaders, workers, loading, submitting, createChat } = useCreateGroupChat();
+  const { leaders, workers, teams, loading, submitting, createChat } = useCreateGroupChat();
   const selectSession = useSessionStore((s) => s.selectSession);
 
   const handleClose = () => {
@@ -32,6 +33,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
     setSelectedLeader(null);
     setSelectedWorkers([]);
     setProjectPath('');
+    setSelectedTeam(null);
     onClose();
   };
 
@@ -39,6 +41,28 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
     setSelectedWorkers((prev) =>
       prev.includes(roleName) ? prev.filter((r) => r !== roleName) : [...prev, roleName]
     );
+  };
+
+  // 选择团队时自动选中该团队的成员
+  const handleSelectTeam = (teamName: string) => {
+    if (selectedTeam === teamName) {
+      // 取消选择团队
+      setSelectedTeam(null);
+      return;
+    }
+    setSelectedTeam(teamName);
+    const team = teams.find((t) => t.name === teamName);
+    if (!team) return;
+
+    // 从团队成员中找到匹配的 leader 和 workers
+    const teamMemberNames = new Set(team.members);
+    const matchedLeader = leaders.find((l) => teamMemberNames.has(l.name));
+    const matchedWorkers = workers.filter((w) => teamMemberNames.has(w.name)).map((w) => w.name);
+
+    if (matchedLeader) {
+      setSelectedLeader(matchedLeader.name);
+    }
+    setSelectedWorkers(matchedWorkers);
   };
 
   const handleBrowse = async () => {
@@ -118,6 +142,30 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                   placeholder="输入群组名称"
                 />
               </div>
+
+              {/* 团队预选 */}
+              {teams.length > 0 && (
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>快速选择团队（可选）</label>
+                  <div className={styles.roleList}>
+                    {teams.map((team) => (
+                      <button
+                        key={team.name}
+                        type="button"
+                        className={`${styles.roleChip} ${selectedTeam === team.name ? styles.selected : ''}`}
+                        onClick={() => handleSelectTeam(team.name)}
+                      >
+                        <span>👥</span>
+                        {team.name}
+                        <span className={styles.teamMemberCount}>{team.members.length}人</span>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedTeam && (
+                    <span className={styles.emptyHint}>已选择「{selectedTeam}」的成员，可在下方调整</span>
+                  )}
+                </div>
+              )}
 
               {/* Leader 选择 */}
               <div className={styles.field}>
