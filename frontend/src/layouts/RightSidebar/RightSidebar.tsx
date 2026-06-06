@@ -131,14 +131,14 @@ export function RightSidebar({
         ) : (
           <div className={styles.pinnedList}>
             {pinnedMessages.map((p) => (
-              <div key={`${p.speaker}:${p.timestamp}`} className={styles.pinnedItem}>
+              <div key={p.message_id} className={styles.pinnedItem}>
                 <div className={styles.pinnedContent}>
                   <span className={styles.pinnedSpeaker}>{p.speaker}</span>
                   <span className={styles.pinnedText}>{p.content}</span>
                 </div>
                 <button
                   className={styles.pinnedRemove}
-                  onClick={() => unpin(p.speaker, p.timestamp)}
+                  onClick={() => unpin(p.message_id)}
                   title="取消置顶"
                 >
                   ×

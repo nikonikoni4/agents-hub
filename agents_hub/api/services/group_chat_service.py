@@ -646,13 +646,12 @@ class GroupChatService:
             pins = await self._read_pins(pins_path)
         return sorted(pins, key=lambda p: p.get("pinned_at", ""))
 
-    async def pin_message(self, group_chat_id: str, speaker: str, timestamp: str) -> None:
+    async def pin_message(self, group_chat_id: str, message_id: int) -> None:
         """置顶一条消息。幂等：已 pin 则跳过。422：消息不存在。
 
         Args:
             group_chat_id: 群聊 ID
-            speaker: 发送者名称
-            timestamp: 消息时间戳
+            message_id: 消息 id
 
         Raises:
             ResourceNotFoundError: 群聊不存在
@@ -663,13 +662,13 @@ class GroupChatService:
         messages = group_chat.runtime.get_message_dicts()
         target = None
         for msg in messages:
-            if msg.get("agent_name") == speaker and msg.get("timestamp") == timestamp:
+            if msg.get("id") == message_id:
                 target = msg
                 break
         if target is None:
             raise MessageNotFoundError(
-                f"Message not found: speaker={speaker}, timestamp={timestamp}",
-                details={"speaker": speaker, "timestamp": timestamp},
+                f"Message not found: message_id={message_id}",
+                details={"message_id": message_id},
             )
         # 读取现有 pins
         pins_path = self._get_pins_path(group_chat_id)
@@ -678,27 +677,27 @@ class GroupChatService:
             pins = await self._read_pins(pins_path)
             # 幂等检查：已存在则跳过
             for p in pins:
-                if p["speaker"] == speaker and p["timestamp"] == timestamp:
+                if p.get("message_id") == message_id:
                     return
             # 保存快照
             pins.append(
                 {
-                    "speaker": target.get("agent_name", speaker),
+                    "message_id": message_id,
+                    "speaker": target.get("speaker", ""),
                     "content": target.get("content", ""),
-                    "timestamp": target.get("timestamp", timestamp),
+                    "timestamp": target.get("timestamp", ""),
                     "platform": target.get("platform", ""),
                     "pinned_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
             await self._write_pins(pins_path, pins)
 
-    async def unpin_message(self, group_chat_id: str, speaker: str, timestamp: str) -> None:
+    async def unpin_message(self, group_chat_id: str, message_id: int) -> None:
         """取消置顶。幂等：未 pin 则跳过。不要求消息存在于历史中。
 
         Args:
             group_chat_id: 群聊 ID
-            speaker: 发送者名称
-            timestamp: 消息时间戳
+            message_id: 消息 id
 
         Raises:
             ResourceNotFoundError: 群聊不存在
@@ -708,8 +707,6 @@ class GroupChatService:
         lock = self._get_pins_lock(group_chat_id)
         async with lock:
             pins = await self._read_pins(pins_path)
-            new_pins = [
-                p for p in pins if not (p["speaker"] == speaker and p["timestamp"] == timestamp)
-            ]
+            new_pins = [p for p in pins if p.get("message_id") != message_id]
             if len(new_pins) != len(pins):
                 await self._write_pins(pins_path, new_pins)

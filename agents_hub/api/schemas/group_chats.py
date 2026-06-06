@@ -59,6 +59,7 @@ class MessageCreate(BaseModel):
 class MessageInfo(BaseModel):
     """消息信息"""
 
+    id: int = Field(..., description="消息自增 id")
     speaker: str = Field(..., description="发送者名称（agent 角色名或 'user'）")
     content: str = Field(..., description="消息内容")
     timestamp: str = Field(..., description="时间戳")
@@ -71,13 +72,13 @@ class MessageInfo(BaseModel):
 class PinMessageRequest(BaseModel):
     """POST /pinned-messages 请求体"""
 
-    speaker: str = Field(..., min_length=1, description="消息发送者名称")
-    timestamp: str = Field(..., description="消息时间戳（ISO 8601）")
+    message_id: int = Field(..., description="消息 id")
 
 
 class PinnedMessageInfo(BaseModel):
     """GET /pinned-messages 响应列表项"""
 
+    message_id: int = Field(..., description="消息 id")
     speaker: str = Field(..., description="消息发送者名称")
     content: str = Field(..., description="消息完整内容（快照）")
     timestamp: str = Field(..., description="消息原始时间戳")

@@ -114,6 +114,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
 
       // 乐观更新：立即显示用户消息
       const optimisticMsg: MessageApiItem = {
+        id: 0, // 临时 id，实际 id 由后端分配
         speaker: 'user',
         content: text,
         timestamp: new Date().toISOString(),
@@ -166,12 +167,12 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
         ) : (
           allMessages.map((msg) => (
             <MessageBubble
-              key={msg.timestamp}
+              key={msg.id}
               msg={msg}
               avatar={roleAvatarMap.get(msg.speaker)}
-              pinned={isPinned(msg.speaker, msg.timestamp)}
-              onPin={() => pin(msg.speaker, msg.timestamp)}
-              onUnpin={() => unpin(msg.speaker, msg.timestamp)}
+              pinned={isPinned(msg.id)}
+              onPin={() => pin(msg.id)}
+              onUnpin={() => unpin(msg.id)}
             />
           ))
         )}

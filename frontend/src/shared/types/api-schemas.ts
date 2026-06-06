@@ -70,6 +70,8 @@ export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed';
  * 对应后端: MessageInfo schema
  */
 export interface MessageApiItem {
+  /** 消息自增 id */
+  id: number;
   /** 发送者名称（agent 角色名或 'user'） */
   speaker: string;
   /** 消息内容 */
@@ -301,6 +303,8 @@ export interface LastViewRecord {
  * GET /pinned-messages 响应列表项
  */
 export interface PinnedMessageInfo {
+  /** 消息 id */
+  message_id: number;
   /** 发送者名称（agent 角色名或 'user'） */
   speaker: string;
   /** 消息内容 */
@@ -319,10 +323,8 @@ export interface PinnedMessageInfo {
  * POST /pinned-messages 请求体
  */
 export interface PinMessageRequest {
-  /** 发送者名称（agent 角色名或 'user'） */
-  speaker: string;
-  /** 消息时间戳（ISO 8601 格式） */
-  timestamp: string;
+  /** 消息 id */
+  message_id: number;
 }
 
 /**

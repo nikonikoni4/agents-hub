@@ -64,10 +64,10 @@ export function usePinnedMessages(chatId: string | null) {
 
   // 置顶消息
   const pin = useCallback(
-    async (speaker: string, timestamp: string) => {
+    async (messageId: number) => {
       if (!chatId) return;
       try {
-        await pinMessage(chatId, { speaker, timestamp });
+        await pinMessage(chatId, { message_id: messageId });
         await refresh();
       } catch (err) {
         console.error('Failed to pin message:', err);
@@ -79,10 +79,10 @@ export function usePinnedMessages(chatId: string | null) {
 
   // 取消置顶
   const unpin = useCallback(
-    async (speaker: string, timestamp: string) => {
+    async (messageId: number) => {
       if (!chatId) return;
       try {
-        await unpinMessage(chatId, { speaker, timestamp });
+        await unpinMessage(chatId, { message_id: messageId });
         await refresh();
       } catch (err) {
         console.error('Failed to unpin message:', err);
@@ -94,13 +94,13 @@ export function usePinnedMessages(chatId: string | null) {
 
   // 构建置顶消息查找集合
   const pinnedSet = useMemo(() => {
-    return new Set(pinnedMessages.map((p) => `${p.speaker}:${p.timestamp}`));
+    return new Set(pinnedMessages.map((p) => p.message_id));
   }, [pinnedMessages]);
 
   // 判断消息是否已置顶
   const isPinned = useCallback(
-    (speaker: string, timestamp: string) => {
-      return pinnedSet.has(`${speaker}:${timestamp}`);
+    (messageId: number) => {
+      return pinnedSet.has(messageId);
     },
     [pinnedSet]
   );

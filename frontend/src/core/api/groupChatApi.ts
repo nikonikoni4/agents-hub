@@ -135,18 +135,21 @@ const MOCK_GROUP_CHAT_INFOS: GroupChatInfoApiResponse[] = [
 const MOCK_MESSAGES_BY_CHAT: Record<string, MessageApiItem[]> = {
   'mock-chat-001': [
     {
+      id: 1,
       speaker: 'user',
       content: '我们需要开发一个新的用户仪表板页面，包含数据可视化组件。',
       timestamp: '2026-06-03T10:00:00Z',
       platform: 'user',
     },
     {
+      id: 2,
       speaker: 'Leader',
       content: '好的，我来负责前端组件开发。建议使用 Recharts 库来实现图表功能。',
       timestamp: '2026-06-03T10:00:05Z',
       platform: 'claude',
     },
     {
+      id: 3,
       speaker: 'Developer',
       content: '我可以处理后端 API 接口，提供用户统计数据。',
       timestamp: '2026-06-03T10:00:12Z',
@@ -155,24 +158,28 @@ const MOCK_MESSAGES_BY_CHAT: Record<string, MessageApiItem[]> = {
   ],
   'mock-chat-002': [
     {
+      id: 1,
       speaker: 'user',
       content: '请帮我设计用户认证系统的 API 接口。',
       timestamp: '2026-06-02T15:30:00Z',
       platform: 'user',
     },
     {
+      id: 2,
       speaker: 'Leader',
       content: '我建议采用 JWT + Refresh Token 的方案，access token 设置 15 分钟过期。',
       timestamp: '2026-06-02T15:30:05Z',
       platform: 'claude',
     },
     {
+      id: 3,
       speaker: 'user',
       content: '好的，请输出完整的 API 文档。',
       timestamp: '2026-06-02T15:31:00Z',
       platform: 'user',
     },
     {
+      id: 4,
       speaker: 'Leader',
       content: 'API 文档已更新，包含登录、注册、刷新 token、登出四个端点。',
       timestamp: '2026-06-02T16:45:00Z',
@@ -181,12 +188,14 @@ const MOCK_MESSAGES_BY_CHAT: Record<string, MessageApiItem[]> = {
   ],
   'mock-chat-003': [
     {
+      id: 1,
       speaker: 'user',
       content: '请检查认证模块的安全性问题。',
       timestamp: '2026-06-01T09:15:00Z',
       platform: 'user',
     },
     {
+      id: 2,
       speaker: 'Leader',
       content:
         '已发现几个安全问题：1. 密码验证过于简单 2. JWT token 过期时间过长 3. refresh token 存储在 localStorage',
@@ -194,6 +203,7 @@ const MOCK_MESSAGES_BY_CHAT: Record<string, MessageApiItem[]> = {
       platform: 'claude',
     },
     {
+      id: 3,
       speaker: 'Designer',
       content: '建议使用 httpOnly cookie 存储 refresh token，并添加 CSRF 保护。',
       timestamp: '2026-06-01T09:15:20Z',
@@ -205,12 +215,14 @@ const MOCK_MESSAGES_BY_CHAT: Record<string, MessageApiItem[]> = {
 // 默认 mock 消息（用于未匹配的 chatId）
 const MOCK_MESSAGES_DEFAULT: MessageApiItem[] = [
   {
+    id: 1,
     speaker: 'user',
     content: '开始新会话。',
     timestamp: '2026-06-03T10:00:00Z',
     platform: 'user',
   },
   {
+    id: 2,
     speaker: 'Leader',
     content: '收到，准备就绪。',
     timestamp: '2026-06-03T10:00:05Z',

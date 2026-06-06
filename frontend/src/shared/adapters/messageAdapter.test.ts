@@ -10,6 +10,7 @@ import {
 import type { MessageApiItem, AgentMessageApiItem } from '@/shared/types/api-schemas';
 
 const mockMessage: MessageApiItem = {
+  id: 1,
   speaker: 'user',
   content: 'Hello',
   timestamp: '2026-06-03T10:00:00Z',

@@ -141,7 +141,7 @@ async def pin_message(
     service: GroupChatService = Depends(get_group_chat_service),
 ):
     """置顶指定消息"""
-    await service.pin_message(group_chat_id, body.speaker, body.timestamp)
+    await service.pin_message(group_chat_id, body.message_id)
     return PinOperationResponse()
 
 
@@ -154,10 +154,9 @@ async def pin_message(
 )
 async def unpin_message(
     group_chat_id: str,
-    speaker: str = Query(..., min_length=1),
-    timestamp: str = Query(...),
+    message_id: int = Query(..., description="消息 id"),
     service: GroupChatService = Depends(get_group_chat_service),
 ):
     """取消置顶消息"""
-    await service.unpin_message(group_chat_id, speaker, timestamp)
+    await service.unpin_message(group_chat_id, message_id)
     return PinOperationResponse()
