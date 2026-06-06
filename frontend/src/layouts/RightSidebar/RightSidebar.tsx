@@ -59,7 +59,14 @@ function MemberItem({ member }: { member: MemberWithRole }) {
   );
 }
 
-export function RightSidebar({ collapsed, width, onResize, resizing, onResizeStart, onResizeEnd }: RightSidebarProps) {
+export function RightSidebar({
+  collapsed,
+  width,
+  onResize,
+  resizing,
+  onResizeStart,
+  onResizeEnd,
+}: RightSidebarProps) {
   const { members, loading } = useMembers();
 
   return (

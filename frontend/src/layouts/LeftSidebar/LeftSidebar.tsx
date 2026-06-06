@@ -14,7 +14,16 @@ export interface LeftSidebarProps {
   onViewModeChange?: (mode: 'chat' | 'role' | 'skill') => void;
 }
 
-export function LeftSidebar({ collapsed, width, onResize, resizing, onResizeStart, onResizeEnd, viewMode, onViewModeChange }: LeftSidebarProps) {
+export function LeftSidebar({
+  collapsed,
+  width,
+  onResize,
+  resizing,
+  onResizeStart,
+  onResizeEnd,
+  viewMode,
+  onViewModeChange,
+}: LeftSidebarProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   return (
