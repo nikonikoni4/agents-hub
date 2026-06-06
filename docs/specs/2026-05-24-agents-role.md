@@ -1,8 +1,8 @@
 ---
-version: 1.5
+version: 1.6
 created_at: 2026-05-24
-updated_at: 2026-06-03
-last_updated: 新增 Roles API 层规格（路由、Schemas、Service），覆盖角色 CRUD、Skill 管理和头像查询的 HTTP 接口契约
+updated_at: 2026-06-06
+last_updated: 修正 PATCH /{name} 端点说明，明确 name 为路径参数不在 request body 中，RoleUpdateRequest 仅含 avatar/abilities/description
 abstract: roles 角色配置模块的正式规格，定义角色生命周期管理、配置数据结构、头像引用机制、Skill 管理和 HTTP API 契约
 id: spec-roles
 title: Roles 角色配置模块规格
@@ -34,6 +34,7 @@ contract_refs:
 | 1.3 | 新增角色名称互为前缀冲突校验规则，避免 @mention 歧义 |
 | 1.4 | role.json 不再保存 skills；Skill 以 work_root/skills 为启用状态；创建角色自动初始化固定 agents-hub MCP；权限和原生配置编辑暂不落地 |
 | 1.5 | 新增 Roles API 层规格：路由端点、Request/Response Schemas、Service 层契约 |
+| 1.6 | 修正 PATCH /{name} 端点说明：name 为路径参数不在 body 中，仅支持更新 avatar/abilities/description |
 
 ---
 
@@ -250,7 +251,7 @@ route → service → manager
 | GET | `/roles` | 列出所有角色 | 200 |
 | GET | `/roles/{name}` | 获取单个角色 | 200 |
 | POST | `/roles` | 创建角色 | 201 |
-| PATCH | `/roles/{name}` | 更新角色信息 | 200 |
+| PATCH | `/roles/{name}` | 更新角色信息（`name` 为路径参数，不在 request body 中；仅支持更新 avatar、abilities、description） | 200 |
 | DELETE | `/roles/{name}` | 删除角色 | 200 |
 
 **头像查询**
