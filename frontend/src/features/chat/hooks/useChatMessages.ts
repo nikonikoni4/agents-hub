@@ -17,6 +17,7 @@ import { getMessages } from '@/core/api/groupChatApi';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
 import type { MessageApiItem } from '@/shared/types';
 
+// 与后端 API 默认 limit 保持一致 (routes/group_chat.py)
 const PAGE_SIZE = 30;
 
 export function useChatMessages() {

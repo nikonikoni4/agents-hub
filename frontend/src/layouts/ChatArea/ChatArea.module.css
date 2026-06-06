@@ -116,15 +116,15 @@
 
 /* 用户气泡内的 Markdown 代码块适配深色文字 */
 .bubbleUser pre {
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--bg-bubble);
 }
 
 .bubbleUser :not(pre) > code {
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--bg-shadow);
 }
 
 .bubbleUser a {
-  color: #fff;
+  color: var(--accent-color);
   text-decoration: underline;
 }
 

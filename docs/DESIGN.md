@@ -275,7 +275,7 @@ flex-direction: column;
 ```
 
 **分区**：
-1. **头部** (chat-header, 56px)
+1. **头部** (chat-header, 44px)
    - 对话标题
    - 操作按钮
 

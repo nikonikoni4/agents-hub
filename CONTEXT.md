@@ -304,9 +304,9 @@
 
 ```
 local_data/
+├── avatars/                       # 头像文件统一存放
+│   └── *.png/jpg/gif/webp
 ├── agents/                        # Agent 工作目录
-│   ├── assets/                    # 头像文件统一存放
-│   │   └── *.png/jpg/gif/webp
 │   └── <role_name>/               # 角色目录
 │       ├── role.json              # 角色配置（SSOT）
 │       └── work_root/             # 工作目录
