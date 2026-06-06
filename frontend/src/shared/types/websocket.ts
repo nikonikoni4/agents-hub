@@ -37,7 +37,7 @@ export enum WebSocketState {
 /**
  * WebSocket 事件回调类型
  */
-export type WebSocketEventCallback = (data?: any) => void;
+export type WebSocketEventCallback = (data?: unknown) => void;
 
 // ==================== WebSocket 消息格式 ====================
 
@@ -46,6 +46,6 @@ export type WebSocketEventCallback = (data?: any) => void;
  */
 export interface WebSocketMessage {
   event: string;
-  data: any;
+  data: unknown;
   timestamp: string;
 }

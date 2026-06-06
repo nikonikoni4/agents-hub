@@ -53,7 +53,7 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
     if (activeSessionId) {
       setViewMode('chat');
     }
-  }, [lastSelectedAt]);
+  }, [activeSessionId, lastSelectedAt]);
 
   const handleToggleLeftSidebar = useCallback(() => {
     setLeftSidebarCollapsed((prev) => !prev);

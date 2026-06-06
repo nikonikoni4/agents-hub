@@ -137,7 +137,7 @@ export interface ErrorResponse {
   error_code: string;
   message: string;
   type: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 /**
