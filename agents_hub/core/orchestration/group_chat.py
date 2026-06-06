@@ -279,7 +279,7 @@ class GroupChat:
             prompt = f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己"
         else:
             other_members = [name for name in self.team_members_name if name != agent.name]
-            manager_name = self.manager.name if self.manager else "manager"
+            manager_name = self.manager.name if self.manager else config.default_manager_name
             prompt = f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{manager_name},你使用一句话简单介绍一下自己"
 
         result = await agent.execute(prompt)
