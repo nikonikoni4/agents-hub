@@ -7,6 +7,7 @@ import {
 } from '@/shared/components';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
+import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { sendMessage, getMembers } from '@/core/api/groupChatApi';
 import type { MessageApiItem } from '@/shared/types';
 import { ChatInput } from './ChatInput';
@@ -17,7 +18,19 @@ export interface ChatAreaProps {
 }
 
 const MessageBubble = React.memo(
-  ({ msg, avatar }: { msg: MessageApiItem; avatar?: string | null }) => {
+  ({
+    msg,
+    avatar,
+    pinned,
+    onPin,
+    onUnpin,
+  }: {
+    msg: MessageApiItem;
+    avatar?: string | null;
+    pinned: boolean;
+    onPin: () => void;
+    onUnpin: () => void;
+  }) => {
     const isUser = msg.speaker === 'user';
 
     return (
@@ -37,6 +50,15 @@ const MessageBubble = React.memo(
         >
           <MarkdownRenderer content={msg.content} />
         </div>
+        <div className={`${styles.messageActions} ${isUser ? styles.actionsRight : ''}`}>
+          <button
+            className={`${styles.pinButton} ${pinned ? styles.pinButtonActive : ''}`}
+            onClick={pinned ? onUnpin : onPin}
+            title={pinned ? '取消置顶' : '置顶消息'}
+          >
+            📌
+          </button>
+        </div>
       </div>
     );
   }
@@ -55,6 +77,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
     loadMoreWithRestore,
   } = useChatMessages();
   const { members } = useMembers();
+  const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -141,11 +164,14 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
         {loading && allMessages.length === 0 ? (
           <div className={styles.loadingText}>加载中...</div>
         ) : (
-          allMessages.map((msg) => (
+          allMessages.map((msg, i) => (
             <MessageBubble
-              key={msg.timestamp}
+              key={i}
               msg={msg}
-              avatar={msg.speaker !== 'user' ? roleAvatarMap.get(msg.speaker) : undefined}
+              avatar={roleAvatarMap.get(msg.speaker)}
+              pinned={isPinned(msg.speaker, msg.timestamp)}
+              onPin={() => pin(msg.speaker, msg.timestamp)}
+              onUnpin={() => unpin(msg.speaker, msg.timestamp)}
             />
           ))
         )}

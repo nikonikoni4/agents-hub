@@ -227,3 +227,42 @@
 .mentionItem:hover {
   background: var(--bg-hover);
 }
+
+.messageActions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  margin-top: 2px;
+}
+
+.actionsRight {
+  justify-content: flex-end;
+}
+
+/* hover 气泡时显示操作栏 */
+.message:hover .messageActions {
+  opacity: 1;
+}
+
+.pinButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.5;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+
+.pinButton:hover {
+  opacity: 1;
+  background: var(--bg-hover);
+}
+
+.pinButtonActive {
+  opacity: 1;
+}
