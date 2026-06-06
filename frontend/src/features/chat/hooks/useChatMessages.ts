@@ -85,7 +85,9 @@ export function useChatMessages() {
       console.error('Failed to load more messages:', err);
     } finally {
       loadingMoreRef.current = false;
-      setLoadingMore(false);
+      // 注意：不在这里 setLoadingMore(false)
+      // 由调用方（ChatArea handleScroll）在滚动位置恢复后再重置，
+      // 避免 setMessages 和 setLoadingMore(false) 同批处理导致自动滚动到底部
     }
   }, [activeSessionId, hasMore, messages]);
 
@@ -97,6 +99,7 @@ export function useChatMessages() {
     roleAvatarMap,
     hasMore,
     loadingMore,
+    setLoadingMore,
     loadMore,
   };
 }

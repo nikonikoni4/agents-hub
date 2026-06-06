@@ -94,6 +94,12 @@
  - 触发规则：当设计、修改或扩展前端 core 层的 WebSocket 管理器、API 客户端、IndexedDB 存储或主题管理器时阅读
  - 内容摘要：前端核心层规格，定义 WebSocket 连接策略（指数退避重连、消息队列、事件订阅）、REST API 客户端职责（拦截器、统一错误处理、Mock 支持）、Storage 的 IndexedDB 用途（last_view_at 持久化）、Theme 的 CSS 变量注入方式和所有 API 函数分组（groupChat/role/skill/team）
 
+## agent-prompt-system
+ - updated_at : 2026-06-06
+ - path: `docs/specs/2026-06-06-agent-prompt-system.md`
+ - 触发规则：当设计、修改或扩展 Agent 提示词系统时阅读，包括 Runtime 注入、工具使用说明注入、消息渲染、Heartbeat 和 Task 闭环提醒
+ - 内容摘要：Agent 提示词系统规格，定义发送给 Agent 的所有提示词来源、注入机制、渲染规则和平台标识
+
 ## frontend-features
  - updated_at : 2026-06-06
  - path: `docs/specs/2026-06-06-frontend-features.md`

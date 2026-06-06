@@ -365,10 +365,12 @@ class Agent:
                     "注意：不要在任务结束时使用此工具，任务结束应使用 finish_agent_call",
                     "",
                     "#### 6. finish_agent_call - 完成任务调用",
-                    "结束一个需要回复的 TASK 调用。",
-                    "使用场景：任务完成、任务失败、无法继续",
+                    "当你完成任务分派或做出决策后，立即调用此工具闭环。",
                     "参数：call_id（AgentCall ID）、content（完成说明）、success（是否成功）",
-                    "重要：此消息会显示在群聊中，并激活你所发送的那个 agent",
+                    "重要：",
+                    "- 安排完任务后即可闭环，无需等待 Worker 执行结果。Worker 完成后会通过新的 AgentCall 重新激活你。",
+                    "- 如果你在上一次输出时忘记调用，需要立即补一个 finish_agent_call。",
+                    "- 忘记闭环会导致系统判定你连续出错而自动停止。",
                     "",
                 ]
             )
@@ -387,10 +389,12 @@ class Agent:
                     "注意：不要在任务结束时使用此工具，任务结束应使用 finish_agent_call",
                     "",
                     "#### 2. finish_agent_call - 完成任务调用",
-                    "结束一个需要回复的 TASK 调用。",
-                    "使用场景：任务完成、任务失败、无法继续",
+                    "完成实际工作后调用此工具闭环。",
                     "参数：call_id（AgentCall ID）、content（完成说明）、success（是否成功）",
-                    "重要：此消息会显示在群聊中，并激活你所发送的那个 agent",
+                    "重要：",
+                    "- 必须在完成实际工作后才能调用，不要提前闭环。",
+                    "- 如果你在上一次输出时忘记调用，需要立即补一个 finish_agent_call。",
+                    "- 忘记闭环会导致系统判定你连续出错而自动停止。",
                     "",
                 ]
             )
@@ -473,16 +477,24 @@ class Agent:
 
     def _enqueue_finish_agent_call_reminder(self, msg: AgentMessage):
         """提醒 Agent 使用 finish_agent_call 显式闭环当前任务调用。"""
+        from agents_hub.config.types import RoleType
+
+        base_content = (
+            f"系统提醒：你刚刚处理了来自 [{msg.send_from}] 的 TASK 调用（call_id={msg.call_id}），"
+            f"原始请求：{msg.content[:100]}{'...' if len(msg.content) > 100 else ''}。"
+            "该调用尚未闭环，请调用 finish_agent_call，传入对应的 call_id，"
+            "并用 content 说明任务完成、失败或无法继续的结果。"
+        )
+        if self.role_type == RoleType.LEADER:
+            base_content += (
+                " 你可以在安排完任务后立即闭环，无需等待 Worker 执行结果。"
+                "如果忘记调用，请立即补一个。连续未闭环会被系统自动停止。"
+            )
         reminder = AgentMessage(
             call_id=msg.call_id,
             send_from="__SYSTEM__",
             send_to=self.name,
-            content=(
-                f"系统提醒：你刚刚处理了来自 [{msg.send_from}] 的 TASK 调用（call_id={msg.call_id}），"
-                f"原始请求：{msg.content[:100]}{'...' if len(msg.content) > 100 else ''}。"
-                "该调用尚未闭环，请调用 finish_agent_call，传入对应的 call_id，"
-                "并用 content 说明任务完成、失败或无法继续的结果。"
-            ),
+            content=base_content,
             session_type=SessionType.MAIN,
             message_type=MessageType.TASK,
         )

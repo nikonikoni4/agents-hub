@@ -38,6 +38,9 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(220);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(220);
+  const [isResizing, setIsResizing] = useState(false);
 
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const lastSelectedAt = useSessionStore((s) => s.lastSelectedAt);
@@ -61,19 +64,44 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
     setViewMode(mode);
   }, []);
 
+  const handleLeftResize = useCallback((delta: number) => {
+    setLeftSidebarWidth((prev) => Math.min(400, Math.max(160, prev + delta)));
+  }, []);
+
+  const handleRightResize = useCallback((delta: number) => {
+    setRightSidebarWidth((prev) => Math.min(400, Math.max(160, prev + delta)));
+  }, []);
+
+  const handleResizeStart = useCallback(() => setIsResizing(true), []);
+  const handleResizeEnd = useCallback(() => setIsResizing(false), []);
+
   return (
     <div className={styles.mainLayout}>
       <TopBar onToggleSidebar={handleToggleLeftSidebar} />
       <div className={styles.mainContainer}>
         <LeftSidebar
           collapsed={leftSidebarCollapsed}
+          width={leftSidebarWidth}
+          onResize={handleLeftResize}
+          resizing={isResizing}
+          onResizeStart={handleResizeStart}
+          onResizeEnd={handleResizeEnd}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
         />
         {viewMode === 'chat' && <ChatArea onToggleRightSidebar={handleToggleRightSidebar} />}
         {viewMode === 'role' && <RoleManagement />}
         {viewMode === 'skill' && <SkillSquare />}
-        {viewMode === 'chat' && <RightSidebar collapsed={rightSidebarCollapsed} />}
+        {viewMode === 'chat' && (
+          <RightSidebar
+            collapsed={rightSidebarCollapsed}
+            width={rightSidebarWidth}
+            onResize={handleRightResize}
+            resizing={isResizing}
+            onResizeStart={handleResizeStart}
+            onResizeEnd={handleResizeEnd}
+          />
+        )}
       </div>
 
       {/* 主题切换按钮 */}

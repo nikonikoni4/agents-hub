@@ -1,19 +1,38 @@
 import { useState } from 'react';
-import { PlusIcon, UsersIcon, ZapIcon, SettingsIcon } from '@/shared/components';
+import { PlusIcon, UsersIcon, ZapIcon, SettingsIcon, ResizeHandle } from '@/shared/components';
 import { SessionList, CreateGroupChatDialog } from '@/features/session';
 import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
   collapsed: boolean;
+  width?: number;
+  onResize?: (delta: number) => void;
+  resizing?: boolean;
+  onResizeStart?: () => void;
+  onResizeEnd?: () => void;
   viewMode?: 'chat' | 'role' | 'skill';
   onViewModeChange?: (mode: 'chat' | 'role' | 'skill') => void;
 }
 
-export function LeftSidebar({ collapsed, viewMode, onViewModeChange }: LeftSidebarProps) {
+export function LeftSidebar({ collapsed, width, onResize, resizing, onResizeStart, onResizeEnd, viewMode, onViewModeChange }: LeftSidebarProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   return (
-    <div className={`${styles.leftSidebar} ${collapsed ? styles.collapsed : ''}`}>
+    <div
+      className={`${styles.leftSidebar} ${collapsed ? styles.collapsed : ''}`}
+      style={{
+        ...(width !== undefined ? { width: `${width}px` } : {}),
+        ...(resizing ? { transition: 'none' } : {}),
+      }}
+    >
+      {!collapsed && onResize && (
+        <ResizeHandle
+          direction="left"
+          onResize={onResize}
+          onResizeStart={onResizeStart}
+          onResizeEnd={onResizeEnd}
+        />
+      )}
       {/* 按钮区 */}
       <div className={styles.sidebarButtons}>
         <button

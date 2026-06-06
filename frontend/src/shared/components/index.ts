@@ -4,5 +4,6 @@ export * from './CompositeAvatar';
 export * from './Icon';
 export * from './Input';
 export * from './MarkdownRenderer';
+export * from './ResizeHandle';
 export * from './SkillSelectorModal';
 export * from './Toast';

@@ -1,9 +1,14 @@
 import { useMembers, MemberWithRole } from '@/features/chat/hooks';
-import { AvatarImage } from '@/shared/components';
+import { AvatarImage, ResizeHandle } from '@/shared/components';
 import styles from './RightSidebar.module.css';
 
 export interface RightSidebarProps {
   collapsed: boolean;
+  width?: number;
+  onResize?: (delta: number) => void;
+  resizing?: boolean;
+  onResizeStart?: () => void;
+  onResizeEnd?: () => void;
 }
 
 // SVG 图标组件
@@ -54,11 +59,25 @@ function MemberItem({ member }: { member: MemberWithRole }) {
   );
 }
 
-export function RightSidebar({ collapsed }: RightSidebarProps) {
+export function RightSidebar({ collapsed, width, onResize, resizing, onResizeStart, onResizeEnd }: RightSidebarProps) {
   const { members, loading } = useMembers();
 
   return (
-    <div className={`${styles.rightSidebar} ${collapsed ? styles.collapsed : ''}`}>
+    <div
+      className={`${styles.rightSidebar} ${collapsed ? styles.collapsed : ''}`}
+      style={{
+        ...(width !== undefined ? { width: `${width}px` } : {}),
+        ...(resizing ? { transition: 'none' } : {}),
+      }}
+    >
+      {!collapsed && onResize && (
+        <ResizeHandle
+          direction="right"
+          onResize={onResize}
+          onResizeStart={onResizeStart}
+          onResizeEnd={onResizeEnd}
+        />
+      )}
       <div className={styles.rightModule}>
         <div className={styles.moduleTitle}>
           <UsersIcon />

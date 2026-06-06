@@ -6,6 +6,7 @@
   flex-direction: column;
   transition: width 0.3s ease;
   overflow: hidden;
+  position: relative;
 }
 
 .leftSidebar.collapsed {

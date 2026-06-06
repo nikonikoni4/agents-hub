@@ -209,7 +209,7 @@ class TestRenderer:
         assert result == "<t>\nline1\nline2\n</t>"
 
     def test_render_for_llm_format(self):
-        """契约：render_for_llm 输出 <incoming_message> 包裹的格式"""
+        """契约：render_for_llm 输出 <incoming_message> 包裹的格式，含平台标识"""
         msg = AgentMessage(
             call_id="c1",
             content="hello",
@@ -217,11 +217,12 @@ class TestRenderer:
             send_to="agent_b",
         )
         result = render_for_llm(msg)
-        assert "<incoming_message>" in result
-        assert "</incoming_message>" in result
-        assert "[agent_a]" in result
-        assert "[agent_b(你)]" in result
-        assert "hello" in result
+        assert result.startswith("<incoming_message>")
+        assert result.endswith("</incoming_message>")
+        assert "[Agents Hub 平台消息]" in result
+        assert "来自：agent_a" in result
+        assert "发送给：agent_b（你）" in result
+        assert "内容：hello" in result
 
     def test_render_for_chat_format(self):
         """契约：render_for_chat 输出 @send_to content"""
