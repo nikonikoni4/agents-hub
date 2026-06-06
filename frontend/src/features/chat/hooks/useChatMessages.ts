@@ -68,16 +68,22 @@ export function useChatMessages() {
     };
   }, [activeSessionId]);
 
-  // WebSocket refresh: 当前 session 收到新消息时重新拉取
+  // WebSocket refresh: 当前 session 收到新消息时，追加新消息（不覆盖已加载的历史）
   useEffect(() => {
     if (!activeSessionId) return;
 
     const handleRefresh = (signal?: { group_chat_id: string }) => {
       if (signal?.group_chat_id === activeSessionId) {
         getMessages(activeSessionId, PAGE_SIZE, undefined)
-          .then((msgData) => {
-            setMessages(msgData);
-            setHasMore(msgData.length >= PAGE_SIZE);
+          .then((newestMessages) => {
+            setMessages((prev) => {
+              if (prev.length === 0) return newestMessages;
+              const existingKeys = new Set(prev.map((m) => `${m.speaker}:${m.timestamp}`));
+              const appended = newestMessages.filter(
+                (m) => !existingKeys.has(`${m.speaker}:${m.timestamp}`)
+              );
+              return appended.length > 0 ? [...prev, ...appended] : prev;
+            });
           })
           .catch((err) => {
             console.error('Failed to refresh messages:', err);

@@ -1,10 +1,7 @@
 import { useEffect } from 'react';
 import { wsManager } from '@/core/websocket/WebSocketManager';
-import { useSessionStore } from '@/features/session/store/sessionStore';
 
-export function useWebSocketConnection() {
-  const activeSessionId = useSessionStore((s) => s.activeSessionId);
-
+export function useWebSocketConnection(activeSessionId: string | null) {
   useEffect(() => {
     if (!activeSessionId) {
       wsManager.disconnect();
