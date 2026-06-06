@@ -167,7 +167,7 @@ class RoleManager:
         Returns:
             头像文件名列表，如果目录不存在或为空则返回空列表。
         """
-        assets_dir = self.agents_dir.parent / "avatars"
+        assets_dir = config.data_path / "avatars"
         if not assets_dir.exists():
             return []
 

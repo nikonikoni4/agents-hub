@@ -87,7 +87,9 @@ class RoleService:
 
     def get_avatar_file_path(self, filename: str) -> Path:
         """获取头像文件的绝对路径，做安全校验"""
-        assets_dir = self.role_manager.agents_dir.parent / "avatars"
+        from agents_hub.config import config
+
+        assets_dir = config.data_path / "avatars"
         file_path = (assets_dir / filename).resolve()
         if not file_path.is_relative_to(assets_dir.resolve()):
             raise ValidationError(
