@@ -100,15 +100,11 @@ async def agents_hub_error_handler(request: Request, exc: AgentsHubError) -> JSO
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """兜底：捕获所有未处理异常，防止内部信息泄露"""
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
-    # 开发环境下返回详细错误信息
-    import os
-
-    is_dev = os.getenv("ENV", "development") == "development"
     return JSONResponse(
         status_code=500,
         content={
             "error_code": "INTERNAL_ERROR",
-            "message": str(exc) if is_dev else "服务器内部错误",
+            "message": "服务器内部错误",
             "type": "InternalError",
         },
     )

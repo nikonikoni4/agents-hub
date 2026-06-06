@@ -233,6 +233,5 @@ local_data
 docker-experiment/
 worktrees
 .codex
-.husky
 prompts
 *.png
