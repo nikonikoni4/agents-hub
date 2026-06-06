@@ -12,6 +12,7 @@ GroupChatService 业务编排层
 import asyncio
 import json
 import shutil
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -55,6 +56,7 @@ class GroupChatService:
     """
 
     _pins_locks: dict[str, asyncio.Lock] = {}  # 按 group_chat_id 隔离的锁
+    _locks_creation_lock = threading.Lock()  # 保护 _pins_locks 字典操作的线程锁
 
     def __init__(self, group_chat_manager: GroupChatManager):
         """
@@ -586,18 +588,26 @@ class GroupChatService:
         return base_dir / "pins.json"
 
     def _get_pins_lock(self, group_chat_id: str) -> asyncio.Lock:
-        """获取按 group_chat_id 隔离的 asyncio.Lock"""
+        """获取按 group_chat_id 隔离的 asyncio.Lock（双重检查锁确保线程安全）"""
         if group_chat_id not in self._pins_locks:
-            self._pins_locks[group_chat_id] = asyncio.Lock()
+            with self._locks_creation_lock:
+                if group_chat_id not in self._pins_locks:
+                    self._pins_locks[group_chat_id] = asyncio.Lock()
         return self._pins_locks[group_chat_id]
 
     async def _read_pins(self, pins_path: Path) -> list[dict]:
-        """从 pins.json 读取 pin 列表，文件不存在返回空列表"""
+        """从 pins.json 读取 pin 列表，文件不存在或损坏返回空列表"""
         if not pins_path.exists():
             return []
-        async with aiofiles.open(pins_path, encoding="utf-8") as f:
-            content = await f.read()
-            return json.loads(content) if content.strip() else []
+        try:
+            async with aiofiles.open(pins_path, encoding="utf-8") as f:
+                content = await f.read()
+                if not content.strip():
+                    return []
+                return json.loads(content)
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            logger.warning(f"Failed to read pins.json for path {pins_path}: {e}")
+            return []
 
     async def _write_pins(self, pins_path: Path, pins: list[dict]) -> None:
         """将 pin 列表写入 pins.json"""
@@ -641,7 +651,7 @@ class GroupChatService:
         messages = group_chat.runtime.get_message_dicts()
         target = None
         for msg in messages:
-            if msg.get("speaker") == speaker and msg.get("timestamp") == timestamp:
+            if msg.get("agent_name") == speaker and msg.get("timestamp") == timestamp:
                 target = msg
                 break
         if target is None:
@@ -661,7 +671,7 @@ class GroupChatService:
             # 保存快照
             pins.append(
                 {
-                    "speaker": target.get("speaker", speaker),
+                    "speaker": target.get("agent_name", speaker),
                     "content": target.get("content", ""),
                     "timestamp": target.get("timestamp", timestamp),
                     "platform": target.get("platform", ""),
