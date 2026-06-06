@@ -584,7 +584,14 @@ class GroupChatService:
                 details={"group_chat_id": group_chat_id},
             )
         # 群聊基础目录 = runtime 的 repository group_chat_session_path
-        base_dir = Path(group_chat.runtime.repository.group_chat_session_path)
+        session_path = Path(group_chat.runtime.repository.group_chat_session_path)
+        # 验证路径：如果不是目录，使用 config.data_path 作为备用
+        if not session_path.is_dir():
+            from agents_hub.config import config
+
+            base_dir = config.data_path / "group_chats" / group_chat_id
+        else:
+            base_dir = session_path
         return base_dir / "pins.json"
 
     def _get_pins_lock(self, group_chat_id: str) -> asyncio.Lock:

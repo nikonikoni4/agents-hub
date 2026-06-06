@@ -112,7 +112,13 @@ async def toggle_use_docker(
     return await service.toggle_use_docker(group_chat_id, role_name, request.use_docker)
 
 
-@router.get("/{group_chat_id}/pinned-messages", response_model=list[PinnedMessageInfo])
+@router.get(
+    "/{group_chat_id}/pinned-messages",
+    response_model=list[PinnedMessageInfo],
+    responses={
+        404: {"description": "群聊不存在"},
+    },
+)
 async def get_pinned_messages(
     group_chat_id: str,
     service: GroupChatService = Depends(get_group_chat_service),
@@ -121,7 +127,14 @@ async def get_pinned_messages(
     return await service.get_pinned_messages(group_chat_id)
 
 
-@router.post("/{group_chat_id}/pinned-messages", response_model=PinOperationResponse)
+@router.post(
+    "/{group_chat_id}/pinned-messages",
+    response_model=PinOperationResponse,
+    responses={
+        404: {"description": "群聊不存在"},
+        422: {"description": "消息不存在"},
+    },
+)
 async def pin_message(
     group_chat_id: str,
     body: PinMessageRequest,
@@ -132,7 +145,13 @@ async def pin_message(
     return PinOperationResponse()
 
 
-@router.delete("/{group_chat_id}/pinned-messages", response_model=PinOperationResponse)
+@router.delete(
+    "/{group_chat_id}/pinned-messages",
+    response_model=PinOperationResponse,
+    responses={
+        404: {"description": "群聊不存在"},
+    },
+)
 async def unpin_message(
     group_chat_id: str,
     speaker: str = Query(..., min_length=1),
