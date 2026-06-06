@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
+import { wsManager } from '@/core/websocket/WebSocketManager';
 import { getMessages } from '@/core/api/groupChatApi';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
 import type { MessageApiItem } from '@/shared/types';
@@ -64,6 +65,29 @@ export function useChatMessages() {
 
     return () => {
       cancelled = true;
+    };
+  }, [activeSessionId]);
+
+  // WebSocket refresh: 当前 session 收到新消息时重新拉取
+  useEffect(() => {
+    if (!activeSessionId) return;
+
+    const handleRefresh = (signal?: { group_chat_id: string }) => {
+      if (signal?.group_chat_id === activeSessionId) {
+        getMessages(activeSessionId, PAGE_SIZE, undefined)
+          .then((msgData) => {
+            setMessages(msgData);
+            setHasMore(msgData.length >= PAGE_SIZE);
+          })
+          .catch((err) => {
+            console.error('Failed to refresh messages:', err);
+          });
+      }
+    };
+
+    wsManager.on('refresh', handleRefresh);
+    return () => {
+      wsManager.off('refresh', handleRefresh);
     };
   }, [activeSessionId]);
 

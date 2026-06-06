@@ -14,6 +14,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useSessionStore } from '../store/sessionStore';
+import { wsManager } from '@/core/websocket/WebSocketManager';
 import { storage } from '@/core/storage';
 import { listGroupChatInfos, getMembers } from '@/core/api';
 import { groupSessionsByProject } from '@/shared/adapters/sessionAdapter';
@@ -59,6 +60,17 @@ export function useSessionList() {
 
   useEffect(() => {
     refreshSessions();
+  }, [refreshSessions]);
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      refreshSessions();
+    };
+
+    wsManager.on('refresh', handleRefresh);
+    return () => {
+      wsManager.off('refresh', handleRefresh);
+    };
   }, [refreshSessions]);
 
   return { projectGroups, refreshSessions };

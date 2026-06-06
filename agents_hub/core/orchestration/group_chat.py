@@ -24,6 +24,7 @@ from agents_hub.core.foundation import (
     StateError,
 )
 from agents_hub.core.foundation.token import generate_token
+from agents_hub.realtime import broadcast_group_chat_refresh
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_logger
 
@@ -323,6 +324,7 @@ class GroupChat:
             role_type=role_type,
         )
         await self.group_chat_context.add_message(sender_result)
+        await broadcast_group_chat_refresh(self.group_chat_id)
 
     def _find_agent(self, agent_name: str):
         """查找 agent 实例（manager 或 worker）"""
