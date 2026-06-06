@@ -8,6 +8,9 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatMember,
     MessageCreate,
     MessageInfo,
+    PinMessageRequest,
+    PinnedMessageInfo,
+    PinOperationResponse,
     UseDockerUpdate,
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
@@ -107,3 +110,35 @@ async def toggle_use_docker(
 ):
     """切换指定成员的 Docker 沙箱开关"""
     return await service.toggle_use_docker(group_chat_id, role_name, request.use_docker)
+
+
+@router.get("/{group_chat_id}/pinned-messages", response_model=list[PinnedMessageInfo])
+async def get_pinned_messages(
+    group_chat_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取群聊中的置顶消息列表"""
+    return await service.get_pinned_messages(group_chat_id)
+
+
+@router.post("/{group_chat_id}/pinned-messages", response_model=PinOperationResponse)
+async def pin_message(
+    group_chat_id: str,
+    body: PinMessageRequest,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """置顶指定消息"""
+    await service.pin_message(group_chat_id, body.speaker, body.timestamp)
+    return PinOperationResponse()
+
+
+@router.delete("/{group_chat_id}/pinned-messages", response_model=PinOperationResponse)
+async def unpin_message(
+    group_chat_id: str,
+    speaker: str = Query(..., min_length=1),
+    timestamp: str = Query(...),
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """取消置顶消息"""
+    await service.unpin_message(group_chat_id, speaker, timestamp)
+    return PinOperationResponse()
