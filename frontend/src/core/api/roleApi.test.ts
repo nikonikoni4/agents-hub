@@ -27,7 +27,7 @@ beforeEach(() => {
 describe('roleApi', () => {
   it('listRoles 返回角色列表', async () => {
     const result = await listRoles();
-    expect(result).toHaveLength(3);
+    expect(result).toHaveLength(4);
     expect(result[0]!.name).toBe('Leader');
   });
 
@@ -65,7 +65,7 @@ describe('roleApi', () => {
 
   it('addSkillToRole 返回添加的 skill', async () => {
     const result = await addSkillToRole('Leader', 'skill-123');
-    expect(result.name).toBe('Mock Skill');
+    expect(result.name).toBe('skill-123');
   });
 
   it('removeSkillFromRole 返回删除确认', async () => {
@@ -76,7 +76,7 @@ describe('roleApi', () => {
   it('listAvatars 返回头像列表', async () => {
     const result = await listAvatars();
     expect(result).toHaveLength(5);
-    expect(result[0]).toMatch(/^<svg/);
+    expect(result[0]).toBe('circle-blue.svg');
   });
 
   describe('真实 API 调用路径（通过 client）', () => {

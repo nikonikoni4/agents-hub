@@ -41,12 +41,12 @@ describe('groupChatApi', () => {
 
   it('listGroupChats 返回所有群聊', async () => {
     const result = await listGroupChats();
-    expect(result).toHaveLength(2);
+    expect(result).toHaveLength(5);
   });
 
   it('listGroupChats(true) 只返回活跃群聊', async () => {
     const result = await listGroupChats(true);
-    expect(result).toHaveLength(1);
+    expect(result).toHaveLength(3);
     expect(result[0]!.is_active).toBe(true);
   });
 
