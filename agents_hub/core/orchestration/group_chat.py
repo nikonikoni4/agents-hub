@@ -357,6 +357,22 @@ class GroupChat:
 
         await self.group_chat_context.compact_messages(agent_info)
 
+    def list_agent_state(self) -> dict[str, bool]:
+        """获取所有 agent 的处理状态
+
+        Returns:
+            字典，key 为 agent 名称，value 为是否正在处理消息
+        """
+        result = {}
+
+        if self.manager:
+            result[self.manager.name] = self.manager.is_processing
+
+        for name, worker in self.workers.items():
+            result[name] = worker.is_processing
+
+        return result
+
     async def send_message_to_agent(self, message: AgentMessage):
         """
         发送消息到目标 Agent 并保存到群聊历史

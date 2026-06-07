@@ -58,6 +58,7 @@ class AgentBridge:
         config: RoleConfig,
         session_id: str | None = None,
         cwd: str | None = None,
+        fork_from: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """
         流式执行 Agent 调用
@@ -67,6 +68,7 @@ class AgentBridge:
             config: 角色配置
             session_id: 会话 ID（可选，用于恢复之前的会话）
             cwd: 项目目录路径（可选，设置 CLI 工作目录）
+            fork_from: 源会话 ID（可选，用于从群聊 fork 会话到单聊）
 
         Yields:
             StreamEvent: 统一格式的流式事件
@@ -88,7 +90,7 @@ class AgentBridge:
         parser = self._parsers[config.platform]
 
         try:
-            raw_stream = executor.execute(prompt, config, session_id, cwd)
+            raw_stream = executor.execute(prompt, config, session_id, cwd, fork_from=fork_from)
             async for raw_line in raw_stream:
                 if raw_line.strip():
                     try:

@@ -17,6 +17,8 @@ class DockerClaudeExecutor(DockerExecutor):
         prompt: str,
         config: RoleConfig,
         session_id: str | None,
+        *,
+        fork_from: str | None = None,
     ) -> list[str]:
         """构建 Claude CLI 命令（强制跳过权限检查）"""
         cmd = [
@@ -32,7 +34,9 @@ class DockerClaudeExecutor(DockerExecutor):
         if config.bare:
             cmd.append("--bare")
 
-        if session_id:
+        if fork_from:
+            cmd.extend(["--fork-session", "--resume", fork_from])
+        elif session_id:
             cmd.extend(["--resume", session_id])
 
         cmd.append(prompt)

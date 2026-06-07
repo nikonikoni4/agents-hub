@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Permission Request - Preview</title>
+  <style>
+    /* ========== Theme Variables ========== */
+    :root {
+      --bg-sidebar: #f7f7f8;
+      --bg-shadow: rgb(240, 240, 240);
+      --bg-main: #fcfcfc;
+      --bg-bubble: rgb(248, 248, 248);
+      --bg-input: rgb(255, 255, 255);
+      --bg-hover: rgb(238, 238, 238);
+      --text-primary: rgb(30, 30, 30);
+      --text-secondary: #666666;
+      --text-tertiary: rgb(150, 150, 150);
+      --border-color: rgb(220, 220, 220);
+      --accent-color: #8ba5bf;
+      --bg-selected: rgb(232, 232, 232);
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+      --radius-2xl: 16px;
+      --spacing-1: 4px;
+      --spacing-2: 8px;
+      --spacing-3: 12px;
+      --spacing-4: 16px;
+      --spacing-6: 24px;
+      --spacing-8: 32px;
+      /* Permission-specific */
+      --perm-accent: #8ba5bf;
+      --perm-accent-subtle: rgba(139, 165, 191, 0.1);
+      --perm-accent-hover: rgba(139, 165, 191, 0.18);
+      --perm-reject-bg: transparent;
+      --perm-reject-hover: rgba(0, 0, 0, 0.04);
+      --perm-reject-border: var(--border-color);
+    }
+
+    html[data-theme='dark'] {
+      --bg-sidebar: rgb(20, 20, 20);
+      --bg-shadow: rgb(38, 38, 38);
+      --bg-main: rgb(24, 24, 24);
+      --bg-bubble: rgb(20, 20, 20);
+      --bg-input: rgb(45, 45, 45);
+      --bg-hover: rgb(38, 38, 38);
+      --text-primary: rgb(230, 230, 230);
+      --text-secondary: rgb(180, 180, 180);
+      --text-tertiary: rgb(120, 120, 120);
+      --border-color: rgb(60, 60, 60);
+      --accent-color: #96b0cc;
+      --bg-selected: rgb(40, 40, 40);
+      --perm-accent: #96b0cc;
+      --perm-accent-subtle: rgba(150, 176, 204, 0.08);
+      --perm-accent-hover: rgba(150, 176, 204, 0.15);
+      --perm-reject-hover: rgba(255, 255, 255, 0.05);
+      --perm-reject-border: rgb(70, 70, 70);
+    }
+
+    /* ========== Reset & Base ========== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg-sidebar);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ========== Preview Container ========== */
+    .preview-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .preview-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 12px;
+    }
+
+    /* ========== Permission Card ========== */
+    .permission-card {
+      background: var(--bg-bubble);
+      border: 1px solid var(--border-color);
+      border-left: 3px solid var(--perm-accent);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-4) var(--spacing-4) var(--spacing-3);
+      animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .permission-card:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    html[data-theme='dark'] .permission-card:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* --- Header Row --- */
+    .perm-header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--spacing-3);
+      margin-bottom: var(--spacing-3);
+    }
+
+    .perm-icon {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      background: var(--perm-accent-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--perm-accent);
+      transition: background 0.2s;
+    }
+
+    .permission-card:hover .perm-icon {
+      background: var(--perm-accent-hover);
+    }
+
+    .perm-icon svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .perm-title-group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .perm-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.4;
+      margin-bottom: 2px;
+    }
+
+    .perm-time {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      letter-spacing: 0.01em;
+    }
+
+    /* --- Body --- */
+    .perm-body {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-4);
+      padding-left: 44px; /* align with title after icon */
+    }
+
+    /* --- Actions --- */
+    .perm-actions {
+      display: flex;
+      gap: var(--spacing-2);
+      justify-content: flex-end;
+      padding-left: 44px;
+    }
+
+    .perm-btn {
+      height: 30px;
+      padding: 0 var(--spacing-4);
+      border-radius: var(--radius-md);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-1);
+      user-select: none;
+      outline: none;
+    }
+
+    .perm-btn:focus-visible {
+      box-shadow: 0 0 0 2px var(--perm-accent);
+    }
+
+    /* Reject */
+    .perm-btn-reject {
+      background: var(--perm-reject-bg);
+      border-color: var(--perm-reject-border);
+      color: var(--text-secondary);
+    }
+
+    .perm-btn-reject:hover {
+      background: var(--perm-reject-hover);
+      color: var(--text-primary);
+    }
+
+    /* Approve */
+    .perm-btn-approve {
+      background: var(--perm-accent);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .perm-btn-approve:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    }
+
+    html[data-theme='dark'] .perm-btn-approve:hover {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .perm-btn svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* --- States --- */
+    .permission-card.resolved {
+      opacity: 0.55;
+      pointer-events: none;
+      border-left-color: var(--text-tertiary);
+    }
+
+    .permission-card.resolved .perm-icon {
+      background: var(--bg-shadow);
+      color: var(--text-tertiary);
+    }
+
+    .perm-resolved-label {
+      display: none;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      padding-left: 44px;
+      margin-top: var(--spacing-2);
+    }
+
+    .permission-card.resolved .perm-resolved-label {
+      display: block;
+    }
+
+    .permission-card.resolved .perm-actions {
+      display: none;
+    }
+
+    /* --- Animation --- */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .permission-card:nth-child(2) { animation-delay: 0.08s; }
+    .permission-card:nth-child(3) { animation-delay: 0.16s; }
+
+    /* ========== Theme Toggle ========== */
+    .theme-toggle {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-bubble);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      z-index: 100;
+    }
+
+    .theme-toggle:hover {
+      background: var(--bg-shadow);
+      color: var(--text-primary);
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ========== Scrollbar ========== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="preview-container">
+    <!-- Label -->
+    <div>
+      <div class="preview-label">Permission Request - Pending</div>
+      <div class="permission-card" id="card1">
+        <div class="perm-header">
+          <div class="perm-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="perm-title-group">
+            <div class="perm-title">文件系统读取权限</div>
+            <div class="perm-time">2026-06-08 14:32</div>
+          </div>
+        </div>
+        <div class="perm-body">
+          AI 请求读取项目目录 <code style="background:var(--perm-accent-subtle);padding:1px 5px;border-radius:3px;font-size:12px;">~/projects/agents-hub</code> 下的文件，用于分析代码结构并生成架构文档。
+        </div>
+        <div class="perm-actions">
+          <button class="perm-btn perm-btn-reject" onclick="resolveCard('card1', 'rejected')">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            拒绝
+          </button>
+          <button class="perm-btn perm-btn-approve" onclick="resolveCard('card1', 'approved')">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            允许
+          </button>
+        </div>
+        <div class="perm-resolved-label" id="label1"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="preview-label">Permission Request - Pending (Minimal)</div>
+      <div class="permission-card" id="card2">
+        <div class="perm-header">
+          <div class="perm-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div class="perm-title-group">
+            <div class="perm-title">执行终端命令</div>
+            <div class="perm-time">2026-06-08 14:35</div>
+          </div>
+        </div>
+        <div class="perm-body">
+          AI 需要执行 <code style="background:var(--perm-accent-subtle);padding:1px 5px;border-radius:3px;font-size:12px;">npm run build</code> 来验证构建是否成功。
+        </div>
+        <div class="perm-actions">
+          <button class="perm-btn perm-btn-reject" onclick="resolveCard('card2', 'rejected')">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            拒绝
+          </button>
+          <button class="perm-btn perm-btn-approve" onclick="resolveCard('card2', 'approved')">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            允许
+          </button>
+        </div>
+        <div class="perm-resolved-label" id="label2"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="preview-label">Permission Request - Resolved</div>
+      <div class="permission-card resolved" id="card3">
+        <div class="perm-header">
+          <div class="perm-icon">
+            <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="perm-title-group">
+            <div class="perm-title">网络访问权限</div>
+            <div class="perm-time">2026-06-08 14:28</div>
+          </div>
+        </div>
+        <div class="perm-body">
+          AI 请求访问外部 API 接口以获取最新数据。
+        </div>
+        <div class="perm-actions">
+          <button class="perm-btn perm-btn-reject">拒绝</button>
+          <button class="perm-btn perm-btn-approve">允许</button>
+        </div>
+        <div class="perm-resolved-label">已允许</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Theme Toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">
+    <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg class="icon-moon" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? '' : 'dark');
+      document.querySelector('.icon-sun').style.display = isDark ? 'block' : 'none';
+      document.querySelector('.icon-moon').style.display = isDark ? 'none' : 'block';
+    }
+
+    function resolveCard(cardId, action) {
+      const card = document.getElementById(cardId);
+      const label = document.getElementById('label' + cardId.replace('card', ''));
+      card.classList.add('resolved');
+      label.textContent = action === 'approved' ? '已允许' : '已拒绝';
+    }
+  </script>
+</body>
+</html>
