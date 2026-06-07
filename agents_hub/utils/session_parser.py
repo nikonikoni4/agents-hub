@@ -5,6 +5,7 @@
 
 import json
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -15,7 +16,7 @@ class SessionMessage(BaseModel):
     """单聊消息类型"""
 
     id: str
-    role: str  # "user" | "assistant" | "system" | "tool"
+    role: Literal["user", "assistant", "system", "tool"]
     content: str
     timestamp: str
     model: str | None = None
