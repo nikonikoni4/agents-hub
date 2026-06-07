@@ -117,3 +117,9 @@
  - path: `docs/specs/2026-06-07-message-reply-quote.md`
  - 触发规则：当设计、修改或扩展消息引用功能时阅读，包括引用按钮交互、引用框展示、Markdown 引用语法格式和错误处理
  - 内容摘要：消息引用功能规格，定义前端纯实现的引用机制（无需后端支持）、hover 气泡显示引用按钮（💬）、输入框上方引用框展示（发言者+内容摘要）、Markdown 块引用语法格式化（`> `前缀）、发送失败时保留引用状态的错误处理策略
+
+## permission-request
+ - updated_at : 2026-06-08
+ - path: `docs/specs/2026-06-08-permission-request.md`
+ - 触发规则：当设计、修改或扩展权限请求功能时阅读，包括 MCP request_permission 工具、消息内嵌权限卡片、PATCH 审批 API 和前端交互
+ - 内容摘要：权限请求功能规格，定义 Agent 通过 MCP 工具发起权限请求、消息内嵌 permission_request 字段设计、PATCH 审批端点、AgentCallManager 通知机制和前端 PermissionRequest 卡片交互
