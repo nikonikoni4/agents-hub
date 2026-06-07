@@ -34,8 +34,116 @@ function formatElapsed(startedAt: string | null, completedAt: string | null): st
   return `${minutes}m${remainSeconds}s`;
 }
 
+function formatTime(iso: string | null): string {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  running: '运行中',
+  pending: '等待中',
+  completed: '已完成',
+  failed: '失败',
+  timeout: '超时',
+};
+
+interface CallDetailDialogProps {
+  call: AgentCallInfo | null;
+  onClose: () => void;
+}
+
+function CallDetailDialog({ call, onClose }: CallDetailDialogProps) {
+  if (!call) return null;
+
+  return (
+    <div className={styles.callDetailOverlay} onClick={onClose}>
+      <div className={styles.callDetailDialog} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.callDetailHeader}>
+          <h3>Agent Call 详情</h3>
+          <button type="button" className={styles.callDetailClose} onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className={styles.callDetailContent}>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>调用 ID</span>
+            <span className={styles.callDetailValue}>{call.call_id}</span>
+          </div>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>状态</span>
+            <span className={styles.callDetailValue}>
+              <span
+                className={styles.callStatusDot}
+                style={{
+                  background: STATUS_COLORS[call.status],
+                  display: 'inline-block',
+                  marginRight: 6,
+                }}
+              />
+              {STATUS_LABELS[call.status] || call.status}
+            </span>
+          </div>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>发送者</span>
+            <span className={styles.callDetailValue}>{call.send_from}</span>
+          </div>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>接收者</span>
+            <span className={styles.callDetailValue}>{call.send_to}</span>
+          </div>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>类型</span>
+            <span className={styles.callDetailValue}>
+              <span
+                className={call.message_type === 'task' ? styles.callTagTask : styles.callTagNotify}
+              >
+                {call.message_type === 'task' ? 'TASK' : 'NOTIFY'}
+              </span>
+            </span>
+          </div>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>创建时间</span>
+            <span className={styles.callDetailValue}>{formatTime(call.created_at)}</span>
+          </div>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>开始时间</span>
+            <span className={styles.callDetailValue}>{formatTime(call.started_at)}</span>
+          </div>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>完成时间</span>
+            <span className={styles.callDetailValue}>{formatTime(call.completed_at)}</span>
+          </div>
+          <div className={styles.callDetailRow}>
+            <span className={styles.callDetailLabel}>耗时</span>
+            <span className={styles.callDetailValue}>
+              {formatElapsed(call.started_at, call.completed_at) || '-'}
+            </span>
+          </div>
+          <div className={styles.callDetailSection}>
+            <span className={styles.callDetailLabel}>消息内容</span>
+            <div className={styles.callDetailMessage}>{call.content}</div>
+          </div>
+          {call.error && (
+            <div className={styles.callDetailSection}>
+              <span className={styles.callDetailLabel}>错误信息</span>
+              <div className={styles.callDetailError}>{call.error}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AgentCallsPanel({ agentCalls, loading }: AgentCallsPanelProps) {
   const [expanded, setExpanded] = useState(false);
+  const [selectedCall, setSelectedCall] = useState<AgentCallInfo | null>(null);
 
   const activeCalls = agentCalls.filter((c) => c.status === 'running' || c.status === 'pending');
   const inactiveCalls = agentCalls.filter((c) => c.status !== 'running' && c.status !== 'pending');
@@ -43,7 +151,7 @@ export function AgentCallsPanel({ agentCalls, loading }: AgentCallsPanelProps) {
 
   function renderCall(call: AgentCallInfo) {
     return (
-      <div key={call.call_id} className={styles.callItem}>
+      <div key={call.call_id} className={styles.callItem} onClick={() => setSelectedCall(call)}>
         <div className={styles.callHeader}>
           <span
             className={styles.callStatusDot}
@@ -101,6 +209,7 @@ export function AgentCallsPanel({ agentCalls, loading }: AgentCallsPanelProps) {
           )}
         </div>
       )}
+      <CallDetailDialog call={selectedCall} onClose={() => setSelectedCall(null)} />
     </div>
   );
 }

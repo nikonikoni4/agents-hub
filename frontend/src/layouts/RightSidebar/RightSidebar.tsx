@@ -4,6 +4,7 @@ import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
 import { useTasks } from '@/features/chat/hooks/useTasks';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { AvatarImage, ResizeHandle } from '@/shared/components';
+import { useToast } from '@/shared/components/Toast/useToast';
 import { AgentCallsPanel } from './AgentCallsPanel';
 import { TasksPanel } from './TasksPanel';
 import styles from './RightSidebar.module.css';
@@ -93,12 +94,14 @@ export function RightSidebar({
   const { pinnedMessages, unpin } = usePinnedMessages(activeSessionId);
   const { agentCalls, loading: callsLoading } = useAgentCalls(activeSessionId);
   const { taskList, loading: tasksLoading } = useTasks(activeSessionId);
+  const toast = useToast();
 
   const handleToggleDocker = async (memberName: string) => {
     try {
       await toggleDockerMode(memberName);
     } catch (error) {
-      console.error('切换 Docker 模式失败:', error);
+      const message = error instanceof Error ? error.message : '切换 Docker 模式失败';
+      toast.error(message);
     }
   };
 
