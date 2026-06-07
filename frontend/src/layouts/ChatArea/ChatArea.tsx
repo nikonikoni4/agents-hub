@@ -20,14 +20,15 @@ import type { MessageApiItem } from '@/shared/types';
 import { ChatInput } from './ChatInput';
 import styles from './ChatArea.module.css';
 
-export interface ChatAreaProps {
-  onToggleRightSidebar?: () => void;
-}
-
 export interface RightSidebarContent {
   type: 'preview' | 'diff';
   content: string;
   filePath: string;
+}
+
+export interface ChatAreaProps {
+  onToggleRightSidebar?: () => void;
+  onContentChange?: (content: RightSidebarContent | null) => void;
 }
 
 const MessageBubble = React.memo(
@@ -93,7 +94,7 @@ const MessageBubble = React.memo(
   }
 );
 
-export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
+export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProps) {
   const {
     messages,
     loading,
@@ -110,8 +111,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [quotedMessage, setQuotedMessage] = useState<MessageApiItem | null>(null);
-  // TODO: Task 10 will pass this to RightSidebar component
-  const [_rightSidebarContent, setRightSidebarContent] = useState<RightSidebarContent | null>(null);
+  const [rightSidebarContent, setRightSidebarContent] = useState<RightSidebarContent | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +141,11 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
     setLocalMessages([]);
     setQuotedMessage(null);
   }, [activeSessionId]);
+
+  // 通知 MainLayout 右侧栏内容变化
+  useEffect(() => {
+    onContentChange?.(rightSidebarContent);
+  }, [rightSidebarContent, onContentChange]);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -190,7 +195,6 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
       try {
         const content = await getFileSnapshotContent(activeSessionId, snapshotId);
         setRightSidebarContent({ type: 'preview', content, filePath });
-        // TODO: 打开右侧栏（Task 10 会实现）
       } catch (error) {
         console.error('Failed to load preview:', error);
       }
@@ -204,7 +208,6 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
       try {
         const diff = await getFileSnapshotDiff(activeSessionId, snapshotId);
         setRightSidebarContent({ type: 'diff', content: diff, filePath });
-        // TODO: 打开右侧栏（Task 10 会实现）
       } catch (error) {
         console.error('Failed to load diff:', error);
       }
