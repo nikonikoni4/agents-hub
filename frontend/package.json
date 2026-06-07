@@ -32,9 +32,11 @@
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
       "eslint --fix",
-      "prettier --write"
+      "prettier --write",
+      "vitest related --run"
     ],
-    "src/**/*.{css,json}": "prettier --write"
+    "src/**/*.{css,json}": "prettier --write",
+    "*": "tsc --noEmit --pretty"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",

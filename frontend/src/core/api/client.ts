@@ -4,7 +4,13 @@
  * 提供统一的 HTTP 请求封装、错误处理和 Mock 支持
  */
 
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, {
+  AxiosInstance,
+  AxiosError,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+  AxiosResponse,
+} from 'axios';
 import type { ErrorResponse } from '@/shared/types';
 
 // ==================== 类型定义 ====================
@@ -14,11 +20,11 @@ import type { ErrorResponse } from '@/shared/types';
  * 由于响应拦截器返回 response.data，实际返回类型是 T 而不是 AxiosResponse<T>
  */
 interface ApiClient extends Omit<AxiosInstance, 'get' | 'post' | 'put' | 'patch' | 'delete'> {
-  get<T = any>(url: string, config?: any): Promise<T>;
-  post<T = any>(url: string, data?: any, config?: any): Promise<T>;
-  put<T = any>(url: string, data?: any, config?: any): Promise<T>;
-  patch<T = any>(url: string, data?: any, config?: any): Promise<T>;
-  delete<T = any>(url: string, config?: any): Promise<T>;
+  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
+  put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
+  patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
+  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>;
 }
 
 // ==================== API 错误类 ====================
@@ -29,9 +35,9 @@ interface ApiClient extends Omit<AxiosInstance, 'get' | 'post' | 'put' | 'patch'
 export class ApiError extends Error {
   code: string;
   status: number;
-  data?: any;
+  data?: unknown;
 
-  constructor(code: string, message: string, status: number, data?: any) {
+  constructor(code: string, message: string, status: number, data?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
