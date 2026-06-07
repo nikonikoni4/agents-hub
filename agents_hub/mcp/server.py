@@ -52,6 +52,7 @@ from agents_hub.core.foundation import (  # noqa: E402
     MessageType,
     render_for_chat,
 )
+from agents_hub.core.foundation.file_snapshot import create_file_snapshot  # noqa: E402
 from agents_hub.core.foundation.token import redact_token  # noqa: E402
 from agents_hub.core.orchestration import group_chat_manager  # noqa: E402
 from agents_hub.core.orchestration.group_chat import GroupChat  # noqa: E402
@@ -92,7 +93,14 @@ def _find_agent(group_chat, agent_name: str):
     return None
 
 
-def _make_chat_result(group_chat, agent_name: str, content: str) -> AgentResult:
+def _make_chat_result(
+    group_chat,
+    agent_name: str,
+    content: str,
+    cwd: str | None = None,
+    modified_files: list | None = None,
+    git_diff_range: str | None = None,
+) -> AgentResult:
     agent = _find_agent(group_chat, agent_name)
     platform = getattr(getattr(agent, "role_config", None), "platform", AgentPlatform.CLAUDE)
     role_type = getattr(agent, "role_type", RoleType.TEAM_MEMBER)
@@ -104,6 +112,9 @@ def _make_chat_result(group_chat, agent_name: str, content: str) -> AgentResult:
         agent_name=agent_name,
         platform=platform,
         role_type=role_type,
+        cwd=cwd,
+        modified_files=modified_files,
+        git_diff_range=git_diff_range,
     )
 
 
@@ -497,6 +508,8 @@ async def finish_agent_call(
     call_id: str,
     content: str,
     success: bool = True,
+    modified_files: list[str] | None = None,
+    git_diff_range: str | None = None,
 ) -> dict:
     """
     结束一个需要回复的 AgentCall，并向原调用方投递完成通知以唤醒下一轮处理。
@@ -506,6 +519,8 @@ async def finish_agent_call(
         call_id: 要结束的 AgentCall ID
         content: 最终回复内容
         success: True 表示完成，False 表示失败或无法继续
+        modified_files: 修改的文件列表（相对路径）
+        git_diff_range: Git diff 范围（格式：commit..commit）
 
     Returns:
         成功: {"call_id": "...", "status": "completed|failed"}
@@ -561,23 +576,66 @@ async def finish_agent_call(
             )
         # 3. 将token信息从返回的信息中剥离
         safe_content = redact_token(content)
-        # 4. 完成call闭环
+
+        # 4. 创建文件快照（如果有修改文件）
+        file_metadata_list = None
+        agent_cwd = None
+
+        if modified_files:
+            # 获取 Agent 工作目录
+            agent = _find_agent(group_chat, agent_name)
+            agent_cwd = (
+                agent.cwd if agent and hasattr(agent, "cwd") else group_chat.runtime.project_path
+            )
+
+            # 构造快照目录
+            from pathlib import Path
+
+            snapshot_dir = (
+                Path(config.data_path)
+                / "teams"
+                / group_chat.runtime.project_path
+                / group_chat_id
+                / "file_snapshots"
+            )
+
+            # 为每个文件创建快照
+            file_metadata_list = []
+            for index, file_path in enumerate(modified_files):
+                try:
+                    metadata = create_file_snapshot(
+                        snapshot_dir=snapshot_dir,
+                        call_id=call_id,
+                        file_path=file_path,
+                        index=index,
+                        cwd=agent_cwd,
+                        git_diff_range=git_diff_range,
+                    )
+                    file_metadata_list.append(metadata)
+                except Exception as e:
+                    # 单个文件失败不影响整体
+                    logger.warning(f"Failed to create snapshot for {file_path}: {e}")
+
+        # 5. 完成call闭环
         # TODO : [DESIGN] 这里会把结果发在result中，但是当前也会在直接发送给agent信息，
         # 如果agent调用check_agent_call，实际上会得到2份结果，但是这里先不管
-        # 一个可行的方法是使用 “agent call结束，具体内容{agent_name}会直接发送信息给你”
+        # 一个可行的方法是使用 "agent call结束，具体内容{agent_name}会直接发送信息给你"
         logger.debug(f"finish_agent_call :call_id:{call_id} {success} {safe_content}")
         group_chat.agent_call_manager.mark_agent_response(
             call_id=call_id,
-            content=safe_content,  #  “agent call结束，具体内容{agent_name}会直接发送信息给你”
+            content=safe_content,  #  "agent call结束，具体内容{agent_name}会直接发送信息给你"
             success=success,
         )
-        # 5. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
+        # 6. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
         if config.is_user_name(call.send_from):
             await group_chat.group_chat_context.add_message(
                 _make_chat_result(
                     group_chat=group_chat,
                     agent_name=agent_name,
                     content=render_for_chat(agent_name, call.send_from, safe_content),
+                    cwd=agent_cwd,
+                    modified_files=file_metadata_list,
+                    git_diff_range=git_diff_range,
                 )
             )
             await broadcast_group_chat_refresh(group_chat_id)
