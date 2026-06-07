@@ -197,3 +197,37 @@ async def add_group_chat_members(
 ):
     """添加群成员"""
     return await service.add_group_chat_members(group_chat_id, request.member_names)
+
+
+@router.get(
+    "/{group_chat_id}/files/{snapshot_id}/content",
+    response_model=dict[str, str],
+    responses={
+        404: {"description": "快照不存在或群聊不存在"},
+    },
+)
+async def get_file_snapshot_content(
+    group_chat_id: str,
+    snapshot_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取文件快照的完整内容"""
+    content = await service.get_file_snapshot_content(group_chat_id, snapshot_id)
+    return {"content": content}
+
+
+@router.get(
+    "/{group_chat_id}/files/{snapshot_id}/diff",
+    response_model=dict[str, str],
+    responses={
+        404: {"description": "快照不存在或群聊不存在"},
+    },
+)
+async def get_file_snapshot_diff(
+    group_chat_id: str,
+    snapshot_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取文件快照的 diff"""
+    diff = await service.get_file_snapshot_diff(group_chat_id, snapshot_id)
+    return {"diff": diff}

@@ -569,6 +569,41 @@
   overflow-y: auto;
 }
 
+/* Preview and Diff content */
+.moduleContent {
+  padding: 12px;
+  max-height: 600px;
+  overflow: auto;
+}
+
+.filePathHeader {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.codeBlock {
+  margin: 0;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.codeBlock code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
 .callDetailError {
   font-size: 13px;
   color: #ef4444;

@@ -243,3 +243,181 @@ class TestGroupChatContextTokenPersistence:
 
             context.close()
             context2.close()
+
+
+class TestGroupChatContextNewFields:
+    """测试 GroupChatContext 对新字段的序列化"""
+
+    @pytest.mark.asyncio
+    async def test_add_message_with_new_fields(self):
+        """测试 add_message 能正确序列化 cwd, modified_files, git_diff_range"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            group_chat_id = "test_chat_new_fields"
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
+            await context.load()
+
+            # 创建带有新字段的 AgentResult
+            agent_name = "agent_a"
+            session_id = "session_123"
+
+            class AgentResultWithFields:
+                """包含新字段的 AgentResult"""
+
+                def __init__(self):
+                    self.agent_name = agent_name
+                    self.session_id = session_id
+                    self.text = "任务完成，已修改 2 个文件"
+                    self.timestamp = "2024-01-01T00:00:00"
+                    self.platform = AgentPlatform.CLAUDE
+                    self.cwd = "/path/to/project"
+                    self.modified_files = [
+                        {
+                            "path": "src/a.py",
+                            "status": "modified",
+                            "additions": 10,
+                            "deletions": 5,
+                            "snapshot_id": "call_abc_0",
+                            "diff_available": True,
+                            "diff_error": None,
+                        },
+                        {
+                            "path": "src/b.py",
+                            "status": "added",
+                            "additions": 20,
+                            "deletions": 0,
+                            "snapshot_id": "call_abc_1",
+                            "diff_available": True,
+                            "diff_error": None,
+                        },
+                    ]
+                    self.git_diff_range = "abc123..def456"
+
+            agent_result = AgentResultWithFields()
+            await context.add_message(agent_result)
+
+            # 读取 jsonl 文件验证字段已写入
+            import json
+
+            jsonl_file = runtime.repository.messages_file
+            with open(jsonl_file, encoding="utf-8") as f:
+                lines = f.readlines()
+
+            # 应该有 2 行（初始化 + 消息）
+            assert len(lines) >= 1
+
+            # 解析最后一行（最新消息）
+            last_message = json.loads(lines[-1])
+
+            # 验证新字段已写入
+            assert last_message["cwd"] == "/path/to/project"
+            assert last_message["git_diff_range"] == "abc123..def456"
+            assert len(last_message["modified_files"]) == 2
+
+            # 验证 modified_files 内容
+            file0 = last_message["modified_files"][0]
+            assert file0["path"] == "src/a.py"
+            assert file0["status"] == "modified"
+            assert file0["additions"] == 10
+            assert file0["deletions"] == 5
+            assert file0["snapshot_id"] == "call_abc_0"
+            assert file0["diff_available"] is True
+
+            file1 = last_message["modified_files"][1]
+            assert file1["path"] == "src/b.py"
+            assert file1["status"] == "added"
+            assert file1["additions"] == 20
+
+            context.close()
+
+    @pytest.mark.asyncio
+    async def test_add_message_without_optional_fields(self):
+        """测试 add_message 当可选字段为 None 时不写入"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            group_chat_id = "test_chat_no_fields"
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
+            await context.load()
+
+            # 创建不包含新字段的 AgentResult
+            agent_name = "agent_b"
+            session_id = "session_456"
+
+            class SimpleAgentResult:
+                """不包含新字段的 AgentResult"""
+
+                def __init__(self):
+                    self.agent_name = agent_name
+                    self.session_id = session_id
+                    self.text = "简单消息"
+                    self.timestamp = "2024-01-01T00:00:00"
+                    self.platform = AgentPlatform.CLAUDE
+                    self.cwd = None
+                    self.modified_files = None
+                    self.git_diff_range = None
+
+            agent_result = SimpleAgentResult()
+            await context.add_message(agent_result)
+
+            # 读取 jsonl 文件验证字段不存在
+            import json
+
+            jsonl_file = runtime.repository.messages_file
+            with open(jsonl_file, encoding="utf-8") as f:
+                lines = f.readlines()
+
+            last_message = json.loads(lines[-1])
+
+            # 验证可选字段不在消息中
+            assert "cwd" not in last_message
+            assert "modified_files" not in last_message
+            assert "git_diff_range" not in last_message
+
+            context.close()
+
+    @pytest.mark.asyncio
+    async def test_add_message_with_partial_fields(self):
+        """测试 add_message 只包含部分新字段"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            group_chat_id = "test_chat_partial_fields"
+            runtime = GroupChatRuntime(group_chat_id, tmpdir)
+            context = GroupChatContext(runtime)
+            await context.load()
+
+            # 创建只包含部分新字段的 AgentResult
+            agent_name = "agent_c"
+            session_id = "session_789"
+
+            class PartialAgentResult:
+                """只包含部分新字段的 AgentResult"""
+
+                def __init__(self):
+                    self.agent_name = agent_name
+                    self.session_id = session_id
+                    self.text = "部分字段消息"
+                    self.timestamp = "2024-01-01T00:00:00"
+                    self.platform = AgentPlatform.CLAUDE
+                    self.cwd = "/work/dir"
+                    self.modified_files = None
+                    self.git_diff_range = "v1.0..v2.0"
+
+            agent_result = PartialAgentResult()
+            await context.add_message(agent_result)
+
+            # 读取 jsonl 文件
+            import json
+
+            jsonl_file = runtime.repository.messages_file
+            with open(jsonl_file, encoding="utf-8") as f:
+                lines = f.readlines()
+
+            last_message = json.loads(lines[-1])
+
+            # 验证存在的字段
+            assert last_message["cwd"] == "/work/dir"
+            assert last_message["git_diff_range"] == "v1.0..v2.0"
+
+            # 验证不存在的字段
+            assert "modified_files" not in last_message
+
+            context.close()

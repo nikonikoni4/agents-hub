@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { TopBar } from '../TopBar';
 import { LeftSidebar } from '../LeftSidebar';
-import { ChatArea } from '../ChatArea';
+import { ChatArea, type RightSidebarContent } from '../ChatArea';
 import { RightSidebar } from '../RightSidebar';
 import { RoleManagement } from '../RoleManagement';
 import { SkillSquare } from '@/features/skills';
@@ -42,6 +42,7 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(220);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(220);
   const [isResizing, setIsResizing] = useState(false);
+  const [rightSidebarContent, setRightSidebarContent] = useState<RightSidebarContent | null>(null);
 
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const lastSelectedAt = useSessionStore((s) => s.lastSelectedAt);
@@ -92,7 +93,12 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
         />
-        {viewMode === 'chat' && <ChatArea onToggleRightSidebar={handleToggleRightSidebar} />}
+        {viewMode === 'chat' && (
+          <ChatArea
+            onToggleRightSidebar={handleToggleRightSidebar}
+            onContentChange={setRightSidebarContent}
+          />
+        )}
         {viewMode === 'role' && <RoleManagement />}
         {viewMode === 'skill' && <SkillSquare />}
         {viewMode === 'chat' && (
@@ -103,6 +109,7 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
             resizing={isResizing}
             onResizeStart={handleResizeStart}
             onResizeEnd={handleResizeEnd}
+            content={rightSidebarContent}
           />
         )}
       </div>

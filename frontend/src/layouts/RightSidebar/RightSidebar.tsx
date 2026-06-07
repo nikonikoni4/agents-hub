@@ -6,6 +6,7 @@ import { useTasks } from '@/features/chat/hooks/useTasks';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { AvatarImage, ResizeHandle } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast/useToast';
+import { RightSidebarContent } from '@/shared/types/layout';
 import { AgentCallsPanel } from './AgentCallsPanel';
 import { TasksPanel } from './TasksPanel';
 import styles from './RightSidebar.module.css';
@@ -26,6 +27,7 @@ export interface RightSidebarProps {
   resizing?: boolean;
   onResizeStart?: () => void;
   onResizeEnd?: () => void;
+  content?: RightSidebarContent | null;
 }
 
 // SVG 图标组件
@@ -98,6 +100,7 @@ export function RightSidebar({
   resizing,
   onResizeStart,
   onResizeEnd,
+  content,
 }: RightSidebarProps) {
   const { members, loading, toggleDockerMode } = useMembers();
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
@@ -212,7 +215,16 @@ export function RightSidebar({
             <EyeIcon />
             预览
           </div>
-          <div className={styles.moduleItem}>无预览内容</div>
+          {content && content.type === 'preview' ? (
+            <div className={styles.moduleContent}>
+              <div className={styles.filePathHeader}>{content.filePath}</div>
+              <pre className={styles.codeBlock}>
+                <code>{content.content}</code>
+              </pre>
+            </div>
+          ) : (
+            <div className={styles.emptyText}>无预览内容</div>
+          )}
         </div>
       )}
 
@@ -222,7 +234,16 @@ export function RightSidebar({
             <MaximizeIcon />
             Diff
           </div>
-          <div className={styles.moduleItem}>无代码差异</div>
+          {content && content.type === 'diff' ? (
+            <div className={styles.moduleContent}>
+              <div className={styles.filePathHeader}>{content.filePath}</div>
+              <pre className={styles.codeBlock}>
+                <code>{content.content}</code>
+              </pre>
+            </div>
+          ) : (
+            <div className={styles.emptyText}>无代码差异</div>
+          )}
         </div>
       )}
     </div>

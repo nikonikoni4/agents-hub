@@ -54,16 +54,27 @@ class GroupChatSession:
         Args:
             agent_result: Agent 执行结果（AgentResult）
                 需要包含: agent_name, text, timestamp, platform
+                可选: cwd, modified_files, git_diff_range
         """
-        self.messages.append(
-            {
-                "id": self.next_message_id,
-                "agent_name": agent_result.agent_name,
-                "content": agent_result.text,
-                "timestamp": agent_result.timestamp,
-                "platform": agent_result.platform.value,
-            }
-        )
+        message = {
+            "id": self.next_message_id,
+            "agent_name": agent_result.agent_name,
+            "content": agent_result.text,
+            "timestamp": agent_result.timestamp,
+            "platform": agent_result.platform.value,
+        }
+
+        # 添加可选字段（如果存在且不为 None）
+        if agent_result.cwd is not None:
+            message["cwd"] = agent_result.cwd
+
+        if agent_result.modified_files is not None:
+            message["modified_files"] = agent_result.modified_files
+
+        if agent_result.git_diff_range is not None:
+            message["git_diff_range"] = agent_result.git_diff_range
+
+        self.messages.append(message)
         self.next_message_id += 1
 
     def get_uncompact_messages(self) -> list[dict]:

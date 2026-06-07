@@ -36,6 +36,7 @@ from agents_hub.core.foundation import (
     group_chat_paths,
 )
 from agents_hub.core.foundation.exceptions import DockerNotAvailableError
+from agents_hub.core.foundation.file_snapshot import get_snapshot_content, get_snapshot_diff
 from agents_hub.core.orchestration import GroupChat, GroupChatManager
 from agents_hub.exceptions import (
     ExternalServiceError,
@@ -604,6 +605,91 @@ class GroupChatService:
                 if group_chat_id not in self._pins_locks:
                     self._pins_locks[group_chat_id] = asyncio.Lock()
         return self._pins_locks[group_chat_id]
+
+    async def get_file_snapshot_content(self, group_chat_id: str, snapshot_id: str) -> str:
+        """
+        获取文件快照内容
+
+        Args:
+            group_chat_id: 群聊 ID
+            snapshot_id: 快照 ID
+
+        Returns:
+            文件内容字符串
+
+        Raises:
+            ResourceNotFoundError: 群聊或快照不存在
+        """
+        # 1. 加载群聊
+        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+
+        # 2. 构建快照目录
+        snapshot_dir = self._build_snapshot_dir(group_chat, group_chat_id)
+
+        # 3. 读取快照内容
+        try:
+            return get_snapshot_content(snapshot_dir, snapshot_id)
+        except (ValueError, FileNotFoundError, PermissionError) as e:
+            raise ResourceNotFoundError(
+                f"文件快照不存在或无法访问: {snapshot_id}",
+                details={
+                    "group_chat_id": group_chat_id,
+                    "snapshot_id": snapshot_id,
+                    "error": str(e),
+                },
+            ) from e
+
+    async def get_file_snapshot_diff(self, group_chat_id: str, snapshot_id: str) -> str:
+        """
+        获取文件快照 diff
+
+        Args:
+            group_chat_id: 群聊 ID
+            snapshot_id: 快照 ID
+
+        Returns:
+            Diff 内容字符串
+
+        Raises:
+            ResourceNotFoundError: 群聊或快照不存在
+        """
+        # 1. 加载群聊
+        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+
+        # 2. 构建快照目录
+        snapshot_dir = self._build_snapshot_dir(group_chat, group_chat_id)
+
+        # 3. 读取快照 diff
+        try:
+            return get_snapshot_diff(snapshot_dir, snapshot_id)
+        except (ValueError, FileNotFoundError, PermissionError) as e:
+            raise ResourceNotFoundError(
+                f"文件快照 diff 不存在或无法访问: {snapshot_id}",
+                details={
+                    "group_chat_id": group_chat_id,
+                    "snapshot_id": snapshot_id,
+                    "error": str(e),
+                },
+            ) from e
+
+    def _build_snapshot_dir(self, group_chat: GroupChat, group_chat_id: str) -> Path:
+        """
+        构建快照存储目录路径
+
+        Args:
+            group_chat: GroupChat 实例
+            group_chat_id: 群聊 ID
+
+        Returns:
+            快照目录 Path 对象
+        """
+        return (
+            Path(config.data_path)
+            / "teams"
+            / group_chat.runtime.project_path
+            / group_chat_id
+            / "file_snapshots"
+        )
 
     async def _read_pins(self, pins_path: Path) -> list[dict]:
         """从 pins.json 读取 pin 列表，文件不存在或损坏返回空列表"""

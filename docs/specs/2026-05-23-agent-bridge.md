@@ -172,6 +172,23 @@ bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续
 | `platform` | AgentPlatform | 平台类型 |
 | `role_type` | RoleType | 角色类型 |
 | `usage` | dict? | token 使用统计 |
+| `cwd` | str? | Agent 工作目录（绝对路径） |
+| `modified_files` | FileMetadata[]? | 修改的文件列表元数据 |
+| `git_diff_range` | str? | Git diff 范围（格式：start..end） |
+
+#### FileMetadata 类型
+
+`modified_files` 数组中每个元素的结构：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `path` | str | 文件路径 |
+| `status` | str | 文件状态（如 modified、added、deleted） |
+| `additions` | int | 新增行数 |
+| `deletions` | int | 删除行数 |
+| `snapshot_id` | str | 快照 ID |
+| `diff_available` | bool | 是否有可用的 diff |
+| `diff_error` | str? | diff 获取错误信息 |
 
 ### 协议接口
 

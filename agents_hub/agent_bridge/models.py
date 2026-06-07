@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from agents_hub.config.types import AgentPlatform, RoleType
+from agents_hub.core.foundation.types import FileMetadata
 
 
 class AgentEventType(Enum):
@@ -43,7 +44,14 @@ class AgentResult:
     platform: AgentPlatform  # agent 所属平台
     role_type: RoleType  # 角色类型
     usage: dict | None = None  # token 使用统计
+    cwd: str | None = None  # Agent 工作目录
+    modified_files: list[FileMetadata] | None = None  # 修改的文件列表元数据
+    git_diff_range: str | None = None  # Git diff 范围
 
 
 # 向后兼容别名（待废弃）
 AgentEvent = StreamEvent
+
+
+# 导出 FileMetadata 保持向后兼容
+__all__ = ["FileMetadata", "AgentEventType", "StreamEvent", "AgentResult", "AgentEvent"]

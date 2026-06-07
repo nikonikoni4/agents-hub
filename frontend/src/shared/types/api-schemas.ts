@@ -66,6 +66,27 @@ export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed';
 // ==================== 消息相关 ====================
 
 /**
+ * 文件修改信息
+ * 对应后端: FileMetadata dataclass
+ */
+export interface ModifiedFileInfo {
+  /** 文件路径（相对于 cwd） */
+  path: string;
+  /** 文件状态 */
+  status: 'added' | 'modified' | 'deleted';
+  /** 新增行数 */
+  additions: number;
+  /** 删除行数 */
+  deletions: number;
+  /** 快照 ID */
+  snapshot_id: string;
+  /** diff 是否可用 */
+  diff_available: boolean;
+  /** diff 错误信息（如果有） */
+  diff_error: string | null;
+}
+
+/**
  * 消息信息
  * 对应后端: MessageInfo schema
  */
@@ -80,6 +101,12 @@ export interface MessageApiItem {
   timestamp: string;
   /** 来源平台 */
   platform: string;
+  /** 当前工作目录 */
+  cwd?: string;
+  /** 文件修改信息列表 */
+  modified_files?: ModifiedFileInfo[];
+  /** git diff 范围（如：refs/heads/main...HEAD） */
+  git_diff_range?: string;
 }
 
 /**

@@ -12,13 +12,12 @@ Agent 基类
 import asyncio
 from pathlib import Path
 
-from agents_hub.agent_bridge import agent_platform_client
+from agents_hub.agent_bridge import AgentResult, agent_platform_client
 from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import AgentContext, GroupChatContext
 from agents_hub.core.foundation import (
     AgentExecutionError,
     AgentMessage,
-    AgentResult,
     CallStatus,
     MessageType,
     Role,
