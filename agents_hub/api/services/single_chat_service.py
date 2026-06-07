@@ -94,7 +94,7 @@ class SingleChatManager:
 
     def _save_index(self):
         """保存索引到文件"""
-        data = {"single_chats": [idx.model_dump() for idx in self._index.values()]}
+        data = {"single_chats": [idx.model_dump(mode="json") for idx in self._index.values()]}
         with open(self._index_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
