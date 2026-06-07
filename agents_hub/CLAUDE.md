@@ -5,3 +5,4 @@
 from agents_hub.config import config
 config.data_path
 ```
+2. 编写错误处理里必须查看docs\coding-rules\backend-style.md

@@ -5,6 +5,7 @@
 """
 
 from agents_hub.exceptions import AgentsHubError as _TopLevelAgentsHubError
+from agents_hub.exceptions import ResourceNotFoundError
 
 __all__ = [
     "AgentsHubError",
@@ -21,6 +22,7 @@ __all__ = [
     "DockerConfigError",
     "DockerNotAvailableError",
     "DockerStartError",
+    "SessionFileNotFoundError",
 ]
 
 
@@ -66,6 +68,17 @@ class GroupChatNotFoundError(AgentsHubError):
             message=f"GroupChat '{group_chat_id}' 不存在",
             error_code="GROUP_CHAT_NOT_FOUND",
             details={"group_chat_id": group_chat_id},
+        )
+
+
+class SessionFileNotFoundError(ResourceNotFoundError):
+    """Session 文件不存在"""
+
+    def __init__(self, session_id: str, platform: str, work_root: str):
+        super().__init__(
+            message=f"Session 文件不存在: {session_id} ({platform})",
+            error_code="SESSION_FILE_NOT_FOUND",
+            details={"session_id": session_id, "platform": platform, "work_root": work_root},
         )
 
 
