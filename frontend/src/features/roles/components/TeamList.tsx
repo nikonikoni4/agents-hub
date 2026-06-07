@@ -43,11 +43,15 @@ export function TeamList({
       </div>
       <div className={styles.list}>
         {teams.map((team) => (
-          <button
+          <div
             key={team.name}
-            type="button"
+            role="button"
+            tabIndex={0}
             className={`${styles.item} ${selectedTeam === team.name ? styles.active : ''}`}
             onClick={() => onSelectTeam(team.name)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') onSelectTeam(team.name);
+            }}
           >
             <div className={styles.itemIcon}>👥</div>
             <div className={styles.itemInfo}>
@@ -84,7 +88,7 @@ export function TeamList({
                 删除
               </button>
             )}
-          </button>
+          </div>
         ))}
       </div>
     </div>

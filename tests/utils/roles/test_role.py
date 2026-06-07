@@ -93,14 +93,8 @@ def test_add_skill_copies_without_role_json_mutation(claude_role):
     """添加 skill 复制全局 skill 到角色目录，不写 role.json"""
     global_skill_dir = claude_role.role_dir.parent.parent / "skills" / "test_skill"
     global_skill_dir.mkdir(parents=True)
-    (global_skill_dir / "skill.json").write_text(
-        json.dumps(
-            {
-                "id": "test_skill",
-                "name": "Test Skill",
-                "description": "A test skill",
-            }
-        ),
+    (global_skill_dir / "SKILL.md").write_text(
+        "---\nname: Test Skill\ndescription: A test skill\n---\nContent",
         encoding="utf-8",
     )
 
@@ -111,7 +105,7 @@ def test_add_skill_copies_without_role_json_mutation(claude_role):
     skill_dir = claude_role.role_dir / "work_root" / "skills" / "test_skill"
     assert skill_dir.exists()
     assert not skill_dir.is_symlink()
-    assert json.loads((skill_dir / "skill.json").read_text(encoding="utf-8"))["id"] == "test_skill"
+    assert (skill_dir / "SKILL.md").exists()
     assert claude_role.list_skills()[0].id == "test_skill"
     after = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
     assert after == before
@@ -132,14 +126,8 @@ def test_remove_skill_deletes_role_entry_without_touching_global_skill(claude_ro
     """移除 skill 只删除角色入口，不修改 role.json，不影响全局 skill"""
     global_skill_dir = claude_role.role_dir.parent.parent / "skills" / "test_skill"
     global_skill_dir.mkdir(parents=True)
-    (global_skill_dir / "skill.json").write_text(
-        json.dumps(
-            {
-                "id": "test_skill",
-                "name": "Test Skill",
-                "description": "A test skill",
-            }
-        ),
+    (global_skill_dir / "SKILL.md").write_text(
+        "---\nname: Test Skill\ndescription: A test skill\n---\nContent",
         encoding="utf-8",
     )
     claude_role.add_skill("test_skill")
@@ -150,7 +138,7 @@ def test_remove_skill_deletes_role_entry_without_touching_global_skill(claude_ro
     role_skill_dir = claude_role.role_dir / "work_root" / "skills" / "test_skill"
     assert not role_skill_dir.exists()
     assert global_skill_dir.exists()
-    assert (global_skill_dir / "skill.json").exists()
+    assert (global_skill_dir / "SKILL.md").exists()
     after = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
     assert after == before
 
@@ -159,14 +147,8 @@ def test_remove_skill_deletes_copy_without_touching_global_skill(claude_role):
     """移除复制的 skill 时，不影响全局 skill"""
     global_skill_dir = claude_role.role_dir.parent.parent / "skills" / "copy_skill"
     global_skill_dir.mkdir(parents=True)
-    (global_skill_dir / "skill.json").write_text(
-        json.dumps(
-            {
-                "id": "copy_skill",
-                "name": "Copy Skill",
-                "description": "A copied skill",
-            }
-        ),
+    (global_skill_dir / "SKILL.md").write_text(
+        "---\nname: Copy Skill\ndescription: A copied skill\n---\nContent",
         encoding="utf-8",
     )
     claude_role.add_skill("copy_skill")
@@ -177,7 +159,7 @@ def test_remove_skill_deletes_copy_without_touching_global_skill(claude_role):
 
     assert not (claude_role.role_dir / "work_root" / "skills" / "copy_skill").exists()
     assert global_skill_dir.exists()
-    assert (global_skill_dir / "skill.json").exists()
+    assert (global_skill_dir / "SKILL.md").exists()
     after = json.loads((claude_role.role_dir / "role.json").read_text(encoding="utf-8"))
     assert after == before
 

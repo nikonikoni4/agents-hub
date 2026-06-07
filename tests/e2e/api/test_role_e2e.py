@@ -108,12 +108,8 @@ class TestRoleE2E:
 
     # ── 技能关联 ──────────────────────────────────────────────────────────
 
-    @pytest.mark.xfail(reason="list_skills() 查找 skill.json 而非 SKILL.md，添加后无法读取元数据")
     def test_09_add_skill_to_leader(self, api):
-        """POST /roles/e2e_leader/skills 添加 deep-answer -> 201
-
-        已知问题：add_skill 用 SKILL.md，list_skills 用 skill.json，格式不一致导致 SKILL_METADATA_INVALID。
-        """
+        """POST /roles/e2e_leader/skills 添加 deep-answer -> 201"""
         resp = api.post("/roles/e2e_leader/skills", json={"skill_id": "deep-answer"})
         assert resp.status_code == 201, f"添加技能失败: {resp.text}"
 

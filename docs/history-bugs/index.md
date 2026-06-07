@@ -63,3 +63,9 @@
  - path: docs/history-bugs/2026-06-07-sidebar-collapse-inline-style-priority.md
  - 触发规则：点击左侧栏或右侧栏的抽屉按钮，CSS 类正确变化但侧栏宽度不变
  - 内容摘要：LeftSidebar 和 RightSidebar 组件中，内联样式 `width: 220px` 优先级高于 CSS 类的 `width: 0`，导致 collapsed 状态失效。修复：当 collapsed 为 true 时，内联宽度设置为 0
+
+## 角色添加 Skill 后报元数据无效
+ - updated_at : 2026-06-07
+ - path: docs/history-bugs/2026-06-07-role-skill-metadata-invalid.md
+ - 触发规则：前端角色编辑面板添加 Skill 后报 SKILL_METADATA_INVALID，角色卡片不显示已添加的 Skill
+ - 内容摘要：list_skills() 查找 skill.json 但实际 Skill 用 SKILL.md 格式；RoleResponse 已包含 skills 字段，前端直接用 getRoleInfo() 读取

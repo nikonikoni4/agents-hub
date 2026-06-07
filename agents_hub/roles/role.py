@@ -5,6 +5,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from agents_hub.config.types import AgentPlatform
 from agents_hub.roles.exceptions import SkillAlreadyExistsError, SkillNotFoundError
 from agents_hub.roles.models import RoleConfig, RoleInfo, RoleType, SkillInfo
@@ -142,7 +144,7 @@ class Role:
     def list_skills(self) -> list[SkillInfo]:
         """列出角色已启用的 skills。
 
-        扫描 work_root/skills/ 目录，读取每个 skill 的 skill.json 文件。
+        扫描 work_root/skills/ 目录，解析每个 skill 的 SKILL.md frontmatter。
 
         Returns:
             SkillInfo 列表，如果没有 skill 则返回空列表。
@@ -153,13 +155,26 @@ class Role:
 
         skills = []
         for skill_dir in skills_dir.iterdir():
-            if skill_dir.is_dir():
-                skill_json = skill_dir / "skill.json"
-                if skill_json.exists():
-                    data = json.loads(skill_json.read_text(encoding="utf-8"))
-                    skills.append(
-                        SkillInfo(id=data["id"], name=data["name"], description=data["description"])
-                    )
+            if not skill_dir.is_dir():
+                continue
+            skill_md = skill_dir / "SKILL.md"
+            if not skill_md.exists():
+                continue
+            try:
+                content = skill_md.read_text(encoding="utf-8")
+                if not content.startswith("---"):
+                    continue
+                parts = content.split("---", 2)
+                if len(parts) < 3:
+                    continue
+                frontmatter = yaml.safe_load(parts[1])
+                if not isinstance(frontmatter, dict):
+                    continue
+                name = frontmatter.get("name", skill_dir.name)
+                description = frontmatter.get("description", "")
+                skills.append(SkillInfo(id=skill_dir.name, name=name, description=description))
+            except Exception:
+                continue
         return skills
 
     def add_skill(self, skill_id: str, global_skills_dir: Path | None = None) -> None:
