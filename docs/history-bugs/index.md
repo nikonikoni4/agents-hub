@@ -69,3 +69,9 @@
  - path: docs/history-bugs/2026-06-07-role-skill-metadata-invalid.md
  - 触发规则：前端角色编辑面板添加 Skill 后报 SKILL_METADATA_INVALID，角色卡片不显示已添加的 Skill
  - 内容摘要：list_skills() 查找 skill.json 但实际 Skill 用 SKILL.md 格式；RoleResponse 已包含 skills 字段，前端直接用 getRoleInfo() 读取
+
+## 前端 Mutation 后组件刷新链路断裂
+ - updated_at : 2026-06-07
+ - path: docs/history-bugs/2026-06-07-frontend-refresh-dependency-gaps.md
+ - 触发规则：修改角色头像/描述后，Session 列表群聊头像、消息气泡发言人头像、成员列表头像不刷新；增删群成员后 CompositeAvatar 不刷新
+ - 内容摘要：6 个刷新链路断裂问题，根因是缺少跨 feature 刷新协调机制、数据聚合点无订阅、local state 缓存无失效策略
