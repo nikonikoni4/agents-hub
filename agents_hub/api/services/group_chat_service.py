@@ -43,6 +43,7 @@ from agents_hub.exceptions import (
     ValidationError,
 )
 from agents_hub.roles import RoleManager
+from agents_hub.realtime import broadcast_group_chat_refresh
 from agents_hub.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -739,5 +740,7 @@ class GroupChatService:
             group_chat_name=group_chat.group_chat_name,
             group_type=group_chat.group_type,
         )
+        # 让前端更新信息：这里为什么需要后端推送，原因是初始化的时候会启动平台，让他在群聊里面打招呼，这个消息需要显式推送
+        await broadcast_group_chat_refresh(group_chat.group_chat_id)
 
         return [GroupChatMember(**m) for m in group_chat.runtime.get_member_dicts()]
