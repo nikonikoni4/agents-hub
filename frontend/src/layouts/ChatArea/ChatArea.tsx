@@ -26,6 +26,45 @@ export interface ChatAreaProps {
   onContentChange?: (content: RightSidebarContent | null) => void;
 }
 
+// SVG 图标
+function PinIcon({ active }: { active?: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={active ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 17v5" />
+      <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 1 1 0 0 0 1-1V4a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1 1 1 0 0 1 1 1z" />
+    </svg>
+  );
+}
+
+function QuoteIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M8 10h.01" />
+      <path d="M12 10h.01" />
+      <path d="M16 10h.01" />
+    </svg>
+  );
+}
+
 const MessageBubble = React.memo(
   ({
     msg,
@@ -65,18 +104,6 @@ const MessageBubble = React.memo(
         >
           <MarkdownRenderer content={msg.content} />
         </div>
-        <div className={`${styles.messageActions} ${isUser ? styles.actionsRight : ''}`}>
-          <button
-            className={`${styles.pinButton} ${pinned ? styles.pinButtonActive : ''}`}
-            onClick={pinned ? onUnpin : onPin}
-            title={pinned ? '取消置顶' : '置顶消息'}
-          >
-            📌
-          </button>
-          <button className={styles.quoteButton} onClick={onQuote} title="引用消息">
-            💬
-          </button>
-        </div>
         {msg.modified_files && msg.modified_files.length > 0 && (
           <FileChangesCard
             modifiedFiles={msg.modified_files}
@@ -84,6 +111,18 @@ const MessageBubble = React.memo(
             onDiff={onDiff}
           />
         )}
+        <div className={`${styles.messageActions} ${isUser ? styles.actionsRight : ''}`}>
+          <button
+            className={`${styles.pinButton} ${pinned ? styles.pinButtonActive : ''}`}
+            onClick={pinned ? onUnpin : onPin}
+            title={pinned ? '取消置顶' : '置顶消息'}
+          >
+            <PinIcon active={pinned} />
+          </button>
+          <button className={styles.quoteButton} onClick={onQuote} title="引用消息">
+            <QuoteIcon />
+          </button>
+        </div>
       </div>
     );
   }

@@ -107,7 +107,7 @@
   font-size: 14px;
   line-height: 1.65;
   word-break: break-word;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .messageBubble p {
@@ -246,42 +246,44 @@
 }
 
 .pinButton {
+  display: flex;
+  align-items: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
-  padding: 2px 4px;
-  border-radius: 4px;
-  opacity: 0.5;
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: var(--text-tertiary);
   transition:
-    opacity 0.15s ease,
+    color 0.15s ease,
     background 0.15s ease;
 }
 
 .pinButton:hover {
-  opacity: 1;
+  color: var(--text-secondary);
   background: var(--bg-hover);
 }
 
 .pinButtonActive {
-  opacity: 1;
+  color: var(--accent-color);
 }
 
 .quoteButton {
+  display: flex;
+  align-items: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
-  padding: 2px 4px;
-  border-radius: 4px;
-  opacity: 0.5;
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: var(--text-tertiary);
   transition:
-    opacity 0.15s ease,
+    color 0.15s ease,
     background 0.15s ease;
 }
 
 .quoteButton:hover {
-  opacity: 1;
+  color: var(--text-secondary);
   background: var(--bg-hover);
 }
 

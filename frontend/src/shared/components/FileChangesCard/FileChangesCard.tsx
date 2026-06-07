@@ -3,6 +3,58 @@ import { ModifiedFileInfo } from '@/shared/types/api-schemas';
 import { FileItem } from './FileItem';
 import styles from './FileChangesCard.module.css';
 
+function PencilIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function ChevronUpIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m18 15-6-6-6 6" />
+    </svg>
+  );
+}
+
 export interface FileChangesCardProps {
   modifiedFiles: ModifiedFileInfo[];
   onPreview: (snapshotId: string, filePath: string) => void;
@@ -12,16 +64,16 @@ export interface FileChangesCardProps {
 export function FileChangesCard({ modifiedFiles, onPreview, onDiff }: FileChangesCardProps) {
   const [collapsed, setCollapsed] = useState(true);
 
-  // 计算总的 additions 和 deletions
   const totalAdditions = modifiedFiles.reduce((sum, file) => sum + file.additions, 0);
   const totalDeletions = modifiedFiles.reduce((sum, file) => sum + file.deletions, 0);
 
   return (
     <div className={styles.card}>
-      {/* 折叠头部 */}
       <div className={styles.header} onClick={() => setCollapsed(!collapsed)}>
         <div className={styles.summary}>
-          <span className={styles.icon}>📝</span>
+          <span className={styles.icon}>
+            <PencilIcon />
+          </span>
           <span>已编辑 {modifiedFiles.length} 个文件</span>
           <span className={styles.stats}>
             <span className={styles.additions}>+{totalAdditions}</span>
@@ -29,11 +81,18 @@ export function FileChangesCard({ modifiedFiles, onPreview, onDiff }: FileChange
           </span>
         </div>
         <button className={styles.toggleBtn} type="button">
-          {collapsed ? '展开 ▼' : '收起 ▲'}
+          {collapsed ? (
+            <>
+              <span>展开</span> <ChevronDownIcon />
+            </>
+          ) : (
+            <>
+              <span>收起</span> <ChevronUpIcon />
+            </>
+          )}
         </button>
       </div>
 
-      {/* 文件列表（展开时显示） */}
       {!collapsed && (
         <div className={styles.fileList}>
           {modifiedFiles.map((file) => (

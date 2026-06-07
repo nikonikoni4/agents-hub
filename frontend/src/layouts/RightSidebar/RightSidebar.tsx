@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMembers, MemberWithRole } from '@/features/chat/hooks';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
@@ -109,6 +109,13 @@ export function RightSidebar({
   const { taskList, loading: tasksLoading } = useTasks(activeSessionId);
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<SidebarTab>('chat');
+
+  // content 变化时自动切换到对应 tab
+  useEffect(() => {
+    if (content?.type === 'preview' || content?.type === 'diff') {
+      setActiveTab(content.type);
+    }
+  }, [content]);
 
   const handleToggleDocker = async (memberName: string) => {
     try {

@@ -56,6 +56,13 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
     }
   }, [activeSessionId, lastSelectedAt]);
 
+  // 当有新的预览/diff 内容时，自动展开右侧栏
+  useEffect(() => {
+    if (rightSidebarContent) {
+      setRightSidebarCollapsed(false);
+    }
+  }, [rightSidebarContent]);
+
   const handleToggleLeftSidebar = useCallback(() => {
     setLeftSidebarCollapsed((prev) => !prev);
   }, []);

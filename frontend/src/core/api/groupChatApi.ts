@@ -676,13 +676,9 @@ export async function getFileSnapshotContent(
   groupChatId: string,
   snapshotId: string
 ): Promise<string> {
-  const response = await fetch(`/api/group-chats/${groupChatId}/files/${snapshotId}/content`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch snapshot content: ${response.statusText}`);
-  }
-
-  const data = await response.json();
+  const data = await apiClient.get<{ content: string }>(
+    `/group-chats/${groupChatId}/files/${snapshotId}/content`
+  );
   return data.content;
 }
 
@@ -693,12 +689,8 @@ export async function getFileSnapshotDiff(
   groupChatId: string,
   snapshotId: string
 ): Promise<string> {
-  const response = await fetch(`/api/group-chats/${groupChatId}/files/${snapshotId}/diff`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch snapshot diff: ${response.statusText}`);
-  }
-
-  const data = await response.json();
+  const data = await apiClient.get<{ diff: string }>(
+    `/group-chats/${groupChatId}/files/${snapshotId}/diff`
+  );
   return data.diff;
 }

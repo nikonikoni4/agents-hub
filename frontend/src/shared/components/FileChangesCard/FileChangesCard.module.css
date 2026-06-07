@@ -1,106 +1,140 @@
 .card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #fff;
   margin-top: 8px;
+  border-radius: 10px;
+  background: var(--bg-bubble);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
+/* 折叠头部 */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 10px 14px;
   cursor: pointer;
   user-select: none;
+  transition: background 0.15s;
 }
 
 .header:hover {
-  background: #f5f5f5;
+  background: var(--bg-shadow, rgba(0, 0, 0, 0.04));
 }
 
 .summary {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .icon {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
 }
 
 .stats {
   display: flex;
-  gap: 8px;
-  margin-left: 8px;
+  gap: 6px;
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
 }
 
 .additions {
-  color: #4caf50;
-  font-weight: 500;
+  color: #22c55e;
 }
 
 .deletions {
-  color: #f44336;
-  font-weight: 500;
+  color: #ef4444;
 }
 
 .toggleBtn {
   background: none;
   border: none;
-  color: #666;
+  color: var(--text-tertiary);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
+.toggleBtn:hover {
+  background: var(--bg-shadow, rgba(0, 0, 0, 0.04));
+  color: var(--text-secondary);
+}
+
+/* 文件列表 */
 .fileList {
-  border-top: 1px solid #f0f0f0;
+  padding: 2px 0;
 }
 
 .fileItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 14px;
+  transition: background 0.15s;
 }
 
-.fileItem:last-child {
-  border-bottom: none;
+.fileItem:hover {
+  background: var(--bg-shadow, rgba(0, 0, 0, 0.04));
 }
 
 .fileInfo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
+  min-width: 0;
 }
 
 .fileIcon {
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
 .filePath {
-  color: #333;
-  font-size: 14px;
-  flex: 1;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .actionBtn {
-  padding: 4px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  background: #fff;
-  color: #333;
+  padding: 3px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .actionBtn:hover {
-  background: #f5f5f5;
+  background: var(--accent-color);
+  color: #fff;
 }
