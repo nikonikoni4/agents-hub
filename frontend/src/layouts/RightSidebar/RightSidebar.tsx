@@ -6,6 +6,7 @@ import { useTasks } from '@/features/chat/hooks/useTasks';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { AvatarImage, ResizeHandle } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast/useToast';
+import { RightSidebarContent } from '@/shared/types/layout';
 import { AgentCallsPanel } from './AgentCallsPanel';
 import { TasksPanel } from './TasksPanel';
 import styles from './RightSidebar.module.css';
@@ -18,12 +19,6 @@ const TAB_LABELS: Record<SidebarTab, string> = {
   preview: '预览',
   diff: 'Diff',
 };
-
-export interface RightSidebarContent {
-  type: 'preview' | 'diff';
-  content: string;
-  filePath: string;
-}
 
 export interface RightSidebarProps {
   collapsed: boolean;

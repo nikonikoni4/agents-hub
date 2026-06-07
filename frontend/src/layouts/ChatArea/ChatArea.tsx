@@ -17,14 +17,9 @@ import {
   getFileSnapshotDiff,
 } from '@/core/api/groupChatApi';
 import type { MessageApiItem } from '@/shared/types';
+import { RightSidebarContent } from '@/shared/types/layout';
 import { ChatInput } from './ChatInput';
 import styles from './ChatArea.module.css';
-
-export interface RightSidebarContent {
-  type: 'preview' | 'diff';
-  content: string;
-  filePath: string;
-}
 
 export interface ChatAreaProps {
   onToggleRightSidebar?: () => void;

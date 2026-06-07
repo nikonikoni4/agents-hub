@@ -1,2 +1,2 @@
 export { ChatArea } from './ChatArea';
-export type { RightSidebarContent } from './ChatArea';
+export type { RightSidebarContent } from '@/shared/types/layout';
