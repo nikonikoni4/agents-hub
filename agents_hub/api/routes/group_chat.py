@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 
 from agents_hub.api.schemas.group_chats import (
     AddMembersRequest,
+    AgentCallInfo,
     GroupChatCreate,
     GroupChatInfo,
     GroupChatMember,
@@ -12,6 +13,7 @@ from agents_hub.api.schemas.group_chats import (
     PinMessageRequest,
     PinnedMessageInfo,
     PinOperationResponse,
+    TaskListInfo,
     UseDockerUpdate,
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
@@ -85,6 +87,24 @@ async def get_messages(
 ):
     """获取群聊消息历史"""
     return await service.get_messages(group_chat_id, limit=limit, before=before)
+
+
+@router.get("/{group_chat_id}/agent-calls", response_model=list[AgentCallInfo])
+async def get_agent_calls(
+    group_chat_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取群聊的所有 Agent 调用记录"""
+    return await service.get_agent_calls(group_chat_id)
+
+
+@router.get("/{group_chat_id}/tasks", response_model=TaskListInfo | None)
+async def get_tasks(
+    group_chat_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取群聊的当前任务列表（ACTIVE）"""
+    return await service.get_tasks(group_chat_id)
 
 
 @router.post("/{group_chat_id}/messages", response_model=dict[str, str])

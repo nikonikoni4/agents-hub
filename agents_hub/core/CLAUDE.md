@@ -17,7 +17,9 @@ trigger: 修改 agents_hub/core/ 或依赖 core 行为的代码时
 
 ## 编码规则
 
-### Runtime 是 GroupChat 状态入口
+### Runtime 是 GroupChat 上下文状态入口
+
+**适用范围**：群聊上下文状态（消息历史、成员会话、压缩记录、元数据）
 
 **禁止**：
 - ❌ 在 `GroupChatManager`、API service 或 MCP tool 中直接打开 `agent_member.json`、`group_metadata.json`、消息 jsonl 来获取已加载群聊状态
@@ -34,6 +36,38 @@ members = group_chat.runtime.get_member_dicts()
 with open(agent_member_file, encoding="utf-8") as f:
     members = json.load(f)
 ```
+
+### 通信状态访问规则
+
+**适用范围**：AgentCallManager 和 TaskManager 管理的通信层状态
+
+**架构说明**：
+- `GroupChatRuntime` 管理**群聊上下文状态**（context/ 层）
+- `AgentCallManager` 和 `TaskManager` 管理**通信控制面状态**（communication/ 层）
+- 两者是**平级组件**，都由 `GroupChat` 组装
+
+**访问方式**：
+```python
+# ✅ 正确：通过 GroupChat 访问平级组件
+group_chat = await group_chat_manager.load_group_chat(group_chat_id)
+
+# 获取 Agent 调用记录
+all_calls = group_chat.agent_call_manager.list_all_calls()
+
+# 获取任务列表
+task_list = group_chat.task_manager.get_active_task_list(group_chat_id)
+
+# ❌ 错误：直接访问私有属性
+all_calls = group_chat.agent_call_manager._calls.values()
+
+# ❌ 错误：试图通过 Runtime 访问（Runtime 不管理通信状态）
+all_calls = group_chat.runtime.get_agent_calls()  # Runtime 没有这个方法
+```
+
+**为什么不集成到 Runtime**：
+- Runtime 职责：管理群聊上下文（消息、成员、元数据）
+- Manager 职责：管理通信控制面（调用追踪、任务协作）
+- 保持分层清晰：`context/` 和 `communication/` 平级，互不依赖
 
 ### user 身份只能通过 config 判断
 
@@ -83,7 +117,9 @@ target_agent.message_queue.put_nowait(message)
 
 | 场景 | 决策 |
 |------|------|
-| 查询已加载群聊信息 | 用 `group_chat.runtime.get_*` |
+| 查询已加载群聊上下文信息 | 用 `group_chat.runtime.get_*` |
+| 查询 Agent 调用记录 | 用 `group_chat.agent_call_manager.list_all_calls()` |
+| 查询任务列表 | 用 `group_chat.task_manager.get_active_task_list()` |
 | 修改群聊状态并持久化 | 给 `GroupChatRuntime` 增加 command 方法 |
 | Agent 调用另一个 Agent | 创建 `AgentCall` 后通过 `GroupChat.send_message_to_agent()` 投递并保存 |
 | 判断调用方是否是前端用户 | 用 `config.is_user_name(name)` |
