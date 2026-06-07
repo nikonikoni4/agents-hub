@@ -117,6 +117,15 @@ class AgentCallManager:
         self.logger.warning(f"调用 {call_id} 不存在，可能已被清理或系统重启导致数据丢失")
         return None
 
+    def list_all_calls(self) -> list[AgentCall]:
+        """
+        获取所有调用记录（用于 API 查询）
+
+        Returns:
+            list[AgentCall]: 所有调用记录列表
+        """
+        return list(self._calls.values())
+
     def get_runtime_calls_for_agent(self, agent_name: str) -> list[AgentCall]:
         """
         获取需要注入到指定接收方 runtime 的调用列表。

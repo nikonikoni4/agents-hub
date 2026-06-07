@@ -106,3 +106,84 @@ class AddMembersRequest(BaseModel):
     """添加群成员请求"""
 
     member_names: list[str] = Field(..., min_length=1, description="成员角色名列表")
+
+
+# --- Agent Calls Schemas ---
+
+
+class AgentCallInfo(BaseModel):
+    """Agent 调用信息（用于前端展示）"""
+
+    call_id: str = Field(..., description="调用 ID")
+    send_from: str = Field(..., description="发送者名称")
+    send_to: str = Field(..., description="接收者名称")
+    content: str = Field(..., description="消息内容")
+    message_type: str = Field(..., description="消息类型：task/notification")
+    status: str = Field(..., description="调用状态：pending/running/completed/failed/timeout")
+    created_at: str = Field(..., description="创建时间 ISO 8601")
+    started_at: str | None = Field(None, description="开始时间 ISO 8601")
+    completed_at: str | None = Field(None, description="完成时间 ISO 8601")
+    error: str | None = Field(None, description="错误信息")
+
+    @classmethod
+    def from_agent_call(cls, call) -> "AgentCallInfo":
+        """从 AgentCall 领域模型转换为 API Schema"""
+        return cls(
+            call_id=call.call_id,
+            send_from=call.send_from,
+            send_to=call.send_to,
+            content=call.content,
+            message_type=call.message_type.value,
+            status=call.status.value,
+            created_at=call.created_at.isoformat(),
+            started_at=call.started_at.isoformat() if call.started_at else None,
+            completed_at=call.completed_at.isoformat() if call.completed_at else None,
+            error=call.error,
+        )
+
+
+# --- Tasks Schemas ---
+
+
+class TaskInfo(BaseModel):
+    """单个任务信息"""
+
+    task_id: str = Field(..., description="任务 ID")
+    owner: str = Field(..., description="任务负责人")
+    content: str = Field(..., description="任务描述")
+    status: str = Field(..., description="任务状态：pending/running/completed/failed")
+    created_at: str = Field(..., description="创建时间 ISO 8601")
+    updated_at: str = Field(..., description="更新时间 ISO 8601")
+
+    @classmethod
+    def from_task(cls, task) -> "TaskInfo":
+        """从 Task 领域模型转换为 API Schema"""
+        return cls(
+            task_id=task.task_id,
+            owner=task.owner,
+            content=task.content,
+            status=task.status.value,
+            created_at=task.created_at.isoformat(),
+            updated_at=task.updated_at.isoformat(),
+        )
+
+
+class TaskListInfo(BaseModel):
+    """任务列表信息（用于前端展示）"""
+
+    list_id: str = Field(..., description="任务列表 ID")
+    status: str = Field(..., description="列表状态：active/archived")
+    tasks: list[TaskInfo] = Field(..., description="任务列表")
+    created_at: str = Field(..., description="创建时间 ISO 8601")
+    archived_at: str | None = Field(None, description="归档时间 ISO 8601")
+
+    @classmethod
+    def from_task_list(cls, task_list) -> "TaskListInfo":
+        """从 TaskList 领域模型转换为 API Schema"""
+        return cls(
+            list_id=task_list.list_id,
+            status=task_list.status.value,
+            tasks=[TaskInfo.from_task(task) for task in task_list.tasks],
+            created_at=task_list.created_at.isoformat(),
+            archived_at=task_list.archived_at.isoformat() if task_list.archived_at else None,
+        )

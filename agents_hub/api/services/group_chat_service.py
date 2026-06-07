@@ -20,9 +20,11 @@ from uuid import uuid4
 import aiofiles
 
 from agents_hub.api.schemas.group_chats import (
+    AgentCallInfo,
     GroupChatInfo,
     GroupChatMember,
     MessageInfo,
+    TaskListInfo,
 )
 from agents_hub.config import config
 from agents_hub.core.context.group_metadata import GroupMetadata
@@ -744,3 +746,68 @@ class GroupChatService:
         await broadcast_group_chat_refresh(group_chat.group_chat_id)
 
         return [GroupChatMember(**m) for m in group_chat.runtime.get_member_dicts()]
+
+    async def get_agent_calls(self, group_chat_id: str) -> list[AgentCallInfo]:
+        """获取群聊的所有 Agent 调用记录
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            list[AgentCallInfo]: Agent 调用记录列表（按创建时间升序）
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        logger.info("获取 Agent 调用记录: group_chat_id=%s", group_chat_id)
+
+        # 1. 加载群聊（验证存在性）
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 2. 从 AgentCallManager 获取所有调用记录
+        all_calls = group_chat.agent_call_manager.list_all_calls()
+
+        # 3. 按创建时间升序排序
+        sorted_calls = sorted(all_calls, key=lambda call: call.created_at)
+
+        # 4. 转换为 API Schema
+        return [AgentCallInfo.from_agent_call(call) for call in sorted_calls]
+
+    async def get_tasks(self, group_chat_id: str) -> TaskListInfo | None:
+        """获取群聊的当前任务列表（ACTIVE）
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            TaskListInfo | None: 当前 ACTIVE 的任务列表，不存在则返回 None
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        logger.info("获取任务列表: group_chat_id=%s", group_chat_id)
+
+        # 1. 加载群聊（验证存在性）
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 2. 从 TaskManager 获取 ACTIVE 任务列表
+        active_task_list = group_chat.task_manager.get_active_task_list(group_chat_id)
+
+        # 3. 如果不存在，返回 None
+        if active_task_list is None:
+            return None
+
+        # 4. 转换为 API Schema
+        return TaskListInfo.from_task_list(active_task_list)
