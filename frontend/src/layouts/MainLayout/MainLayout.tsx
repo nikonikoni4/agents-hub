@@ -39,8 +39,12 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
-  const [leftSidebarWidth, setLeftSidebarWidth] = useState(220);
-  const [rightSidebarWidth, setRightSidebarWidth] = useState(220);
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(() =>
+    Math.round(window.innerWidth * 0.15)
+  );
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(() =>
+    Math.round(window.innerWidth * 0.25)
+  );
   const [isResizing, setIsResizing] = useState(false);
   const [rightSidebarContent, setRightSidebarContent] = useState<RightSidebarContent | null>(null);
 
@@ -76,11 +80,11 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   }, []);
 
   const handleLeftResize = useCallback((delta: number) => {
-    setLeftSidebarWidth((prev) => Math.min(400, Math.max(160, prev + delta)));
+    setLeftSidebarWidth((prev) => Math.max(120, prev + delta));
   }, []);
 
   const handleRightResize = useCallback((delta: number) => {
-    setRightSidebarWidth((prev) => Math.min(400, Math.max(160, prev + delta)));
+    setRightSidebarWidth((prev) => Math.max(120, prev + delta));
   }, []);
 
   const handleResizeStart = useCallback(() => setIsResizing(true), []);
