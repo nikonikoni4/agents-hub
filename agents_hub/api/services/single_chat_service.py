@@ -58,24 +58,30 @@ class SingleChatManager:
         self._load_index()
 
     @staticmethod
-    def _resolve_session_path(session_id: str, platform: AgentPlatform) -> str | None:
+    def _resolve_session_path(
+        session_id: str, platform: AgentPlatform, work_root: str | None
+    ) -> str | None:
         """根据 session_id 和平台查找会话文件路径
 
         Args:
             session_id: 会话 ID
             platform: 平台类型
+            work_root: 角色工作根目录（RoleConfig.work_root）
 
         Returns:
             会话文件路径字符串，未找到返回 None
         """
-        search_roots = {
-            AgentPlatform.CLAUDE: Path.home() / ".claude",
-            AgentPlatform.CODEX: Path.home() / ".codex",
-        }
-        root = search_roots.get(platform)
-        if not root or not root.exists():
+        if not work_root:
             return None
-        for f in root.rglob(f"*{session_id}*.jsonl"):
+        if platform == AgentPlatform.CLAUDE:
+            search_dir = Path(work_root) / "projects"
+        elif platform == AgentPlatform.CODEX:
+            search_dir = Path(work_root) / "sessions"
+        else:
+            return None  # type: ignore[unreachable]
+        if not search_dir.exists():
+            return None
+        for f in search_dir.rglob(f"*{session_id}*.jsonl"):
             return str(f)
         return None
 
@@ -115,15 +121,8 @@ class SingleChatManager:
         """
         single_chat_id = str(uuid4())
 
-        # 验证 agent 存在
-        try:
-            role = self._role_manager.get_role(request.agent_name)
-        except Exception as e:
-            raise ResourceNotFoundError(
-                f"Agent '{request.agent_name}' 不存在",
-                details={"agent_name": request.agent_name},
-            ) from e
-
+        # 验证 agent 存在（RoleNotFoundError 会自然传播到全局异常处理器）
+        role = self._role_manager.get_role(request.agent_name)
         role_config = role.get_role_config()
 
         session_id = None
@@ -152,7 +151,9 @@ class SingleChatManager:
 
         # continue_group_chat 类型：解析已有 session 的文件路径
         if session_id:
-            session_path = self._resolve_session_path(session_id, role_config.platform)
+            session_path = self._resolve_session_path(
+                session_id, role_config.platform, role_config.work_root
+            )
 
         index = SingleChatIndex(
             single_chat_id=single_chat_id,
@@ -296,7 +297,9 @@ class SingleChatManager:
 
         # 首次获取 session_id 时解析并设置 session_path
         if session_updated and index.session_id:
-            index.session_path = self._resolve_session_path(index.session_id, index.platform)
+            index.session_path = self._resolve_session_path(
+                index.session_id, index.platform, role_config.work_root
+            )
 
         # 流结束后更新活跃时间和索引
         index.last_active_at = datetime.now().isoformat()
@@ -337,7 +340,7 @@ class SingleChatManager:
                 self._cache.popitem(last=False)
 
             return messages
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error("Failed to load messages for %s: %s", single_chat_id, e)
             return []
 

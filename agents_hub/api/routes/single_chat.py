@@ -57,7 +57,10 @@ async def send_message_stream(
 
     async def event_generator():
         async for event_json in manager.send_message_stream(single_chat_id, request.content):
-            yield f"data: {event_json}\n\n"
+            # SSE 规范：data 字段中的换行符必须用多行 data: 前缀
+            for line in event_json.split("\n"):
+                yield f"data: {line}\n"
+            yield "\n"
 
     return StreamingResponse(
         event_generator(),

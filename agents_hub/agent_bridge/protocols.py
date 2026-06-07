@@ -11,7 +11,12 @@ class Executor(Protocol):
     """执行器协议：负责启动 CLI 并返回原始输出流"""
 
     async def execute(
-        self, prompt: str, config: RoleConfig, session_id: str | None = None
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: str | None = None,
+        cwd: str | None = None,
+        fork_from: str | None = None,
     ) -> AsyncIterator[str]:
         """
         启动 CLI 并返回原始输出流
@@ -20,6 +25,8 @@ class Executor(Protocol):
             prompt: 用户输入
             config: 角色配置
             session_id: 会话 ID（可选，用于恢复已有会话或指定新会话 ID）
+            cwd: 工作目录
+            fork_from: fork 源会话 ID
 
         Returns:
             AsyncIterator[str]: 原始 JSON 字符串流（每行一个事件）

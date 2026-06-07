@@ -17,8 +17,14 @@ class DockerCodexExecutor(DockerExecutor):
         prompt: str,
         config: RoleConfig,
         session_id: str | None,
+        *,
+        fork_from: str | None = None,
     ) -> list[str]:
         """构建 Codex CLI 命令（强制跳过审批和沙箱）"""
+        if fork_from:
+            cmd = [DOCKER_CODEX_COMMAND, "fork", fork_from, prompt]
+            return cmd
+
         cmd = [
             DOCKER_CODEX_COMMAND,
             "--dangerously-bypass-approvals-and-sandbox",

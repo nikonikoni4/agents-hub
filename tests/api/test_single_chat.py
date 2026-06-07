@@ -13,6 +13,7 @@ from agents_hub.api.routes.single_chat import get_single_chat_manager, router
 from agents_hub.api.services.single_chat_service import SingleChatManager
 from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.exceptions import AgentsHubError, ResourceNotFoundError, ValidationError
+from agents_hub.roles.exceptions import RoleNotFoundError
 from agents_hub.roles.models import RoleConfig
 
 
@@ -110,7 +111,7 @@ def test_create_single_chat(client):
 
 def test_create_single_chat_agent_not_found(client, mock_role_manager):
     """测试创建单聊时 agent 不存在"""
-    mock_role_manager.get_role.side_effect = Exception("not found")
+    mock_role_manager.get_role.side_effect = RoleNotFoundError(role_name="nonexistent_agent")
 
     response = client.post("/api/v1/single-chats", json={
         "type": "new",

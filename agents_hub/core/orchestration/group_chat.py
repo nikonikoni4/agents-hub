@@ -366,10 +366,10 @@ class GroupChat:
         result = {}
 
         if self.manager:
-            result[self.manager.name] = self.manager._is_processing
+            result[self.manager.name] = self.manager.is_processing
 
         for name, worker in self.workers.items():
-            result[name] = worker._is_processing
+            result[name] = worker.is_processing
 
         return result
 

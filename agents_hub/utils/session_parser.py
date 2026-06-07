@@ -10,6 +10,11 @@ from typing import Literal
 from pydantic import BaseModel
 
 from agents_hub.config.types import AgentPlatform
+from agents_hub.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+_VALID_ROLES = frozenset({"user", "assistant", "system", "tool"})
 
 
 class SessionMessage(BaseModel):
@@ -90,6 +95,9 @@ def parse_codex_session(messages: list[dict]) -> list[SessionMessage]:
         if msg_type == "response_item":
             payload = msg.get("payload", {})
             role = payload.get("role", "")
+            if role not in _VALID_ROLES:
+                logger.debug("Skipping codex message with unknown role: %s", role)
+                continue
             texts = []
             for block in payload.get("content", []):
                 bt = block.get("type", "")

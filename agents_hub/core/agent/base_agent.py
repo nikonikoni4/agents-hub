@@ -64,6 +64,10 @@ class Agent:
         info = self.group_chat_context.agent_member_info.get(self.name)
         return info.cwd if info else ""
 
+    @property
+    def is_processing(self) -> bool:
+        return self._is_processing
+
     def set_run(self, run: bool):
         """设置该agent是否工作"""
         # TODO 后续使用，暂时占位
