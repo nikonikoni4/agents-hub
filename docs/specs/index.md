@@ -117,3 +117,9 @@
  - path: `docs/specs/2026-06-07-message-reply-quote.md`
  - 触发规则：当设计、修改或扩展消息引用功能时阅读，包括引用按钮交互、引用框展示、Markdown 引用语法格式和错误处理
  - 内容摘要：消息引用功能规格，定义前端纯实现的引用机制（无需后端支持）、hover 气泡显示引用按钮（💬）、输入框上方引用框展示（发言者+内容摘要）、Markdown 块引用语法格式化（`> `前缀）、发送失败时保留引用状态的错误处理策略
+
+## single-chat
+ - updated_at : 2026-06-08
+ - path: `docs/specs/2026-06-08-single-chat.md`
+ - 触发规则：当设计、修改或扩展单聊通道时阅读，包括单聊 CRUD、三种创建模式、流式消息发送、Session 文件解析和 LRU 消息缓存
+ - 内容摘要：单聊通道模块规格，定义用户与单个 Agent 直接对话的轻量级通道（不依赖群聊编排逻辑）、三种创建模式（new/fork/continue_group_chat）、SSE 流式消息发送、平台 session 文件解析（Claude/Codex）、LRU 消息缓存（15 个上限）和 session 路径解析规则
