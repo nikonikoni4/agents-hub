@@ -1,19 +1,20 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-06
-updated_at: 2026-06-06
-last_updated: 创建 spec 初稿
-abstract: 消息置顶功能规格，定义 pin/unpin 操作的 API 契约、前端交互和右侧栏展示
+updated_at: 2026-06-07
+last_updated: 添加 Agent Context Integration 章节
+abstract: 消息置顶功能规格，定义 pin/unpin 操作的 API 契约、前端交互、右侧栏展示和 Agent 上下文注入
 id: pinned-messages
 title: 消息置顶功能
 status: draft
-module: api/group_chat, frontend/chat
+module: api/group_chat, frontend/chat, core/agent
 sourc_spec: 无（brainstorming 讨论直接产出）
 related_plan: 无（当前无对应执行计划）
 code_scope:
   - agents_hub/api/routes/group_chat.py
   - agents_hub/api/schemas/group_chats.py
   - agents_hub/api/services/group_chat_service.py
+  - agents_hub/core/agent/base_agent.py
   - frontend/src/core/api/groupChatApi.ts
   - frontend/src/features/chat/hooks/
   - frontend/src/layouts/ChatArea/ChatArea.tsx
@@ -30,6 +31,7 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
+| 1.1 | 添加 Agent Context Integration 章节，定义 Pin 消息自动注入到 Agent 提示词的行为 |
 
 ## Overview
 
@@ -184,3 +186,89 @@ Unpin（两种方式）:
 4. 前端组件的具体实现（TypeScript 类型、状态管理、样式）
 5. Pin 消息的排序策略
 6. 批量 pin/unpin 操作
+
+## Agent Context Integration
+
+### 概述
+
+Pin 消息会自动注入到 Agent 的上下文提示词中，让 Agent 在处理任务时遵守用户置顶的规则和要求。这为用户提供了一种全局配置 Agent 行为的机制。
+
+### 注入时机
+
+- **触发条件**：Agent 处理 MAIN 会话（群聊）消息时
+- **不触发场景**：BTW 单聊会话不注入 Pin 消息
+- **执行位置**：`Agent._process_message()` 中，在组装完整提示词时
+
+### 注入格式
+
+Pin 消息以 XML 格式注入到提示词中：
+
+```xml
+<pinned_messages>
+以下是用户置顶的重要消息，请在处理任务时遵守这些规则和要求：
+
+[speaker]: 消息内容
+[speaker]: 消息内容
+
+</pinned_messages>
+```
+
+**排序规则**：按 `pinned_at` 时间升序排列（最早 pin 的在前）
+
+### 提示词组装顺序
+
+完整提示词的组装顺序为：
+
+```
+1. 历史上下文（agent_context.get_context()）
+2. Pin 消息（_get_pinned_messages_prompt()）
+3. 当前用户消息（render_for_llm(msg)）
+```
+
+### 实现细节
+
+**数据来源**：
+- 直接读取 `pins.json` 文件（遵循 SSOT 原则）
+- 路径：`{group_chat_session_path}/pins.json`
+
+**异常处理**：
+- 文件不存在：返回空字符串
+- 文件为空或无有效数据：返回空字符串
+- 读取失败（IOError 等）：记录警告日志，返回空字符串
+
+**性能考虑**：
+- 每次消息处理都读取 `pins.json`（文件通常很小）
+- 未来可优化为缓存机制（监听文件变化）
+
+### 使用场景示例
+
+**场景 1：代码规范**
+```
+用户 Pin: "所有代码必须添加类型注解"
+→ Agent 在编写代码时会自动遵守此规则
+```
+
+**场景 2：任务约束**
+```
+Manager Pin: "提交前必须运行测试"
+→ Agent 完成任务后会主动运行测试
+```
+
+**场景 3：偏好设置**
+```
+用户 Pin: "使用简洁的变量命名，避免过长的名称"
+→ Agent 在重构代码时会遵循此偏好
+```
+
+### 测试契约
+
+Pin 消息注入功能的测试覆盖：
+- 文件不存在时返回空字符串
+- 文件为空时返回空字符串
+- 有 Pin 消息时生成正确的 XML 格式
+- Pin 消息按时间升序排列
+- 读取失败时返回空字符串（异常处理）
+- MAIN 会话中注入 Pin 消息
+- BTW 会话中不注入 Pin 消息
+
+**测试文件**：`tests/unit/test_agent_pin_injection.py`

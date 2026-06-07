@@ -25,12 +25,14 @@ const MessageBubble = React.memo(
     pinned,
     onPin,
     onUnpin,
+    onQuote,
   }: {
     msg: MessageApiItem;
     avatar?: string | null;
     pinned: boolean;
     onPin: () => void;
     onUnpin: () => void;
+    onQuote: () => void;
   }) => {
     const isUser = msg.speaker === 'user';
 
@@ -59,6 +61,9 @@ const MessageBubble = React.memo(
           >
             📌
           </button>
+          <button className={styles.quoteButton} onClick={onQuote} title="引用消息">
+            💬
+          </button>
         </div>
       </div>
     );
@@ -81,6 +86,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const [showManageMembers, setShowManageMembers] = useState(false);
+  const [quotedMessage, setQuotedMessage] = useState<MessageApiItem | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -108,17 +114,28 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   // 切换 session 时清空本地消息
   useEffect(() => {
     setLocalMessages([]);
+    setQuotedMessage(null);
   }, [activeSessionId]);
 
   const handleSend = useCallback(
     async (text: string) => {
       if (!activeSessionId) return;
 
+      // 如果有引用消息，用 MD 引用语法包裹
+      let finalText = text;
+      if (quotedMessage) {
+        const quotedContent = quotedMessage.content
+          .split('\n')
+          .map((line) => `> ${line}`)
+          .join('\n');
+        finalText = `${quotedContent}\n\n${text}`;
+      }
+
       // 乐观更新：立即显示用户消息
       const optimisticMsg: MessageApiItem = {
         id: 0, // 临时 id，实际 id 由后端分配
         speaker: 'user',
-        content: text,
+        content: finalText,
         timestamp: new Date().toISOString(),
         platform: 'user',
       };
@@ -127,13 +144,20 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
       try {
         const members = await getMembers(activeSessionId);
         const memberNames = members.map((m) => m.name);
-        await sendMessage(activeSessionId, { content: text, members: memberNames });
+        await sendMessage(activeSessionId, { content: finalText, members: memberNames });
+        // 发送成功后才清空引用状态
+        setQuotedMessage(null);
       } catch (err) {
         console.error('Failed to send message:', err);
+        // 发送失败时保留引用状态，用户可重试
       }
     },
-    [activeSessionId]
+    [activeSessionId, quotedMessage]
   );
+
+  const handleQuote = useCallback((msg: MessageApiItem) => {
+    setQuotedMessage(msg);
+  }, []);
 
   // 未选择会话时的空态
   if (!activeSessionId) {
@@ -186,6 +210,7 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
               pinned={isPinned(msg.id)}
               onPin={() => pin(msg.id)}
               onUnpin={() => unpin(msg.id)}
+              onQuote={() => handleQuote(msg)}
             />
           ))
         )}
@@ -193,7 +218,13 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
       </div>
 
       {/* 输入区 */}
-      <ChatInput activeSessionId={activeSessionId} members={members} onSend={handleSend} />
+      <ChatInput
+        activeSessionId={activeSessionId}
+        members={members}
+        onSend={handleSend}
+        quotedMessage={quotedMessage}
+        onClearQuote={() => setQuotedMessage(null)}
+      />
     </div>
   );
 }

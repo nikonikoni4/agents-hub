@@ -107,7 +107,13 @@
  - 内容摘要：前端功能层规格，定义 chat/session/roles/skills 四个业务模块的职责边界、Zustand 独立 store 状态管理模式、跨 feature 通信规则（store 订阅/props/core 中转）、shared 层分层职责（types 定义契约、adapters 转换数据、components 提供复用）
 
 ## pinned-messages
- - updated_at : 2026-06-06
+ - updated_at : 2026-06-07
  - path: `docs/specs/2026-06-06-pinned-messages.md`
- - 触发规则：当设计、修改或扩展消息置顶功能时阅读，包括 pin/unpin API、右侧栏 Pinned 模块、hover pin 按钮交互
- - 内容摘要：消息置顶功能规格，定义 RESTful 端点（GET/POST/DELETE pinned-messages）、使用 timestamp+speaker 复合键标识消息、hover 气泡底部 pin 按钮交互、右侧栏 Pinned 模块展示和取消置顶操作
+ - 触发规则：当设计、修改或扩展消息置顶功能时阅读，包括 pin/unpin API、右侧栏 Pinned 模块、hover pin 按钮交互和 Agent 上下文注入
+ - 内容摘要：消息置顶功能规格，定义 RESTful 端点（GET/POST/DELETE pinned-messages）、使用 message_id 标识消息、hover 气泡底部 pin 按钮交互、右侧栏 Pinned 模块展示、取消置顶操作和 Pin 消息自动注入到 Agent 提示词的行为（XML 格式、MAIN 会话触发、按时间升序排列）
+
+## message-reply-quote
+ - updated_at : 2026-06-07
+ - path: `docs/specs/2026-06-07-message-reply-quote.md`
+ - 触发规则：当设计、修改或扩展消息引用功能时阅读，包括引用按钮交互、引用框展示、Markdown 引用语法格式和错误处理
+ - 内容摘要：消息引用功能规格，定义前端纯实现的引用机制（无需后端支持）、hover 气泡显示引用按钮（💬）、输入框上方引用框展示（发言者+内容摘要）、Markdown 块引用语法格式化（`> `前缀）、发送失败时保留引用状态的错误处理策略

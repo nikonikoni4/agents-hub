@@ -167,6 +167,57 @@ class Agent:
         except Exception:
             return False
 
+    async def _get_pinned_messages_prompt(self) -> str:
+        """读取 Pin 消息并生成提示词片段。
+
+        Returns:
+            Pin 消息的提示词字符串，如果没有 Pin 消息则返回空字符串
+        """
+        import json
+        from pathlib import Path
+
+        import aiofiles
+
+        # 获取 pins.json 路径
+        session_path = Path(self.group_chat_context.repository.group_chat_session_path)
+        pins_path = session_path / "pins.json"
+
+        if not pins_path.exists():
+            return ""
+
+        try:
+            # 读取 pins.json
+            async with aiofiles.open(pins_path, encoding="utf-8") as f:
+                content = await f.read()
+                pins = json.loads(content) if content.strip() else []
+
+            if not pins:
+                return ""
+
+            # 按 pinned_at 升序排列（最早 pin 的在前）
+            pins_sorted = sorted(pins, key=lambda p: p.get("pinned_at", ""))
+
+            # 构造提示词
+            lines = [
+                "",
+                "<pinned_messages>",
+                "以下是用户置顶的重要消息，请在处理任务时遵守这些规则和要求：",
+                "",
+            ]
+
+            for pin in pins_sorted:
+                speaker = pin.get("speaker", "unknown")
+                content = pin.get("content", "")
+                lines.append(f"[{speaker}]: {content}")
+                lines.append("")
+
+            lines.append("</pinned_messages>")
+
+            return "\n".join(lines)
+        except Exception as e:
+            self.logger.warning("读取 Pin 消息失败: %s", str(e))
+            return ""
+
     async def _process_message(self, msg: AgentMessage, prompt: str) -> AgentResult:
         """处理一条入站消息。
 
@@ -204,8 +255,22 @@ class Agent:
                     msg.call_id,
                     use_docker,
                 )
+                # 获取历史上下文
                 history = await self.agent_context.get_context()
-                full_prompt = f"{history}\n{prompt}" if history else prompt
+
+                # 获取 Pin 消息提示词
+                pinned_prompt = await self._get_pinned_messages_prompt()
+
+                # 组装完整提示词：历史 + Pin 消息 + 当前消息
+                if history and pinned_prompt:
+                    full_prompt = f"{history}\n{pinned_prompt}\n{prompt}"
+                elif history:
+                    full_prompt = f"{history}\n{prompt}"
+                elif pinned_prompt:
+                    full_prompt = f"{pinned_prompt}\n{prompt}"
+                else:
+                    full_prompt = prompt
+
                 result = await self.execute(
                     full_prompt,
                     use_docker=use_docker,
