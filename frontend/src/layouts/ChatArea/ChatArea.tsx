@@ -5,17 +5,29 @@ import {
   AvatarImage,
   MarkdownRenderer,
 } from '@/shared/components';
+import { FileChangesCard } from '@/shared/components/FileChangesCard';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
-import { sendMessage, getMembers } from '@/core/api/groupChatApi';
+import {
+  sendMessage,
+  getMembers,
+  getFileSnapshotContent,
+  getFileSnapshotDiff,
+} from '@/core/api/groupChatApi';
 import type { MessageApiItem } from '@/shared/types';
 import { ChatInput } from './ChatInput';
 import styles from './ChatArea.module.css';
 
 export interface ChatAreaProps {
   onToggleRightSidebar?: () => void;
+}
+
+export interface RightSidebarContent {
+  type: 'preview' | 'diff';
+  content: string;
+  filePath: string;
 }
 
 const MessageBubble = React.memo(
@@ -26,6 +38,8 @@ const MessageBubble = React.memo(
     onPin,
     onUnpin,
     onQuote,
+    onPreview,
+    onDiff,
   }: {
     msg: MessageApiItem;
     avatar?: string | null;
@@ -33,6 +47,8 @@ const MessageBubble = React.memo(
     onPin: () => void;
     onUnpin: () => void;
     onQuote: () => void;
+    onPreview: (snapshotId: string, filePath: string) => void;
+    onDiff: (snapshotId: string, filePath: string) => void;
   }) => {
     const isUser = msg.speaker === 'user';
 
@@ -65,6 +81,13 @@ const MessageBubble = React.memo(
             💬
           </button>
         </div>
+        {msg.modified_files && msg.modified_files.length > 0 && (
+          <FileChangesCard
+            modifiedFiles={msg.modified_files}
+            onPreview={onPreview}
+            onDiff={onDiff}
+          />
+        )}
       </div>
     );
   }
@@ -87,6 +110,8 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [quotedMessage, setQuotedMessage] = useState<MessageApiItem | null>(null);
+  // TODO: Task 10 will pass this to RightSidebar component
+  const [_rightSidebarContent, setRightSidebarContent] = useState<RightSidebarContent | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -159,6 +184,34 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
     setQuotedMessage(msg);
   }, []);
 
+  const handlePreview = useCallback(
+    async (snapshotId: string, filePath: string) => {
+      if (!activeSessionId) return;
+      try {
+        const content = await getFileSnapshotContent(activeSessionId, snapshotId);
+        setRightSidebarContent({ type: 'preview', content, filePath });
+        // TODO: 打开右侧栏（Task 10 会实现）
+      } catch (error) {
+        console.error('Failed to load preview:', error);
+      }
+    },
+    [activeSessionId]
+  );
+
+  const handleDiff = useCallback(
+    async (snapshotId: string, filePath: string) => {
+      if (!activeSessionId) return;
+      try {
+        const diff = await getFileSnapshotDiff(activeSessionId, snapshotId);
+        setRightSidebarContent({ type: 'diff', content: diff, filePath });
+        // TODO: 打开右侧栏（Task 10 会实现）
+      } catch (error) {
+        console.error('Failed to load diff:', error);
+      }
+    },
+    [activeSessionId]
+  );
+
   // 未选择会话时的空态
   if (!activeSessionId) {
     return (
@@ -211,6 +264,8 @@ export function ChatArea({ onToggleRightSidebar }: ChatAreaProps) {
               onPin={() => pin(msg.id)}
               onUnpin={() => unpin(msg.id)}
               onQuote={() => handleQuote(msg)}
+              onPreview={handlePreview}
+              onDiff={handleDiff}
             />
           ))
         )}
