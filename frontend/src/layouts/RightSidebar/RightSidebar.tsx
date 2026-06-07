@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMembers, MemberWithRole } from '@/features/chat/hooks';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
@@ -8,6 +9,15 @@ import { useToast } from '@/shared/components/Toast/useToast';
 import { AgentCallsPanel } from './AgentCallsPanel';
 import { TasksPanel } from './TasksPanel';
 import styles from './RightSidebar.module.css';
+
+type SidebarTab = 'chat' | 'tasks' | 'preview' | 'diff';
+
+const TAB_LABELS: Record<SidebarTab, string> = {
+  chat: '群聊',
+  tasks: '任务',
+  preview: '预览',
+  diff: 'Diff',
+};
 
 export interface RightSidebarProps {
   collapsed: boolean;
@@ -95,6 +105,7 @@ export function RightSidebar({
   const { agentCalls, loading: callsLoading } = useAgentCalls(activeSessionId);
   const { taskList, loading: tasksLoading } = useTasks(activeSessionId);
   const toast = useToast();
+  const [activeTab, setActiveTab] = useState<SidebarTab>('chat');
 
   const handleToggleDocker = async (memberName: string) => {
     try {
@@ -121,71 +132,99 @@ export function RightSidebar({
           onResizeEnd={onResizeEnd}
         />
       )}
-      <div className={styles.rightModule}>
-        <div className={styles.moduleTitle}>
-          <UsersIcon />
-          成员列表
-        </div>
-        <div className={styles.memberList}>
-          {loading ? (
-            <div className={styles.emptyText}>加载中...</div>
-          ) : members.length === 0 ? (
-            <div className={styles.emptyText}>暂无成员</div>
-          ) : (
-            members.map((member) => (
-              <MemberItem key={member.name} member={member} onToggleDocker={handleToggleDocker} />
-            ))
-          )}
-        </div>
+
+      <div className={styles.tabBar}>
+        {(Object.keys(TAB_LABELS) as SidebarTab[]).map((tab) => (
+          <button
+            key={tab}
+            className={`${styles.tabButton} ${activeTab === tab ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {TAB_LABELS[tab]}
+          </button>
+        ))}
       </div>
 
-      <AgentCallsPanel agentCalls={agentCalls} loading={callsLoading} />
-
-      <TasksPanel taskList={taskList} loading={tasksLoading} />
-
-      <div className={styles.rightModule}>
-        <div className={styles.moduleTitle}>
-          <EyeIcon />
-          预览
-        </div>
-        <div className={styles.moduleItem}>无预览内容</div>
-      </div>
-
-      <div className={styles.rightModule}>
-        <div className={styles.moduleTitle}>
-          <MaximizeIcon />
-          Diff
-        </div>
-        <div className={styles.moduleItem}>无代码差异</div>
-      </div>
-
-      <div className={styles.rightModule}>
-        <div className={styles.moduleTitle}>
-          <span>📌</span>
-          <span>Pinned</span>
-        </div>
-        {pinnedMessages.length === 0 ? (
-          <div className={styles.emptyText}>暂无置顶消息</div>
-        ) : (
-          <div className={styles.pinnedList}>
-            {pinnedMessages.map((p) => (
-              <div key={p.message_id} className={styles.pinnedItem}>
-                <div className={styles.pinnedContent}>
-                  <span className={styles.pinnedSpeaker}>{p.speaker}</span>
-                  <span className={styles.pinnedText}>{p.content}</span>
-                </div>
-                <button
-                  className={styles.pinnedRemove}
-                  onClick={() => unpin(p.message_id)}
-                  title="取消置顶"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+      {activeTab === 'chat' && (
+        <>
+          <div className={styles.rightModule}>
+            <div className={styles.moduleTitle}>
+              <UsersIcon />
+              成员列表
+            </div>
+            <div className={styles.memberList}>
+              {loading ? (
+                <div className={styles.emptyText}>加载中...</div>
+              ) : members.length === 0 ? (
+                <div className={styles.emptyText}>暂无成员</div>
+              ) : (
+                members.map((member) => (
+                  <MemberItem
+                    key={member.name}
+                    member={member}
+                    onToggleDocker={handleToggleDocker}
+                  />
+                ))
+              )}
+            </div>
           </div>
-        )}
-      </div>
+
+          <div className={styles.rightModule}>
+            <div className={styles.moduleTitle}>
+              <span>📌</span>
+              <span>Pinned</span>
+            </div>
+            {pinnedMessages.length === 0 ? (
+              <div className={styles.emptyText}>暂无置顶消息</div>
+            ) : (
+              <div className={styles.pinnedList}>
+                {pinnedMessages.map((p) => (
+                  <div key={p.message_id} className={styles.pinnedItem}>
+                    <div className={styles.pinnedContent}>
+                      <span className={styles.pinnedSpeaker}>{p.speaker}</span>
+                      <span className={styles.pinnedText}>{p.content}</span>
+                    </div>
+                    <button
+                      className={styles.pinnedRemove}
+                      onClick={() => unpin(p.message_id)}
+                      title="取消置顶"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'tasks' && (
+        <>
+          <AgentCallsPanel agentCalls={agentCalls} loading={callsLoading} />
+          <TasksPanel taskList={taskList} loading={tasksLoading} />
+        </>
+      )}
+
+      {activeTab === 'preview' && (
+        <div className={styles.rightModule}>
+          <div className={styles.moduleTitle}>
+            <EyeIcon />
+            预览
+          </div>
+          <div className={styles.moduleItem}>无预览内容</div>
+        </div>
+      )}
+
+      {activeTab === 'diff' && (
+        <div className={styles.rightModule}>
+          <div className={styles.moduleTitle}>
+            <MaximizeIcon />
+            Diff
+          </div>
+          <div className={styles.moduleItem}>无代码差异</div>
+        </div>
+      )}
     </div>
   );
 }

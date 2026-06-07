@@ -30,6 +30,40 @@
   background: var(--text-tertiary);
 }
 
+/* Tab bar */
+.tabBar {
+  display: flex;
+  gap: 2px;
+  padding: 0 12px;
+  margin-bottom: 8px;
+}
+
+.tabButton {
+  flex: 1;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.tabButton:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.tabButton.tabActive {
+  background: var(--bg-right-base, var(--bg-bubble));
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .rightSidebar.collapsed {
   width: 0;
   box-shadow: none;
