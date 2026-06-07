@@ -13,7 +13,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { getMembers, getRoleInfo, updateMemberDockerMode } from '@/core/api';
-import type { GroupChatMemberApiItem, RoleApiResponse } from '@/shared/types';
+import { wsManager } from '@/core/websocket/WebSocketManager';
+import type { GroupChatMemberApiItem, RoleApiResponse, RefreshSignal } from '@/shared/types';
 
 /**
  * 成员完整信息（聚合 Member + Role）
@@ -65,6 +66,24 @@ export function useMembers() {
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
+
+  // 监听 WebSocket refresh 信号
+  useEffect(() => {
+    if (!activeSessionId) return;
+
+    const handleRefresh = (data?: unknown) => {
+      const signal = data as RefreshSignal;
+      if (signal?.group_chat_id === activeSessionId) {
+        fetchMembers();
+      }
+    };
+
+    wsManager.on('refresh', handleRefresh);
+
+    return () => {
+      wsManager.off('refresh', handleRefresh);
+    };
+  }, [activeSessionId, fetchMembers]);
 
   const toggleDockerMode = useCallback(
     async (memberName: string) => {
