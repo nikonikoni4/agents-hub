@@ -4,7 +4,7 @@ import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
 import { useTasks } from '@/features/chat/hooks/useTasks';
 import { useSessionStore } from '@/features/session/store/sessionStore';
-import { AvatarImage, ResizeHandle } from '@/shared/components';
+import { AvatarImage, ResizeHandle, DiffViewer, MarkdownRenderer } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast/useToast';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { AgentCallsPanel } from './AgentCallsPanel';
@@ -225,9 +225,9 @@ export function RightSidebar({
           {content && content.type === 'preview' ? (
             <div className={styles.moduleContent}>
               <div className={styles.filePathHeader}>{content.filePath}</div>
-              <pre className={styles.codeBlock}>
-                <code>{content.content}</code>
-              </pre>
+              <div className={styles.previewContent}>
+                <MarkdownRenderer content={content.content} />
+              </div>
             </div>
           ) : (
             <div className={styles.emptyText}>无预览内容</div>
@@ -244,9 +244,7 @@ export function RightSidebar({
           {content && content.type === 'diff' ? (
             <div className={styles.moduleContent}>
               <div className={styles.filePathHeader}>{content.filePath}</div>
-              <pre className={styles.codeBlock}>
-                <code>{content.content}</code>
-              </pre>
+              <DiffViewer diff={content.content} />
             </div>
           ) : (
             <div className={styles.emptyText}>无代码差异</div>

@@ -620,6 +620,29 @@
   font-size: inherit;
 }
 
+/* 预览内容区 */
+.previewContent {
+  max-height: 600px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-primary);
+}
+
+.previewContent::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.previewContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.previewContent::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
 .callDetailError {
   font-size: 13px;
   color: #ef4444;
