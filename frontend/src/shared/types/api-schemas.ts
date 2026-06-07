@@ -348,3 +348,70 @@ export interface AddMembersRequest {
   /** 成员角色名列表 */
   member_names: string[];
 }
+
+// ==================== Agent Call 相关 ====================
+
+/**
+ * Agent 调用信息
+ * 对应后端: AgentCall dataclass
+ */
+export interface AgentCallInfo {
+  /** 调用 ID */
+  call_id: string;
+  /** 发送者名称 */
+  send_from: string;
+  /** 接收者名称 */
+  send_to: string;
+  /** 消息内容 */
+  content: string;
+  /** 消息类型 */
+  message_type: MessageType;
+  /** 调用状态 */
+  status: CallStatus;
+  /** 创建时间（ISO 8601 格式） */
+  created_at: string;
+  /** 开始执行时间（ISO 8601 格式） */
+  started_at: string | null;
+  /** 完成时间（ISO 8601 格式） */
+  completed_at: string | null;
+  /** 错误信息 */
+  error: string | null;
+}
+
+// ==================== 任务相关 ====================
+
+/**
+ * 任务信息
+ * 对应后端: Task dataclass
+ */
+export interface TaskInfo {
+  /** 任务 ID */
+  task_id: string;
+  /** 负责人名称 */
+  owner: string;
+  /** 任务内容 */
+  content: string;
+  /** 任务状态 */
+  status: TaskStatus;
+  /** 创建者名称 */
+  created_by: string;
+  /** 创建时间（ISO 8601 格式） */
+  created_at: string;
+  /** 更新时间（ISO 8601 格式） */
+  updated_at: string;
+}
+
+/**
+ * 任务列表信息
+ * 对应后端: TaskList dataclass
+ */
+export interface TaskListInfo {
+  /** 列表 ID */
+  list_id: string;
+  /** 列表状态 */
+  status: 'active' | 'archived';
+  /** 任务列表 */
+  tasks: TaskInfo[];
+  /** 创建时间（ISO 8601 格式） */
+  created_at: string;
+}

@@ -18,6 +18,8 @@ import type {
   PinnedMessageInfo,
   PinMessageRequest,
   PinOperationResponse,
+  AgentCallInfo,
+  TaskListInfo,
 } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
@@ -293,6 +295,146 @@ const MOCK_PINNED_MESSAGES: PinnedMessageInfo[] = [];
 
 const MOCK_PIN_OPERATION: PinOperationResponse = { ok: true };
 
+const MOCK_AGENT_CALLS: AgentCallInfo[] = [
+  {
+    call_id: 'call-001',
+    send_from: 'Leader',
+    send_to: 'Developer',
+    content: '请帮我分析这个数据集的特征分布',
+    message_type: 'task',
+    status: 'running',
+    created_at: '2026-06-07T10:00:00Z',
+    started_at: '2026-06-07T10:00:02Z',
+    completed_at: null,
+    error: null,
+  },
+  {
+    call_id: 'call-002',
+    send_from: 'Leader',
+    send_to: 'Tester',
+    content: '等待确认测试方案',
+    message_type: 'notification',
+    status: 'pending',
+    created_at: '2026-06-07T10:01:00Z',
+    started_at: null,
+    completed_at: null,
+    error: null,
+  },
+  {
+    call_id: 'call-003',
+    send_from: 'Developer',
+    send_to: 'Leader',
+    content: '数据分析完成，结果已提交',
+    message_type: 'task',
+    status: 'completed',
+    created_at: '2026-06-07T09:58:00Z',
+    started_at: '2026-06-07T09:58:01Z',
+    completed_at: '2026-06-07T09:58:05Z',
+    error: null,
+  },
+  {
+    call_id: 'call-004',
+    send_from: 'Tester',
+    send_to: 'Leader',
+    content: '超时未响应',
+    message_type: 'notification',
+    status: 'failed',
+    created_at: '2026-06-07T09:55:00Z',
+    started_at: '2026-06-07T09:55:01Z',
+    completed_at: '2026-06-07T09:55:09Z',
+    error: 'Agent response timeout',
+  },
+  {
+    call_id: 'call-005',
+    send_from: 'Leader',
+    send_to: 'Designer',
+    content: '请设计用户仪表板的 UI 原型',
+    message_type: 'task',
+    status: 'completed',
+    created_at: '2026-06-07T09:40:00Z',
+    started_at: '2026-06-07T09:40:01Z',
+    completed_at: '2026-06-07T09:42:30Z',
+    error: null,
+  },
+  {
+    call_id: 'call-006',
+    send_from: 'Developer',
+    send_to: 'Tester',
+    content: '请对新增的 API 端点进行单元测试',
+    message_type: 'task',
+    status: 'completed',
+    created_at: '2026-06-07T09:30:00Z',
+    started_at: '2026-06-07T09:30:02Z',
+    completed_at: '2026-06-07T09:35:10Z',
+    error: null,
+  },
+  {
+    call_id: 'call-007',
+    send_from: 'Tester',
+    send_to: 'Developer',
+    content: '发现登录接口返回 500 错误',
+    message_type: 'notification',
+    status: 'completed',
+    created_at: '2026-06-07T09:20:00Z',
+    started_at: '2026-06-07T09:20:01Z',
+    completed_at: '2026-06-07T09:20:03Z',
+    error: null,
+  },
+];
+
+const MOCK_TASK_LIST: TaskListInfo = {
+  list_id: 'tasklist-001',
+  status: 'active',
+  tasks: [
+    {
+      task_id: 'task-001',
+      owner: 'Developer',
+      content: '数据清洗',
+      status: 'completed',
+      created_by: 'Leader',
+      created_at: '2026-06-07T09:00:00Z',
+      updated_at: '2026-06-07T09:30:00Z',
+    },
+    {
+      task_id: 'task-002',
+      owner: 'Developer',
+      content: '特征工程',
+      status: 'completed',
+      created_by: 'Leader',
+      created_at: '2026-06-07T09:00:00Z',
+      updated_at: '2026-06-07T09:45:00Z',
+    },
+    {
+      task_id: 'task-003',
+      owner: 'Developer',
+      content: '模型训练',
+      status: 'running',
+      created_by: 'Leader',
+      created_at: '2026-06-07T09:00:00Z',
+      updated_at: '2026-06-07T10:00:00Z',
+    },
+    {
+      task_id: 'task-004',
+      owner: 'Tester',
+      content: '结果验证',
+      status: 'pending',
+      created_by: 'Leader',
+      created_at: '2026-06-07T09:00:00Z',
+      updated_at: '2026-06-07T09:00:00Z',
+    },
+    {
+      task_id: 'task-005',
+      owner: 'Leader',
+      content: '报告撰写',
+      status: 'pending',
+      created_by: 'Leader',
+      created_at: '2026-06-07T09:00:00Z',
+      updated_at: '2026-06-07T09:00:00Z',
+    },
+  ],
+  created_at: '2026-06-07T09:00:00Z',
+};
+
 // ==================== API 接口 ====================
 
 /**
@@ -504,5 +646,25 @@ export async function removeGroupChatMember(
     () =>
       apiClient.delete<GroupChatMemberApiItem[]>(`/group-chats/${chatId}/members/${memberName}`),
     []
+  );
+}
+
+/**
+ * 获取 Agent 调用状态列表
+ */
+export async function getAgentCalls(chatId: string): Promise<AgentCallInfo[]> {
+  return mockableRequest(
+    () => apiClient.get<AgentCallInfo[]>(`/group-chats/${chatId}/agent-calls`),
+    MOCK_AGENT_CALLS
+  );
+}
+
+/**
+ * 获取活跃任务列表
+ */
+export async function getActiveTasks(chatId: string): Promise<TaskListInfo | null> {
+  return mockableRequest(
+    () => apiClient.get<TaskListInfo | null>(`/group-chats/${chatId}/tasks`),
+    MOCK_TASK_LIST
   );
 }

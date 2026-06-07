@@ -16,6 +16,8 @@ export {
   sendMessage,
   updateMemberDockerMode,
   deleteGroupChat,
+  getAgentCalls,
+  getActiveTasks,
 } from './groupChatApi';
 
 // 角色管理 API

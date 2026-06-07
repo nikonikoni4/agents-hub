@@ -28,6 +28,9 @@ export type {
   PinMessageRequest,
   PinOperationResponse,
   LastViewRecord,
+  AgentCallInfo,
+  TaskInfo,
+  TaskListInfo,
 } from './api-schemas';
 
 // API 请求类型

@@ -1,7 +1,11 @@
 import { useMembers, MemberWithRole } from '@/features/chat/hooks';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
+import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
+import { useTasks } from '@/features/chat/hooks/useTasks';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { AvatarImage, ResizeHandle } from '@/shared/components';
+import { AgentCallsPanel } from './AgentCallsPanel';
+import { TasksPanel } from './TasksPanel';
 import styles from './RightSidebar.module.css';
 
 export interface RightSidebarProps {
@@ -87,6 +91,8 @@ export function RightSidebar({
   const { members, loading, toggleDockerMode } = useMembers();
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const { pinnedMessages, unpin } = usePinnedMessages(activeSessionId);
+  const { agentCalls, loading: callsLoading } = useAgentCalls(activeSessionId);
+  const { taskList, loading: tasksLoading } = useTasks(activeSessionId);
 
   const handleToggleDocker = async (memberName: string) => {
     try {
@@ -129,6 +135,10 @@ export function RightSidebar({
           )}
         </div>
       </div>
+
+      <AgentCallsPanel agentCalls={agentCalls} loading={callsLoading} />
+
+      <TasksPanel taskList={taskList} loading={tasksLoading} />
 
       <div className={styles.rightModule}>
         <div className={styles.moduleTitle}>

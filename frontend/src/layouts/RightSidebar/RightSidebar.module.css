@@ -5,11 +5,29 @@
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding-top: 16px;
   border-radius: 0 12px 12px 0;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
   position: relative;
+}
+
+.rightSidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rightSidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rightSidebar::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.rightSidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 .rightSidebar.collapsed {
@@ -210,4 +228,200 @@
 .pinnedRemove:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
+}
+
+/* Module badge */
+.moduleBadge {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Module toggle button (expand/collapse) */
+.moduleToggle {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.moduleToggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+/* Agent Calls */
+.callList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.callItem {
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: background-color 0.15s;
+}
+
+.callItem:hover {
+  background: var(--bg-hover);
+}
+
+.callDivider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
+  opacity: 0.5;
+}
+
+.callHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.callStatusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.callFrom {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.callArrow {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.callTo {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.callElapsed {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.callBody {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 12px;
+}
+
+.callContent {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.callTagTask,
+.callTagNotify {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.callTagTask {
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-color);
+}
+
+.callTagNotify {
+  background: var(--bg-bubble);
+  color: var(--text-tertiary);
+}
+
+/* Tasks */
+.taskProgress {
+  height: 4px;
+  background: var(--bg-bubble);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.taskProgressBar {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.taskItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background-color 0.15s;
+}
+
+.taskItem:hover {
+  background: var(--bg-hover);
+}
+
+.taskStatusIcon {
+  font-size: 12px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.taskContent {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.taskOwner {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
