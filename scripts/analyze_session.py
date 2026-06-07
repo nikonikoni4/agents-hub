@@ -1,13 +1,17 @@
-"""分析 Claude Code 会话历史 JSONL 文件。
+"""分析 Claude Code 或 Codex 平台的会话历史 JSONL 文件。
+
+自动检测平台格式（Claude Code / Codex），统一解析输出。
 
 用法:
     python analyze_session.py <session_id> [--config-dir DIR] [--tool-call-result]
     python analyze_session.py --path <path_to_jsonl> [--tool-call-result]
+    python analyze_session.py --path <path_to_jsonl> --platform codex [--tool-call-result]
 
 参数:
-    session_id          会话 UUID
+    session_id          会话 UUID（仅 Claude Code）
     --path              直接指定 JSONL 文件路径
-    --config-dir DIR    Claude 配置目录，默认 ~/.claude
+    --config-dir DIR    配置目录，默认 ~/.claude（Claude Code）或 ~/.codex（Codex）
+    --platform          指定平台 (auto|claude|codex)，默认 auto 自动检测
     --tool-call-result  是否显示工具调用详情（调用输入 + 返回结果）
     --output-md FILE    将输出保存为 Markdown 文件
 """
@@ -19,11 +23,7 @@ from collections import defaultdict
 from pathlib import Path
 
 
-def find_session_file(config_dir: Path, session_id: str) -> Path | None:
-    """递归搜索 {session_id}.jsonl 文件。"""
-    for f in config_dir.rglob(f"{session_id}.jsonl"):
-        return f
-    return None
+# ─── 共享工具函数 ──────────────────────────────────────────────
 
 
 def load_messages(file_path: Path) -> list[dict]:
@@ -41,15 +41,60 @@ def load_messages(file_path: Path) -> list[dict]:
     return messages
 
 
-def group_assistant_chunks(messages: list[dict]) -> list[dict]:
-    """将 assistant 消息按 message.id 合并，重建完整响应。
+def find_session_file(config_dir: Path, session_id: str) -> Path | None:
+    """递归搜索 {session_id}.jsonl 文件。"""
+    for f in config_dir.rglob(f"{session_id}.jsonl"):
+        return f
+    return None
 
-    JSONL 中一个 assistant 响应被拆成多行（每行一个 content block），
-    通过 message.id 关联。这里将它们合并为一条完整消息。
+
+def format_content_for_display(content: str, max_len: int = 2000) -> str:
+    """格式化内容用于显示，截断过长文本。"""
+    if len(content) > max_len:
+        return content[:max_len] + "\n... (truncated)"
+    return content
+
+
+def is_system_instruction(content: str) -> bool:
+    """判断是否为系统指令。"""
+    markers = [
+        "<permissions instructions>",
+        "<skills_instructions>",
+        "<plugins_instructions>",
+        "<environment_context>",
+        "<INSTRUCTIONS>",
+    ]
+    return any(content.strip().startswith(m) for m in markers)
+
+
+def is_context_metadata(content: str) -> bool:
+    """判断是否为上下文元数据（AGENTS.md 等）。"""
+    return "AGENTS.md instructions for" in content
+
+
+# ─── 格式检测 ─────────────────────────────────────────────────
+
+
+def detect_platform(messages: list[dict]) -> str:
+    """自动检测平台格式。
+
+    - Codex: 包含 type=session_meta 的行
+    - Claude Code: 包含 type=assistant 且 message 字段有 id
     """
-    # 按 message.id 分组
+    for msg in messages[:20]:
+        if msg.get("type") == "session_meta":
+            return "codex"
+        if msg.get("type") == "assistant" and "message" in msg:
+            return "claude"
+    return "claude"  # 默认
+
+
+# ─── Claude Code 解析器 ───────────────────────────────────────
+
+
+def claude_group_assistant_chunks(messages: list[dict]) -> list[dict]:
+    """将 Claude Code 的 assistant 消息按 message.id 合并。"""
     chunks_by_msg_id: dict[str, list[dict]] = defaultdict(list)
-    non_assistant = []
     assistant_meta: dict[str, dict] = {}
 
     for msg in messages:
@@ -68,60 +113,35 @@ def group_assistant_chunks(messages: list[dict]) -> list[dict]:
                     "attributionAgent": msg.get("attributionAgent"),
                     "attributionSkill": msg.get("attributionSkill"),
                 }
-        else:
-            non_assistant.append(msg)
 
-    # 合并每个 message.id 的 content blocks
-    merged_assistants = []
+    merged = []
     for msg_id, chunks in chunks_by_msg_id.items():
         meta = assistant_meta[msg_id]
         all_content = []
         usage = None
         stop_reason = None
-
         for chunk in chunks:
             inner = chunk.get("message", {})
-            content_blocks = inner.get("content", [])
-            all_content.extend(content_blocks)
+            all_content.extend(inner.get("content", []))
             if inner.get("usage"):
                 usage = inner["usage"]
             if inner.get("stop_reason"):
                 stop_reason = inner["stop_reason"]
+        merged.append({**meta, "content": all_content, "usage": usage, "stop_reason": stop_reason})
 
-        merged = {
-            **meta,
-            "content": all_content,
-            "usage": usage,
-            "stop_reason": stop_reason,
-        }
-        merged_assistants.append(merged)
-
-    return merged_assistants
+    return merged
 
 
-def build_conversation(messages: list[dict]) -> list[dict]:
-    """构建对话列表，按时间顺序排列。
-
-    返回消息类型：
-    - user: 用户消息
-    - assistant: 助手响应（已合并 chunks）
-    - tool_result: 工具调用结果
-    - system: 系统消息
-    - attachment: 附件/钩子
-    """
-    # 分离不同类型
-    user_msgs = []
-    tool_results = []
-    system_msgs = []
-    other_msgs = []
+def claude_build_conversation(messages: list[dict]) -> list[dict]:
+    """构建 Claude Code 对话列表。"""
+    user_msgs, tool_results, system_msgs, other_msgs = [], [], [], []
 
     for msg in messages:
         t = msg.get("type")
         if t == "assistant":
-            continue  # 单独处理
+            continue
         elif t == "user":
             content = msg.get("message", {}).get("content")
-            # 判断是普通用户消息还是工具结果
             if isinstance(content, list) and content and content[0].get("type") == "tool_result":
                 tool_results.append(msg)
             else:
@@ -130,12 +150,9 @@ def build_conversation(messages: list[dict]) -> list[dict]:
             system_msgs.append(msg)
         elif t == "attachment":
             other_msgs.append(msg)
-        # 忽略 file-history-snapshot, last-prompt, ai-title, permission-mode, queue-operation
 
-    # 合并 assistant chunks
-    assistant_msgs = group_assistant_chunks(messages)
+    assistant_msgs = claude_group_assistant_chunks(messages)
 
-    # 按时间戳排序所有消息
     all_msgs = []
     for msg in user_msgs:
         all_msgs.append(("user", msg.get("timestamp", ""), msg))
@@ -149,26 +166,44 @@ def build_conversation(messages: list[dict]) -> list[dict]:
         all_msgs.append(("attachment", msg.get("timestamp", ""), msg))
 
     all_msgs.sort(key=lambda x: x[1])
-
     return [(t, m) for t, _, m in all_msgs]
 
 
-def format_user_message(msg: dict) -> str:
-    """格式化用户消息。"""
+def claude_detect_streaming(messages: list[dict]) -> bool:
+    """检测 Claude Code 是否为流式输出。"""
+    id_counts: dict[str, int] = defaultdict(int)
+    for msg in messages:
+        if msg.get("type") == "assistant":
+            msg_id = msg.get("message", {}).get("id", "")
+            if msg_id:
+                id_counts[msg_id] += 1
+    return any(c > 1 for c in id_counts.values())
+
+
+def claude_extract_meta(messages: list[dict]) -> dict:
+    """提取 Claude Code 会话元信息。"""
+    models = set()
+    for msg in messages:
+        if msg.get("type") == "assistant":
+            model = msg.get("message", {}).get("model")
+            if model:
+                models.add(model)
+    return {"models": list(models)}
+
+
+def claude_format_user(msg: dict) -> str:
     content = msg.get("message", {}).get("content", "")
     if isinstance(content, str):
         return content
     return str(content)
 
 
-def format_assistant_message(msg: dict, show_tool_calls: bool) -> list[str]:
-    """格式化助手消息，返回多个输出行。"""
+def claude_format_assistant(msg: dict, show_tool_calls: bool) -> list[str]:
     lines = []
     for block in msg.get("content", []):
         block_type = block.get("type")
         if block_type == "thinking":
             thinking = block.get("thinking", "")
-            # 截断过长的 thinking
             if len(thinking) > 500:
                 thinking = thinking[:500] + "..."
             lines.append(f"  [thinking] {thinking}")
@@ -179,7 +214,6 @@ def format_assistant_message(msg: dict, show_tool_calls: bool) -> list[str]:
                 tool_name = block.get("name", "")
                 tool_input = block.get("input", {})
                 input_str = json.dumps(tool_input, ensure_ascii=False, indent=2)
-                # 截断过长的输入
                 if len(input_str) > 800:
                     input_str = input_str[:800] + "\n..."
                 lines.append(f"  [tool_call] {tool_name}")
@@ -190,82 +224,134 @@ def format_assistant_message(msg: dict, show_tool_calls: bool) -> list[str]:
     return lines
 
 
-def format_tool_result(msg: dict, show_details: bool) -> list[str]:
-    """格式化工具调用结果。"""
-    if not show_details:
-        return []
-
+def claude_format_tool_result(msg: dict) -> list[str]:
     lines = []
     content = msg.get("message", {}).get("content", [])
     if isinstance(content, list):
         for item in content:
             if item.get("type") == "tool_result":
                 result_content = item.get("content", "")
-                # content 可能是 list（多个内容块）或 string
                 if isinstance(result_content, list):
                     result_content = json.dumps(result_content, ensure_ascii=False, indent=2)
                 elif not isinstance(result_content, str):
                     result_content = str(result_content)
-                # 尝试解析 JSON 字符串
                 try:
                     parsed = json.loads(result_content)
                     result_content = json.dumps(parsed, ensure_ascii=False, indent=2)
                 except (json.JSONDecodeError, TypeError):
                     pass
-                # 截断过长结果
                 if len(result_content) > 1000:
                     result_content = result_content[:1000] + "\n..."
-                lines.append(f"  [tool_result]")
+                lines.append("  [tool_result]")
                 for rline in result_content.split("\n"):
                     lines.append(f"    {rline}")
     return lines
 
 
-def format_system_message(msg: dict) -> str:
-    """格式化系统消息。"""
-    subtype = msg.get("subtype", "")
-    content = msg.get("content", "")
-    if subtype == "turn_duration":
-        dur = msg.get("durationMs", 0)
-        count = msg.get("messageCount", 0)
-        return f"  [system] turn_duration: {dur}ms, {count} messages"
-    return f"  [system:{subtype}] {content[:200]}" if content else f"  [system:{subtype}]"
+# ─── Codex 解析器 ─────────────────────────────────────────────
 
 
-def format_attachment(msg: dict) -> str:
-    """格式化附件消息。"""
-    att = msg.get("attachment", {})
-    att_type = att.get("type", "")
-    return f"  [attachment:{att_type}]"
-
-
-def detect_streaming(messages: list[dict]) -> bool:
-    """检测是否为流式输出（基于 assistant 消息的 chunk 拆分模式）。"""
-    msg_ids = set()
+def codex_extract_meta(messages: list[dict]) -> dict:
+    """提取 Codex 会话元信息。"""
+    meta = {}
     for msg in messages:
-        if msg.get("type") == "assistant":
-            inner = msg.get("message", {})
-            msg_id = inner.get("id", "")
-            if msg_id:
-                msg_ids.add(msg_id)
-
-    # 统计每个 message.id 出现的次数
-    id_counts: dict[str, int] = defaultdict(int)
+        if msg.get("type") == "session_meta":
+            p = msg.get("payload", {})
+            meta = {
+                "id": p.get("id", ""),
+                "timestamp": p.get("timestamp", ""),
+                "cwd": p.get("cwd", ""),
+                "cli_version": p.get("cli_version", ""),
+                "model_provider": p.get("model_provider", ""),
+                "git_branch": p.get("git", {}).get("branch", ""),
+                "git_commit": p.get("git", {}).get("commit_hash", "")[:12],
+            }
+            break
     for msg in messages:
-        if msg.get("type") == "assistant":
-            inner = msg.get("message", {})
-            msg_id = inner.get("id", "")
-            if msg_id:
-                id_counts[msg_id] += 1
-
-    # 如果有任何 message.id 出现超过 1 次，说明是流式（chunk 拆分）存储
-    has_chunks = any(count > 1 for count in id_counts.values())
-    return has_chunks
+        if msg.get("type") == "turn_context":
+            p = msg.get("payload", {})
+            meta["model"] = p.get("model", "")
+            meta["personality"] = p.get("personality", "")
+            meta["effort"] = p.get("effort", "")
+            break
+    return meta
 
 
-def analyze_session(session_id: str, config_dir: str, show_tool_calls: bool, session_path: str = None, output_md: str = None):
+def codex_build_conversation(messages: list[dict]) -> list[dict]:
+    """构建 Codex 对话列表，以 response_item 为主，event_msg 只用于元数据。"""
+    conversation = []
+
+    for msg in messages:
+        msg_type = msg.get("type")
+        timestamp = msg.get("timestamp", "")
+
+        if msg_type == "response_item":
+            payload = msg.get("payload", {})
+            role = payload.get("role", "")
+            texts = []
+            for block in payload.get("content", []):
+                bt = block.get("type", "")
+                if bt in ("input_text", "output_text"):
+                    texts.append(block.get("text", ""))
+            if texts:
+                conversation.append({
+                    "role": role,
+                    "content": "\n".join(texts),
+                    "timestamp": timestamp,
+                })
+
+        elif msg_type == "event_msg":
+            payload = msg.get("payload", {})
+            et = payload.get("type", "")
+
+            if et == "token_count":
+                info = payload.get("info", {})
+                usage = info.get("total_token_usage", {})
+                conversation.append({
+                    "role": "system",
+                    "content": "[token_usage]",
+                    "timestamp": timestamp,
+                    "token_usage": {
+                        "input_tokens": usage.get("input_tokens", 0),
+                        "cached_input_tokens": usage.get("cached_input_tokens", 0),
+                        "output_tokens": usage.get("output_tokens", 0),
+                        "reasoning_output_tokens": usage.get("reasoning_output_tokens", 0),
+                        "total_tokens": usage.get("total_tokens", 0),
+                    },
+                    "context_window": info.get("model_context_window", 0),
+                })
+            elif et == "task_started":
+                conversation.append({
+                    "role": "system",
+                    "content": f"[task_started] turn_id={payload.get('turn_id', '')}",
+                    "timestamp": timestamp,
+                })
+            elif et == "task_complete":
+                dur = payload.get("duration_ms", 0)
+                ttft = payload.get("time_to_first_token_ms", 0)
+                conversation.append({
+                    "role": "system",
+                    "content": f"[task_complete] duration={dur}ms, time_to_first_token={ttft}ms",
+                    "timestamp": timestamp,
+                })
+
+    conversation.sort(key=lambda x: x["timestamp"])
+    return conversation
+
+
+# ─── 主分析函数 ────────────────────────────────────────────────
+
+
+def analyze_session(
+    session_id: str | None,
+    config_dir: str,
+    show_tool_calls: bool,
+    session_path: str | None = None,
+    output_md: str | None = None,
+    platform: str = "auto",
+):
     """主分析函数。"""
-    # 确定会话文件路径
+    # 确定文件路径
     if session_path:
         session_file = Path(session_path).expanduser().resolve()
         if not session_file.exists():
@@ -276,6 +362,9 @@ def analyze_session(session_id: str, config_dir: str, show_tool_calls: bool, ses
         if not config_path.exists():
             print(f"错误: 配置目录不存在: {config_path}", file=sys.stderr)
             sys.exit(1)
+        if not session_id:
+            print("错误: 必须提供 session_id 或 --path 参数", file=sys.stderr)
+            sys.exit(1)
         print(f"搜索会话 {session_id} ...")
         session_file = find_session_file(config_path, session_id)
         if not session_file:
@@ -283,111 +372,174 @@ def analyze_session(session_id: str, config_dir: str, show_tool_calls: bool, ses
             print(f"搜索路径: {config_path}", file=sys.stderr)
             sys.exit(1)
 
-    print(f"找到文件: {session_file}")
+    print(f"文件: {session_file}")
+    messages = load_messages(session_file)
+
+    # 检测平台
+    if platform == "auto":
+        platform = detect_platform(messages)
+    print(f"平台: {platform}")
     print()
 
-    messages = load_messages(session_file)
     output_lines = []
 
-    def print_and_collect(text=""):
+    def out(text=""):
         print(text)
         output_lines.append(text)
 
-    print_and_collect(f"总消息数: {len(messages)}")
+    # ─── Claude Code ───
+    if platform == "claude":
+        meta = claude_extract_meta(messages)
+        is_streaming = claude_detect_streaming(messages)
 
-    # 检测流式/非流式
-    is_streaming = detect_streaming(messages)
-    mode = "流式 (streaming, chunk 拆分存储)" if is_streaming else "非流式 (完整消息存储)"
-    print_and_collect(f"存储模式: {mode}")
+        out(f"总消息数: {len(messages)}")
+        mode = "流式 (streaming, chunk 拆分存储)" if is_streaming else "非流式 (完整消息存储)"
+        out(f"存储模式: {mode}")
 
-    # 统计
-    type_counts: dict[str, int] = defaultdict(int)
-    for msg in messages:
-        type_counts[msg.get("type", "unknown")] += 1
-    print_and_collect(f"消息类型: {dict(type_counts)}")
+        type_counts: dict[str, int] = defaultdict(int)
+        for msg in messages:
+            type_counts[msg.get("type", "unknown")] += 1
+        out(f"消息类型: {dict(type_counts)}")
 
-    # 获取模型信息
-    models = set()
-    for msg in messages:
-        if msg.get("type") == "assistant":
-            model = msg.get("message", {}).get("model")
-            if model:
-                models.add(model)
-    if models:
-        print_and_collect(f"使用模型: {', '.join(models)}")
+        if meta["models"]:
+            out(f"使用模型: {', '.join(meta['models'])}")
 
-    print_and_collect()
-    print_and_collect("=" * 60)
-    print_and_collect("对话内容")
-    print_and_collect("=" * 60)
-    print_and_collect()
+        out()
+        out("=" * 60)
+        out("对话内容")
+        out("=" * 60)
+        out()
 
-    # 构建对话
-    conversation = build_conversation(messages)
+        conversation = claude_build_conversation(messages)
 
-    for msg_type, msg in conversation:
-        if msg_type == "user":
-            # 跳过 meta 消息（如 /clear）
-            if msg.get("isMeta"):
-                continue
-            content = format_user_message(msg)
-            if content:
-                print_and_collect(f"[用户] {content}")
-                print_and_collect()
+        for msg_type, msg in conversation:
+            if msg_type == "user":
+                if msg.get("isMeta"):
+                    continue
+                content = claude_format_user(msg)
+                if content:
+                    out(f"[用户] {content}")
+                    out()
 
-        elif msg_type == "assistant":
-            # 确定角色标识
-            role = "助手"
-            attr_agent = msg.get("attributionAgent")
-            attr_skill = msg.get("attributionSkill")
-            if attr_agent:
-                role = f"子代理({attr_agent})"
-            elif attr_skill:
-                role = f"技能({attr_skill})"
+            elif msg_type == "assistant":
+                role = "助手"
+                attr_agent = msg.get("attributionAgent")
+                attr_skill = msg.get("attributionSkill")
+                if attr_agent:
+                    role = f"子代理({attr_agent})"
+                elif attr_skill:
+                    role = f"技能({attr_skill})"
 
-            model = msg.get("model", "")
-            stop = msg.get("stop_reason", "")
+                model = msg.get("model", "")
+                usage = msg.get("usage")
+                usage_str = ""
+                if usage:
+                    in_tok = usage.get("input_tokens", 0)
+                    out_tok = usage.get("output_tokens", 0)
+                    cache_read = usage.get("cache_read_input_tokens", 0)
+                    usage_str = f" [in:{in_tok} out:{out_tok} cache:{cache_read}]"
 
-            # 显示 token 使用
-            usage = msg.get("usage")
-            usage_str = ""
-            if usage:
-                in_tok = usage.get("input_tokens", 0)
-                out_tok = usage.get("output_tokens", 0)
-                cache_read = usage.get("cache_read_input_tokens", 0)
-                usage_str = f" [in:{in_tok} out:{out_tok} cache:{cache_read}]"
+                out(f"[{role}] ({model}){usage_str}")
+                for line in claude_format_assistant(msg, show_tool_calls):
+                    out(line)
+                out()
 
-            print_and_collect(f"[{role}] ({model}){usage_str}")
+            elif msg_type == "tool_result":
+                if show_tool_calls:
+                    for line in claude_format_tool_result(msg):
+                        out(line)
+                    if claude_format_tool_result(msg):
+                        out()
 
-            lines = format_assistant_message(msg, show_tool_calls)
-            for line in lines:
-                print_and_collect(line)
-            print_and_collect()
+            elif msg_type == "system":
+                subtype = msg.get("subtype", "")
+                content = msg.get("content", "")
+                if subtype == "turn_duration":
+                    dur = msg.get("durationMs", 0)
+                    count = msg.get("messageCount", 0)
+                    out(f"  [system] turn_duration: {dur}ms, {count} messages")
+                else:
+                    out(f"  [system:{subtype}] {content[:200]}" if content else f"  [system:{subtype}]")
+                out()
 
-        elif msg_type == "tool_result":
-            if show_tool_calls:
-                lines = format_tool_result(msg, show_details=True)
-                if lines:
-                    for line in lines:
-                        print_and_collect(line)
-                    print_and_collect()
+    # ─── Codex ───
+    elif platform == "codex":
+        meta = codex_extract_meta(messages)
 
-        elif msg_type == "system":
-            print_and_collect(format_system_message(msg))
-            print_and_collect()
+        type_counts: dict[str, int] = defaultdict(int)
+        for msg in messages:
+            type_counts[msg.get("type", "unknown")] += 1
+        out(f"总消息数: {len(messages)}")
+        out(f"消息类型: {dict(type_counts)}")
 
-        elif msg_type == "attachment":
-            # 附件通常不需要显示
-            pass
+        if meta.get("id"):
+            out(f"会话 ID: {meta['id']}")
+        if meta.get("cwd"):
+            out(f"工作目录: {meta['cwd']}")
+        if meta.get("cli_version"):
+            out(f"Cli 版本: {meta['cli_version']}")
+        if meta.get("model_provider"):
+            out(f"模型提供商: {meta['model_provider']}")
+        if meta.get("git_branch"):
+            out(f"Git 分支: {meta['git_branch']} ({meta.get('git_commit', '')})")
+        if meta.get("model"):
+            out(f"模型: {meta['model']}")
+        if meta.get("personality"):
+            out(f"性格: {meta['personality']}")
+        if meta.get("effort"):
+            out(f"推理强度: {meta['effort']}")
 
-    # 如果指定了输出 md 文件，保存到文件
+        out()
+        out("=" * 60)
+        out("对话内容")
+        out("=" * 60)
+        out()
+
+        conversation = codex_build_conversation(messages)
+
+        for item in conversation:
+            role = item["role"]
+            content = item["content"]
+
+            if role == "developer":
+                if not show_tool_calls and is_system_instruction(content):
+                    continue
+                out("[developer]")
+                out(format_content_for_display(content, 500))
+                out()
+
+            elif role == "user":
+                if not show_tool_calls and is_context_metadata(content):
+                    continue
+                out("[用户]")
+                out(format_content_for_display(content))
+                out()
+
+            elif role == "assistant":
+                out("[助手]")
+                out(format_content_for_display(content))
+                out()
+
+            elif role == "system":
+                if content == "[token_usage]":
+                    usage = item.get("token_usage", {})
+                    ctx_win = item.get("context_window", 0)
+                    out(
+                        f"[token] in={usage['input_tokens']} "
+                        f"cached={usage['cached_input_tokens']} "
+                        f"out={usage['output_tokens']} "
+                        f"reasoning={usage['reasoning_output_tokens']} "
+                        f"total={usage['total_tokens']} "
+                        f"ctx_window={ctx_win}"
+                    )
+                else:
+                    out(f"[system] {content}")
+                out()
+
+    # ─── 输出 MD ───
     if output_md:
         if output_md == "auto":
-            # 自动生成文件名
-            if session_path:
-                stem = Path(session_path).stem
-            else:
-                stem = session_id
+            stem = Path(session_path).stem if session_path else (session_id or "session")
             md_path = Path(f"{stem}_analysis.md").resolve()
         else:
             md_path = Path(output_md).expanduser().resolve()
@@ -398,21 +550,27 @@ def analyze_session(session_id: str, config_dir: str, show_tool_calls: bool, ses
 
 def main():
     parser = argparse.ArgumentParser(
-        description="分析 Claude Code 会话历史 JSONL 文件"
+        description="分析 Claude Code 或 Codex 平台的会话历史 JSONL 文件"
     )
     parser.add_argument(
         "session_id",
         nargs="?",
-        help="会话 UUID"
+        help="会话 UUID（仅 Claude Code）",
     )
     parser.add_argument(
         "--path",
-        help="直接指定 JSONL 文件路径"
+        help="直接指定 JSONL 文件路径",
     )
     parser.add_argument(
         "--config-dir",
         default="~/.claude",
-        help="Claude 配置目录，默认 ~/.claude",
+        help="配置目录，默认 ~/.claude",
+    )
+    parser.add_argument(
+        "--platform",
+        choices=["auto", "claude", "codex"],
+        default="auto",
+        help="指定平台 (auto|claude|codex)，默认 auto 自动检测",
     )
     parser.add_argument(
         "--tool-call-result",
@@ -423,12 +581,11 @@ def main():
         "--output-md",
         nargs="?",
         const="auto",
-        help="将输出保存为 Markdown 文件（不指定文件名时自动生成）"
+        help="将输出保存为 Markdown 文件（不指定文件名时自动生成）",
     )
 
     args = parser.parse_args()
 
-    # 验证参数
     if not args.path and not args.session_id:
         parser.error("必须提供 session_id 或 --path 参数")
 
@@ -437,7 +594,8 @@ def main():
         args.config_dir,
         args.tool_call_result,
         args.path,
-        args.output_md
+        args.output_md,
+        args.platform,
     )
 
 

@@ -49,6 +49,7 @@ class Agent:
         self.agent_call_manager = agent_call_manager
         self.task_manager = task_manager
         self._run = True
+        self._is_processing: bool = False  # 是否正在处理消息
         self._consecutive_no_finish_count: int = 0  # 连续未闭环计数
         self.max_consecutive_no_finish: int = 30  # 阈值
         self.logger = get_logger(f"agent.{self.name}")
@@ -606,7 +607,11 @@ class Agent:
 
             # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
-            await self._process_message(msg, prompt)
+            self._is_processing = True
+            try:
+                await self._process_message(msg, prompt)
+            finally:
+                self._is_processing = False
             # 5. TASK 必须由 finish_agent_call 显式闭环；普通执行文本默认私下保留。
             if self._needs_finish_agent_call_reminder(msg):
                 self._enqueue_finish_agent_call_reminder(msg)
