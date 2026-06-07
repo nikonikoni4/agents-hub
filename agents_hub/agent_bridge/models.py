@@ -5,21 +5,9 @@ StreamEvent、AgentResult 等数据传输格式定义。
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TypedDict
 
 from agents_hub.config.types import AgentPlatform, RoleType
-
-
-class FileMetadata(TypedDict, total=False):
-    """文件元数据结构（AgentResult.modified_files 使用）"""
-
-    path: str
-    status: str
-    additions: int
-    deletions: int
-    snapshot_id: str
-    diff_available: bool
-    diff_error: str | None
+from agents_hub.core.foundation.types import FileMetadata
 
 
 class AgentEventType(Enum):
@@ -63,3 +51,7 @@ class AgentResult:
 
 # 向后兼容别名（待废弃）
 AgentEvent = StreamEvent
+
+
+# 导出 FileMetadata 保持向后兼容
+__all__ = ["FileMetadata", "AgentEventType", "StreamEvent", "AgentResult", "AgentEvent"]

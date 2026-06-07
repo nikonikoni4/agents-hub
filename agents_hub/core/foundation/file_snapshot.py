@@ -3,10 +3,11 @@
 用于创建和读取文件快照（diff + content）。
 """
 
+import re
 import subprocess
 from pathlib import Path
 
-from agents_hub.agent_bridge.models import FileMetadata
+from agents_hub.core.foundation.types import FileMetadata
 
 
 def create_file_snapshot(
@@ -72,8 +73,11 @@ def get_snapshot_content(snapshot_dir: Path, snapshot_id: str) -> str:
     Returns:
         文件完整内容
     """
-    content_path = snapshot_dir / f"{snapshot_id}.content"
-    return content_path.read_text(encoding="utf-8")
+    try:
+        content_path = snapshot_dir / f"{snapshot_id}.content"
+        return content_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+        raise ValueError(f"Failed to read snapshot content: {e}") from e
 
 
 def get_snapshot_diff(snapshot_dir: Path, snapshot_id: str) -> str:
@@ -86,8 +90,11 @@ def get_snapshot_diff(snapshot_dir: Path, snapshot_id: str) -> str:
     Returns:
         git diff 输出
     """
-    diff_path = snapshot_dir / f"{snapshot_id}.diff"
-    return diff_path.read_text(encoding="utf-8")
+    try:
+        diff_path = snapshot_dir / f"{snapshot_id}.diff"
+        return diff_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+        raise ValueError(f"Failed to read snapshot diff: {e}") from e
 
 
 def _run_git_diff(file_path: str, cwd: str, git_diff_range: str | None) -> tuple[str, str | None]:
@@ -101,17 +108,25 @@ def _run_git_diff(file_path: str, cwd: str, git_diff_range: str | None) -> tuple
     Returns:
         (diff_text, error_message) 元组
     """
+    # 验证 git_diff_range 格式（防止命令注入）
     if git_diff_range:
+        # 只接受 commit..commit 格式（SHA-1 或 SHA-256）
+        pattern = r"^[0-9a-f]{7,64}\.\.[0-9a-f]{7,64}$"
+        if not re.match(pattern, git_diff_range):
+            return "", f"Invalid git_diff_range format: {git_diff_range}"
         cmd = ["git", "diff", git_diff_range, "--", file_path]
     else:
         cmd = ["git", "diff", "HEAD", "--", file_path]
 
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=30)
 
-    if result.returncode == 0:
-        return result.stdout, None
-    else:
-        return "", result.stderr or "git diff failed"
+        if result.returncode == 0:
+            return result.stdout, None
+        else:
+            return "", result.stderr or "git diff failed"
+    except subprocess.TimeoutExpired:
+        return "", "git diff timeout (30s)"
 
 
 def _parse_diff(diff_text: str) -> tuple[int, int, str]:
@@ -151,9 +166,15 @@ def _read_file_content(file_path: str, cwd: str) -> str:
         文件内容，如果读取失败返回空字符串
     """
     try:
-        full_path = Path(cwd) / file_path
+        cwd_path = Path(cwd).resolve()
+        full_path = (cwd_path / file_path).resolve()
+
+        # 路径遍历防护：确保解析后的路径在 cwd 内
+        if not str(full_path).startswith(str(cwd_path)):
+            return ""
+
         return full_path.read_text(encoding="utf-8")
-    except (FileNotFoundError, UnicodeDecodeError):
+    except (FileNotFoundError, UnicodeDecodeError, PermissionError, IsADirectoryError):
         return ""
 
 
@@ -166,5 +187,8 @@ def _save_snapshot(snapshot_dir: Path, snapshot_id: str, diff_text: str, content
         diff_text: diff 内容
         content: 文件内容
     """
+    # 确保目录存在
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+
     (snapshot_dir / f"{snapshot_id}.diff").write_text(diff_text, encoding="utf-8")
     (snapshot_dir / f"{snapshot_id}.content").write_text(content, encoding="utf-8")

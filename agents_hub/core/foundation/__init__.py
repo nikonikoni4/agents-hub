@@ -4,7 +4,6 @@ Foundation layer - 基础层（零依赖）
 提供基础数据模型、枚举、异常类和常量定义。
 """
 
-from agents_hub.agent_bridge import AgentResult, RoleType
 from agents_hub.exceptions import StateError
 from agents_hub.roles import Role, RoleConfig
 
@@ -24,6 +23,7 @@ from .message import AgentMessage
 from .models import CallStatus, GroupChatType, MessageType, SessionType
 from .paths import GroupChatPaths, group_chat_paths
 from .renderer import Tag, parse_chat_input, render_for_chat, render_for_llm, wrap_xml
+from .types import FileMetadata
 
 __all__ = [
     # models
@@ -31,8 +31,6 @@ __all__ = [
     "MessageType",
     "CallStatus",
     "GroupChatType",
-    "AgentResult",  # 从agent_bridge中导入
-    "RoleType",
     "Role",
     "RoleConfig",
     # message
@@ -60,4 +58,6 @@ __all__ = [
     "parse_chat_input",
     "wrap_xml",
     "Tag",
+    # types
+    "FileMetadata",
 ]
