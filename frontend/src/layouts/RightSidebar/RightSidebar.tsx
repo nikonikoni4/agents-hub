@@ -130,7 +130,7 @@ export function RightSidebar({
     <div
       className={`${styles.rightSidebar} ${collapsed ? styles.collapsed : ''}`}
       style={{
-        ...(width !== undefined ? { width: `${width}px` } : {}),
+        ...(collapsed ? { width: 0 } : width !== undefined ? { width: `${width}px` } : {}),
         ...(resizing ? { transition: 'none' } : {}),
       }}
     >

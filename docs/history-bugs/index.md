@@ -57,3 +57,9 @@
  - path: docs/history-bugs/2026-06-05-group-chat-runtime-state-concurrency.md
  - 触发规则：多协程并发访问 GroupChatRuntime 的 command 方法（如 add_message、append_compact_record），或 AgentCallManager 后台清理与主流程竞态
  - 内容摘要：Runtime 层 read-modify-write 序列缺乏锁保护，Repository 层文件锁无法覆盖内存状态竞态。涉及 6 处代码位置，核心方案是在 Runtime 层添加 asyncio.Lock
+
+## 前端侧栏抽屉按钮失效 - 内联样式优先级覆盖 CSS 类
+ - updated_at : 2026-06-07
+ - path: docs/history-bugs/2026-06-07-sidebar-collapse-inline-style-priority.md
+ - 触发规则：点击左侧栏或右侧栏的抽屉按钮，CSS 类正确变化但侧栏宽度不变
+ - 内容摘要：LeftSidebar 和 RightSidebar 组件中，内联样式 `width: 220px` 优先级高于 CSS 类的 `width: 0`，导致 collapsed 状态失效。修复：当 collapsed 为 true 时，内联宽度设置为 0
