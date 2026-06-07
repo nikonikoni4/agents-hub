@@ -11,6 +11,7 @@
   border-radius: 10px;
   transition: all 0.15s;
   margin-bottom: 8px;
+  position: relative;
 }
 
 .session-content {
@@ -65,4 +66,74 @@
   color: var(--accent-color);
   font-size: 16px;
   line-height: 1;
+}
+
+.session-actions {
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.session-item:hover .session-actions {
+  opacity: 1;
+}
+
+.menu-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--text-secondary, #666);
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.menu-button:hover {
+  background: var(--bg-hover, #f0f0f0);
+  color: var(--text-primary, #333);
+}
+
+.context-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 120px;
+  margin-top: 4px;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary, #333);
+  transition: background 0.15s;
+}
+
+.menu-item:hover:not(:disabled) {
+  background: var(--bg-hover, #f0f0f0);
+}
+
+.menu-item.danger {
+  color: #ef4444;
+}
+
+.menu-item.danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }

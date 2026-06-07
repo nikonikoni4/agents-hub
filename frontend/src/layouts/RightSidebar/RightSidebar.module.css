@@ -127,6 +127,22 @@
   flex-shrink: 0;
 }
 
+.dockerToggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.dockerToggle:hover {
+  background: var(--bg-hover);
+}
+
 .emptyText {
   font-size: 13px;
   color: var(--text-tertiary);

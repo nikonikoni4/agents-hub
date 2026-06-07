@@ -43,7 +43,13 @@ function MaximizeIcon() {
   );
 }
 
-function MemberItem({ member }: { member: MemberWithRole }) {
+function MemberItem({
+  member,
+  onToggleDocker,
+}: {
+  member: MemberWithRole;
+  onToggleDocker: (memberName: string) => void;
+}) {
   return (
     <div className={styles.memberItem}>
       <div className={styles.memberAvatar}>
@@ -56,6 +62,15 @@ function MemberItem({ member }: { member: MemberWithRole }) {
           <span className={styles.memberPlatform}>{member.role?.platform ?? 'unknown'}</span>
         </div>
       </div>
+      <button
+        className={styles.dockerToggle}
+        onClick={() => onToggleDocker(member.name)}
+        title={
+          member.use_docker ? 'Docker 模式（点击切换到本地）' : '本地模式（点击切换到 Docker）'
+        }
+      >
+        {member.use_docker ? '🐳' : '💻'}
+      </button>
       <div className={member.isOnline ? styles.onlineDot : styles.offlineDot} />
     </div>
   );
@@ -69,9 +84,17 @@ export function RightSidebar({
   onResizeStart,
   onResizeEnd,
 }: RightSidebarProps) {
-  const { members, loading } = useMembers();
+  const { members, loading, toggleDockerMode } = useMembers();
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const { pinnedMessages, unpin } = usePinnedMessages(activeSessionId);
+
+  const handleToggleDocker = async (memberName: string) => {
+    try {
+      await toggleDockerMode(memberName);
+    } catch (error) {
+      console.error('切换 Docker 模式失败:', error);
+    }
+  };
 
   return (
     <div
@@ -100,7 +123,9 @@ export function RightSidebar({
           ) : members.length === 0 ? (
             <div className={styles.emptyText}>暂无成员</div>
           ) : (
-            members.map((member) => <MemberItem key={member.name} member={member} />)
+            members.map((member) => (
+              <MemberItem key={member.name} member={member} onToggleDocker={handleToggleDocker} />
+            ))
           )}
         </div>
       </div>
