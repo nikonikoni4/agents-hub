@@ -668,3 +668,37 @@ export async function getActiveTasks(chatId: string): Promise<TaskListInfo | nul
     MOCK_TASK_LIST
   );
 }
+
+/**
+ * 获取文件快照内容
+ */
+export async function getFileSnapshotContent(
+  groupChatId: string,
+  snapshotId: string
+): Promise<string> {
+  const response = await fetch(`/api/group-chats/${groupChatId}/files/${snapshotId}/content`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch snapshot content: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.content;
+}
+
+/**
+ * 获取文件快照 diff
+ */
+export async function getFileSnapshotDiff(
+  groupChatId: string,
+  snapshotId: string
+): Promise<string> {
+  const response = await fetch(`/api/group-chats/${groupChatId}/files/${snapshotId}/diff`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch snapshot diff: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.diff;
+}
