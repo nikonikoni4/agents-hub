@@ -1,5 +1,7 @@
 """群聊 API 路由"""
 
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Query
 
 from agents_hub.api.schemas.group_chats import (
@@ -17,7 +19,10 @@ from agents_hub.api.schemas.group_chats import (
     UseDockerUpdate,
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
+from agents_hub.config import config
+from agents_hub.core.foundation.file_snapshot import get_snapshot_content, get_snapshot_diff
 from agents_hub.core.orchestration import group_chat_manager as _group_chat_manager
+from agents_hub.exceptions import ResourceNotFoundError
 
 router = APIRouter(prefix="/group-chats", tags=["group-chats"])
 
@@ -197,3 +202,77 @@ async def add_group_chat_members(
 ):
     """添加群成员"""
     return await service.add_group_chat_members(group_chat_id, request.member_names)
+
+
+@router.get(
+    "/{group_chat_id}/files/{snapshot_id}/content",
+    response_model=dict[str, str],
+    responses={
+        404: {"description": "快照不存在或群聊不存在"},
+    },
+)
+async def get_file_snapshot_content(
+    group_chat_id: str,
+    snapshot_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取文件快照的完整内容"""
+    # 1. 验证群聊存在
+    await service.group_chat_manager.load_group_chat(group_chat_id)
+
+    # 2. 构建快照目录路径
+    group_chat = await service.group_chat_manager.load_group_chat(group_chat_id)
+    snapshot_dir = (
+        Path(config.data_path)
+        / "teams"
+        / group_chat.runtime.get_project_path()
+        / group_chat_id
+        / "file_snapshots"
+    )
+
+    # 3. 读取内容
+    try:
+        content = get_snapshot_content(snapshot_dir, snapshot_id)
+        return {"content": content}
+    except ValueError as e:
+        raise ResourceNotFoundError(
+            f"快照不存在: {snapshot_id}",
+            details={"snapshot_id": snapshot_id, "group_chat_id": group_chat_id},
+        ) from e
+
+
+@router.get(
+    "/{group_chat_id}/files/{snapshot_id}/diff",
+    response_model=dict[str, str],
+    responses={
+        404: {"description": "快照不存在或群聊不存在"},
+    },
+)
+async def get_file_snapshot_diff(
+    group_chat_id: str,
+    snapshot_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取文件快照的 diff"""
+    # 1. 验证群聊存在
+    await service.group_chat_manager.load_group_chat(group_chat_id)
+
+    # 2. 构建快照目录路径
+    group_chat = await service.group_chat_manager.load_group_chat(group_chat_id)
+    snapshot_dir = (
+        Path(config.data_path)
+        / "teams"
+        / group_chat.runtime.get_project_path()
+        / group_chat_id
+        / "file_snapshots"
+    )
+
+    # 3. 读取 diff
+    try:
+        diff = get_snapshot_diff(snapshot_dir, snapshot_id)
+        return {"diff": diff}
+    except ValueError as e:
+        raise ResourceNotFoundError(
+            f"快照不存在: {snapshot_id}",
+            details={"snapshot_id": snapshot_id, "group_chat_id": group_chat_id},
+        ) from e
