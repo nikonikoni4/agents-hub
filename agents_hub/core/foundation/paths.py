@@ -230,6 +230,18 @@ class GroupChatPaths:
         """
         return self.base_dir(group_chat_id, project_path) / "tasks.log"
 
+    def file_snapshots_dir(self, group_chat_id: str, project_path: str) -> Path:
+        """
+        文件快照存储目录
+
+        存储内容：
+        - Agent 修改文件后生成的 diff 和 content 快照
+        - 用于前端预览和查看文件变更
+
+        路径格式：local_data/teams/<project>/<id>/file_snapshots/
+        """
+        return self.base_dir(group_chat_id, project_path) / "file_snapshots"
+
     def tasks_data(self, group_chat_id: str, project_path: str) -> Path:
         """
         任务持久化数据文件

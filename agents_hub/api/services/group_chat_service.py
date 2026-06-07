@@ -624,7 +624,9 @@ class GroupChatService:
         group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
 
         # 2. 构建快照目录
-        snapshot_dir = self._build_snapshot_dir(group_chat, group_chat_id)
+        snapshot_dir = group_chat_paths.file_snapshots_dir(
+            group_chat_id, group_chat.runtime.project_path
+        )
 
         # 3. 读取快照内容
         try:
@@ -657,7 +659,9 @@ class GroupChatService:
         group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
 
         # 2. 构建快照目录
-        snapshot_dir = self._build_snapshot_dir(group_chat, group_chat_id)
+        snapshot_dir = group_chat_paths.file_snapshots_dir(
+            group_chat_id, group_chat.runtime.project_path
+        )
 
         # 3. 读取快照 diff
         try:
@@ -671,25 +675,6 @@ class GroupChatService:
                     "error": str(e),
                 },
             ) from e
-
-    def _build_snapshot_dir(self, group_chat: GroupChat, group_chat_id: str) -> Path:
-        """
-        构建快照存储目录路径
-
-        Args:
-            group_chat: GroupChat 实例
-            group_chat_id: 群聊 ID
-
-        Returns:
-            快照目录 Path 对象
-        """
-        return (
-            Path(config.data_path)
-            / "teams"
-            / group_chat.runtime.project_path
-            / group_chat_id
-            / "file_snapshots"
-        )
 
     async def _read_pins(self, pins_path: Path) -> list[dict]:
         """从 pins.json 读取 pin 列表，文件不存在或损坏返回空列表"""

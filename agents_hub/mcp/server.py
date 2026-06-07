@@ -53,6 +53,7 @@ from agents_hub.core.foundation import (  # noqa: E402
     render_for_chat,
 )
 from agents_hub.core.foundation.file_snapshot import create_file_snapshot  # noqa: E402
+from agents_hub.core.foundation.paths import group_chat_paths  # noqa: E402
 from agents_hub.core.foundation.token import redact_token  # noqa: E402
 from agents_hub.core.orchestration import group_chat_manager  # noqa: E402
 from agents_hub.core.orchestration.group_chat import GroupChat  # noqa: E402
@@ -589,14 +590,8 @@ async def finish_agent_call(
             )
 
             # 构造快照目录
-            from pathlib import Path
-
-            snapshot_dir = (
-                Path(config.data_path)
-                / "teams"
-                / group_chat.runtime.project_path
-                / group_chat_id
-                / "file_snapshots"
+            snapshot_dir = group_chat_paths.file_snapshots_dir(
+                group_chat_id, group_chat.runtime.project_path
             )
 
             # 为每个文件创建快照
