@@ -21,6 +21,7 @@ class CodexExecutor:
         config: RoleConfig,
         session_id: str | None = None,
         cwd: str | None = None,
+        fork_from: str | None = None,
     ) -> AsyncIterator[str]:
         """
         启动 Codex CLI 并返回原始输出流
@@ -30,6 +31,7 @@ class CodexExecutor:
             config: 角色配置
             session_id: 会话 ID（可选，用于恢复会话）
             cwd: 项目目录路径（可选，通过 -C 参数指定工作目录）
+            fork_from: 源会话 ID（可选，用于从群聊 fork 会话到单聊）
 
         Returns:
             AsyncIterator[str]: 原始 JSON 字符串流
@@ -38,7 +40,7 @@ class CodexExecutor:
         # 参考: docs/history-bugs/2026-05-28-cli-system-prompt-blocks-simple-requests.md
         prompt = prompt.replace("\n", " ").replace("\r", " ")
 
-        cmd = self._build_command(prompt, config, session_id, cwd)
+        cmd = self._build_command(prompt, config, session_id, cwd, fork_from)
         env = self._build_env(config)
 
         try:
@@ -72,8 +74,16 @@ class CodexExecutor:
         config: RoleConfig,
         session_id: str | None,
         cwd: str | None = None,
+        fork_from: str | None = None,
     ) -> list:
         """构建 Codex CLI 命令"""
+        if fork_from:
+            # fork 会话：从源会话创建新分支
+            cmd = [CODEX_COMMAND, "fork", fork_from, prompt]
+            if cwd:
+                cmd.extend(["-C", cwd])
+            return cmd
+
         if session_id:
             # 恢复已有会话
             cmd = [

@@ -25,6 +25,7 @@ from agents_hub.api.routes import (
     config_router,
     group_chats_router,
     roles_router,
+    single_chat_router,
     skills_router,
     teams_router,
 )
@@ -89,6 +90,7 @@ app.include_router(group_chats_router, prefix="/api/v1")
 app.include_router(roles_router, prefix="/api/v1")
 app.include_router(teams_router, prefix="/api/v1")
 app.include_router(config_router, prefix="/api/v1")
+app.include_router(single_chat_router, prefix="/api/v1")
 
 
 @app.exception_handler(AgentsHubError)
