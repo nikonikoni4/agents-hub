@@ -64,6 +64,9 @@ class MessageInfo(BaseModel):
     content: str = Field(..., description="消息内容")
     timestamp: str = Field(..., description="时间戳")
     platform: str = Field(..., description="来源平台")
+    cwd: str | None = Field(None, description="Agent 工作目录")
+    modified_files: list[dict] | None = Field(None, description="修改的文件列表")
+    git_diff_range: str | None = Field(None, description="Git diff 范围")
 
 
 # --- Pin Messages Schemas ---

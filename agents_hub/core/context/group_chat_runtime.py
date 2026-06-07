@@ -137,17 +137,25 @@ class GroupChatRuntime:
         start = max(0, len(candidates) - limit)
         messages = candidates[start:]
 
-        # 映射 agent_name -> speaker
-        return [
-            {
+        # 映射 agent_name -> speaker，并包含所有可选字段
+        result = []
+        for msg in messages:
+            item = {
                 "id": msg.get("id"),
                 "speaker": msg["agent_name"],
                 "content": msg["content"],
                 "timestamp": msg.get("timestamp", ""),
                 "platform": msg.get("platform", ""),
             }
-            for msg in messages
-        ]
+            # 添加可选字段（如果存在）
+            if "cwd" in msg:
+                item["cwd"] = msg["cwd"]
+            if "modified_files" in msg:
+                item["modified_files"] = msg["modified_files"]
+            if "git_diff_range" in msg:
+                item["git_diff_range"] = msg["git_diff_range"]
+            result.append(item)
+        return result
 
     def get_or_create_agent_member_info(self, agent_name: str) -> AgentMemberInfo:
         """

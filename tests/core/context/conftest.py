@@ -18,6 +18,7 @@ class FakeRepository:
         session = GroupChatSession(group_chat_id="gc_1")
         session.messages = [
             {
+                "id": 1,
                 "agent_name": "Worker1",
                 "content": "hello",
                 "timestamp": "2026-06-04T10:00:00",

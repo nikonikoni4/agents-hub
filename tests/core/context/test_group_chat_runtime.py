@@ -76,6 +76,7 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
     messages = runtime.get_message_dicts(limit=10)
     assert messages == [
         {
+            "id": 1,
             "speaker": "Worker1",
             "content": "hello",
             "timestamp": "2026-06-04T10:00:00",
@@ -165,6 +166,9 @@ class MockAgentResult:
         self.text = text
         self.timestamp = "2026-06-04T10:00:00"
         self.platform = AgentPlatform.CLAUDE
+        self.cwd = None
+        self.modified_files = None
+        self.git_diff_range = None
 
 
 async def test_runtime_commands_update_memory_then_persist():

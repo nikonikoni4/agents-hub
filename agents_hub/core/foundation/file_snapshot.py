@@ -115,18 +115,53 @@ def _run_git_diff(file_path: str, cwd: str, git_diff_range: str | None) -> tuple
         if not re.match(pattern, git_diff_range):
             return "", f"Invalid git_diff_range format: {git_diff_range}"
         cmd = ["git", "diff", git_diff_range, "--", file_path]
+        use_no_index = False
     else:
-        cmd = ["git", "diff", "HEAD", "--", file_path]
+        # 检查文件是否是 untracked（新文件）
+        is_untracked = _is_file_untracked(file_path, cwd)
+        if is_untracked:
+            # 对于 untracked 文件，使用 git diff --no-index 与空文件比较
+            cmd = ["git", "diff", "--no-index", "/dev/null", file_path]
+            use_no_index = True
+        else:
+            cmd = ["git", "diff", "HEAD", "--", file_path]
+            use_no_index = False
 
     try:
         result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=30)
 
-        if result.returncode == 0:
+        # git diff --no-index 对于新文件会返回 exit code 1（表示有差异）
+        # 只有在使用 --no-index 时才接受 exit code 1
+        if result.returncode == 0 or (use_no_index and result.returncode == 1):
             return result.stdout, None
         else:
             return "", result.stderr or "git diff failed"
     except subprocess.TimeoutExpired:
         return "", "git diff timeout (30s)"
+
+
+def _is_file_untracked(file_path: str, cwd: str) -> bool:
+    """检查文件是否是 git untracked（新文件）
+
+    Args:
+        file_path: 文件路径
+        cwd: 工作目录
+
+    Returns:
+        True 如果文件是 untracked
+    """
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", file_path],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        # untracked 文件在 git status --porcelain 中以 "?? " 开头
+        return result.stdout.startswith("?? ")
+    except (subprocess.TimeoutExpired, Exception):
+        return False
 
 
 def _parse_diff(diff_text: str) -> tuple[int, int, str]:
