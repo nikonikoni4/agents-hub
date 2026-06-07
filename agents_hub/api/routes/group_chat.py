@@ -10,6 +10,8 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatMember,
     MessageCreate,
     MessageInfo,
+    PermissionUpdateRequest,
+    PermissionUpdateResponse,
     PinMessageRequest,
     PinnedMessageInfo,
     PinOperationResponse,
@@ -231,3 +233,25 @@ async def get_file_snapshot_diff(
     """获取文件快照的 diff"""
     diff = await service.get_file_snapshot_diff(group_chat_id, snapshot_id)
     return {"diff": diff}
+
+
+@router.patch(
+    "/{group_chat_id}/messages/{message_id}/permission",
+    response_model=PermissionUpdateResponse,
+    responses={
+        404: {"description": "群聊或消息不存在"},
+        422: {"description": "无效的状态值"},
+    },
+)
+async def update_permission_status(
+    group_chat_id: str,
+    message_id: int,
+    body: PermissionUpdateRequest,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """更新消息中的权限请求状态（批准/拒绝）"""
+    result = await service.update_permission_status(group_chat_id, message_id, body.status)
+    return PermissionUpdateResponse(
+        message_id=result["message_id"],
+        new_status=result["new_status"],
+    )

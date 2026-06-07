@@ -5,6 +5,7 @@
 """
 
 from datetime import datetime
+from typing import Any
 
 from agents_hub.core.foundation import GroupChatType
 from agents_hub.utils.logger import get_logger
@@ -154,6 +155,8 @@ class GroupChatRuntime:
                 item["modified_files"] = msg["modified_files"]
             if "git_diff_range" in msg:
                 item["git_diff_range"] = msg["git_diff_range"]
+            if "permission_request" in msg:
+                item["permission_request"] = msg["permission_request"]
             result.append(item)
         return result
 
@@ -300,6 +303,30 @@ class GroupChatRuntime:
         if session.messages is not current_session.messages:
             logger.warning("群聊 message 引用不一致: session=%s", id(session))
         await self._persist(lambda: self.repository.save_group_chat_session(session))
+
+    async def update_message_field(self, message_id: int, field_path: str, value: Any) -> bool:
+        """
+        更新消息中的指定字段并持久化
+
+        Args:
+            message_id: 消息 ID
+            field_path: 字段路径（如 "permission_request.status"）
+            value: 新值
+
+        Returns:
+            bool: 是否找到并更新了消息
+        """
+        session = self.state.require_session()
+        for msg in session.messages:
+            if msg.get("id") == message_id:
+                parts = field_path.split(".")
+                target = msg
+                for part in parts[:-1]:
+                    target = target.setdefault(part, {})
+                target[parts[-1]] = value
+                await self._persist(lambda: self.repository.save_group_chat_session(session))
+                return True
+        return False
 
     async def append_compact_record_and_mark_compacted(self, compact_record: dict) -> None:
         """

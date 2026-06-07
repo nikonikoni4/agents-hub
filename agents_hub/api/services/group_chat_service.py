@@ -882,3 +882,76 @@ class GroupChatService:
 
         # 4. 转换为 API Schema
         return TaskListInfo.from_task_list(active_task_list)
+
+    async def update_permission_status(
+        self, group_chat_id: str, message_id: int, status: str
+    ) -> dict:
+        """更新消息中的权限请求状态
+
+        Args:
+            group_chat_id: 群聊 ID
+            message_id: 消息 ID
+            status: 新状态 ("approved" 或 "rejected")
+
+        Returns:
+            dict: {"message_id": int, "new_status": str}
+
+        Raises:
+            ResourceNotFoundError: 群聊或消息不存在
+            ValidationError: 无效的状态值
+        """
+        # 1. 验证 status
+        if status not in ("approved", "rejected"):
+            raise ValidationError(
+                f"无效的权限状态: {status}，只允许 approved 或 rejected",
+                details={"status": status},
+            )
+
+        # 2. 加载群聊
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 3. 更新消息中的 permission_request.status
+        updated = await group_chat.runtime.update_message_field(
+            message_id, "permission_request.status", status
+        )
+        if not updated:
+            raise MessageNotFoundError(
+                f"消息不存在: message_id={message_id}",
+                details={"message_id": message_id},
+            )
+
+        # 4. 查找请求发起 agent 并发送通知
+        messages = group_chat.runtime.get_message_dicts()
+        target_msg = next((m for m in messages if m.get("id") == message_id), None)
+        if target_msg and target_msg.get("permission_request"):
+            requested_by = target_msg["permission_request"].get("requested_by")
+            if requested_by and not config.is_user_name(requested_by):
+                notification_content = (
+                    f"权限请求已{'批准' if status == 'approved' else '拒绝'}: "
+                    f"{target_msg['permission_request'].get('title', '')}"
+                )
+                call = group_chat.agent_call_manager.create_call(
+                    send_from=config.default_user_name,
+                    send_to=requested_by,
+                    content=notification_content,
+                    message_type=MessageType.NOTIFICATION,
+                )
+                message = AgentMessage(
+                    send_from=config.default_user_name,
+                    send_to=requested_by,
+                    content=notification_content,
+                    message_type=MessageType.NOTIFICATION,
+                    call_id=call.call_id,
+                )
+                await group_chat.send_message_to_agent(message)
+
+        # 5. 广播刷新
+        await broadcast_group_chat_refresh(group_chat_id)
+
+        return {"message_id": message_id, "new_status": status}

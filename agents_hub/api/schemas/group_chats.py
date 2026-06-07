@@ -56,6 +56,16 @@ class MessageCreate(BaseModel):
     members: list[str] = Field(..., min_length=1, description="群聊中所有 agent 名称列表")
 
 
+class PermissionRequestInfo(BaseModel):
+    """权限请求信息（嵌入在 MessageInfo 中）"""
+
+    request_id: str = Field(..., description="权限请求唯一 ID")
+    title: str = Field(..., description="权限请求标题")
+    content: str = Field(..., description="权限请求详细描述")
+    status: str = Field("pending", description="请求状态：pending/approved/rejected")
+    requested_by: str = Field(..., description="请求发起者名称（agent 角色名）")
+
+
 class MessageInfo(BaseModel):
     """消息信息"""
 
@@ -67,6 +77,24 @@ class MessageInfo(BaseModel):
     cwd: str | None = Field(None, description="Agent 工作目录")
     modified_files: list[dict] | None = Field(None, description="修改的文件列表")
     git_diff_range: str | None = Field(None, description="Git diff 范围")
+    permission_request: PermissionRequestInfo | None = Field(None, description="权限请求信息")
+
+
+# --- Permission Request Schemas ---
+
+
+class PermissionUpdateRequest(BaseModel):
+    """PATCH /messages/{id}/permission 请求体"""
+
+    status: str = Field(..., description="新状态：approved 或 rejected")
+
+
+class PermissionUpdateResponse(BaseModel):
+    """PATCH /messages/{id}/permission 响应"""
+
+    ok: bool = Field(default=True, description="操作是否成功")
+    message_id: int = Field(..., description="更新的消息 ID")
+    new_status: str = Field(..., description="更新后的状态")
 
 
 # --- Pin Messages Schemas ---

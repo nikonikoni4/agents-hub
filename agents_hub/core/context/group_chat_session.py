@@ -74,6 +74,9 @@ class GroupChatSession:
         if agent_result.git_diff_range is not None:
             message["git_diff_range"] = agent_result.git_diff_range
 
+        if agent_result.permission_request is not None:
+            message["permission_request"] = agent_result.permission_request
+
         self.messages.append(message)
         self.next_message_id += 1
 

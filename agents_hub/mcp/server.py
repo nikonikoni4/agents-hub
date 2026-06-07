@@ -654,6 +654,87 @@ async def finish_agent_call(
 
 
 # ============================================================================
+# Tool 7: request_permission
+# ============================================================================
+
+
+# TODO 这个只是一个示例，之后应该换做是具体的请求，比如添加群成员等，把这个降级为一个基本的工具函数
+async def request_permission(
+    agent_token: str,
+    title: str,
+    content: str,
+) -> dict:
+    """
+    向用户请求操作权限
+
+    创建一条权限请求消息显示在群聊中，等待用户批准或拒绝。
+    工具立即返回（不阻塞），用户操作后会通过通知告知结果。
+
+    Args:
+        agent_token: 调用者的身份令牌
+        title: 权限请求标题（如"创建新成员"、"执行终端命令"）
+        content: 权限请求的详细描述
+
+    Returns:
+        成功: {"request_id": "...", "status": "pending"}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    from uuid import uuid4
+
+    try:
+        # 1. 身份解析
+        identity = group_chat_manager.resolve_token(agent_token)
+        if identity is None:
+            return make_error_response(
+                INVALID_TOKEN,
+                "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
+            )
+
+        agent_name, group_chat_id = identity
+
+        # 2. 获取 GroupChat
+        try:
+            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError:
+            return make_error_response(
+                GROUP_CHAT_NOT_FOUND,
+                f"群聊 {group_chat_id} 不存在",
+                details={"group_chat_id": group_chat_id},
+            )
+
+        # 3. 构建权限请求数据
+        request_id = str(uuid4())
+        permission_request = {
+            "request_id": request_id,
+            "title": title,
+            "content": content,
+            "status": "pending",
+            "requested_by": agent_name,
+        }
+
+        # 4. 创建 AgentResult 并写入消息
+        agent_result = _make_chat_result(
+            group_chat=group_chat,
+            agent_name=agent_name,
+            content=f"[权限请求] {title}",
+        )
+        agent_result.permission_request = permission_request
+
+        await group_chat.group_chat_context.add_message(agent_result)
+        await broadcast_group_chat_refresh(group_chat_id)
+
+        # 5. 返回 request_id
+        return {"request_id": request_id, "status": "pending"}
+
+    except Exception as e:
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+# ============================================================================
 # 注册工具到 FastMCP
 # ============================================================================
 
@@ -663,3 +744,4 @@ mcp.tool()(archive_task_list)
 mcp.tool()(check_agent_call)
 mcp.tool()(speak_in_group_chat)
 mcp.tool()(finish_agent_call)
+mcp.tool()(request_permission)

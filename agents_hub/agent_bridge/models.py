@@ -47,6 +47,7 @@ class AgentResult:
     cwd: str | None = None  # Agent 工作目录
     modified_files: list[FileMetadata] | None = None  # 修改的文件列表元数据
     git_diff_range: str | None = None  # Git diff 范围
+    permission_request: dict | None = None  # 权限请求数据
 
 
 # 向后兼容别名（待废弃）
