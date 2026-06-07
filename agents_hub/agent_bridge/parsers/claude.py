@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 class ClaudeParser:
     """解析 Claude CLI 的流式输出"""
 
+    # 工具调用解析开关，默认关闭，未来按需启用
+    ENABLE_TOOL_USE_PARSING = False
+
+    def __init__(self):
+        self._tool_use_blocks: dict[int, dict] = {}
+
     def parse_event(self, raw_line: str) -> StreamEvent | None:
         """
         解析单行 JSON 事件
@@ -48,21 +54,80 @@ class ClaudeParser:
         inner_event = event.get("event", {})
         inner_type = inner_event.get("type")
 
-        # 文本增量
+        # 内容块开始：捕获 tool_use 块
+        if inner_type == "content_block_start":
+            return self._handle_content_block_start(inner_event, session_id)
+
+        # 内容增量
         if inner_type == "content_block_delta":
-            delta = inner_event.get("delta", {})
-            if delta.get("type") == "text_delta":
-                return StreamEvent(
-                    type=AgentEventType.TEXT_DELTA,
-                    content={"text": delta.get("text", "")},
-                    session_id=session_id,
-                    timestamp=datetime.now().isoformat(),
-                    agent_name="",  # 将在 bridge 中填充
-                    platform=AgentPlatform.CLAUDE,
-                    role_type=RoleType.TEAM_MEMBER,  # 默认值，将在 bridge 中更新
-                )
+            return self._handle_content_block_delta(inner_event, session_id)
+
+        # 内容块结束：emit 缓存的 tool_use 事件
+        if inner_type == "content_block_stop":
+            return self._handle_content_block_stop(inner_event, session_id)
 
         return None
+
+    def _handle_content_block_start(self, inner_event: dict, session_id: str) -> StreamEvent | None:
+        """处理 content_block_start：缓存 tool_use 块"""
+        content_block = inner_event.get("content_block", {})
+        if content_block.get("type") == "tool_use" and self.ENABLE_TOOL_USE_PARSING:
+            index = inner_event.get("index", 0)
+            self._tool_use_blocks[index] = {
+                "id": content_block.get("id", ""),
+                "name": content_block.get("name", ""),
+                "input_parts": [],
+            }
+        return None
+
+    def _handle_content_block_delta(self, inner_event: dict, session_id: str) -> StreamEvent | None:
+        """处理 content_block_delta：文本增量或工具输入增量"""
+        delta = inner_event.get("delta", {})
+        delta_type = delta.get("type")
+
+        if delta_type == "text_delta":
+            return StreamEvent(
+                type=AgentEventType.TEXT_DELTA,
+                content={"text": delta.get("text", "")},
+                session_id=session_id,
+                timestamp=datetime.now().isoformat(),
+                agent_name="",
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
+
+        if delta_type == "input_json_delta":
+            index = inner_event.get("index", 0)
+            if index in self._tool_use_blocks:
+                self._tool_use_blocks[index]["input_parts"].append(delta.get("partial_json", ""))
+
+        return None
+
+    def _handle_content_block_stop(self, inner_event: dict, session_id: str) -> StreamEvent | None:
+        """处理 content_block_stop：emit 缓存的 tool_use 事件"""
+        index = inner_event.get("index", 0)
+        block = self._tool_use_blocks.pop(index, None)
+        if block is None:
+            return None
+
+        try:
+            input_data = json.loads("".join(block["input_parts"])) if block["input_parts"] else {}
+        except json.JSONDecodeError:
+            input_data = {}
+
+        return StreamEvent(
+            type=AgentEventType.TOOL_USE,
+            content={
+                "tool_id": block["id"],
+                "tool_name": block["name"],
+                "input": input_data,
+            },
+            session_id=session_id,
+            timestamp=datetime.now().isoformat(),
+            agent_name="",
+            platform=AgentPlatform.CLAUDE,
+            role_type=RoleType.TEAM_MEMBER,
+        )
 
     def _parse_system_event(self, event: dict, session_id: str) -> StreamEvent | None:
         """解析系统事件"""
