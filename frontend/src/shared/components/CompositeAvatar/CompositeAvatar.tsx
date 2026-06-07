@@ -11,15 +11,34 @@ export interface CompositeAvatarProps {
 export function CompositeAvatar({ avatars, size = 36 }: CompositeAvatarProps) {
   if (avatars.length === 0) return null;
 
+  // 单个头像：直接圆形展示
+  const nonEmpty = avatars.filter(Boolean);
+  if (nonEmpty.length <= 1) {
+    return (
+      <div className={styles.single} style={{ width: size, height: size }}>
+        <AvatarImage avatar={nonEmpty[0] ?? null} />
+      </div>
+    );
+  }
+
   const cells = avatars.slice(0, 4);
-  // 补齐到 4 个格子
   while (cells.length < 4) cells.push(null);
 
+  const gap = Math.max(1, Math.round(size * 0.06));
+  const cellSize = Math.round((size - gap) / 2);
+
   return (
-    <div className={styles.grid} style={{ width: size, height: size }}>
+    <div
+      className={styles.grid}
+      style={{
+        width: size,
+        height: size,
+        gap: `${gap}px`,
+      }}
+    >
       {cells.map((avatar, i) => (
-        <div key={i} className={styles.cell}>
-          {avatar ? <AvatarImage avatar={avatar} /> : null}
+        <div key={i} className={styles.cell} style={{ width: cellSize, height: cellSize }}>
+          {avatar ? <AvatarImage avatar={avatar} /> : <div className={styles.empty} />}
         </div>
       ))}
     </div>
