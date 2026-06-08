@@ -150,6 +150,31 @@
   2. **路径显示**：群聊显示自身路径；成员若 worktree 路径与群聊相同用标识符标注（如 `≈`），不同则显示完整路径
   3. **打开工作目录**：支持打开每个成员的工作目录
 
+### 29. Agent Bridge System Prompt 注入模式 ⭐
+- **来源**：用户直接指定
+- **状态**：⏳ 待开始
+- **创建时间**：2026-06-08
+- **描述**：修改 Agent Bridge，支持通过 system prompt 参数直接注入系统提示词，替代当前向 cloud.md 和 agents.md 文件写入的方式。这是多 Agent 使用同一个 Cloud MD 时状态冲突问题的解决方案。
+- **优先级**：29
+- **背景**：
+  - 当前实现：系统提示词通过 `_inject_tool_usage_to_files` 方法写入 CLAUDE.md/AGENTS.md 文件
+  - 问题：多个 Agent 并行使用同一个 Cloud MD 时，会产生文件读写竞态条件和状态冲突
+  - 解决方案：支持通过 system prompt 参数直接注入，避免文件层面的冲突
+- **需求清单**：
+  1. **保留现有实现**：保留当前 `_inject_tool_usage_to_files` 方法，不删除
+  2. **新增 system prompt 参数**：在 Agent 配置或初始化时增加 `system_prompt` 参数
+  3. **实现注入方法**：新增方法将提示词内容直接拼接到 system prompt 中
+  4. **切换机制**：实现一个配置开关或方法，允许在文件注入和 system prompt 注入两种模式间切换
+  5. **默认行为**：建议默认使用 system prompt 模式，文件注入模式作为回退方案
+- **涉及模块**：
+  - `agents_hub/core/agent/base_agent.py`：修改 `_generate_tool_usage_content` 输出目标
+  - `agents_hub/core/agent/bridge.py`：增加 system prompt 参数传递
+  - 配置层：增加注入模式的配置选项
+- **技术方案**：
+  - 模式 A（当前）：`_inject_tool_usage_to_files` → 写入 CLAUDE.md/AGENTS.md
+  - 模式 B（新增）：`_generate_system_prompt_content` → 拼接到 system prompt 参数
+  - 切换方式：Agent 配置中的 `prompt_injection_mode: "file" | "system_prompt"`
+
 ---
 
 ## 进行中

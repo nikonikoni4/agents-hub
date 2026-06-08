@@ -9,7 +9,11 @@
 import { useCallback } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useCreateSingleChat } from './useCreateSingleChat';
-import type { NavigationMark, GroupChatNavigationData, CreateSingleChatNavigationData } from '@/shared/utils/navigationParser';
+import type {
+  NavigationMark,
+  GroupChatNavigationData,
+  CreateSingleChatNavigationData,
+} from '@/shared/utils/navigationParser';
 
 export function useNavigationHandler() {
   const selectSession = useSessionStore((s) => s.selectSession);
