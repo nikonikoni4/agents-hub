@@ -75,3 +75,9 @@
  - path: docs/history-bugs/2026-06-07-frontend-refresh-dependency-gaps.md
  - 触发规则：修改角色头像/描述后，Session 列表群聊头像、消息气泡发言人头像、成员列表头像不刷新；增删群成员后 CompositeAvatar 不刷新
  - 内容摘要：6 个刷新链路断裂问题，根因是缺少跨 feature 刷新协调机制、数据聚合点无订阅、local state 缓存无失效策略
+
+## Message PIN 后右侧栏不自动刷新
+ - updated_at : 2026-06-08
+ - path: docs/history-bugs/pin-message-refresh-bug.md
+ - 触发规则：群聊中置顶/取消置顶消息后，右侧栏 Pinned 列表不自动更新，必须手动刷新
+ - 内容摘要：后端 pin_message/unpin_message 方法缺少 broadcast_group_chat_refresh 调用，前端 usePinnedMessages 收不到 refresh 信号。修复：在 pin/unpin 成功写入后添加 refresh 广播

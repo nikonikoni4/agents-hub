@@ -760,6 +760,8 @@ class GroupChatService:
                 }
             )
             await self._write_pins(pins_path, pins)
+            # 必须发送 refresh 信号，否则前端 usePinnedMessages 不会自动刷新
+            await broadcast_group_chat_refresh(group_chat_id)
 
     async def unpin_message(self, group_chat_id: str, message_id: int) -> None:
         """取消置顶。幂等：未 pin 则跳过。不要求消息存在于历史中。
@@ -779,6 +781,8 @@ class GroupChatService:
             new_pins = [p for p in pins if p.get("message_id") != message_id]
             if len(new_pins) != len(pins):
                 await self._write_pins(pins_path, new_pins)
+                # 必须发送 refresh 信号，否则前端 usePinnedMessages 不会自动刷新
+                await broadcast_group_chat_refresh(group_chat_id)
 
     # ==================== Group Chat Members Methods ====================
 
