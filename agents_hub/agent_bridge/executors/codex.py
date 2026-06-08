@@ -58,6 +58,7 @@ class CodexExecutor:
         )
         env = self._build_env(config)
 
+        logger.info("Codex CLI: %s", " ".join(cmd))
         try:
             process = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env
@@ -92,37 +93,23 @@ class CodexExecutor:
         fork_from: str | None = None,
         system_prompt: str | None = None,
     ) -> list:
-        """构建 Codex CLI 命令"""
+        """构建 Codex CLI 命令。-C 必须在子命令之前。"""
+        cmd = [CODEX_COMMAND]
+        if cwd:
+            cmd.extend(["-C", cwd])
+
         if fork_from:
-            # fork 会话：从源会话创建新分支
-            cmd = [CODEX_COMMAND, "fork", fork_from, prompt]
-            if cwd:
-                cmd.extend(["-C", cwd])
+            cmd.extend(["fork", fork_from, prompt])
             if system_prompt:
                 cmd.extend(["-c", f"instructions={_sanitize_for_codex_cli(system_prompt)}"])
             return cmd
 
         if session_id:
-            # 恢复已有会话
-            cmd = [
-                CODEX_COMMAND,
-                "exec",
-                "resume",
-                "--json",
-                session_id,
-            ]
+            cmd.extend(["exec", "resume", "--json", session_id])
         else:
-            cmd = [
-                CODEX_COMMAND,
-                "exec",
-                "--json",
-            ]
-
-        if cwd:
-            cmd.extend(["-C", cwd])
+            cmd.extend(["exec", "--json"])
 
         if system_prompt:
-            # Codex 通过 -c instructions 注入 system prompt，需 strip 换行符
             cmd.extend(["-c", f"instructions={_sanitize_for_codex_cli(system_prompt)}"])
 
         cmd.append(prompt)
