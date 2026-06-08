@@ -21,6 +21,8 @@ interface SingleChatState {
   activeSingleChatId: string | null;
   /** 单聊面板是否可见 */
   isPanelOpen: boolean;
+  /** 单聊显示位置：'sidebar' 为右侧栏，'main' 为主界面 */
+  displayLocation: 'sidebar' | 'main';
 
   // Actions
   /** 设置单聊列表 */
@@ -33,20 +35,31 @@ interface SingleChatState {
   closeSingleChat: () => void;
   /** 添加一条单聊记录 */
   addSingleChat: (chat: SingleChatApiResponse) => void;
+  /** 切换单聊显示位置 */
+  toggleLocation: () => void;
+  /** 设置单聊显示位置 */
+  setLocation: (location: 'sidebar' | 'main') => void;
 }
 
 export const useSingleChatStore = create<SingleChatState>((set) => ({
   singleChats: [],
   activeSingleChatId: null,
   isPanelOpen: false,
+  displayLocation: 'sidebar',
 
   setSingleChats: (chats) => set({ singleChats: chats }),
 
   setActiveSingleChat: (id) => set({ activeSingleChatId: id }),
 
-  openSingleChat: (id) => set({ activeSingleChatId: id, isPanelOpen: true }),
+  openSingleChat: (id) => set({ activeSingleChatId: id, isPanelOpen: true, displayLocation: 'sidebar' }),
 
   closeSingleChat: () => set({ isPanelOpen: false }),
 
   addSingleChat: (chat) => set((state) => ({ singleChats: [...state.singleChats, chat] })),
+
+  toggleLocation: () => set((state) => ({
+    displayLocation: state.displayLocation === 'sidebar' ? 'main' : 'sidebar',
+  })),
+
+  setLocation: (location) => set({ displayLocation: location }),
 }));
