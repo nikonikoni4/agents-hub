@@ -2,19 +2,16 @@
 Agent Pin 消息注入功能测试
 
 测试契约：
-1. Agent._get_pinned_messages_prompt() - 读取 pins.json 并生成提示词
-2. Agent._process_message() - 将 Pin 消息注入到 MAIN 会话的提示词中
+1. Agent._get_pinned_messages_content() - 读取 pins.json 并生成 XML 片段（用于 runtime 注入）
+2. Agent._generate_runtime_content() - 将 Pin 消息包含在 runtime 内容中
 """
 
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from agents_hub.core.agent.base_agent import Agent
-from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
 
 
 # ==================== 辅助函数 ====================
@@ -57,43 +54,27 @@ def create_mock_agent(session_path: Path) -> Agent:
     return agent
 
 
-# ==================== _get_pinned_messages_prompt() 测试 ====================
+# ==================== _get_pinned_messages_content() 测试 ====================
 
 
-class TestGetPinnedMessagesPrompt:
-    """Agent._get_pinned_messages_prompt() 契约测试"""
+class TestGetPinnedMessagesContent:
+    """Agent._get_pinned_messages_content() 契约测试"""
 
-    @pytest.mark.asyncio
-    async def test_returns_empty_when_pins_file_not_exists(self):
+    def test_returns_empty_when_pins_file_not_exists(self):
         """
         契约：当 pins.json 不存在时，返回空字符串
-
-        验证方式：
-        1. 创建临时目录（不创建 pins.json）
-        2. 调用 _get_pinned_messages_prompt()
-        3. 验证返回空字符串
-
-        如果失败，说明：Agent 没有正确处理文件不存在的情况
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             session_path = Path(tmpdir)
             agent = create_mock_agent(session_path)
 
-            result = await agent._get_pinned_messages_prompt()
+            result = agent._get_pinned_messages_content()
 
             assert result == "", "pins.json 不存在时应返回空字符串"
 
-    @pytest.mark.asyncio
-    async def test_returns_empty_when_pins_file_is_empty(self):
+    def test_returns_empty_when_pins_file_is_empty(self):
         """
         契约：当 pins.json 为空或无有效数据时，返回空字符串
-
-        验证方式：
-        1. 创建临时目录和空的 pins.json
-        2. 调用 _get_pinned_messages_prompt()
-        3. 验证返回空字符串
-
-        如果失败，说明：Agent 没有正确处理空文件的情况
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             session_path = Path(tmpdir)
@@ -102,21 +83,13 @@ class TestGetPinnedMessagesPrompt:
 
             agent = create_mock_agent(session_path)
 
-            result = await agent._get_pinned_messages_prompt()
+            result = agent._get_pinned_messages_content()
 
             assert result == "", "pins.json 为空时应返回空字符串"
 
-    @pytest.mark.asyncio
-    async def test_generates_prompt_with_single_pin(self):
+    def test_generates_content_with_single_pin(self):
         """
-        契约：当有 Pin 消息时，生成 XML 格式的提示词
-
-        验证方式：
-        1. 创建包含单条 Pin 消息的 pins.json
-        2. 调用 _get_pinned_messages_prompt()
-        3. 验证返回的提示词包含 XML 标签和消息内容
-
-        如果失败，说明：提示词生成逻辑有问题
+        契约：当有 Pin 消息时，生成 XML 格式的内容片段
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             session_path = Path(tmpdir)
@@ -133,7 +106,7 @@ class TestGetPinnedMessagesPrompt:
 
             agent = create_mock_agent(session_path)
 
-            result = await agent._get_pinned_messages_prompt()
+            result = agent._get_pinned_messages_content()
 
             # 验证包含必要的结构
             assert "<pinned_messages>" in result, "缺少开始标签"
@@ -141,17 +114,9 @@ class TestGetPinnedMessagesPrompt:
             assert "以下是用户置顶的重要消息" in result, "缺少说明文字"
             assert "[user]: 规则：所有代码必须添加类型注解" in result, "缺少消息内容"
 
-    @pytest.mark.asyncio
-    async def test_sorts_pins_by_pinned_at_ascending(self):
+    def test_sorts_pins_by_pinned_at_ascending(self):
         """
         契约：Pin 消息按 pinned_at 升序排列（最早 pin 的在前）
-
-        验证方式：
-        1. 创建包含多条 Pin 消息的 pins.json（时间乱序）
-        2. 调用 _get_pinned_messages_prompt()
-        3. 验证返回的提示词中消息按时间排序
-
-        如果失败，说明：排序逻辑有问题
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             session_path = Path(tmpdir)
@@ -179,7 +144,7 @@ class TestGetPinnedMessagesPrompt:
 
             agent = create_mock_agent(session_path)
 
-            result = await agent._get_pinned_messages_prompt()
+            result = agent._get_pinned_messages_content()
 
             # 验证顺序：通过索引位置判断
             idx_first = result.index("第一条规则")
@@ -188,17 +153,9 @@ class TestGetPinnedMessagesPrompt:
 
             assert idx_first < idx_second < idx_third, "Pin 消息应按时间升序排列"
 
-    @pytest.mark.asyncio
-    async def test_returns_empty_on_file_read_error(self):
+    def test_returns_empty_on_file_read_error(self):
         """
         契约：当读取文件失败时，返回空字符串（异常处理）
-
-        验证方式：
-        1. Mock aiofiles.open 抛出异常
-        2. 调用 _get_pinned_messages_prompt()
-        3. 验证返回空字符串（不崩溃）
-
-        如果失败，说明：异常处理不完善
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             session_path = Path(tmpdir)
@@ -207,31 +164,26 @@ class TestGetPinnedMessagesPrompt:
 
             agent = create_mock_agent(session_path)
 
-            # Mock aiofiles.open 抛出异常
-            with patch("aiofiles.open", side_effect=IOError("Mock read error")):
-                result = await agent._get_pinned_messages_prompt()
+            with patch("builtins.open", side_effect=IOError("Mock read error")):
+                result = agent._get_pinned_messages_content()
 
                 assert result == "", "文件读取失败时应返回空字符串"
 
 
-# ==================== _process_message() Pin 注入测试 ====================
+# ==================== runtime 注入 Pin 消息测试 ====================
 
 
-class TestProcessMessagePinInjection:
-    """Agent._process_message() 中 Pin 消息注入的契约测试"""
+class TestRuntimePinInjection:
+    """Agent._generate_runtime_content() 中 Pin 消息注入的契约测试"""
 
-    @pytest.mark.asyncio
-    async def test_injects_pins_into_main_session_prompt(self):
+    def test_pins_included_in_runtime_content(self):
         """
-        契约：在 MAIN 会话中，Pin 消息会被注入到提示词中
+        契约：Pin 消息被包含在 _generate_runtime_content() 输出中
 
         验证方式：
         1. 创建包含 Pin 消息的 pins.json
-        2. Mock Agent.execute() 捕获传入的 prompt
-        3. 调用 _process_message()（MAIN 会话）
-        4. 验证传入的 prompt 包含 Pin 消息内容
-
-        如果失败，说明：Pin 注入逻辑未正确触发
+        2. 调用 _generate_runtime_content()
+        3. 验证输出包含 pinned_messages 标签和内容
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             session_path = Path(tmpdir)
@@ -248,42 +200,38 @@ class TestProcessMessagePinInjection:
 
             agent = create_mock_agent(session_path)
 
-            # Mock 依赖
-            agent.agent_context.get_context = AsyncMock(return_value="")
-            agent.execute = AsyncMock(return_value=MagicMock(text="done"))
-            agent.agent_call_manager.update_status = MagicMock()
+            result = agent._generate_runtime_content()
 
-            # 构造消息
-            msg = AgentMessage(
-                call_id="test-call",
-                send_from="user",
-                send_to="TestAgent",
-                content="执行任务",
-                session_type=SessionType.MAIN,
-                message_type=MessageType.TASK,
-            )
+            assert "<pinned_messages>" in result, "runtime 内容应包含 pinned_messages 标签"
+            assert "重要规则：必须测试" in result, "Pin 消息内容应出现在 runtime 中"
 
-            await agent._process_message(msg, "执行任务")
-
-            # 验证 execute 被调用，且 prompt 包含 Pin 消息
-            agent.execute.assert_called_once()
-            called_prompt = agent.execute.call_args[0][0]
-
-            assert "<pinned_messages>" in called_prompt, "MAIN 会话的 prompt 应包含 Pin 消息"
-            assert "重要规则：必须测试" in called_prompt, "Pin 消息内容应被注入"
-
-    @pytest.mark.asyncio
-    async def test_does_not_inject_pins_into_btw_session(self):
+    def test_no_pins_section_when_empty(self):
         """
-        契约：在 BTW（单聊）会话中，不注入 Pin 消息
+        契约：无 Pin 消息时，runtime 内容不包含 pinned_messages 标签
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            session_path = Path(tmpdir)
+            agent = create_mock_agent(session_path)
+
+            result = agent._generate_runtime_content()
+
+            assert "<pinned_messages>" not in result, "无 Pin 时不应出现 pinned_messages 标签"
+
+
+# ==================== 幂等性测试 ====================
+
+
+class TestPinInjectionIdempotency:
+    """Pin 消息注入的幂等性测试"""
+
+    def test_runtime_content_idempotent_across_calls(self):
+        """
+        契约：多次调用 _generate_runtime_content() 返回相同结果
 
         验证方式：
         1. 创建包含 Pin 消息的 pins.json
-        2. Mock Agent.btw_execute() 捕获传入的 prompt
-        3. 调用 _process_message()（BTW 会话）
-        4. 验证传入的 prompt 不包含 Pin 消息内容
-
-        如果失败，说明：Pin 注入逻辑作用范围错误
+        2. 连续调用 _generate_runtime_content() 多次
+        3. 验证每次返回内容一致
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             session_path = Path(tmpdir)
@@ -292,7 +240,7 @@ class TestProcessMessagePinInjection:
             pins = [
                 {
                     "speaker": "user",
-                    "content": "这条不应该出现在单聊中",
+                    "content": "幂等性测试规则",
                     "pinned_at": "2026-06-07T10:00:00",
                 }
             ]
@@ -300,24 +248,86 @@ class TestProcessMessagePinInjection:
 
             agent = create_mock_agent(session_path)
 
-            # Mock 依赖
-            agent.btw_execute = AsyncMock(return_value=MagicMock(text="done"))
-            agent.agent_call_manager.update_status = MagicMock()
+            result1 = agent._generate_runtime_content()
+            result2 = agent._generate_runtime_content()
+            result3 = agent._generate_runtime_content()
 
-            # 构造 BTW 消息
-            msg = AgentMessage(
-                call_id="test-call",
-                send_from="user",
-                send_to="TestAgent",
-                content="单聊任务",
-                session_type=SessionType.BTW,
-                message_type=MessageType.NOTIFICATION,
+            assert result1 == result2 == result3, "多次调用应返回一致结果"
+
+    def test_pinned_messages_content_idempotent(self):
+        """
+        契约：多次调用 _get_pinned_messages_content() 返回相同结果
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            session_path = Path(tmpdir)
+            pins_path = session_path / "pins.json"
+
+            pins = [
+                {
+                    "speaker": "user",
+                    "content": "规则A",
+                    "pinned_at": "2026-06-07T10:00:00",
+                },
+                {
+                    "speaker": "Manager",
+                    "content": "规则B",
+                    "pinned_at": "2026-06-07T11:00:00",
+                },
+            ]
+            pins_path.write_text(json.dumps(pins, ensure_ascii=False), encoding="utf-8")
+
+            agent = create_mock_agent(session_path)
+
+            result1 = agent._get_pinned_messages_content()
+            result2 = agent._get_pinned_messages_content()
+
+            assert result1 == result2, "多次调用应返回一致结果"
+            assert result1 != "", "有 pin 时不应返回空字符串"
+
+    def test_inject_runtime_idempotent(self):
+        """
+        契约：多次调用 _inject_runtime_to_files() 后文件内容一致
+
+        验证方式：
+        1. 创建包含 Pin 消息的 pins.json 和 CLAUDE.md
+        2. 多次调用 _inject_runtime_to_files()
+        3. 验证文件内容一致（不会累积重复）
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            session_path = Path(tmpdir)
+            pins_path = session_path / "pins.json"
+
+            pins = [
+                {
+                    "speaker": "user",
+                    "content": "注入幂等性测试",
+                    "pinned_at": "2026-06-07T10:00:00",
+                }
+            ]
+            pins_path.write_text(json.dumps(pins, ensure_ascii=False), encoding="utf-8")
+
+            agent = create_mock_agent(session_path)
+            agent.role_config.work_root = tmpdir
+
+            # 创建带标记的 CLAUDE.md
+            claude_md = Path(tmpdir) / "CLAUDE.md"
+            claude_md.write_text(
+                "# Test\n\n<AGENT_RUNTIME>\nold content\n</AGENT_RUNTIME>\n",
+                encoding="utf-8",
             )
 
-            await agent._process_message(msg, "单聊任务")
+            # 多次注入
+            agent._inject_runtime_to_files()
+            content_after_first = claude_md.read_text(encoding="utf-8")
 
-            # 验证 btw_execute 被调用，且 prompt 不包含 Pin 消息
-            agent.btw_execute.assert_called_once()
-            called_prompt = agent.btw_execute.call_args[0][0]
+            agent._inject_runtime_to_files()
+            content_after_second = claude_md.read_text(encoding="utf-8")
 
-            assert "<pinned_messages>" not in called_prompt, "BTW 会话不应注入 Pin 消息"
+            agent._inject_runtime_to_files()
+            content_after_third = claude_md.read_text(encoding="utf-8")
+
+            assert content_after_first == content_after_second == content_after_third, (
+                "多次注入后文件内容应一致（不会累积重复）"
+            )
+            assert "注入幂等性测试" in content_after_first, "Pin 内容应被注入"
+            assert content_after_first.count("<pinned_messages>") == 1, "pinned_messages 标签应只出现一次"

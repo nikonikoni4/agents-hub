@@ -448,11 +448,11 @@ async def check_agent_call(agent_token: str, call_id: str) -> dict:
 
 async def speak_in_group_chat(agent_token: str, content: str, send_to: str | None = None) -> dict:
     """
-    在群聊中公开发言。
+    任务汇报：向群聊发送进展信息，让 user 和 manager 知道当前状态。
 
     Args:
         agent_token: 调用者的身份令牌
-        content: 公开发言内容
+        content: 汇报内容
         send_to: 可选的 @ 对象；为空时表示普通群聊发言
 
     Returns:
@@ -518,8 +518,8 @@ async def finish_agent_call(
     Args:
         agent_token: 调用者的身份令牌
         call_id: 要结束的 AgentCall ID
-        content: 最终回复内容
-        success: True 表示完成，False 表示失败或无法继续
+        content: 成果汇报（结果、修改文件、注意事项等）
+        success: True 表示完成，False 表示阻塞或失败
         modified_files: 修改的文件列表（相对路径）
         git_diff_range: Git diff 范围（格式：commit..commit）
 

@@ -30,6 +30,17 @@ from agents_hub.utils.logger import get_logger
 
 
 class Agent:
+    ROLE_INSTRUCTIONS: str = ""
+
+    SHARED_RULES = """\
+## 群聊消息显示规则
+
+1. **speak_in_group_chat**：所有 agent 都会看到，但只有被调用和激活时才会传给它
+2. **finish_agent_call**：会显示在群聊中，并激活目标 agent
+3. **不要同时调用 speak_in_group_chat 和 finish_agent_call**
+4. **任务结束时使用 finish_agent_call，不要使用 speak_in_group_chat**
+"""
+
     def __init__(
         self,
         role: Role,
@@ -43,7 +54,7 @@ class Agent:
         self.role_type = self.role_config.role_type
         self.message_queue: asyncio.Queue[AgentMessage] = asyncio.Queue()  # 私有队列
         self.group_chat_context = group_chat_context
-        self.agent_context = AgentContext(self.name, group_chat_context)
+        self.agent_context = AgentContext(self.name, group_chat_context, self.role_type)
         self.message_router = message_router
         self.agent_call_manager = agent_call_manager
         self.task_manager = task_manager
@@ -171,57 +182,6 @@ class Agent:
         except Exception:
             return False
 
-    async def _get_pinned_messages_prompt(self) -> str:
-        """读取 Pin 消息并生成提示词片段。
-
-        Returns:
-            Pin 消息的提示词字符串，如果没有 Pin 消息则返回空字符串
-        """
-        import json
-        from pathlib import Path
-
-        import aiofiles
-
-        # 获取 pins.json 路径
-        session_path = Path(self.group_chat_context.repository.group_chat_session_path)
-        pins_path = session_path / "pins.json"
-
-        if not pins_path.exists():
-            return ""
-
-        try:
-            # 读取 pins.json
-            async with aiofiles.open(pins_path, encoding="utf-8") as f:
-                content = await f.read()
-                pins = json.loads(content) if content.strip() else []
-
-            if not pins:
-                return ""
-
-            # 按 pinned_at 升序排列（最早 pin 的在前）
-            pins_sorted = sorted(pins, key=lambda p: p.get("pinned_at", ""))
-
-            # 构造提示词
-            lines = [
-                "",
-                "<pinned_messages>",
-                "以下是用户置顶的重要消息，请在处理任务时遵守这些规则和要求：",
-                "",
-            ]
-
-            for pin in pins_sorted:
-                speaker = pin.get("speaker", "unknown")
-                content = pin.get("content", "")
-                lines.append(f"[{speaker}]: {content}")
-                lines.append("")
-
-            lines.append("</pinned_messages>")
-
-            return "\n".join(lines)
-        except Exception as e:
-            self.logger.warning("读取 Pin 消息失败: %s", str(e))
-            return ""
-
     async def _process_message(self, msg: AgentMessage, prompt: str) -> AgentResult:
         """处理一条入站消息。
 
@@ -262,18 +222,8 @@ class Agent:
                 # 获取历史上下文
                 history = await self.agent_context.get_context()
 
-                # 获取 Pin 消息提示词
-                pinned_prompt = await self._get_pinned_messages_prompt()
-
-                # 组装完整提示词：历史 + Pin 消息 + 当前消息
-                if history and pinned_prompt:
-                    full_prompt = f"{history}\n{pinned_prompt}\n{prompt}"
-                elif history:
-                    full_prompt = f"{history}\n{prompt}"
-                elif pinned_prompt:
-                    full_prompt = f"{pinned_prompt}\n{prompt}"
-                else:
-                    full_prompt = prompt
+                # 组装完整提示词：历史 + 当前消息（Pin 消息已通过 runtime 注入 md 文件）
+                full_prompt = f"{history}\n{prompt}" if history else prompt
 
                 result = await self.execute(
                     full_prompt,
@@ -385,103 +335,69 @@ class Agent:
                     )
             content_parts.append("</active_agent_calls>")
 
+        # 添加 pinned messages
+        pinned_section = self._get_pinned_messages_content()
+        if pinned_section:
+            content_parts.extend(["", pinned_section])
+
         return "\n".join(content_parts)
+
+    def _get_pinned_messages_content(self) -> str:
+        """读取 Pin 消息并生成 XML 片段（用于注入到 runtime）。
+
+        Returns:
+            pinned_messages XML 字符串，无 pin 时返回空字符串
+        """
+        import json
+
+        session_path = Path(self.group_chat_context.repository.group_chat_session_path)
+        pins_path = session_path / "pins.json"
+
+        if not pins_path.exists():
+            return ""
+
+        try:
+            with open(pins_path, encoding="utf-8") as f:
+                content = f.read()
+                pins = json.loads(content) if content.strip() else []
+
+            if not pins:
+                return ""
+
+            pins_sorted = sorted(pins, key=lambda p: p.get("pinned_at", ""))
+
+            lines = [
+                "<pinned_messages>",
+                "以下是用户置顶的重要消息，请在处理任务时遵守这些规则和要求：",
+                "",
+            ]
+            for pin in pins_sorted:
+                speaker = pin.get("speaker", "unknown")
+                pin_content = pin.get("content", "")
+                lines.append(f"[{speaker}]: {pin_content}")
+                lines.append("")
+            lines.append("</pinned_messages>")
+
+            return "\n".join(lines)
+        except Exception as e:
+            self.logger.warning("读取 Pin 消息失败: %s", str(e))
+            return ""
 
     def _generate_tool_usage_content(self) -> str:
         """生成工具使用说明内容。
 
-        根据角色类型生成不同的工具使用说明：
-        - Manager/Leader：说明所有工具
-        - Worker/Team Member：只说明 speak_in_group_chat 和 finish_agent_call
+        编排逻辑：从子类 ROLE_INSTRUCTIONS 和基类 SHARED_RULES 组装。
 
         Returns:
             XML 格式的工具使用说明字符串
         """
-        from agents_hub.config.types import RoleType
-
-        content_parts = [
+        parts = [
             "<tool_usage>",
-            "## 工具使用说明",
-            "",
+            self.ROLE_INSTRUCTIONS,
+            self.SHARED_RULES,
+            "</tool_usage>",
         ]
-
-        if self.role_type == RoleType.LEADER:
-            # Manager 需要了解所有工具
-            content_parts.extend(
-                [
-                    "### 作为 Manager，你可以使用以下工具：",
-                    "",
-                    "#### 1. call_agent - 派活给团队成员",
-                    "当你需要分配任务给团队成员时使用。",
-                    "参数：send_to（目标 Agent 名称）、content（任务内容）",
-                    "返回：call_id（用于后续查询状态）",
-                    "",
-                    "#### 2. assign_tasks_to_team - 更新任务列表",
-                    "覆盖式更新任务列表，用于管理团队任务。",
-                    "参数：tasks（任务列表）",
-                    "",
-                    "#### 3. archive_task_list - 归档任务列表",
-                    "归档当前 ACTIVE 任务列表。",
-                    "",
-                    "#### 4. check_agent_call - 查询调用状态",
-                    "查询 AgentCall 的状态，了解任务执行进度。",
-                    "参数：call_id（AgentCall ID）",
-                    "",
-                    "#### 5. speak_in_group_chat - 群聊公开发言",
-                    "在群聊中公开发言，所有 agent 都会看到。",
-                    "使用场景：汇报状态、宣布决定、与团队沟通",
-                    "参数：content（发言内容）、send_to（可选，@ 某个 agent）",
-                    "注意：不要在任务结束时使用此工具，任务结束应使用 finish_agent_call",
-                    "",
-                    "#### 6. finish_agent_call - 完成任务调用",
-                    "当你完成任务分派或做出决策后，立即调用此工具闭环。",
-                    "参数：call_id（AgentCall ID）、content（完成说明）、success（是否成功）",
-                    "重要：",
-                    "- 安排完任务后即可闭环，无需等待 Worker 执行结果。Worker 完成后会通过新的 AgentCall 重新激活你。",
-                    "- 如果你在上一次输出时忘记调用，需要立即补一个 finish_agent_call。",
-                    "- 忘记闭环会导致系统判定你连续出错而自动停止。",
-                    "",
-                ]
-            )
-        else:
-            # Worker 只需要了解 speak_in_group_chat 和 finish_agent_call
-            content_parts.extend(
-                [
-                    "### 作为 Worker，你可以使用以下工具：",
-                    "",
-                    "#### 1. speak_in_group_chat - 群聊公开发言",
-                    "在群聊中公开发言，所有 agent 都会看到。",
-                    "使用场景：",
-                    "- 收到任务时，汇报'收到任务，开始执行'",
-                    "- 执行过程中，汇报进度或遇到的问题",
-                    "参数：content（发言内容）、send_to（可选，@ 某个 agent）",
-                    "注意：不要在任务结束时使用此工具，任务结束应使用 finish_agent_call",
-                    "",
-                    "#### 2. finish_agent_call - 完成任务调用",
-                    "完成实际工作后调用此工具闭环。",
-                    "参数：call_id（AgentCall ID）、content（完成说明）、success（是否成功）",
-                    "重要：",
-                    "- 必须在完成实际工作后才能调用，不要提前闭环。",
-                    "- 如果你在上一次输出时忘记调用，需要立即补一个 finish_agent_call。",
-                    "- 忘记闭环会导致系统判定你连续出错而自动停止。",
-                    "",
-                ]
-            )
-
-        content_parts.extend(
-            [
-                "## 群聊消息显示规则",
-                "",
-                "1. **speak_in_group_chat**：所有 agent 都会看到，但只有被调用和激活时才会传给它",
-                "2. **finish_agent_call**：会显示在群聊中，并激活目标 agent",
-                "3. **不要同时调用 speak_in_group_chat 和 finish_agent_call**",
-                "4. **任务结束时使用 finish_agent_call，不要使用 speak_in_group_chat**",
-                "",
-                "</tool_usage>",
-            ]
-        )
-
-        return "\n".join(content_parts)
+        return "\n".join(parts)
 
     def _format_runtime_call_instruction(self, message_type: MessageType) -> str:
         """生成 runtime 中针对不同 AgentCall 类型的操作提示。"""

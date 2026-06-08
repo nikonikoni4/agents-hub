@@ -1,8 +1,8 @@
 ---
 version: 1.0
 created_at: 2026-06-06
-updated_at: 2026-06-06
-last_updated: 创建 spec 初稿
+updated_at: 2026-06-08
+last_updated: AgentContext 差异化交付、ROLE_INSTRUCTIONS 重构、阻塞判定规则
 abstract: Agent 提示词系统规格，定义发送给 Agent 的所有提示词来源、注入机制、渲染规则和平台标识
 id: spec-agent-prompt-system
 title: Agent 提示词系统规格
@@ -12,6 +12,8 @@ sourc_spec: null
 related_plan: null
 code_scope:
   - agents_hub/core/agent/base_agent.py
+  - agents_hub/core/agent/manager.py
+  - agents_hub/core/agent/worker.py
   - agents_hub/core/foundation/renderer.py
   - agents_hub/core/orchestration/group_chat.py
   - agents_hub/core/context/agent_context.py
@@ -27,6 +29,8 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
+| 1.1 | `<AGENT_RUNTIME>` 新增 `<pinned_messages>` 区块，Pin 消息通过 runtime 注入而非 prompt 拼接 |
+| 1.2 | AgentContext 按角色差异化交付（Worker 不接收 raw messages）；工具提示词重构为 ROLE_INSTRUCTIONS 类变量；收窄 speak_in_group_chat 语义；新增阻塞判定规则 |
 
 ## Overview
 
@@ -63,7 +67,7 @@ Agent 收到的完整 prompt 由以下部分组成：
 ```
 ┌─────────────────────────────────────────────┐
 │ System Prompt（CLI 自动加载 CLAUDE.md）       │
-│  ├─ <AGENT_RUNTIME>  身份/团队/任务/调用状态   │
+│  ├─ <AGENT_RUNTIME>  身份/团队/任务/调用状态/Pin消息 │
 │  └─ <TOOL_USAGE>     工具使用说明              │
 ├─────────────────────────────────────────────┤
 │ User Prompt（代码构造后传给 CLI）              │
@@ -89,12 +93,21 @@ Agent 收到的完整 prompt 由以下部分组成：
 | `<team>` | 始终 | 团队成员列表（排除自己）、前端用户名、user 不可调用提示 |
 | `<team_workboard>` | 仅 Manager + task_manager 存在 | 当前任务列表及状态 |
 | `<active_agent_calls>` | 有待处理 AgentCall 时 | call_id、来源、类型、状态、请求内容 |
+| `<pinned_messages>` | 有 Pin 消息时 | 用户置顶的重要消息，按 pinned_at 升序排列 |
 
 ### 3. 工具使用说明注入（`<TOOL_USAGE>`）
 
 **触发时机**：与 Runtime 注入相同，在 `run()` 循环中调用。
 
 **注入目标**：`work_root/CLAUDE.md` 和 `work_root/AGENTS.md` 的 `<TOOL_USAGE>` 标记。
+
+**架构**：工具提示词通过子类 `ROLE_INSTRUCTIONS` 类变量定义，基类 `Agent.SHARED_RULES` 定义共享规则，`_generate_tool_usage_content()` 只做编排拼接。
+
+| 类 | 变量 | 内容 |
+|------|------|------|
+| `Manager` | `ROLE_INSTRUCTIONS` | 工具列表、工作流程、派活要求、阻塞处理流程 |
+| `Worker` | `ROLE_INSTRUCTIONS` | 工具列表、工作流程、阻塞判定规则、回报要求 |
+| `Agent` | `SHARED_RULES` | 群聊消息显示规则 |
 
 **角色差异**：
 
@@ -103,12 +116,39 @@ Agent 收到的完整 prompt 由以下部分组成：
 | Manager | 全部 6 个工具：call_agent、assign_tasks_to_team、archive_task_list、check_agent_call、speak_in_group_chat、finish_agent_call |
 | Worker | 2 个工具：speak_in_group_chat、finish_agent_call |
 
+**工具语义**：
+
+| 工具 | 用途 |
+|------|------|
+| speak_in_group_chat | 任务汇报，让 user 和 manager 知道当前进展 |
+| finish_agent_call | 闭环 AgentCall，汇报成果（成功/失败/阻塞） |
+
 **finish_agent_call 的角色差异说明**：
 
 | 角色 | 何时闭环 | 说明 |
 |------|---------|------|
 | Manager | 安排完任务后立即闭环 | 不需要等待 Worker 执行结果，Worker 完成后会通过新的 AgentCall 重新激活 |
 | Worker | 完成实际工作后闭环 | Worker 不委派，闭环即表示工作完成 |
+
+**Worker 阻塞判定规则**：
+
+遇到以下情况，Worker 用 finish_agent_call 标记失败（success=false）：
+
+| 类型 | 判断标准 |
+|------|----------|
+| 跨模块依赖 | 问题涉及其他模块且改动范围超出当前任务边界（小 bug 直接修） |
+| 对外接口不明 | 需要暴露的接口、关键数据模型与其他模块未对齐 |
+| 需求冲突 | 任务要求与现有代码逻辑矛盾，修改会影响其他模块 |
+| 执行路径需协调 | 方案选择会影响其他并行任务（如 schema 变更、公共配置修改） |
+
+核心原则：阻塞只针对影响范围超出任务边界的情况，内部实现细节自行判断。
+
+**Manager 阻塞处理流程**：
+
+Worker 报告阻塞时，Manager 根据情况处理：
+1. 自己能判断的，直接决策并重新派活
+2. 需要专业判断的（需求澄清、架构决策），派给群里对应的专业成员
+3. 都无法解决的，向 user 汇报
 
 两个角色均需说明：忘记闭环会被系统自动停止，如果之前忘记调用需要立即补一个。
 
@@ -135,14 +175,23 @@ Agent 收到的完整 prompt 由以下部分组成：
 
 **触发时机**：Agent 处理 MAIN 会话消息时。
 
+**角色差异化交付**：
+
+| 角色 | compact history | raw messages |
+|------|----------------|-------------|
+| Manager | 接收 | 接收（增量，过滤自己和 @ 自己的） |
+| Worker | 接收 | 不接收 |
+
+Worker 不接收 raw messages，因为 Worker 的工作模式是「接任务 → 执行 → 报告」，通过 AgentMessage.content 已经拿到任务详情，compact history 提供团队进展摘要。无论角色，都更新 `last_loaded_message_index` 避免积压。
+
 **内容结构**：
 
-| 区块 | 内容 |
-|------|------|
-| `<group_chat_history>` | 压缩历史摘要，含 `<overall_summary>`（全体）和 `<summary_for_you>`（针对当前 Agent） |
-| `<recent_messages>` | 最近群聊消息列表，格式为 `[发送者]: 内容` |
+| 区块 | 条件 | 内容 |
+|------|------|------|
+| `<group_chat_history>` | 有新压缩历史时 | 压缩历史摘要，含 `<overall_summary>`（全体）和 `<summary_for_you>`（针对当前 Agent） |
+| `<recent_messages>` | 仅 Manager + 有新消息时 | 最近群聊消息列表，格式为 `[发送者]: 内容` |
 
-**过滤规则**：
+**过滤规则**（仅 Manager）：
 - 排除自己发送的消息
 - 排除 @ 自己的消息（已在 incoming_message 中）
 
@@ -223,10 +272,13 @@ Agent 收到的完整 prompt 由以下部分组成：
 ## Acceptance Notes
 
 - 注入函数必须幂等：多次注入不会产生重复的标记块
-- Manager 和 Worker 的 TOOL_USAGE 内容必须有差异
+- Manager 和 Worker 的 ROLE_INSTRUCTIONS 内容必须有差异
 - render_for_llm 输出必须包含 `[Agents Hub 平台消息]` 标识
 - Task 未闭环提醒必须包含 call_id 和原始请求摘要
 - Manager 的 finish_agent_call 说明必须强调"安排后即可闭环"
+- Worker 的 AgentContext 不得包含 `<recent_messages>`
+- Worker 的 ROLE_INSTRUCTIONS 必须包含阻塞判定规则
+- Manager 的 ROLE_INSTRUCTIONS 必须包含阻塞处理流程
 
 ## Out of Spec
 

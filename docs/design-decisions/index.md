@@ -56,6 +56,20 @@
 - 触发规则：当设计或修改 core runtime 运行态状态管理、内存与文件同步机制、GroupChat/Context/Runtime 职责划分时阅读
 - 内容摘要：确定运行态 SSOT 以内存为准（文件作为持久化副本），引入 GroupChatRuntime 和 GroupChatRuntimeState 提供统一接口，同步持久化策略，Repository 从业务层穿透访问中退出
 
+## agent-context-and-prompt-architecture
+- updated_at: 2026-06-08
+- path: `docs/design-decisions/0010-agent-context-and-prompt-architecture.md`
+- 状态：decided
+- 触发规则：当设计或修改 AgentContext 的上下文交付策略、Agent 提示词的代码组织方式、Manager/Worker 的 context 差异化时阅读
+- 内容摘要：Agent Context 按角色差异化交付（Worker 不接收 raw messages），工具提示词从 base_agent 提取到子类作为 ROLE_INSTRUCTIONS 类变量
+
+## agent-tool-semantics-and-blocking-rules
+- updated_at: 2026-06-08
+- path: `docs/design-decisions/0011-agent-tool-semantics-and-blocking-rules.md`
+- 状态：decided
+- 触发规则：当设计或修改 speak_in_group_chat/finish_agent_call 的使用边界、Worker 阻塞判定规则、Manager 阻塞处理流程时阅读
+- 内容摘要：收窄 speak_in_group_chat 为任务汇报工具，所有成果/问题/风险通过 finish_agent_call 汇报；阻塞判定标准为"影响范围是否超出任务边界"
+
 ## user-design-summary
 - updated_at: 2026-06-04
 - path: `docs/design-decisions/user-design-summary.md`

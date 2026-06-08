@@ -16,6 +16,8 @@ import pytest
 
 from agents_hub.config.types import RoleType
 from agents_hub.core.agent.base_agent import Agent
+from agents_hub.core.agent.manager import Manager
+from agents_hub.core.agent.worker import Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
 from agents_hub.core.context import GroupChatContext
 from agents_hub.core.foundation import (
@@ -56,7 +58,7 @@ def manager_agent(mock_group_chat_context):
     agent_call_manager = MagicMock(spec=AgentCallManager)
     message_router = MagicMock(spec=MessageRouter)
 
-    agent = Agent(
+    agent = Manager(
         role=role,
         group_chat_context=mock_group_chat_context,
         agent_call_manager=agent_call_manager,
@@ -82,7 +84,7 @@ def worker_agent(mock_group_chat_context):
     agent_call_manager = MagicMock(spec=AgentCallManager)
     message_router = MagicMock(spec=MessageRouter)
 
-    agent = Agent(
+    agent = Worker(
         role=role,
         group_chat_context=mock_group_chat_context,
         agent_call_manager=agent_call_manager,
@@ -114,12 +116,12 @@ class TestToolUsageContentGeneration:
         assert "作为 Manager，你可以使用以下工具：" in content
 
         # 验证所有 6 个工具
-        assert "call_agent - 派活给团队成员" in content
-        assert "assign_tasks_to_team - 更新任务列表" in content
-        assert "archive_task_list - 归档任务列表" in content
-        assert "check_agent_call - 查询调用状态" in content
-        assert "speak_in_group_chat - 群聊公开发言" in content
-        assert "finish_agent_call - 完成任务调用" in content
+        assert "**call_agent**" in content
+        assert "**assign_tasks_to_team**" in content
+        assert "**archive_task_list**" in content
+        assert "**check_agent_call**" in content
+        assert "**speak_in_group_chat**" in content
+        assert "**finish_agent_call**" in content
 
     def test_worker_generates_only_two_tools(self, worker_agent):
         """
@@ -140,8 +142,8 @@ class TestToolUsageContentGeneration:
         assert "作为 Worker，你可以使用以下工具：" in content
 
         # 验证只包含两个工具
-        assert "speak_in_group_chat - 群聊公开发言" in content
-        assert "finish_agent_call - 完成任务调用" in content
+        assert "**speak_in_group_chat**" in content
+        assert "**finish_agent_call**" in content
 
         # 验证不包含 Manager 专属工具
         assert "call_agent" not in content
@@ -209,7 +211,7 @@ class TestToolUsageInjection:
         assert "<TOOL_USAGE>" in content
         assert "</TOOL_USAGE>" in content
         assert "作为 Manager，你可以使用以下工具：" in content
-        assert "call_agent - 派活给团队成员" in content
+        assert "**call_agent**" in content
         assert "Some content here." in content  # 其他内容保持不变
 
     def test_inject_tool_usage_to_agents_md(self, worker_agent, tmp_path):
@@ -238,7 +240,7 @@ class TestToolUsageInjection:
         assert "<TOOL_USAGE>" in content
         assert "</TOOL_USAGE>" in content
         assert "作为 Worker，你可以使用以下工具：" in content
-        assert "speak_in_group_chat - 群聊公开发言" in content
+        assert "**speak_in_group_chat**" in content
         assert "Some content here." in content  # 其他内容保持不变
 
     def test_inject_tool_usage_idempotent(self, manager_agent, tmp_path):
@@ -276,7 +278,7 @@ class TestToolUsageInjection:
 
         # 验证没有重复的内容
         assert content.count("作为 Manager，你可以使用以下工具：") == 1
-        assert content.count("call_agent - 派活给团队成员") == 1
+        assert content.count("**call_agent**") == 1
 
         # 验证文件结构完整
         assert content.startswith("# Project Instructions\n")

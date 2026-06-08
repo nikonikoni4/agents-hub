@@ -7,6 +7,7 @@ Agent 上下文
 
 import re
 
+from agents_hub.config.types import RoleType
 from agents_hub.core.foundation import StateError, Tag, wrap_xml
 
 from .group_chat_context import GroupChatContext
@@ -22,9 +23,10 @@ class AgentContext:
     3. 更新 Agent 的上下文加载状态
     """
 
-    def __init__(self, agent_name: str, group_chat_context: GroupChatContext):
+    def __init__(self, agent_name: str, group_chat_context: GroupChatContext, role_type: RoleType):
         self.agent_name = agent_name
         self.group_chat_context = group_chat_context
+        self.role_type = role_type
 
     async def get_context(self) -> str:
         """
@@ -63,13 +65,14 @@ class AgentContext:
         if compact_history_xml:
             parts.append(compact_history_xml)
 
-        # 3. 未压缩的最新消息 → <recent_messages>
+        # 3. 未压缩的最新消息 → <recent_messages>（仅 LEADER 需要）
         if self.group_chat_context.group_chat_session is None:
             raise StateError("GroupChatSession 未加载，请先调用 load()")
-        new_messages = self._get_filtered_messages(last_loaded_message_index)
-        if new_messages:
-            msg_lines = [f"[{m['agent_name']}]: {m['content']}" for m in new_messages]
-            parts.append(wrap_xml(Tag.RECENT_MESSAGES, "\n".join(msg_lines)))
+        if self.role_type == RoleType.LEADER:
+            new_messages = self._get_filtered_messages(last_loaded_message_index)
+            if new_messages:
+                msg_lines = [f"[{m['agent_name']}]: {m['content']}" for m in new_messages]
+                parts.append(wrap_xml(Tag.RECENT_MESSAGES, "\n".join(msg_lines)))
 
         # 4. 更新 agent 的加载状态
         await self._update_agent_context_state(

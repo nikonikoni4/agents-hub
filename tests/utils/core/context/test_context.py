@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from agents_hub.config.types import RoleType
 from agents_hub.core.context.agent_context import AgentContext
 from agents_hub.core.context.group_chat_context import GroupChatContext
 from agents_hub.core.context.group_chat_repository import GroupChatRepository
@@ -302,6 +303,7 @@ class TestBuildCompactHistoryXml:
         """契约：无新压缩历史时返回空串"""
         ctx = AgentContext.__new__(AgentContext)
         ctx.agent_name = "agent_a"
+        ctx.role_type = RoleType.TEAM_MEMBER
 
         result = await ctx._build_compact_history_xml(compact_history=[], last_loaded_compact_index=0)
         assert result == ""
@@ -377,6 +379,7 @@ class TestGetFilteredMessages:
     def _make_context(self, agent_name: str, messages: list[dict]) -> AgentContext:
         ctx = AgentContext.__new__(AgentContext)
         ctx.agent_name = agent_name
+        ctx.role_type = RoleType.TEAM_MEMBER
         session = GroupChatSession(group_chat_id="gc1")
         session.messages = messages
         group_ctx = GroupChatContext.__new__(GroupChatContext)
@@ -521,3 +524,105 @@ class TestGetFilteredMessages:
         result = ctx._get_filtered_messages(last_loaded_message_index=0)
 
         assert result == []
+
+
+# ==================== get_context() 角色差异化 ====================
+
+
+class TestGetContext:
+    """测试 AgentContext.get_context() 按角色差异化交付"""
+
+    @staticmethod
+    def _make_context_for_get(
+        agent_name: str,
+        role_type: RoleType,
+        messages: list[dict],
+        compact_history: list[dict] | None = None,
+    ) -> AgentContext:
+        ctx = AgentContext.__new__(AgentContext)
+        ctx.agent_name = agent_name
+        ctx.role_type = role_type
+
+        session = GroupChatSession(group_chat_id="gc1")
+        session.messages = messages
+
+        group_ctx = GroupChatContext.__new__(GroupChatContext)
+        runtime = MagicMock()
+        runtime.state = MagicMock()
+        runtime.state.group_chat_session = session
+        runtime.state.agent_member_infos = {}
+        runtime.update_context_load_state = AsyncMock()
+        group_ctx.runtime = runtime
+        group_ctx.load_compact_history = AsyncMock(return_value=compact_history or [])
+
+        ctx.group_chat_context = group_ctx
+        return ctx
+
+    @pytest.mark.asyncio
+    async def test_leader_gets_recent_messages(self):
+        """契约：LEADER 角色 get_context 包含 <recent_messages>"""
+        messages = [
+            {"agent_name": "agent_b", "content": "任务进展"},
+        ]
+        ctx = self._make_context_for_get("agent_a", RoleType.LEADER, messages)
+
+        result = await ctx.get_context()
+
+        assert Tag.RECENT_MESSAGES in result
+        assert "任务进展" in result
+
+    @pytest.mark.asyncio
+    async def test_worker_skips_recent_messages(self):
+        """契约：TEAM_MEMBER 角色 get_context 不包含 <recent_messages>"""
+        messages = [
+            {"agent_name": "agent_b", "content": "任务进展"},
+        ]
+        ctx = self._make_context_for_get("agent_a", RoleType.TEAM_MEMBER, messages)
+
+        result = await ctx.get_context()
+
+        assert Tag.RECENT_MESSAGES not in result
+        assert "任务进展" not in result
+
+    @pytest.mark.asyncio
+    async def test_worker_still_gets_compact_history(self):
+        """契约：TEAM_MEMBER 角色仍接收 compact history"""
+        messages = [
+            {"agent_name": "agent_b", "content": "消息"},
+        ]
+        compact_history = [
+            {"content": {"summary": "团队进展摘要", "agent_a": "你的专属摘要"}},
+        ]
+        ctx = self._make_context_for_get(
+            "agent_a", RoleType.TEAM_MEMBER, messages, compact_history
+        )
+
+        result = await ctx.get_context()
+
+        assert Tag.GROUP_HISTORY in result
+        assert "团队进展摘要" in result
+        assert "你的专属摘要" in result
+
+    @pytest.mark.asyncio
+    async def test_leader_with_no_messages_returns_empty_recent(self):
+        """契约：LEADER 无新消息时不生成 <recent_messages>"""
+        ctx = self._make_context_for_get("agent_a", RoleType.LEADER, [])
+
+        result = await ctx.get_context()
+
+        assert Tag.RECENT_MESSAGES not in result
+
+    @pytest.mark.asyncio
+    async def test_worker_updates_message_index(self):
+        """契约：TEAM_MEMBER 虽跳过 raw messages，但仍更新 message_index"""
+        messages = [
+            {"agent_name": "agent_b", "content": "m1"},
+            {"agent_name": "agent_c", "content": "m2"},
+        ]
+        ctx = self._make_context_for_get("agent_a", RoleType.TEAM_MEMBER, messages)
+
+        await ctx.get_context()
+
+        ctx.group_chat_context.runtime.update_context_load_state.assert_called_once_with(
+            "agent_a", 0, 2
+        )
