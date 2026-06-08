@@ -15,7 +15,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import { getMessages } from '@/core/api/groupChatApi';
+import { getSingleChatMessages } from '@/core/api/singleChatApi';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
+import { adaptSingleChatMessages } from '@/shared/adapters/singleChatMessageAdapter';
 import type { MessageApiItem } from '@/shared/types';
 
 // 与后端 API 默认 limit 保持一致 (routes/group_chat.py)
@@ -25,6 +27,7 @@ const LOAD_MORE_COOLDOWN_MS = 100;
 
 export function useChatMessages() {
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const activeSessionType = useSessionStore((s) => s.activeSessionType);
   const projectGroups = useSessionStore((s) => s.projectGroups);
 
   const [messages, setMessages] = useState<MessageApiItem[]>([]);
@@ -51,7 +54,7 @@ export function useChatMessages() {
 
   // 初始加载最新消息
   useEffect(() => {
-    if (!activeSessionId) {
+    if (!activeSessionId || !activeSessionType) {
       setMessages([]);
       setRoleAvatarMap(new Map());
       setHasMore(true);
@@ -61,7 +64,11 @@ export function useChatMessages() {
     let cancelled = false;
     setLoading(true);
 
-    Promise.all([getMessages(activeSessionId, PAGE_SIZE, undefined), buildRoleAvatarMap()])
+    const loadMessages = activeSessionType === 'single_chat'
+      ? getSingleChatMessages(activeSessionId).then(adaptSingleChatMessages)
+      : getMessages(activeSessionId, PAGE_SIZE, undefined);
+
+    Promise.all([loadMessages, buildRoleAvatarMap()])
       .then(([msgData, avatarMap]) => {
         if (!cancelled) {
           setMessages(msgData);
@@ -79,7 +86,7 @@ export function useChatMessages() {
     return () => {
       cancelled = true;
     };
-  }, [activeSessionId]);
+  }, [activeSessionId, activeSessionType]);
 
   // WebSocket refresh: 当前 session 收到新消息时，追加新消息（不覆盖已加载的历史）
   useEffect(() => {
