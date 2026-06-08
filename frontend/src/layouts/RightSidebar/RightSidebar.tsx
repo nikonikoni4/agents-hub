@@ -122,6 +122,8 @@ export function RightSidebar({
   const { taskList, loading: tasksLoading } = useTasks(activeSessionId);
   const toast = useToast();
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
+  const displayLocation = useSingleChatStore((s) => s.displayLocation);
+  const setLocation = useSingleChatStore((s) => s.setLocation);
   const [activeTab, setActiveTab] = useState<SidebarTab>('chat');
 
   // content 变化时自动切换到对应 tab
@@ -177,7 +179,20 @@ export function RightSidebar({
         ))}
       </div>
 
-      {activeTab === 'single-chat' && <SingleChatPanel />}
+      {activeTab === 'single-chat' && (
+        <>
+          {displayLocation === 'main' ? (
+            <div className={styles.placeholder}>
+              <p className={styles.placeholderText}>单聊已移至主界面</p>
+              <button className={styles.placeholderBtn} onClick={() => setLocation('sidebar')}>
+                返回右侧
+              </button>
+            </div>
+          ) : (
+            <SingleChatPanel />
+          )}
+        </>
+      )}
 
       {activeTab === 'chat' && (
         <>
