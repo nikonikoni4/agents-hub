@@ -52,7 +52,7 @@ describe('groupChatApi', () => {
 
   it('getMessages 返回消息列表', async () => {
     const result = await getMessages('chat-001');
-    expect(result).toHaveLength(2);
+    expect(result).toHaveLength(4);
     expect(result[0]!.speaker).toBe('user');
   });
 
