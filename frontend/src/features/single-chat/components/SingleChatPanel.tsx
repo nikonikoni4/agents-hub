@@ -63,6 +63,7 @@ export function SingleChatPanel() {
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const singleChats = useSingleChatStore((s) => s.singleChats);
   const closeSingleChat = useSingleChatStore((s) => s.closeSingleChat);
+  const toggleLocation = useSingleChatStore((s) => s.toggleLocation);
 
   const { messages, loading, streaming, streamingText, sendMessage } = useSingleChatMessages();
   const { handleNavigation } = useNavigationHandler();
@@ -116,6 +117,14 @@ export function SingleChatPanel() {
             {CHAT_TYPE_LABELS[activeChat.type] ?? activeChat.type}
           </span>
         </div>
+        <button
+          type="button"
+          className={styles.toggleLocationBtn}
+          onClick={toggleLocation}
+          title="移到主界面"
+        >
+          📍
+        </button>
         <button
           type="button"
           className={styles.closeBtn}
