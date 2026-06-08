@@ -763,8 +763,6 @@ class GroupChatService:
             }
             pins.append(pin_data)
             await self._write_pins(pins_path, pins)
-            # 发送 WebSocket refresh 信号，通知所有客户端更新 pinned messages
-            await broadcast_group_chat_refresh(group_chat_id)
             return PinnedMessageInfo(**pin_data)
 
     async def unpin_message(self, group_chat_id: str, message_id: int) -> None:
@@ -785,8 +783,6 @@ class GroupChatService:
             new_pins = [p for p in pins if p.get("message_id") != message_id]
             if len(new_pins) != len(pins):
                 await self._write_pins(pins_path, new_pins)
-                # 发送 WebSocket refresh 信号，通知所有客户端更新 pinned messages
-                await broadcast_group_chat_refresh(group_chat_id)
 
     # ==================== Group Chat Members Methods ====================
 

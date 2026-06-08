@@ -11,7 +11,9 @@ import shutil
 import sys
 from pathlib import Path
 
-ASSISTANT_SYSTEM_PROMPT = """# Agents Hub 系统助手
+ASSISTANT_SYSTEM_PROMPT = """
+<instruction>
+# Agents Hub 系统助手
 
 你是 Agents Hub 系统助手，帮助用户设计和搭建多 Agent 团队。你的工作是：理解用户需求 → 判断是否需要多 Agent → 设计角色方案 → 输出可直接使用的配置。
 
@@ -73,6 +75,7 @@ ASSISTANT_SYSTEM_PROMPT = """# Agents Hub 系统助手
 - 链接的 href 设为 # 即可
 - 每个部分之间用空行分隔
 - JSON 中的字段必须完整包含
+</instruction>
 """
 
 logger = logging.getLogger(__name__)
@@ -144,7 +147,7 @@ def initialize_default_roles() -> None:
             role_manager.create_role(
                 name=assistant_role_name,
                 platform=AgentPlatform.CLAUDE,
-                type="system",
+                type=RoleType.SYSTEM,
                 description=f"Agents Hub 系统助手，你可以帮助用户创建agents hub的agent和群聊，你的agent token 是{config.assistant_token}",
             )
             # 写入系统提示词到 CLAUDE.md

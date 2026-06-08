@@ -839,10 +839,6 @@ async def create_agent(
     name: str,
     platform: Literal["claude", "codex"],
     description: str | None = None,
-    avatar: str | None = None,
-    abilities: list[str] | None = None,
-    type: Literal["leader", "team_member", "system"] | None = None,
-    scope: list[str] | None = None,
 ) -> dict:
     """
     创建新的成员角色（系统助手专用）
@@ -852,13 +848,9 @@ async def create_agent(
         name: 角色名称（必须是合法的目录名）
         platform: 平台类型（claude 或 codex）
         description: 角色描述（可选）
-        avatar: 头像文件名（可选）
-        abilities: 能力标签列表（可选）
-        type: 角色类型（leader/team_member/system，可选）
-        scope: 所属群聊列表（可选）
 
     Returns:
-        成功: {"name": "...", "platform": "...", "type": "...", ...}
+        成功: {"name": "...", "platform": "...", ...}
         失败: {"error": {"code": "...", "message": "..."}}
     """
     try:
@@ -875,10 +867,7 @@ async def create_agent(
             name=name,
             platform=platform,
             description=description,
-            avatar=avatar,
-            abilities=abilities or [],
-            type=type,
-            scope=scope,
+            type="team_member",
         )
         role_info = role_service.create_role(request)
 

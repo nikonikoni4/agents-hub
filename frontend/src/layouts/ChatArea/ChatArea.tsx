@@ -210,6 +210,13 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   // 合并 API 消息和本地发送的消息（使用 useMemo 优化）
   const allMessages = useMemo(() => [...messages, ...localMessages], [messages, localMessages]);
 
+  // 服务端消息刷新后，清空乐观消息（服务端已包含最新数据）
+  useEffect(() => {
+    if (messages.length > 0 && localMessages.length > 0) {
+      setLocalMessages([]);
+    }
+  }, [messages]);
+
   // 自动滚动到底部（loadMore 恢复滚动位置期间跳过）
   useEffect(() => {
     if (loadingMore || isRestoringScroll) return;

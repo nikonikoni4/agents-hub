@@ -10,7 +10,7 @@ import {
   formatPreview,
   formatRelativeTime,
 } from './sessionAdapter';
-import { GroupChatInfoApiResponse } from '../types/api-schemas';
+import { GroupChatInfoApiResponse, SingleChatApiResponse } from '../types/api-schemas';
 
 describe('sessionAdapter', () => {
   describe('extractProjectName', () => {
@@ -187,6 +187,69 @@ describe('sessionAdapter', () => {
     it('应该处理空列表', () => {
       const result = groupSessionsByProject([], {});
       expect(result).toHaveLength(0);
+    });
+
+    it('应该将单聊合并到对应项目分组', () => {
+      const singleChats: SingleChatApiResponse[] = [
+        {
+          single_chat_id: 'sc1',
+          single_chat_name: 'Developer 单聊',
+          type: 'new',
+          agent_name: 'Developer',
+          platform: 'claude',
+          session_id: 'sess-sc1',
+          group_chat_id: null,
+          cwd: 'D:\\projects\\agents-hub',
+          created_at: '2026-06-05T10:00:00Z',
+          last_active_at: '2026-06-05T10:30:00Z',
+        },
+      ];
+
+      const result = groupSessionsByProject(mockChats, {}, singleChats);
+      const agentsHubGroup = result.find((g) => g.projectName === 'agents-hub');
+
+      // 应该有 2 个群聊 + 1 个单聊
+      expect(agentsHubGroup?.sessions).toHaveLength(3);
+
+      const singleChatSession = agentsHubGroup?.sessions.find((s) => s.type === 'single_chat');
+      expect(singleChatSession).toBeDefined();
+      expect(singleChatSession?.title).toBe('Developer 单聊');
+      expect(singleChatSession?.agentName).toBe('Developer');
+      expect(singleChatSession?.platform).toBe('claude');
+    });
+
+    it('单聊应按 lastUpdateAt 与群聊混合排序', () => {
+      const singleChats: SingleChatApiResponse[] = [
+        {
+          single_chat_id: 'sc1',
+          single_chat_name: '最新单聊',
+          type: 'new',
+          agent_name: 'Developer',
+          platform: 'claude',
+          session_id: 'sess-sc1',
+          group_chat_id: null,
+          cwd: 'D:\\projects\\agents-hub',
+          created_at: '2026-06-05T10:00:00Z',
+          last_active_at: '2026-06-05T13:00:00Z', // 比所有群聊都新
+        },
+      ];
+
+      const result = groupSessionsByProject(mockChats, {}, singleChats);
+      const agentsHubGroup = result.find((g) => g.projectName === 'agents-hub');
+
+      // 最新的应该是单聊
+      expect(agentsHubGroup?.sessions[0]?.id).toBe('sc1');
+      expect(agentsHubGroup?.sessions[0]?.type).toBe('single_chat');
+    });
+
+    it('单聊应设置正确的 type 字段', () => {
+      const result = groupSessionsByProject(mockChats, {});
+      const allSessions = result.flatMap((g) => g.sessions);
+
+      // 所有群聊的 type 应该是 group_chat
+      for (const session of allSessions) {
+        expect(session.type).toBe('group_chat');
+      }
     });
   });
 });

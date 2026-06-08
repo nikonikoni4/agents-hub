@@ -15,9 +15,10 @@ import './ProjectGroup.css';
 
 interface ProjectGroupProps {
   group: ProjectGroupType;
+  onSelectSingleChat?: (id: string) => void;
 }
 
-export function ProjectGroup({ group }: ProjectGroupProps) {
+export function ProjectGroup({ group, onSelectSingleChat }: ProjectGroupProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const activeSessionId = useSessionStore((state) => state.activeSessionId);
 
@@ -36,6 +37,7 @@ export function ProjectGroup({ group }: ProjectGroupProps) {
               key={session.id}
               session={session}
               isActive={session.id === activeSessionId}
+              onSelectSingleChat={onSelectSingleChat}
             />
           ))}
         </div>

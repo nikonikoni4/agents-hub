@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   PlusIcon,
   UsersIcon,
@@ -8,7 +8,7 @@ import {
   ResizeHandle,
 } from '@/shared/components';
 import { SessionList, CreateGroupChatDialog } from '@/features/session';
-import { useCreateSingleChat } from '@/features/single-chat';
+import { useCreateSingleChat, useSingleChatStore } from '@/features/single-chat';
 import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
@@ -34,6 +34,7 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { createChat } = useCreateSingleChat();
+  const openSingleChat = useSingleChatStore((s) => s.openSingleChat);
 
   const handleCreateAssistantChat = async () => {
     await createChat({
@@ -43,6 +44,14 @@ export function LeftSidebar({
     });
     onViewModeChange?.('chat');
   };
+
+  const handleSelectSingleChat = useCallback(
+    (id: string) => {
+      openSingleChat(id);
+      onViewModeChange?.('chat');
+    },
+    [openSingleChat, onViewModeChange]
+  );
 
   return (
     <div
@@ -98,7 +107,7 @@ export function LeftSidebar({
 
       {/* Session 列表区（按项目分组） */}
       <div className={styles.sidebarSessions}>
-        <SessionList />
+        <SessionList onSelectSingleChat={handleSelectSingleChat} />
       </div>
 
       {/* 设置按钮 */}

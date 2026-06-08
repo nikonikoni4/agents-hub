@@ -7,18 +7,22 @@
  * - 监听 WebSocket refresh 信号自动刷新
  *
  * 架构约束：
+ * - 状态存储在 pinnedMessagesStore 中，所有调用方共享同一份数据
  * - 管理副作用（API 调用、WebSocket 订阅）
- * - 不直接操作 DOM 或组件状态
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { getPinnedMessages, pinMessage, unpinMessage } from '@/core/api/groupChatApi';
 import { wsManager } from '@/core/websocket/WebSocketManager';
-import type { PinnedMessageInfo, RefreshSignal } from '@/shared/types';
+import { usePinnedMessagesStore } from '../store/pinnedMessagesStore';
+import type { RefreshSignal } from '@/shared/types';
 
 export function usePinnedMessages(chatId: string | null) {
-  const [pinnedMessages, setPinnedMessages] = useState<PinnedMessageInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const pinnedMessages = usePinnedMessagesStore((s) => s.pinnedMessages);
+  const isLoading = usePinnedMessagesStore((s) => s.isLoading);
+  const setChatId = usePinnedMessagesStore((s) => s.setChatId);
+  const setPinnedMessages = usePinnedMessagesStore((s) => s.setPinnedMessages);
+  const setIsLoading = usePinnedMessagesStore((s) => s.setIsLoading);
 
   // 刷新置顶消息列表
   const refresh = useCallback(async () => {
@@ -36,12 +40,13 @@ export function usePinnedMessages(chatId: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [chatId]);
+  }, [chatId, setPinnedMessages, setIsLoading]);
 
   // chatId 变化时自动加载
   useEffect(() => {
+    setChatId(chatId);
     refresh();
-  }, [refresh]);
+  }, [chatId, setChatId, refresh]);
 
   // 监听 WebSocket refresh 信号
   useEffect(() => {
@@ -68,7 +73,7 @@ export function usePinnedMessages(chatId: string | null) {
       if (!chatId) return;
       try {
         await pinMessage(chatId, { message_id: messageId });
-        // 刷新列表以确保所有使用此 hook 的组件都能更新
+        // 刷新列表：写入 store，所有使用此 hook 的组件都会更新
         await refresh();
       } catch (err) {
         console.error('Failed to pin message:', err);
@@ -84,7 +89,7 @@ export function usePinnedMessages(chatId: string | null) {
       if (!chatId) return;
       try {
         await unpinMessage(chatId, { message_id: messageId });
-        // 刷新列表以确保所有使用此 hook 的组件都能更新
+        // 刷新列表：写入 store，所有使用此 hook 的组件都会更新
         await refresh();
       } catch (err) {
         console.error('Failed to unpin message:', err);
