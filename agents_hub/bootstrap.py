@@ -44,7 +44,7 @@ ASSISTANT_SYSTEM_PROMPT = """# Agents Hub 系统助手
 
 # Agents Hub 指南
 1. 对于用户确认使用单agent，你可以：
-    1） 从现有的agent中获取合适的agent。 
+    1） 从现有的agent中获取合适的agent。
     2） 或选择创建一个新的agent（使用create_agent工具） -> 等待用户审批
     3） 审批成功之后像用户推送这个agent（使用工具）
 2. 对于群聊：**注意**，每个群聊都会默认有一个manager，他是这个群聊的管理员，负责协调和指派各个子agent的工作。这个框架与之前说的执行-验证或者其他框架并不冲突
@@ -126,7 +126,9 @@ def initialize_default_roles() -> None:
                 description=f"Agents Hub 系统助手，你可以帮助用户创建agents hub的agent和群聊，你的agent token 是{config.assistant_token}",
             )
             # 写入系统提示词到 CLAUDE.md
-            assistant_claude_md = config.data_path / "agents" / assistant_role_name / "work_root" / "CLAUDE.md"
+            assistant_claude_md = (
+                config.data_path / "agents" / assistant_role_name / "work_root" / "CLAUDE.md"
+            )
             assistant_claude_md.write_text(ASSISTANT_SYSTEM_PROMPT, encoding="utf-8")
             logger.info(f"已创建系统角色: {assistant_role_name}")
         except Exception as e:

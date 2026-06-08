@@ -1,5 +1,5 @@
 """
-MCP Server 和 6 个工具
+MCP Server 和 8 个工具
 
 提供 Manager 编排团队协作的能力：
 1. call_agent: 派活给团队成员
@@ -8,6 +8,8 @@ MCP Server 和 6 个工具
 4. check_agent_call: 查询 AgentCall 状态
 5. speak_in_group_chat: 在群聊中公开发言
 6. finish_agent_call: 结束一个需要回复的 AgentCall
+7. create_group_chat: 创建新群聊（系统助手专用）
+8. create_agent: 创建新的成员角色（系统助手专用）
 
 维护说明：
 - 当前 tool 数量少，且共享同一套 token 解析、GroupChat 获取和错误响应约定，
@@ -41,7 +43,13 @@ def _model_dump_json_utf8(self, **kwargs):
 
 JSONRPCMessage.model_dump_json = _model_dump_json_utf8  # type: ignore[method-assign]
 
+from dataclasses import asdict  # noqa: E402
+from typing import Literal  # noqa: E402
+
 from agents_hub.agent_bridge.models import AgentResult  # noqa: E402
+from agents_hub.api.schemas.roles import RoleCreateRequest  # noqa: E402
+from agents_hub.api.services.group_chat_service import GroupChatService  # noqa: E402
+from agents_hub.api.services.role_service import RoleService  # noqa: E402
 from agents_hub.config import config  # noqa: E402
 from agents_hub.config.types import AgentPlatform, RoleType  # noqa: E402
 from agents_hub.core.foundation import (  # noqa: E402
@@ -57,6 +65,7 @@ from agents_hub.core.foundation.paths import group_chat_paths  # noqa: E402
 from agents_hub.core.foundation.token import redact_token  # noqa: E402
 from agents_hub.core.orchestration import group_chat_manager  # noqa: E402
 from agents_hub.core.orchestration.group_chat import GroupChat  # noqa: E402
+from agents_hub.exceptions import ResourceNotFoundError, StateError, ValidationError  # noqa: E402
 from agents_hub.mcp.errors import (  # noqa: E402
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
@@ -68,11 +77,8 @@ from agents_hub.mcp.errors import (  # noqa: E402
     make_error_response,
 )
 from agents_hub.realtime import broadcast_group_chat_refresh  # noqa: E402
+from agents_hub.roles.exceptions import RoleAlreadyExistsError  # noqa: E402
 from agents_hub.utils import get_logger  # noqa: E402
-from agents_hub.api.services.group_chat_service import GroupChatService  # noqa: E402
-from agents_hub.api.services.role_service import RoleService  # noqa: E402
-from agents_hub.api.schemas.roles import RoleCreateRequest  # noqa: E402
-from agents_hub.exceptions import ValidationError, ResourceNotFoundError, StateError  # noqa: E402
 
 logger = get_logger(__name__)
 # ============================================================================
@@ -822,18 +828,18 @@ async def create_group_chat(
 
 
 # ============================================================================
-# Tool 9: add_group_member
+# Tool 9: create_agent
 # ============================================================================
 
 
-async def add_group_member(
+async def create_agent(
     agent_token: str,
     name: str,
-    platform: str,
+    platform: Literal["claude", "codex"],
     description: str | None = None,
     avatar: str | None = None,
     abilities: list[str] | None = None,
-    type: str | None = None,
+    type: Literal["leader", "team_member", "system"] | None = None,
     scope: list[str] | None = None,
 ) -> dict:
     """
@@ -875,7 +881,7 @@ async def add_group_member(
         role_info = role_service.create_role(request)
 
         # 3. 返回结果
-        return role_info.model_dump()
+        return asdict(role_info)
 
     except (ValueError, RoleAlreadyExistsError) as e:
         return make_error_response(
@@ -902,3 +908,5 @@ mcp.tool()(check_agent_call)
 mcp.tool()(speak_in_group_chat)
 mcp.tool()(finish_agent_call)
 # mcp.tool()(request_permission)
+mcp.tool()(create_group_chat)
+mcp.tool()(create_agent)
