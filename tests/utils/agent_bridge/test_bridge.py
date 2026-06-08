@@ -30,7 +30,7 @@ class TestAgentBridge:
         )
 
         # Mock executor - execute() is an async generator
-        async def mock_raw_stream(prompt, config, session_id, cwd=None):
+        async def mock_raw_stream(prompt, config, session_id, cwd=None, fork_from=None, system_prompt=None):
             yield '{"type":"system","subtype":"init","session_id":"123"}'
 
         mock_executor = MagicMock()
@@ -67,7 +67,7 @@ class TestAgentBridge:
         )
 
         # Mock execute_stream - yields StreamEvent dataclass instances
-        async def mock_stream(prompt, config, session_id=None, cwd=None):
+        async def mock_stream(prompt, config, session_id=None, cwd=None, fork_from=None, system_prompt=None):
             yield StreamEvent(
                 type=AgentEventType.TEXT_DELTA,
                 content={"text": "你好"},

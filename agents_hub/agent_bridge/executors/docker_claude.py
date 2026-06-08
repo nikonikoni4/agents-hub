@@ -19,6 +19,7 @@ class DockerClaudeExecutor(DockerExecutor):
         session_id: str | None,
         *,
         fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> list[str]:
         """构建 Claude CLI 命令（强制跳过权限检查）"""
         cmd = [
@@ -38,6 +39,9 @@ class DockerClaudeExecutor(DockerExecutor):
             cmd.extend(["--fork-session", "--resume", fork_from])
         elif session_id:
             cmd.extend(["--resume", session_id])
+
+        if system_prompt:
+            cmd.extend(["--append-system-prompt", system_prompt])
 
         cmd.append(prompt)
         return cmd

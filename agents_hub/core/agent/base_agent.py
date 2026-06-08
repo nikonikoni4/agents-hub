@@ -112,7 +112,11 @@ class Agent:
             pass
 
     async def execute(
-        self, prompt, use_docker: bool = False, group_chat_id: str | None = None
+        self,
+        prompt,
+        use_docker: bool = False,
+        group_chat_id: str | None = None,
+        system_prompt: str | None = None,
     ) -> AgentResult:
         """执行主会话（群聊）
 
@@ -120,6 +124,7 @@ class Agent:
             prompt: 渲染好的 LLM prompt 字符串
             use_docker: 是否使用 Docker 沙箱执行
             group_chat_id: 群聊 ID（Docker 模式下必填）
+            system_prompt: 系统提示词（可选，通过 CLI 参数注入）
         """
         cwd = self.agent_cwd if self.agent_cwd else None
         return await agent_platform_client.execute(
@@ -129,13 +134,18 @@ class Agent:
             cwd,
             use_docker=use_docker,
             group_chat_id=group_chat_id,
+            system_prompt=system_prompt,
         )
 
-    async def btw_execute(self, prompt, session: str | None = None) -> AgentResult:
+    async def btw_execute(
+        self, prompt, session: str | None = None, system_prompt: str | None = None
+    ) -> AgentResult:
         """执行单聊（by the way）"""
         print(f"Info : {self.name} 执行单聊 content:{prompt[:20]}")
         cwd = self.agent_cwd if self.agent_cwd else None
-        return await agent_platform_client.execute(prompt, self.role_config, session, cwd)
+        return await agent_platform_client.execute(
+            prompt, self.role_config, session, cwd, system_prompt=system_prompt
+        )
 
     @property
     def main_session_id(self):
@@ -205,6 +215,9 @@ class Agent:
         agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
         use_docker = getattr(agent_member_info, "use_docker", False) if agent_member_info else False
 
+        # 3. 构建 system_prompt（通过 CLI 参数注入，避免文件竞态条件）
+        system_prompt = self._build_system_prompt(self.task_manager)
+
         self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
         self.logger.debug(
             "状态更新为 RUNNING: call_id=%s, agent=%s",
@@ -229,6 +242,7 @@ class Agent:
                     full_prompt,
                     use_docker=use_docker,
                     group_chat_id=self.group_chat_context.group_chat_id,
+                    system_prompt=system_prompt,
                 )
             else:
                 self.logger.debug(
@@ -236,7 +250,7 @@ class Agent:
                     self.name,
                     msg.call_id,
                 )
-                result = await self.btw_execute(prompt)
+                result = await self.btw_execute(prompt, system_prompt=system_prompt)
             if msg.message_type != MessageType.TASK:
                 self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)
             self.logger.debug(
@@ -459,6 +473,22 @@ class Agent:
         agents_md = work_root / "AGENTS.md"
         if agents_md.exists():
             replace_marked_section(agents_md, "TOOL_USAGE", tool_usage_content)
+
+    def _build_system_prompt(self, task_manager=None) -> str:
+        """构建完整的 system_prompt，用于 CLI 参数注入。
+
+        将 runtime 和 tool_usage 内容拼接为字符串，通过 CLI 参数直接注入，
+        避免多 Agent 并行时写入 CLAUDE.md/AGENTS.md 的文件竞态条件。
+
+        Args:
+            task_manager: TaskManager 实例（可选，仅 Manager 需要）
+
+        Returns:
+            拼接后的 system_prompt 字符串
+        """
+        runtime_content = self._generate_runtime_content(task_manager)
+        tool_usage_content = self._generate_tool_usage_content()
+        return f"{runtime_content}\n\n{tool_usage_content}"
 
     def _enqueue_finish_agent_call_reminder(self, msg: AgentMessage):
         """提醒 Agent 使用 finish_agent_call 显式闭环当前任务调用。"""
