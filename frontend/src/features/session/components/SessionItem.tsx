@@ -64,7 +64,7 @@ export function SessionItem({ session, isActive = false, onSelectSingleChat }: S
       await storage.setLastView(session.id, now);
       updateSession(session.id, { isUnread: false });
     } else {
-      handleSelectSession(session.id);
+      handleSelectSession(session.id, 'group_chat');
     }
   };
 

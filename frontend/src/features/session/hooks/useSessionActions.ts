@@ -17,10 +17,10 @@ import { storage } from '@/core/storage';
 export function useSessionActions() {
   const { selectSession, updateSession } = useSessionStore();
 
-  const handleSelectSession = async (sessionId: string) => {
+  const handleSelectSession = async (sessionId: string, type: 'group_chat' | 'single_chat') => {
     try {
       // 1. 切换 session
-      selectSession(sessionId);
+      selectSession(sessionId, type);
 
       // 2. 标记为已读
       const now = new Date().toISOString();

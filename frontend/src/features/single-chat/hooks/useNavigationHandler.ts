@@ -23,7 +23,7 @@ export function useNavigationHandler() {
     async (navigation: NavigationMark) => {
       if (navigation.type === 'group_chat') {
         const { group_chat_id } = navigation.data as GroupChatNavigationData;
-        selectSession(group_chat_id);
+        selectSession(group_chat_id, 'group_chat');
       } else if (navigation.type === 'create_single_chat') {
         const { agent_name, description } = navigation.data as CreateSingleChatNavigationData;
         await createChat({

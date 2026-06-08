@@ -21,12 +21,14 @@ interface SessionState {
   activeSessionId: string | null;
   /** 最近一次选择 session 的时间戳 */
   lastSelectedAt: number;
+  /** 当前活跃的 session 类型 */
+  activeSessionType: 'group_chat' | 'single_chat' | null;
 
   // Actions
   /** 设置项目分组 */
   setProjectGroups: (groups: ProjectGroup[]) => void;
   /** 选择 session */
-  selectSession: (sessionId: string) => void;
+  selectSession: (sessionId: string, type: 'group_chat' | 'single_chat') => void;
   /** 更新某个 session 的数据 */
   updateSession: (sessionId: string, updates: Partial<SessionItem>) => void;
 }
@@ -35,10 +37,15 @@ export const useSessionStore = create<SessionState>((set) => ({
   projectGroups: [],
   activeSessionId: null,
   lastSelectedAt: 0,
+  activeSessionType: null,
 
   setProjectGroups: (groups) => set({ projectGroups: groups }),
 
-  selectSession: (sessionId) => set({ activeSessionId: sessionId, lastSelectedAt: Date.now() }),
+  selectSession: (sessionId, type) => set({
+    activeSessionId: sessionId,
+    activeSessionType: type,
+    lastSelectedAt: Date.now()
+  }),
 
   updateSession: (sessionId, updates) =>
     set((state) => ({

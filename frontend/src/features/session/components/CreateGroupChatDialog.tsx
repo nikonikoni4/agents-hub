@@ -115,7 +115,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
         project_path: projectPath.trim(),
       });
       if (chatId) {
-        selectSession(chatId);
+        selectSession(chatId, 'group_chat');
         onSuccess?.();
         handleClose();
       }
