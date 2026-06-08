@@ -13,7 +13,7 @@ import { AgentCallsPanel } from './AgentCallsPanel';
 import { TasksPanel } from './TasksPanel';
 import styles from './RightSidebar.module.css';
 
-type SidebarTab = 'single-chat' | 'chat' | 'tasks' | 'preview' | 'diff';
+type SidebarTab = 'single-chat' | 'chat' | 'tasks' | 'preview' | 'diff' | 'web';
 
 const TAB_LABELS: Record<SidebarTab, string> = {
   'single-chat': '单聊',
@@ -21,6 +21,7 @@ const TAB_LABELS: Record<SidebarTab, string> = {
   tasks: '任务',
   preview: '预览',
   diff: 'Diff',
+  web: '网页',
 };
 
 export interface RightSidebarProps {
@@ -59,6 +60,16 @@ function MaximizeIcon() {
   return (
     <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
       <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+    </svg>
+  );
+}
+
+function GlobeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
     </svg>
   );
 }
@@ -126,7 +137,7 @@ export function RightSidebar({
 
   // content 变化时自动切换到对应 tab
   useEffect(() => {
-    if (content?.type === 'preview' || content?.type === 'diff') {
+    if (content?.type === 'preview' || content?.type === 'diff' || content?.type === 'web') {
       setActiveTab(content.type);
     }
   }, [content]);
@@ -272,6 +283,39 @@ export function RightSidebar({
             </div>
           ) : (
             <div className={styles.emptyText}>无代码差异</div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'web' && (
+        <div className={styles.rightModule}>
+          <div className={styles.moduleTitle}>
+            <GlobeIcon />
+            网页预览
+          </div>
+          {content && content.type === 'web' ? (
+            <div className={styles.webPreviewContainer}>
+              <div className={styles.webPreviewHeader}>
+                <span className={styles.webPreviewTitle}>{content.title || content.url}</span>
+                <a
+                  className={styles.webPreviewOpenBtn}
+                  href={content.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  在浏览器中打开
+                </a>
+              </div>
+              <iframe
+                className={styles.webPreviewIframe}
+                src={content.url}
+                sandbox="allow-scripts allow-same-origin allow-forms"
+                loading="lazy"
+                title={content.title || '网页预览'}
+              />
+            </div>
+          ) : (
+            <div className={styles.emptyText}>点击消息中的预览卡片查看网页</div>
           )}
         </div>
       )}

@@ -683,3 +683,53 @@
   word-break: break-word;
   line-height: 1.5;
 }
+
+/* 网页预览 */
+.webPreviewContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.webPreviewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  gap: 8px;
+}
+
+.webPreviewTitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.webPreviewOpenBtn {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-color);
+  text-decoration: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.webPreviewOpenBtn:hover {
+  background: rgba(139, 165, 191, 0.1);
+}
+
+.webPreviewIframe {
+  width: 100%;
+  flex: 1;
+  border: none;
+  border-radius: 6px;
+  background: #fff;
+  min-height: 400px;
+}

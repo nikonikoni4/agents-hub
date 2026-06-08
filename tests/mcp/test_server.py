@@ -747,3 +747,106 @@ class TestFinishAgentCall:
         assert "error" in result
         assert result["error"]["code"] == INVALID_AGENT_CALL_STATE
         mock_group_chat.agent_call_manager.mark_agent_response.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_finish_agent_call_with_web_preview(
+        self, mock_group_chat_manager, mock_group_chat
+    ):
+        """
+        契约：传入 web_preview_url 时，写入群聊的消息包含 web_preview 字段
+
+        验证方式：
+        1. Mock user 调用方的 finish_agent_call
+        2. 传入 web_preview_url 和 web_preview_title
+        3. 验证 AgentResult 包含 web_preview dict
+
+        如果失败，说明：finish_agent_call 未将 web_preview 传递到 AgentResult
+        """
+        from agents_hub.mcp.server import finish_agent_call
+
+        worker_name = "worker1"
+        group_chat_id = "group_123"
+        mock_group_chat_manager.resolve_token.return_value = (worker_name, group_chat_id)
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
+
+        mock_call = MagicMock()
+        mock_call.call_id = "call_456"
+        mock_call.send_from = "Alice"
+        mock_call.send_to = worker_name
+        mock_call.message_type = MessageType.TASK
+        mock_call.has_agent_response = False
+        mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+
+        with (
+            patch("agents_hub.mcp.server.config") as mock_config,
+            patch(
+                "agents_hub.mcp.server.broadcast_group_chat_refresh",
+                new=AsyncMock(),
+                create=True,
+            ),
+        ):
+            mock_config.is_user_name.return_value = True
+            result = await finish_agent_call(
+                agent_token="worker_token",
+                call_id="call_456",
+                content="网页已生成",
+                success=True,
+                web_preview_url="http://localhost:3000",
+                web_preview_title="我的网页",
+            )
+
+        assert result == {"call_id": "call_456", "status": CallStatus.COMPLETED.value}
+        mock_group_chat.group_chat_context.add_message.assert_awaited_once()
+        agent_result = mock_group_chat.group_chat_context.add_message.call_args.args[0]
+        assert agent_result.web_preview is not None
+        assert agent_result.web_preview["url"] == "http://localhost:3000"
+        assert agent_result.web_preview["title"] == "我的网页"
+
+    @pytest.mark.asyncio
+    async def test_finish_agent_call_without_web_preview(
+        self, mock_group_chat_manager, mock_group_chat
+    ):
+        """
+        契约：不传 web_preview_url 时，AgentResult.web_preview 为 None
+
+        验证方式：
+        1. Mock user 调用方的 finish_agent_call
+        2. 不传 web_preview 参数
+        3. 验证 AgentResult.web_preview 为 None
+
+        如果失败，说明：web_preview 在未传入时未正确设为 None
+        """
+        from agents_hub.mcp.server import finish_agent_call
+
+        worker_name = "worker1"
+        group_chat_id = "group_123"
+        mock_group_chat_manager.resolve_token.return_value = (worker_name, group_chat_id)
+        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
+
+        mock_call = MagicMock()
+        mock_call.call_id = "call_456"
+        mock_call.send_from = "Alice"
+        mock_call.send_to = worker_name
+        mock_call.message_type = MessageType.TASK
+        mock_call.has_agent_response = False
+        mock_group_chat.agent_call_manager.get_call.return_value = mock_call
+
+        with (
+            patch("agents_hub.mcp.server.config") as mock_config,
+            patch(
+                "agents_hub.mcp.server.broadcast_group_chat_refresh",
+                new=AsyncMock(),
+                create=True,
+            ),
+        ):
+            mock_config.is_user_name.return_value = True
+            result = await finish_agent_call(
+                agent_token="worker_token",
+                call_id="call_456",
+                content="任务完成",
+                success=True,
+            )
+
+        assert result == {"call_id": "call_456", "status": CallStatus.COMPLETED.value}
+        agent_result = mock_group_chat.group_chat_context.add_message.call_args.args[0]
+        assert agent_result.web_preview is None

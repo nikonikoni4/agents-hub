@@ -126,6 +126,19 @@ export interface MessageApiItem {
   git_diff_range?: string;
   /** 权限请求信息（仅权限请求消息包含） */
   permission_request?: PermissionRequestInfo;
+  /** 网页预览信息 */
+  web_preview?: WebPreviewInfo;
+}
+
+/**
+ * 网页预览信息
+ * 对应后端: WebPreviewInfo schema
+ */
+export interface WebPreviewInfo {
+  /** 预览页面 URL */
+  url: string;
+  /** 页面标题 */
+  title?: string;
 }
 
 /**
