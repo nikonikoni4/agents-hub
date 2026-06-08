@@ -8,8 +8,9 @@
 """
 
 import pytest
+
 from agents_hub.agent_bridge.bridge import AgentBridge
-from agents_hub.agent_bridge.models import AgentPlatform, AgentEventType
+from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.roles.models import RoleConfig
 
 

@@ -10,9 +10,8 @@ Agent Docker 配置校验测试
 6. _process_message() 在调用 execute 前先校验 Docker 配置
 """
 
-from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -148,7 +147,6 @@ class TestProcessMessageDockerValidation:
             reason="test",
         )) as mock_validate:
             from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
-            from agents_hub.agent_bridge.models import AgentResult
 
             msg = AgentMessage(
                 call_id="call_1",

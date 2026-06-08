@@ -7,7 +7,6 @@ Docker 异常类单元测试
 3. DockerStartError 继承 ExternalServiceError，记录 container_name
 """
 
-import pytest
 
 from agents_hub.core.foundation.exceptions import (
     DockerConfigError,

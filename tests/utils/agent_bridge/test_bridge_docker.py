@@ -227,9 +227,9 @@ class TestAgentProcessMessageDocker:
     @pytest.mark.asyncio
     async def test_process_message_reads_use_docker(self):
         """契约 5：_process_message 读取 use_docker 配置并传递给 execute"""
+        from agents_hub.agent_bridge.models import AgentResult
         from agents_hub.core.agent.base_agent import Agent
         from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
-        from agents_hub.agent_bridge.models import AgentResult
 
         role = MagicMock()
         role.get_role_config.return_value = SimpleNamespace(
@@ -290,9 +290,9 @@ class TestAgentProcessMessageDocker:
     @pytest.mark.asyncio
     async def test_process_message_no_agent_member_info(self):
         """契约 5：无 agent_member_info 时 use_docker 默认为 False"""
+        from agents_hub.agent_bridge.models import AgentResult
         from agents_hub.core.agent.base_agent import Agent
         from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
-        from agents_hub.agent_bridge.models import AgentResult
 
         role = MagicMock()
         role.get_role_config.return_value = SimpleNamespace(

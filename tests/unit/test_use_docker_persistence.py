@@ -11,7 +11,7 @@ import json
 import pytest
 
 from agents_hub.core.context.group_chat_repository import GroupChatRepository
-from agents_hub.core.context.group_chat_session import AgentContextState, AgentMemberInfo
+from agents_hub.core.context.group_chat_session import AgentMemberInfo
 
 
 @pytest.fixture

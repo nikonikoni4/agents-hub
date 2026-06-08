@@ -10,7 +10,6 @@ import re
 
 from agents_hub.core.foundation.token import TOKEN_PATTERN, generate_token, redact_token
 
-
 # ============================================================================
 # generate_token() 测试
 # ============================================================================

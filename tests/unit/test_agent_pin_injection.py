@@ -13,7 +13,6 @@ from unittest.mock import MagicMock, patch
 
 from agents_hub.core.agent.base_agent import Agent
 
-
 # ==================== 辅助函数 ====================
 
 
@@ -164,7 +163,7 @@ class TestGetPinnedMessagesContent:
 
             agent = create_mock_agent(session_path)
 
-            with patch("builtins.open", side_effect=IOError("Mock read error")):
+            with patch("builtins.open", side_effect=OSError("Mock read error")):
                 result = agent._get_pinned_messages_content()
 
                 assert result == "", "文件读取失败时应返回空字符串"

@@ -3,11 +3,11 @@
 验证添加成员的完整流程，特别是崩溃恢复场景。
 """
 import asyncio
-import pytest
-from pathlib import Path
 
-from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
+import pytest
+
 from agents_hub.api.services.group_chat_service import GroupChatService
+from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
 from agents_hub.utils.logger import setup_logging
 
 

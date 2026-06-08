@@ -1,17 +1,16 @@
 """TeamManager 单元测试"""
 
 import json
-import pytest
-from pathlib import Path
 
-from agents_hub.teams.team_manager import TeamManager
-from agents_hub.teams.models import TeamInfo
+import pytest
+
 from agents_hub.teams.exceptions import (
-    TeamAlreadyExistsError,
-    InvalidTeamMembersError,
     EmptyTeamMembersError,
+    InvalidTeamMembersError,
+    TeamAlreadyExistsError,
     TeamNotFoundError,
 )
+from agents_hub.teams.team_manager import TeamManager
 
 
 @pytest.fixture

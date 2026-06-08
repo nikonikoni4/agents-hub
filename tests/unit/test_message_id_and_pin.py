@@ -9,9 +9,7 @@
 """
 
 import json
-import os
 import tempfile
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -19,13 +17,12 @@ import pytest
 
 from agents_hub.api.schemas.group_chats import (
     MessageInfo,
-    PinnedMessageInfo,
     PinMessageRequest,
+    PinnedMessageInfo,
 )
 from agents_hub.core.context.group_chat_repository import GroupChatRepository
 from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 from agents_hub.core.context.group_chat_session import GroupChatSession
-
 
 # ==================== 辅助类 ====================
 

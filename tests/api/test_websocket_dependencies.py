@@ -1,7 +1,6 @@
 # tests/api/test_websocket_dependencies.py
 """WebSocket 依赖注入测试"""
 
-import pytest
 
 from agents_hub.api.websocket.dependencies import get_ws_manager, reset_ws_manager
 from agents_hub.api.websocket.manager import WebSocketManager

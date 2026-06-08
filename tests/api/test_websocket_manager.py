@@ -1,8 +1,9 @@
 # tests/api/test_websocket_manager.py
 """WebSocketManager 单元测试"""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from agents_hub.api.websocket.manager import WebSocketManager
 

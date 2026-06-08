@@ -8,21 +8,17 @@
 - send_message_to_agent 消息格式化
 """
 
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from agents_hub.config.types import RoleType
-from agents_hub.core.agent.base_agent import Agent
 from agents_hub.core.agent.manager import Manager
 from agents_hub.core.agent.worker import Worker
-from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
+from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import GroupChatContext
 from agents_hub.core.foundation import (
-    AgentMessage,
-    MessageType,
     Role,
     RoleConfig,
     render_for_chat,

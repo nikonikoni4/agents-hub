@@ -10,15 +10,15 @@
 7. 角色无 agent_member_info → 新建 AgentMemberInfo
 """
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from agents_hub.api.schemas.group_chats import GroupChatMember
 from agents_hub.api.services.group_chat_service import GroupChatService
 from agents_hub.core.context.group_chat_session import AgentMemberInfo
-from agents_hub.core.foundation.exceptions import DockerNotAvailableError
 from agents_hub.core.foundation import GroupChatNotFoundError
+from agents_hub.core.foundation.exceptions import DockerNotAvailableError
 from agents_hub.exceptions import ResourceNotFoundError, ValidationError
 
 

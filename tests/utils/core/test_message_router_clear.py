@@ -6,7 +6,6 @@ from agents_hub.core.communication import MessageRouter
 from agents_hub.core.foundation import AgentMessage
 
 
-
 def create_message_router_with_agents(names: list) -> MessageRouter:
     """创建并注册多个 Agent 的 MessageRouter"""
     router = MessageRouter()
@@ -47,7 +46,7 @@ async def test_clear_queue():
         queue_list.append(queue)
         assert queue.qsize() >0, "队列写入失败"
     # 执行清空
-    message_router.clear()    
+    message_router.clear()
     for queue in queue_list:
         assert queue.qsize() == 0, "队列内容未清空"
 
@@ -68,7 +67,7 @@ async def test_clear_registry():
     # 确保有agent
     assert len(message_router._agents_queue) > 0 , "初始化agent数据失败"
     message_router.clear()
-    assert len(message_router._agents_queue) == 0 
+    assert len(message_router._agents_queue) == 0
 @pytest.mark.asyncio
 async def test_idempotence():
     """幂等性：重复调用不出错"""
@@ -80,7 +79,7 @@ async def test_idempotence():
     message_router.send_message(a_to_b_message)
     message_router.send_message(b_to_c_message)
     message_router.send_message(c_to_a_message)
-    message_router.clear()    
     message_router.clear()
     message_router.clear()
-    
+    message_router.clear()
+

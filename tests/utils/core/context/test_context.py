@@ -7,8 +7,6 @@ Context 层单元测试
 3. group_chat_context.py: close 清空引用、add_message 未 load 抛异常
 """
 
-from datetime import datetime
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -23,9 +21,8 @@ from agents_hub.core.context.group_chat_session import (
     AgentMemberInfo,
     GroupChatSession,
 )
-from agents_hub.core.foundation import StateError, Tag, wrap_xml
+from agents_hub.core.foundation import StateError, Tag
 from agents_hub.core.utils import sanitize_project_path
-
 
 # ==================== group_chat_session.py ====================
 

@@ -8,7 +8,6 @@
     pytest tests/e2e/api/test_team_e2e.py -v
 """
 
-import pytest
 
 
 # ── 测试数据常量 ──────────────────────────────────────────────────────────

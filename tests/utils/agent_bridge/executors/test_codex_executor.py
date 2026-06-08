@@ -1,7 +1,5 @@
 """CodexExecutor 单元测试"""
 
-import os
-import pytest
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
 from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.config.types import CODEX_COMMAND

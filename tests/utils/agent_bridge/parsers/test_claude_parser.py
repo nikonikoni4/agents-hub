@@ -1,10 +1,12 @@
 """ClaudeParser 单元测试"""
 
 import json
+
 import pytest
-from agents_hub.agent_bridge.parsers.claude import ClaudeParser
-from agents_hub.agent_bridge.models import AgentEventType
+
 from agents_hub.agent_bridge.exceptions import ParseError
+from agents_hub.agent_bridge.models import AgentEventType
+from agents_hub.agent_bridge.parsers.claude import ClaudeParser
 
 
 class TestClaudeParser:

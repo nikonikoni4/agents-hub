@@ -1,11 +1,11 @@
-import pytest
-from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from datetime import datetime
-from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
 
-from agents_hub.api.services.group_chat_service import GroupChatService
+import pytest
+
 from agents_hub.api.schemas.group_chats import GroupChatInfo
-from agents_hub.exceptions import ValidationError, ResourceNotFoundError, StateError
+from agents_hub.api.services.group_chat_service import GroupChatService
+from agents_hub.exceptions import ResourceNotFoundError, StateError, ValidationError
 
 
 @pytest.fixture

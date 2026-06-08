@@ -1,9 +1,11 @@
 """AgentBridge 单元测试"""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+
 from agents_hub.agent_bridge.bridge import AgentBridge
-from agents_hub.agent_bridge.models import AgentPlatform, AgentEventType, StreamEvent, AgentResult
+from agents_hub.agent_bridge.models import AgentEventType, AgentPlatform, AgentResult, StreamEvent
 from agents_hub.config.types import RoleType
 from agents_hub.roles.models import RoleConfig
 

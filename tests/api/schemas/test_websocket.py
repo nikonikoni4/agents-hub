@@ -1,6 +1,5 @@
 """WebSocket Schemas 测试"""
 
-import pytest
 from datetime import datetime
 
 from agents_hub.api.schemas.websocket import BroadcastResponse, RefreshSignal

@@ -1,9 +1,9 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.roles.models import RoleConfig
-
 
 # 角色名称映射：config.default_manager_name -> 实际显示名
 _MANAGER_DISPLAY_NAME = "Leader"

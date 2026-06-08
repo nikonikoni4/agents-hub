@@ -6,7 +6,6 @@ import pytest
 
 from agents_hub.config.types import AgentPlatform
 from agents_hub.utils.session_parser import (
-    SessionMessage,
     parse_session_file,
 )
 
