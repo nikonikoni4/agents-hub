@@ -71,14 +71,6 @@ export function LeftSidebar({
           <span>新对话</span>
         </button>
         <button
-          className={styles.sidebarBtn}
-          onClick={handleCreateAssistantChat}
-          aria-label="Agents Hub 助手"
-        >
-          <BotIcon />
-          <span>Agents Hub 助手</span>
-        </button>
-        <button
           className={`${styles.sidebarBtn} ${viewMode === 'role' ? styles.active : ''}`}
           onClick={() => onViewModeChange?.('role')}
           aria-label="角色管理"
@@ -93,6 +85,14 @@ export function LeftSidebar({
         >
           <ZapIcon />
           <span>技能广场</span>
+        </button>
+        <button
+          className={styles.sidebarBtn}
+          onClick={handleCreateAssistantChat}
+          aria-label="Agents Hub 助手"
+        >
+          <BotIcon />
+          <span>Agents Hub 助手</span>
         </button>
       </div>
 

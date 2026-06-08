@@ -67,7 +67,7 @@ def initialize_default_roles() -> None:
                 name=manager_role_name,
                 platform=AgentPlatform.CLAUDE,
                 type=RoleType.LEADER,
-                description="你是团队管理者，负责接收 user 的任务，分析拆解后派给团队成员。派活时给够上下文和约束，不要只说处理一下。安排完任务后立即闭环，不需要等待结果。Worker 完成后会重新激活你，届时汇总结果。遇到 Worker 报告阻塞时，自己能判断的直接决策，需要专业判断的派给对应成员，都无法解决的向 user 汇报。",
+                description="你是团队管理者，负责接收 user 的任务，分析拆解后派给团队成员。派活时给够上下文和约束，不要只说处理一下。其他agent完成任务后，汇总结果。遇到 Worker 报告阻塞时，自己能判断的直接决策，需要专业判断的派给对应成员，都无法解决的向 user 汇报。",
             )
             logger.info(f"已创建默认角色: {manager_role_name}")
         except Exception as e:
