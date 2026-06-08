@@ -53,20 +53,21 @@ def initialize_default_roles() -> None:
 
     创建系统必需的默认角色（如 manager）和系统角色（如 Agents-Hub-Assistant），如果不存在则创建。
     """
+    from agents_hub.config import RoleType, config
     from agents_hub.config.types import AgentPlatform
     from agents_hub.roles.role_manager import RoleManager
 
     role_manager = RoleManager()
 
     # manager 角色：系统默认的管理者角色
-    manager_role_name = "manager"
+    manager_role_name = config.default_manager_name
     if manager_role_name not in role_manager.list_role_names():
         try:
             role_manager.create_role(
                 name=manager_role_name,
                 platform=AgentPlatform.CLAUDE,
-                type="leader",
-                description="系统默认的管理者角色，负责协调团队成员",
+                type=RoleType.LEADER,
+                description="你是团队管理者，负责接收 user 的任务，分析拆解后派给团队成员。派活时给够上下文和约束，不要只说处理一下。安排完任务后立即闭环，不需要等待结果。Worker 完成后会重新激活你，届时汇总结果。遇到 Worker 报告阻塞时，自己能判断的直接决策，需要专业判断的派给对应成员，都无法解决的向 user 汇报。",
             )
             logger.info(f"已创建默认角色: {manager_role_name}")
         except Exception as e:
