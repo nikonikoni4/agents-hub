@@ -41,10 +41,7 @@ export function useMembers() {
     setLoading(true);
     try {
       // 并行获取成员列表和所有角色信息（避免 N+1 查询）
-      const [memberList, allRoles] = await Promise.all([
-        getMembers(activeSessionId),
-        listRoles(),
-      ]);
+      const [memberList, allRoles] = await Promise.all([getMembers(activeSessionId), listRoles()]);
 
       const roleMap = new Map(allRoles.map((r) => [r.name, r]));
 
