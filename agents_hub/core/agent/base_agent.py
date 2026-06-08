@@ -35,7 +35,7 @@ class Agent:
     SHARED_RULES = """\
 ## 群聊消息显示规则
 
-1. **speak_in_group_chat**：所有 agent 都会看到，但只有被调用和激活时才会传给它
+1. **speak_in_group_chat**：所有 agent 都会看到，但只有被调用和激活时才会传给它。当你接受到一个任务的时候必须使用speak_in_group_chat发送"收到任务，我将xx"
 2. **finish_agent_call**：会显示在群聊中，并激活目标 agent
 3. **不要同时调用 speak_in_group_chat 和 finish_agent_call**
 4. **任务结束时使用 finish_agent_call，不要使用 speak_in_group_chat**
