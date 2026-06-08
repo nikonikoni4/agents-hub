@@ -183,7 +183,43 @@ VITE_WS_BASE_URL=ws://localhost:8099/api/v1
 
 ---
 
-## 6. 常见问题
+## 6. Pre-commit 配置
+
+### Hook 位置
+
+- **core.hookPath**: 使用默认设置（`.git/hooks/`）
+- **pre-commit 脚本**: `项目根目录/.git/hooks/pre-commit`
+
+> ⚠️ **重要**: 不要使用 husky 或 lint-staged，所有 pre-commit 检查统一通过 Makefile 执行。
+
+### 检查命令
+
+**后端检查**（Python 文件变更时触发）：
+```bash
+make format    # 自动修复格式
+make lint      # 检查 lint
+make type      # 类型检查
+```
+
+**前端检查**（frontend/ 目录文件变更时触发）：
+```bash
+make frontend-format  # 自动修复格式
+make frontend-lint    # 检查 lint
+make frontend-type    # 类型检查
+make frontend-test    # 运行测试
+```
+
+### 手动运行完整检查
+
+```bash
+make check           # 后端完整检查
+make frontend-check  # 前端完整检查
+make all             # 前后端完整检查
+```
+
+---
+
+## 7. 常见问题
 
 ### Q: 启动后端报错 `ModuleNotFoundError: No module named 'agents_hub'`
 
