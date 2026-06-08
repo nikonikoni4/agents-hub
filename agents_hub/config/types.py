@@ -28,7 +28,9 @@ class RoleType(Enum):
     Attributes:
         LEADER: 领导者角色，负责任务分派和协调
         TEAM_MEMBER: 团队成员角色，执行具体任务
+        SYSTEM: 系统角色，由系统预置的特殊角色
     """
 
     LEADER = "leader"
     TEAM_MEMBER = "team_member"
+    SYSTEM = "system"

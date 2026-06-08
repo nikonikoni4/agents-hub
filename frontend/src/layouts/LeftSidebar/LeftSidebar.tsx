@@ -1,6 +1,14 @@
 import { useState } from 'react';
-import { PlusIcon, UsersIcon, ZapIcon, SettingsIcon, ResizeHandle } from '@/shared/components';
+import {
+  PlusIcon,
+  UsersIcon,
+  ZapIcon,
+  SettingsIcon,
+  BotIcon,
+  ResizeHandle,
+} from '@/shared/components';
 import { SessionList, CreateGroupChatDialog } from '@/features/session';
+import { useCreateSingleChat } from '@/features/single-chat';
 import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
@@ -25,6 +33,16 @@ export function LeftSidebar({
   onViewModeChange,
 }: LeftSidebarProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const { createChat } = useCreateSingleChat();
+
+  const handleCreateAssistantChat = async () => {
+    await createChat({
+      type: 'new',
+      single_chat_name: 'Agents Hub 助手',
+      agent_name: 'Agents-Hub-Assistant',
+    });
+    onViewModeChange?.('chat');
+  };
 
   return (
     <div
@@ -51,6 +69,14 @@ export function LeftSidebar({
         >
           <PlusIcon />
           <span>新对话</span>
+        </button>
+        <button
+          className={styles.sidebarBtn}
+          onClick={handleCreateAssistantChat}
+          aria-label="Agents Hub 助手"
+        >
+          <BotIcon />
+          <span>Agents Hub 助手</span>
         </button>
         <button
           className={`${styles.sidebarBtn} ${viewMode === 'role' ? styles.active : ''}`}

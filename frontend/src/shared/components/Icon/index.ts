@@ -18,5 +18,6 @@ export {
   SendIcon,
   XIcon,
   LockIcon,
+  BotIcon,
 } from './Icon';
 export type { IconProps } from './Icon';

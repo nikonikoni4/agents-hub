@@ -25,7 +25,7 @@ export type AgentPlatform = 'claude' | 'codex';
  * 角色类型
  * 对应后端枚举
  */
-export type RoleType = 'leader' | 'team_member';
+export type RoleType = 'leader' | 'team_member' | 'system';
 
 /**
  * 群聊类型

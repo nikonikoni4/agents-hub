@@ -14,7 +14,7 @@ class RoleCreateRequest(BaseModel):
     platform: Literal["claude", "codex"]
     avatar: str | None = None
     abilities: list[str] = []
-    type: Literal["leader", "team_member"] | None = None
+    type: Literal["leader", "team_member", "system"] | None = None
     scope: list[str] | None = None
     description: str | None = None
 
@@ -40,7 +40,7 @@ class RoleResponse(BaseModel):
     platform: Literal["claude", "codex"]
     avatar: str | None = None
     abilities: list[str] = []
-    type: Literal["leader", "team_member"] | None = None
+    type: Literal["leader", "team_member", "system"] | None = None
     scope: list[str] | None = None
     description: str | None = None
     skills: list["RoleSkillResponse"] = []

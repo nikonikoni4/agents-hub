@@ -38,7 +38,7 @@ class RoleInfo:
         description: 角色职责描述，可为空。
         avatar: 头像文件的相对路径，可为空。
         abilities: 能力标签列表，用于展示和调度。
-        type: 角色类型，可选值为 leader 或 team_member。
+        type: 角色类型，可选值为 leader、team_member 或 system。
         scope: 所属群聊列表，MVP 阶段不实现逻辑。
     """
 

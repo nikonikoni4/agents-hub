@@ -220,6 +220,7 @@
 ### RoleType（角色类型）
 - LEADER：领导者角色，负责任务分派和协调
 - TEAM_MEMBER：团队成员角色，执行具体任务
+- SYSTEM：系统角色，由系统预置的特殊角色（如 Agents-Hub-Assistant）
 
 ### GroupChatType（群聊类型）
 - SEQUENCE_EXECUTE：流水线顺序执行
@@ -438,7 +439,7 @@ Agent 实际使用的 cwd = AgentMemberInfo.cwd (如果非空)
     "description": "角色职责描述",
     "avatar": "头像文件名（位于 assets/ 目录）",
     "abilities": ["能力标签1", "能力标签2"],
-    "type": "leader|team_member",
+    "type": "leader|team_member|system",
     "scope": ["群聊ID1", "群聊ID2"],
     "skills": ["skill_id1", "skill_id2"]
 }

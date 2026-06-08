@@ -51,7 +51,7 @@ def initialize_resources() -> None:
 def initialize_default_roles() -> None:
     """初始化默认角色
 
-    创建系统必需的默认角色（如 manager），如果不存在则创建。
+    创建系统必需的默认角色（如 manager）和系统角色（如 Agents-Hub-Assistant），如果不存在则创建。
     """
     from agents_hub.config.types import AgentPlatform
     from agents_hub.roles.role_manager import RoleManager
@@ -71,3 +71,17 @@ def initialize_default_roles() -> None:
             logger.info(f"已创建默认角色: {manager_role_name}")
         except Exception as e:
             logger.warning(f"创建默认角色 {manager_role_name} 失败: {e}")
+
+    # Agents-Hub-Assistant 角色：系统预置的助手角色
+    assistant_role_name = "Agents-Hub-Assistant"
+    if assistant_role_name not in role_manager.list_role_names():
+        try:
+            role_manager.create_role(
+                name=assistant_role_name,
+                platform=AgentPlatform.CLAUDE,
+                type="system",
+                description="Agents Hub 系统助手，提供平台使用帮助和指导",
+            )
+            logger.info(f"已创建系统角色: {assistant_role_name}")
+        except Exception as e:
+            logger.warning(f"创建系统角色 {assistant_role_name} 失败: {e}")
