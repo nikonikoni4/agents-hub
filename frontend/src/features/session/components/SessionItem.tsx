@@ -25,11 +25,7 @@ interface SessionItemProps {
   onSelectSingleChat?: (id: string) => void;
 }
 
-export function SessionItem({
-  session,
-  isActive = false,
-  onSelectSingleChat,
-}: SessionItemProps) {
+export function SessionItem({ session, isActive = false, onSelectSingleChat }: SessionItemProps) {
   const { handleSelectSession } = useSessionActions();
   const updateSession = useSessionStore((s) => s.updateSession);
   const { deleteChat, deleting } = useDeleteGroupChat();

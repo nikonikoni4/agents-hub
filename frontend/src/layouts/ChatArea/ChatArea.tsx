@@ -12,6 +12,7 @@ import { useMembers } from '@/features/chat/hooks/useMembers';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
+import { wsManager } from '@/core/websocket/WebSocketManager';
 import {
   sendMessage,
   getMembers,
@@ -194,6 +195,17 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   const [rightSidebarContent, setRightSidebarContent] = useState<RightSidebarContent | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const connectedSessionRef = useRef<string | null>(null);
+
+  // 切换 session 时断开旧的 WebSocket 连接
+  useEffect(() => {
+    return () => {
+      if (connectedSessionRef.current) {
+        wsManager.disconnect();
+        connectedSessionRef.current = null;
+      }
+    };
+  }, [activeSessionId]);
 
   // 获取当前活跃会话的项目路径
   const activeProjectPath = useMemo(() => {
@@ -249,6 +261,12 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   const handleSend = useCallback(
     async (text: string) => {
       if (!activeSessionId) return;
+
+      // 发送第一条消息时才连接 WebSocket（已连接则跳过）
+      if (connectedSessionRef.current !== activeSessionId) {
+        wsManager.connect(activeSessionId);
+        connectedSessionRef.current = activeSessionId;
+      }
 
       // 如果有引用消息，用 MD 引用语法包裹
       let finalText = text;

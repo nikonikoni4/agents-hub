@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
-import { getMembers, getRoleInfo, updateMemberDockerMode } from '@/core/api';
+import { getMembers, listRoles, updateMemberDockerMode } from '@/core/api';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import type { GroupChatMemberApiItem, RoleApiResponse, RefreshSignal } from '@/shared/types';
 
@@ -40,19 +40,18 @@ export function useMembers() {
 
     setLoading(true);
     try {
-      // 1. 获取成员列表
-      const memberList = await getMembers(activeSessionId);
+      // 并行获取成员列表和所有角色信息（避免 N+1 查询）
+      const [memberList, allRoles] = await Promise.all([
+        getMembers(activeSessionId),
+        listRoles(),
+      ]);
 
-      // 2. 并行获取所有角色信息
-      const rolePromises = memberList.map(
-        (m) => getRoleInfo(m.name).catch(() => null) // 角色不存在时返回 null
-      );
-      const roles = await Promise.all(rolePromises);
+      const roleMap = new Map(allRoles.map((r) => [r.name, r]));
 
-      // 3. 聚合数据
-      const membersWithRole: MemberWithRole[] = memberList.map((member, index) => ({
+      // 聚合数据
+      const membersWithRole: MemberWithRole[] = memberList.map((member) => ({
         ...member,
-        role: roles[index] ?? null,
+        role: roleMap.get(member.name) ?? null,
         isOnline: member.main_session !== null,
       }));
       setMembers(membersWithRole);

@@ -20,9 +20,11 @@ import { listGroupChatInfos, getMembers } from '@/core/api';
 import { listSingleChats } from '@/core/api/singleChatApi';
 import { groupSessionsByProject } from '@/shared/adapters/sessionAdapter';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
+import type { RefreshSignal } from '@/shared/types';
 
 export function useSessionList() {
   const { projectGroups, setProjectGroups } = useSessionStore();
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
 
   const refreshSessions = useCallback(async () => {
     try {
@@ -83,15 +85,20 @@ export function useSessionList() {
   }, [refreshSessions]);
 
   useEffect(() => {
-    const handleRefresh = () => {
-      refreshSessions();
+    const handleRefresh = (data?: unknown) => {
+      const signal = data as RefreshSignal;
+      // 只在无特定群聊信号（全局刷新）或信号匹配当前活跃群聊时才刷新
+      // 避免每次任意群聊收到消息都重新拉取所有群聊成员
+      if (!signal?.group_chat_id || signal.group_chat_id === activeSessionId) {
+        refreshSessions();
+      }
     };
 
     wsManager.on('refresh', handleRefresh);
     return () => {
       wsManager.off('refresh', handleRefresh);
     };
-  }, [refreshSessions]);
+  }, [refreshSessions, activeSessionId]);
 
   return { projectGroups, refreshSessions };
 }

@@ -7,7 +7,6 @@ import { RoleManagement } from '../RoleManagement';
 import { SkillSquare } from '@/features/skills';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { ToastContainer } from '@/shared/components';
-import { useWebSocketConnection } from '@/shared/hooks/useWebSocketConnection';
 import styles from './MainLayout.module.css';
 
 type ViewMode = 'chat' | 'role' | 'skill';
@@ -50,8 +49,6 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
 
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const lastSelectedAt = useSessionStore((s) => s.lastSelectedAt);
-
-  useWebSocketConnection(activeSessionId);
 
   // 当 session 被选中时，自动切换到 chat 视图
   useEffect(() => {
