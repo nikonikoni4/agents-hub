@@ -17,6 +17,7 @@ import { useDeleteGroupChat } from '../hooks/useDeleteGroupChat';
 import { formatRelativeTime } from '@/shared/adapters/sessionAdapter';
 import { CompositeAvatar, AvatarImage } from '@/shared/components';
 import { storage } from '@/core/storage';
+import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import './SessionItem.css';
 
 interface SessionItemProps {
@@ -28,7 +29,10 @@ interface SessionItemProps {
 export function SessionItem({ session, isActive = false, onSelectSingleChat }: SessionItemProps) {
   const { handleSelectSession } = useSessionActions();
   const updateSession = useSessionStore((s) => s.updateSession);
+  const selectSession = useSessionStore((s) => s.selectSession);
   const { deleteChat, deleting } = useDeleteGroupChat();
+  const setActiveSingleChat = useSingleChatStore((s) => s.setActiveSingleChat);
+  const setLocation = useSingleChatStore((s) => s.setLocation);
   const [showMenu, setShowMenu] = useState(false);
 
   const isSingleChat = session.type === 'single_chat';
@@ -57,14 +61,25 @@ export function SessionItem({ session, isActive = false, onSelectSingleChat }: S
   const handleItemClick = async () => {
     if (showMenu) return;
 
-    if (isSingleChat && onSelectSingleChat) {
-      onSelectSingleChat(session.id);
+    if (isSingleChat) {
+      // 单聊：设置 activeSessionType 和 displayLocation
+      selectSession(session.id, 'single_chat');
+      setActiveSingleChat(session.id);
+      setLocation('sidebar'); // 默认右侧
+
       // 标记单聊为已读
       const now = new Date().toISOString();
       await storage.setLastView(session.id, now);
       updateSession(session.id, { isUnread: false });
-      // TODO: Task 5 将添加 selectSession(session.id, 'single_chat') 调用来设置 activeSessionType
+
+      // 通知父组件（如果需要）
+      if (onSelectSingleChat) {
+        onSelectSingleChat(session.id);
+      }
     } else {
+      // 群聊：设置 activeSessionType，单聊回到默认位置
+      selectSession(session.id, 'group_chat');
+      setLocation('sidebar');
       handleSelectSession(session.id, 'group_chat');
     }
   };
