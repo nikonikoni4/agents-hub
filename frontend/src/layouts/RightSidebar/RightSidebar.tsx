@@ -121,7 +121,7 @@ export function RightSidebar({
   const { agentCalls, loading: callsLoading } = useAgentCalls(activeSessionId);
   const { taskList, loading: tasksLoading } = useTasks(activeSessionId);
   const toast = useToast();
-  const isSingleChatOpen = useSingleChatStore((s) => s.isPanelOpen);
+  const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const [activeTab, setActiveTab] = useState<SidebarTab>('chat');
 
   // content 变化时自动切换到对应 tab
@@ -131,12 +131,12 @@ export function RightSidebar({
     }
   }, [content]);
 
-  // 单聊面板打开时自动切换到 single-chat tab
+  // 单聊激活时自动切换到 single-chat tab
   useEffect(() => {
-    if (isSingleChatOpen) {
+    if (activeSingleChatId) {
       setActiveTab('single-chat');
     }
-  }, [isSingleChatOpen]);
+  }, [activeSingleChatId]);
 
   const handleToggleDocker = async (memberName: string) => {
     try {
