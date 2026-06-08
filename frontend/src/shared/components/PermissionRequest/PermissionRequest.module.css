@@ -1,0 +1,204 @@
+/* PermissionRequest 组件样式 */
+
+.card {
+  max-width: 80%;
+  background: var(--bg-bubble);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--perm-accent, var(--accent-color));
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4) var(--spacing-4) var(--spacing-3);
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+:global(html[data-theme='dark']) .card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
+}
+
+.iconWrapper {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: rgba(139, 165, 191, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-color);
+  transition: background 0.2s;
+}
+
+:global(html[data-theme='dark']) .iconWrapper {
+  background: rgba(150, 176, 204, 0.08);
+}
+
+.card:hover .iconWrapper {
+  background: rgba(139, 165, 191, 0.18);
+}
+
+:global(html[data-theme='dark']) .card:hover .iconWrapper {
+  background: rgba(150, 176, 204, 0.15);
+}
+
+.titleGroup {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.agentName {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-color);
+  margin-left: 8px;
+  padding: 1px 6px;
+  background: rgba(139, 165, 191, 0.1);
+  border-radius: 4px;
+}
+
+:global(html[data-theme='dark']) .agentName {
+  background: rgba(150, 176, 204, 0.08);
+}
+
+.time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+}
+
+/* Body */
+.body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-4);
+  padding-left: 44px;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: var(--spacing-2);
+  justify-content: flex-end;
+  padding-left: 44px;
+}
+
+.btnReject {
+  height: 30px;
+  padding: 0 var(--spacing-4);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  user-select: none;
+  outline: none;
+  background: none;
+  font-family: inherit;
+  color: var(--text-secondary);
+}
+
+.btnReject:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-primary);
+}
+
+:global(html[data-theme='dark']) .btnReject:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btnApprove {
+  height: 30px;
+  padding: 0 var(--spacing-4);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  user-select: none;
+  outline: none;
+  background: var(--accent-color);
+  font-family: inherit;
+  color: #fff;
+}
+
+.btnApprove:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+:global(html[data-theme='dark']) .btnApprove:hover {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.btnReject:disabled,
+.btnApprove:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Resolved state */
+.resolved {
+  opacity: 0.55;
+  pointer-events: none;
+  border-left-color: var(--text-tertiary);
+}
+
+.resolved .iconWrapper {
+  background: var(--bg-shadow);
+  color: var(--text-tertiary);
+}
+
+.resolvedLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  padding-left: 44px;
+  margin-top: var(--spacing-2);
+}
+
+.resolved .actions {
+  display: none;
+}
+
+/* Animation */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
