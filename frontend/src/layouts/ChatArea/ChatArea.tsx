@@ -11,6 +11,7 @@ import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useSessionStore } from '@/features/session/store/sessionStore';
+import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import {
@@ -189,6 +190,8 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   const { members } = useMembers();
   const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
   const projectGroups = useSessionStore((s) => s.projectGroups);
+  const activeSessionType = useSessionStore((s) => s.activeSessionType);
+  const { singleChats, displayLocation, toggleLocation } = useSingleChatStore();
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [quotedMessage, setQuotedMessage] = useState<MessageApiItem | null>(null);
@@ -345,8 +348,15 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     [activeSessionId]
   );
 
+  // 判断是否显示单聊
+  const showingSingleChat = activeSessionType === 'single_chat' && displayLocation === 'main';
+  const activeSingleChat = useMemo(() => {
+    if (!activeSessionId) return null;
+    return singleChats.find((chat) => chat.single_chat_id === activeSessionId);
+  }, [activeSessionId, singleChats]);
+
   // 未选择会话时的空态
-  if (!activeSessionId) {
+  if (!activeSessionType) {
     return (
       <div className={styles.chatArea}>
         <div className={styles.emptyState}>
@@ -356,6 +366,60 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     );
   }
 
+  // 单聊界面
+  if (showingSingleChat) {
+    return (
+      <div className={styles.chatArea}>
+        {/* 标题栏 */}
+        <div className={styles.chatHeader}>
+          <h2 className={styles.chatTitle}>{activeSingleChat?.single_chat_name ?? '单聊'}</h2>
+          <div className={styles.chatActions}>
+            <button className={styles.toggleLocationBtn} onClick={toggleLocation} title="返回右侧">
+              返回右侧
+            </button>
+            <button className={styles.iconBtn} onClick={onToggleRightSidebar}>
+              <RightPanelIcon />
+            </button>
+          </div>
+        </div>
+
+        {/* 消息列表 */}
+        <div className={styles.chatMessages} ref={messagesContainerRef} onScroll={handleScroll}>
+          {loadingMore && <div className={styles.loadingText}>加载更多消息...</div>}
+          {loading && allMessages.length === 0 ? (
+            <div className={styles.loadingText}>加载中...</div>
+          ) : (
+            allMessages.map((msg) => (
+              <MessageBubble
+                key={msg.id}
+                msg={msg}
+                avatar={roleAvatarMap.get(msg.speaker)}
+                pinned={isPinned(msg.id)}
+                onPin={() => pin(msg.id)}
+                onUnpin={() => unpin(msg.id)}
+                onQuote={() => handleQuote(msg)}
+                onPreview={handlePreview}
+                onDiff={handleDiff}
+                onPermissionAction={handlePermissionAction}
+              />
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* 输入框 */}
+        <ChatInput
+          activeSessionId={activeSessionId}
+          members={members}
+          onSend={handleSend}
+          quotedMessage={quotedMessage}
+          onClearQuote={() => setQuotedMessage(null)}
+        />
+      </div>
+    );
+  }
+
+  // 群聊界面（原有逻辑）
   return (
     <div className={styles.chatArea}>
       {/* 对话头部 */}
