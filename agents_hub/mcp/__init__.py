@@ -4,7 +4,8 @@ MCP 层
 提供 MCP (Model Context Protocol) 相关的工具和服务。
 """
 
-from agents_hub.mcp.errors import (
+from agents_hub.mcp.errors import (  # noqa: E402
+    AGENT_ALREADY_EXISTS,
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
     AGENT_OFFLINE,
@@ -16,6 +17,7 @@ from agents_hub.mcp.errors import (
     INVALID_TOKEN,
     PERMISSION_DENIED,
     TASK_LIST_NOT_FOUND,
+    VALIDATION_ERROR,
     # 错误响应函数
     make_error_response,
 )
@@ -36,10 +38,12 @@ __all__ = [
     "PERMISSION_DENIED",
     "GROUP_CHAT_NOT_FOUND",
     "AGENT_NOT_FOUND",
+    "AGENT_ALREADY_EXISTS",
     "TASK_LIST_NOT_FOUND",
     "AGENT_CALL_NOT_FOUND",
     "INVALID_AGENT_CALL_STATE",
     "INVALID_TASK_FORMAT",
+    "VALIDATION_ERROR",
     "AGENT_OFFLINE",
     "INTERNAL_ERROR",
     # 错误响应函数

@@ -9,9 +9,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { AvatarImage, MarkdownRenderer } from '@/shared/components';
+import { NavigationCard } from '@/shared/components/NavigationCard/NavigationCard';
+import { parseNavigationMark } from '@/shared/utils/navigationParser';
 import { useSingleChatStore } from '../store/singleChatStore';
 import { useSingleChatMessages } from '../hooks/useSingleChatMessages';
 import { useSingleChatMembers } from '../hooks/useSingleChatMembers';
+import { useNavigationHandler } from '../hooks/useNavigationHandler';
 import type { SingleChatMessageApiItem } from '@/shared/types';
 import styles from './SingleChatPanel.module.css';
 
@@ -21,8 +24,32 @@ const CHAT_TYPE_LABELS: Record<string, string> = {
   continue_group_chat: 'Continue',
 };
 
-function MessageBubble({ msg }: { msg: SingleChatMessageApiItem }) {
+function MessageBubble({
+  msg,
+  onNavigation,
+}: {
+  msg: SingleChatMessageApiItem;
+  onNavigation?: (navigation: import('@/shared/utils/navigationParser').NavigationMark) => void;
+}) {
   const isUser = msg.role === 'user';
+
+  // 检测导航标记
+  if (!isUser) {
+    const navigation = parseNavigationMark(msg.content);
+    if (navigation) {
+      return (
+        <div className={`${styles.messageRow} ${styles.assistantRow}`}>
+          <NavigationCard
+            type={navigation.type}
+            data={navigation.data}
+            linkText={navigation.linkText}
+            onNavigate={() => onNavigation?.(navigation)}
+          />
+        </div>
+      );
+    }
+  }
+
   return (
     <div className={`${styles.messageRow} ${isUser ? styles.userRow : styles.assistantRow}`}>
       <div className={`${styles.bubble} ${isUser ? styles.userBubble : styles.assistantBubble}`}>
@@ -38,6 +65,7 @@ export function SingleChatPanel() {
   const closeSingleChat = useSingleChatStore((s) => s.closeSingleChat);
 
   const { messages, loading, streaming, streamingText, sendMessage } = useSingleChatMessages();
+  const { handleNavigation } = useNavigationHandler();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +135,7 @@ export function SingleChatPanel() {
         ) : (
           <>
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} />
+              <MessageBubble key={msg.id} msg={msg} onNavigation={handleNavigation} />
             ))}
             {streaming && streamingText && (
               <div className={`${styles.messageRow} ${styles.assistantRow}`}>

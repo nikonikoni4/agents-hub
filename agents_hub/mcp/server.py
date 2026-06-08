@@ -66,7 +66,8 @@ from agents_hub.core.foundation.token import redact_token  # noqa: E402
 from agents_hub.core.orchestration import group_chat_manager  # noqa: E402
 from agents_hub.core.orchestration.group_chat import GroupChat  # noqa: E402
 from agents_hub.exceptions import ResourceNotFoundError, StateError, ValidationError  # noqa: E402
-from agents_hub.mcp.errors import (  # noqa: E402
+from agents_hub.mcp.errors import (  # noqa: E402  # noqa: E402
+    AGENT_ALREADY_EXISTS,
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
     GROUP_CHAT_NOT_FOUND,
@@ -74,6 +75,7 @@ from agents_hub.mcp.errors import (  # noqa: E402
     INVALID_AGENT_CALL_STATE,
     INVALID_TOKEN,
     PERMISSION_DENIED,
+    VALIDATION_ERROR,
     make_error_response,
 )
 from agents_hub.realtime import broadcast_group_chat_refresh  # noqa: E402
@@ -803,7 +805,7 @@ async def create_group_chat(
 
     except ValidationError as e:
         return make_error_response(
-            INVALID_TOKEN,
+            VALIDATION_ERROR,
             str(e),
             details=e.details,
         )
@@ -883,9 +885,15 @@ async def create_agent(
         # 3. 返回结果
         return asdict(role_info)
 
-    except (ValueError, RoleAlreadyExistsError) as e:
+    except ValueError as e:
         return make_error_response(
-            AGENT_NOT_FOUND,
+            VALIDATION_ERROR,
+            str(e),
+            details={"name": name},
+        )
+    except RoleAlreadyExistsError as e:
+        return make_error_response(
+            AGENT_ALREADY_EXISTS,
             str(e),
             details={"name": name},
         )

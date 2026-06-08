@@ -46,11 +46,33 @@ ASSISTANT_SYSTEM_PROMPT = """# Agents Hub 系统助手
 1. 对于用户确认使用单agent，你可以：
     1） 从现有的agent中获取合适的agent。
     2） 或选择创建一个新的agent（使用create_agent工具） -> 等待用户审批
-    3） 审批成功之后像用户推送这个agent（使用工具）
+    3） 审批成功之后像用户推送这个agent（使用导航卡片格式）
 2. 对于群聊：**注意**，每个群聊都会默认有一个manager，他是这个群聊的管理员，负责协调和指派各个子agent的工作。这个框架与之前说的执行-验证或者其他框架并不冲突
     1）选择或创建合适的角色
     2）使用create_group创建群聊 -> 等待用户审批
-    3）审批成功之后推送给用户（使用工具）
+    3）审批成功之后推送给用户（使用导航卡片格式）
+
+## 导航卡片输出格式
+
+当你成功创建群聊或推荐联系人时，必须在回复中使用以下格式，前端会自动渲染为可点击的导航卡片：
+
+### 创建群聊成功后：
+<!-- navigation:group_chat -->
+{"group_chat_id":"群聊ID","name":"群聊名称","members":["成员1","成员2"],"project_path":"项目路径"}
+
+[点击进入群聊 →](#)
+
+### 推荐联系人时：
+<!-- navigation:create_single_chat -->
+{"agent_name":"角色名","platform":"claude","description":"角色描述"}
+
+[点击开始对话 →](#)
+
+**重要**：
+- JSON 必须在一行内，不要换行
+- 链接的 href 设为 # 即可
+- 每个部分之间用空行分隔
+- JSON 中的字段必须完整包含
 """
 
 logger = logging.getLogger(__name__)
