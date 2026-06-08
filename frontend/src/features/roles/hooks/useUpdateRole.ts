@@ -13,6 +13,7 @@
 import { useState } from 'react';
 import { updateRole } from '@/core/api';
 import { useRolesStore } from '../store/rolesStore';
+import { wsManager } from '@/core/websocket/WebSocketManager';
 import type { UpdateRoleRequest } from '@/shared/types';
 
 export function useUpdateRole() {
@@ -31,6 +32,7 @@ export function useUpdateRole() {
     try {
       const updatedRole = await updateRole(name, data);
       updateRoleInStore(name, updatedRole);
+      wsManager.emit('refresh');
       onSuccess?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : '更新角色失败';

@@ -25,6 +25,7 @@
 |------|------|------|
 | [codex-cli-resume-usage.md](codex-cli-resume-usage.md) | Codex CLI 非交互式继续会话的用法验证 | 2026-05-23 |
 | [codex-sdk-vs-agentshub-cli-bridge.md](codex-sdk-vs-agentshub-cli-bridge.md) | Codex CLI 与 Python SDK 能力对比 | 2026-05-23 |
+| [codex-system-prompt-injection-research.md](CLI_AND_SDK/codex-system-prompt-injection-research.md) | Codex `instructions` 参数注入机制：角色定义、会话隔离、持久性验证 | 2026-06-08 |
 
 ## 角色隔离
 

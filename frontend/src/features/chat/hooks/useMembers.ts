@@ -73,7 +73,7 @@ export function useMembers() {
 
     const handleRefresh = (data?: unknown) => {
       const signal = data as RefreshSignal;
-      if (signal?.group_chat_id === activeSessionId) {
+      if (!signal?.group_chat_id || signal.group_chat_id === activeSessionId) {
         fetchMembers();
       }
     };

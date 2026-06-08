@@ -63,7 +63,7 @@ export function useGroupChatMembers(chatId: string | null) {
       if (!chatId) return;
       try {
         await addGroupChatMembers(chatId, { member_names: memberNames });
-        await refresh();
+        wsManager.emit('refresh', { group_chat_id: chatId });
       } catch (err) {
         console.error('Failed to add group chat members:', err);
         throw err;
@@ -78,7 +78,7 @@ export function useGroupChatMembers(chatId: string | null) {
       if (!chatId) return;
       try {
         await removeGroupChatMember(chatId, memberName);
-        await refresh();
+        wsManager.emit('refresh', { group_chat_id: chatId });
       } catch (err) {
         console.error('Failed to remove group chat member:', err);
         throw err;

@@ -26,6 +26,19 @@ export function useCreateChatData() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [roleData, chatData] = await Promise.all([listRoles(), listGroupChatInfos()]);
+      setRoles(roleData);
+      setGroupChats(chatData);
+    } catch (err) {
+      console.error('Failed to refresh chat data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     Promise.all([listRoles(), listGroupChatInfos()]).then(([roleData, chatData]) => {
@@ -60,5 +73,5 @@ export function useCreateChatData() {
     []
   );
 
-  return { roles, groupChats, loading, submitting, submitSingleChat };
+  return { roles, groupChats, loading, submitting, submitSingleChat, refresh };
 }

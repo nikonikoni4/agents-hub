@@ -11,12 +11,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getRoleInfo, addSkillToRole, removeSkillFromRole } from '@/core/api';
+import { useRolesStore } from '../store/rolesStore';
 import type { RoleSkillApiItem } from '@/shared/types';
 
 export function useRoleSkills(roleName: string | null) {
   const [skills, setSkills] = useState<RoleSkillApiItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { updateRole: updateRoleInStore } = useRolesStore();
 
   const fetchSkills = useCallback(async () => {
     if (!roleName) {
@@ -42,13 +44,15 @@ export function useRoleSkills(roleName: string | null) {
 
       try {
         await addSkillToRole(roleName, skillId);
-        await fetchSkills();
+        const role = await getRoleInfo(roleName);
+        setSkills(role.skills);
+        updateRoleInStore(roleName, role);
       } catch (err) {
         setError(err instanceof Error ? err.message : '添加技能失败');
         throw err;
       }
     },
-    [roleName, fetchSkills]
+    [roleName, updateRoleInStore]
   );
 
   const removeSkill = useCallback(
@@ -57,13 +61,15 @@ export function useRoleSkills(roleName: string | null) {
 
       try {
         await removeSkillFromRole(roleName, skillId);
-        await fetchSkills();
+        const role = await getRoleInfo(roleName);
+        setSkills(role.skills);
+        updateRoleInStore(roleName, role);
       } catch (err) {
         setError(err instanceof Error ? err.message : '移除技能失败');
         throw err;
       }
     },
-    [roleName, fetchSkills]
+    [roleName, updateRoleInStore]
   );
 
   useEffect(() => {

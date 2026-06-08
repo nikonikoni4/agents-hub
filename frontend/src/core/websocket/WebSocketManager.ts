@@ -141,6 +141,16 @@ class WebSocketManager {
     return this.reconnectAttempts;
   }
 
+  /**
+   * 本地事件分发（不发送到 WebSocket 服务器）
+   *
+   * 用于 mutation hook 成功后触发关联组件刷新，
+   * 复用已有的 on/off 监听机制。
+   */
+  emit(event: WebSocketEventType, data?: unknown): void {
+    this._emit(event, data);
+  }
+
   // ==================== 私有方法 ====================
 
   /**
