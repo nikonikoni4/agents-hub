@@ -12,8 +12,8 @@ import type { SingleChatMessageApiItem, MessageApiItem } from '@/shared/types';
 export function adaptSingleChatMessages(
   singleChatMessages: SingleChatMessageApiItem[]
 ): MessageApiItem[] {
-  return singleChatMessages.map((m, index) => ({
-    id: index, // 单聊用索引作为 id
+  return singleChatMessages.map((m) => ({
+    id: parseInt(m.id, 10), // 转换字符串 id 为数字
     speaker: m.role === 'user' ? 'user' : m.role,
     content: m.content,
     timestamp: m.timestamp,
