@@ -17,6 +17,9 @@ export * from './skillAdapter';
 // 消息相关 Adapter
 export * from './messageAdapter';
 
+// 单聊消息相关 Adapter
+export * from './singleChatMessageAdapter';
+
 // 团队相关 Adapter
 export * from './teamAdapter';
 
