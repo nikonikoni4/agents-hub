@@ -1,0 +1,146 @@
+/**
+ * 单聊面板组件
+ *
+ * 展示在 RightSidebar 的"单聊"tab 中，包含：
+ * - Agent 信息头部
+ * - 消息列表
+ * - 输入框
+ */
+
+import { useState, useRef, useEffect } from 'react';
+import { AvatarImage, MarkdownRenderer } from '@/shared/components';
+import { useSingleChatStore } from '../store/singleChatStore';
+import { useSingleChatMessages } from '../hooks/useSingleChatMessages';
+import { useSingleChatMembers } from '../hooks/useSingleChatMembers';
+import type { SingleChatMessageApiItem } from '@/shared/types';
+import styles from './SingleChatPanel.module.css';
+
+const CHAT_TYPE_LABELS: Record<string, string> = {
+  new: '全新',
+  fork: 'Fork',
+  continue_group_chat: 'Continue',
+};
+
+function MessageBubble({ msg }: { msg: SingleChatMessageApiItem }) {
+  const isUser = msg.role === 'user';
+  return (
+    <div className={`${styles.messageRow} ${isUser ? styles.userRow : styles.assistantRow}`}>
+      <div className={`${styles.bubble} ${isUser ? styles.userBubble : styles.assistantBubble}`}>
+        {isUser ? <span>{msg.content}</span> : <MarkdownRenderer content={msg.content} />}
+      </div>
+    </div>
+  );
+}
+
+export function SingleChatPanel() {
+  const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
+  const singleChats = useSingleChatStore((s) => s.singleChats);
+  const closeSingleChat = useSingleChatStore((s) => s.closeSingleChat);
+
+  const { messages, loading, streaming, streamingText, sendMessage } = useSingleChatMessages();
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const activeChat = singleChats.find((c) => c.single_chat_id === activeSingleChatId);
+
+  // 获取 Agent 头像（通过群聊成员信息）
+  const { members } = useSingleChatMembers(activeChat?.group_chat_id ?? null);
+  const agentMember = members.find((m) => m.name === activeChat?.agent_name);
+  const agentAvatar = agentMember?.role?.avatar ?? null;
+
+  // 自动滚动到底部
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamingText]);
+
+  const handleSend = async () => {
+    const trimmed = input.trim();
+    if (!trimmed || streaming) return;
+    setInput('');
+    await sendMessage(trimmed);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  if (!activeChat) {
+    return (
+      <div className={styles.emptyState}>
+        <p>创建一个单聊开始对话</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.panel}>
+      {/* Agent 信息头部 */}
+      <div className={styles.agentHeader}>
+        <div className={styles.agentAvatar}>
+          <AvatarImage avatar={agentAvatar} fallback={activeChat.agent_name} />
+        </div>
+        <div className={styles.agentInfo}>
+          <span className={styles.agentName}>{activeChat.agent_name}</span>
+          <span className={styles.chatType}>
+            {CHAT_TYPE_LABELS[activeChat.type] ?? activeChat.type}
+          </span>
+        </div>
+        <button
+          type="button"
+          className={styles.closeBtn}
+          onClick={closeSingleChat}
+          title="关闭单聊"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* 消息列表 */}
+      <div className={styles.messages}>
+        {loading ? (
+          <div className={styles.emptyState}>加载中...</div>
+        ) : messages.length === 0 && !streaming ? (
+          <div className={styles.emptyState}>发送消息开始对话</div>
+        ) : (
+          <>
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} msg={msg} />
+            ))}
+            {streaming && streamingText && (
+              <div className={`${styles.messageRow} ${styles.assistantRow}`}>
+                <div className={`${styles.bubble} ${styles.assistantBubble}`}>
+                  <MarkdownRenderer content={streamingText} />
+                  <span className={styles.cursor} />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* 输入框 */}
+      <div className={styles.inputArea}>
+        <textarea
+          className={styles.input}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="输入消息..."
+          rows={1}
+        />
+        <button
+          type="button"
+          className={styles.sendBtn}
+          onClick={handleSend}
+          disabled={!input.trim() || streaming}
+        >
+          发送
+        </button>
+      </div>
+    </div>
+  );
+}
