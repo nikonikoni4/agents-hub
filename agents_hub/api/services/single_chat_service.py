@@ -5,6 +5,7 @@
 
 import dataclasses
 import json
+import threading
 from collections import OrderedDict
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -37,13 +38,29 @@ logger = get_logger(__name__)
 class SingleChatManager:
     """单聊管理器
 
+    全局单例：通过 __new__ + 锁保证整个进程只有一个实例。
+    缓存状态（_cache）必须全局唯一，避免多实例导致数据不一致。
+
     职责：
     - 管理单聊索引（CRUD + 持久化到 index.json）
     - LRU 缓存消息历史
     - 调用 agent_bridge 发送消息（流式）
     """
 
+    _instance: "SingleChatManager | None" = None
+    _initialized: bool = False
+    _creation_lock: threading.Lock = threading.Lock()
+
+    def __new__(cls, data_path: Path | None = None):
+        if cls._instance is None:
+            with cls._creation_lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, data_path: Path | None = None):
+        if SingleChatManager._initialized:
+            return
         self._data_path = data_path or Path(config.data_path) / "single_chats"
         self._index_file = self._data_path / "index.json"
         self._index: dict[str, SingleChatIndex] = {}
@@ -56,6 +73,16 @@ class SingleChatManager:
 
         # 加载索引
         self._load_index()
+        SingleChatManager._initialized = True
+
+    @classmethod
+    def _reset_instance(cls):
+        """重置单例状态，仅供测试使用"""
+        if cls._instance is not None:
+            cls._instance._index.clear()
+            cls._instance._cache.clear()
+        cls._instance = None
+        cls._initialized = False
 
     @staticmethod
     def _resolve_session_path(

@@ -43,6 +43,7 @@ def manager_and_mock(temp_data_dir):
     必须在 RoleManager mock 激活期间实例化 SingleChatManager，
     因为其 __init__ 中会调用 RoleManager()。
     """
+    SingleChatManager._reset_instance()
     mock_rm = MagicMock()
     mock_rm.get_role.return_value = _make_mock_role()
     with patch(
