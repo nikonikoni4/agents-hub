@@ -323,6 +323,15 @@ const MOCK_PINNED_MESSAGES: PinnedMessageInfo[] = [];
 
 const MOCK_PIN_OPERATION: PinOperationResponse = { ok: true };
 
+const MOCK_PIN_RESULT: PinnedMessageInfo = {
+  message_id: 0,
+  speaker: '',
+  content: '',
+  timestamp: '',
+  platform: '',
+  pinned_at: '',
+};
+
 const MOCK_AGENT_CALLS: AgentCallInfo[] = [
   {
     call_id: 'call-001',
@@ -630,14 +639,7 @@ export async function pinMessage(
 ): Promise<PinnedMessageInfo> {
   return mockableRequest(
     () => apiClient.post<PinnedMessageInfo>(`/group-chats/${chatId}/pinned-messages`, data),
-    MOCK_PINNED_MESSAGES[0] || {
-      message_id: 0,
-      speaker: '',
-      content: '',
-      timestamp: '',
-      platform: '',
-      pinned_at: '',
-    }
+    MOCK_PIN_RESULT
   );
 }
 

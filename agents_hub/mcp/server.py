@@ -69,6 +69,10 @@ from agents_hub.mcp.errors import (  # noqa: E402
 )
 from agents_hub.realtime import broadcast_group_chat_refresh  # noqa: E402
 from agents_hub.utils import get_logger  # noqa: E402
+from agents_hub.api.services.group_chat_service import GroupChatService  # noqa: E402
+from agents_hub.api.services.role_service import RoleService  # noqa: E402
+from agents_hub.api.schemas.roles import RoleCreateRequest  # noqa: E402
+from agents_hub.exceptions import ValidationError, ResourceNotFoundError, StateError  # noqa: E402
 
 logger = get_logger(__name__)
 # ============================================================================
@@ -80,6 +84,14 @@ mcp = FastMCP(
     instructions="提供 Manager 编排团队协作的能力",
     version="0.1.0",
 )
+
+group_chat_service = GroupChatService(group_chat_manager=group_chat_manager)
+role_service = RoleService()
+
+
+def _verify_system_token(agent_token: str) -> bool:
+    """验证是否为系统助手 token"""
+    return agent_token == config.assistant_token
 
 
 def _find_agent(group_chat, agent_name: str):
@@ -726,6 +738,151 @@ async def request_permission(
         # 5. 返回 request_id
         return {"request_id": request_id, "status": "pending"}
 
+    except Exception as e:
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+# ============================================================================
+# Tool 8: create_group_chat
+# ============================================================================
+
+
+async def create_group_chat(
+    agent_token: str,
+    team_members: list[str],
+    project_path: str,
+    group_chat_name: str | None = None,
+) -> dict:
+    """
+    创建新群聊（系统助手专用）
+
+    Args:
+        agent_token: 系统助手身份令牌
+        team_members: 团队成员角色名列表
+        project_path: 项目路径（必须为绝对路径）
+        group_chat_name: 群聊名称（可选）
+
+    Returns:
+        成功: {"group_chat_id": "...", "group_chat_name": "...", "project_path": "...", ...}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    try:
+        # 1. 系统身份验证
+        if not _verify_system_token(agent_token):
+            return make_error_response(
+                PERMISSION_DENIED,
+                "权限不足：只有系统助手可以创建群聊",
+                details={"required_token": "config.assistant_token"},
+            )
+
+        # 2. 委托 GroupChatService
+        info = await group_chat_service.create_group_chat(
+            team_members=team_members,
+            project_path=project_path,
+            group_chat_name=group_chat_name,
+        )
+
+        # 3. 返回结果
+        return {
+            "group_chat_id": info.group_chat_id,
+            "group_chat_name": info.group_chat_name,
+            "project_path": info.project_path,
+            "group_type": info.group_type.value,
+            "members": team_members,
+        }
+
+    except ValidationError as e:
+        return make_error_response(
+            INVALID_TOKEN,
+            str(e),
+            details=e.details,
+        )
+    except ResourceNotFoundError as e:
+        return make_error_response(
+            AGENT_NOT_FOUND,
+            str(e),
+            details=e.details,
+        )
+    except StateError as e:
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"群聊启动失败: {str(e)}",
+            details=e.details,
+        )
+    except Exception as e:
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+# ============================================================================
+# Tool 9: add_group_member
+# ============================================================================
+
+
+async def add_group_member(
+    agent_token: str,
+    name: str,
+    platform: str,
+    description: str | None = None,
+    avatar: str | None = None,
+    abilities: list[str] | None = None,
+    type: str | None = None,
+    scope: list[str] | None = None,
+) -> dict:
+    """
+    创建新的成员角色（系统助手专用）
+
+    Args:
+        agent_token: 系统助手身份令牌
+        name: 角色名称（必须是合法的目录名）
+        platform: 平台类型（claude 或 codex）
+        description: 角色描述（可选）
+        avatar: 头像文件名（可选）
+        abilities: 能力标签列表（可选）
+        type: 角色类型（leader/team_member/system，可选）
+        scope: 所属群聊列表（可选）
+
+    Returns:
+        成功: {"name": "...", "platform": "...", "type": "...", ...}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    try:
+        # 1. 系统身份验证
+        if not _verify_system_token(agent_token):
+            return make_error_response(
+                PERMISSION_DENIED,
+                "权限不足：只有系统助手可以创建成员",
+                details={"required_token": "config.assistant_token"},
+            )
+
+        # 2. 委托 RoleService
+        request = RoleCreateRequest(
+            name=name,
+            platform=platform,
+            description=description,
+            avatar=avatar,
+            abilities=abilities or [],
+            type=type,
+            scope=scope,
+        )
+        role_info = role_service.create_role(request)
+
+        # 3. 返回结果
+        return role_info.model_dump()
+
+    except (ValueError, RoleAlreadyExistsError) as e:
+        return make_error_response(
+            AGENT_NOT_FOUND,
+            str(e),
+            details={"name": name},
+        )
     except Exception as e:
         return make_error_response(
             INTERNAL_ERROR,
