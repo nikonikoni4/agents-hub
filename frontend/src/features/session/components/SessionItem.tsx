@@ -63,6 +63,7 @@ export function SessionItem({ session, isActive = false, onSelectSingleChat }: S
       const now = new Date().toISOString();
       await storage.setLastView(session.id, now);
       updateSession(session.id, { isUnread: false });
+      // TODO: Task 5 将添加 selectSession(session.id, 'single_chat') 调用来设置 activeSessionType
     } else {
       handleSelectSession(session.id, 'group_chat');
     }
