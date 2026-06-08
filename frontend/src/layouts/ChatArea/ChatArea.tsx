@@ -10,6 +10,7 @@ import { FileChangesCard } from '@/shared/components/FileChangesCard';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
+import { useSessionStore } from '@/features/session/store/sessionStore';
 import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
 import {
   sendMessage,
@@ -20,6 +21,7 @@ import {
 } from '@/core/api/groupChatApi';
 import type { MessageApiItem } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
+import { extractProjectName } from '@/shared/adapters/sessionAdapter';
 import { ChatInput } from './ChatInput';
 import styles from './ChatArea.module.css';
 
@@ -185,12 +187,25 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   } = useChatMessages();
   const { members } = useMembers();
   const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
+  const projectGroups = useSessionStore((s) => s.projectGroups);
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [quotedMessage, setQuotedMessage] = useState<MessageApiItem | null>(null);
   const [rightSidebarContent, setRightSidebarContent] = useState<RightSidebarContent | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // 获取当前活跃会话的项目路径
+  const activeProjectPath = useMemo(() => {
+    if (!activeSessionId) return null;
+    for (const group of projectGroups) {
+      const session = group.sessions.find((s) => s.id === activeSessionId);
+      if (session) {
+        return session.projectPath;
+      }
+    }
+    return null;
+  }, [activeSessionId, projectGroups]);
 
   // 合并 API 消息和本地发送的消息（使用 useMemo 优化）
   const allMessages = useMemo(() => [...messages, ...localMessages], [messages, localMessages]);
@@ -320,7 +335,14 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     <div className={styles.chatArea}>
       {/* 对话头部 */}
       <div className={styles.chatHeader}>
-        <div className={styles.chatTitle}>{activeTitle ?? '会话'}</div>
+        <div className={styles.chatHeaderInfo}>
+          <div className={styles.chatTitle}>{activeTitle ?? '会话'}</div>
+          {activeProjectPath && (
+            <div className={styles.chatProjectPath} title={activeProjectPath}>
+              📁 {extractProjectName(activeProjectPath)}
+            </div>
+          )}
+        </div>
         <div className={styles.chatActions}>
           <button
             className={styles.iconBtn}

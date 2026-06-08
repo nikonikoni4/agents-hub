@@ -28,6 +28,8 @@ export interface SessionItem {
   preview: string;
   /** 最后更新时间 */
   lastUpdateAt: Date;
+  /** 上次观看时间 */
+  lastViewAt: Date | null;
   /** 是否未读 */
   isUnread: boolean;
   /** 成员数量 */
@@ -77,6 +79,9 @@ export function groupSessionsByProject(
       }
 
       // 2. 转换为 SessionItem
+      const lastViewTimestamp = lastViewRecords[chat.group_chat_id];
+      const lastViewAt = lastViewTimestamp ? new Date(lastViewTimestamp) : null;
+
       const sessionItem: SessionItem = {
         id: chat.group_chat_id,
         title: chat.group_chat_name,
@@ -84,6 +89,7 @@ export function groupSessionsByProject(
         lastUpdateAt: chat.last_update_at
           ? new Date(chat.last_update_at)
           : new Date(chat.created_at),
+        lastViewAt,
         isUnread: isUnread(
           chat.last_update_at || chat.created_at,
           lastViewRecords[chat.group_chat_id]

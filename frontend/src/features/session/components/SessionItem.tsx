@@ -66,7 +66,11 @@ export function SessionItem({ session, isActive = false }: SessionItemProps) {
         <div className="session-title">{session.title}</div>
         <div className="session-preview">{session.preview}</div>
         <div className="session-meta">
-          <span className="session-time">{formatRelativeTime(session.lastUpdateAt)}</span>
+          <span className="session-time">
+            {session.lastViewAt
+              ? formatRelativeTime(session.lastViewAt)
+              : formatRelativeTime(session.lastUpdateAt)}
+          </span>
           {session.isUnread && <span className="unread-badge">●</span>}
         </div>
       </div>

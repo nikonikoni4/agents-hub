@@ -269,6 +269,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       btw_session: [],
       cwd: '/home/user/projects/frontend-app',
       use_docker: false,
+      status: 'idle',
     },
     {
       name: 'Developer',
@@ -276,6 +277,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       btw_session: [],
       cwd: '/home/user/projects/frontend-app',
       use_docker: true,
+      status: 'busy',
     },
   ],
   'mock-chat-002': [
@@ -285,6 +287,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       btw_session: [],
       cwd: '/home/user/projects/backend-api',
       use_docker: false,
+      status: 'idle',
     },
     {
       name: 'Developer',
@@ -292,6 +295,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       btw_session: ['session-dev-002-btw'],
       cwd: '/home/user/projects/backend-api',
       use_docker: true,
+      status: 'busy',
     },
     {
       name: 'Tester',
@@ -299,6 +303,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       btw_session: [],
       cwd: '/home/user/projects/backend-api',
       use_docker: false,
+      status: 'idle',
     },
   ],
   'mock-chat-003': [
@@ -308,6 +313,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       btw_session: [],
       cwd: '/home/user/projects/legacy-system',
       use_docker: false,
+      status: 'idle',
     },
     {
       name: 'Designer',
@@ -315,6 +321,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       btw_session: [],
       cwd: '/home/user/projects/legacy-system',
       use_docker: false,
+      status: 'idle',
     },
   ],
 };
@@ -597,6 +604,7 @@ export async function updateMemberDockerMode(
       main_session: null,
       btw_session: [],
       cwd: null,
+      status: 'idle',
     }
   );
 }

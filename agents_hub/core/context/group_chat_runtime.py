@@ -112,6 +112,7 @@ class GroupChatRuntime:
                     "btw_session": agent_member_info.btw_session,
                     "cwd": agent_member_info.cwd,
                     "use_docker": agent_member_info.use_docker,
+                    "status": agent_member_info.status,
                 }
             )
         return members
