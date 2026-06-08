@@ -627,10 +627,17 @@ export async function getPinnedMessages(chatId: string): Promise<PinnedMessageIn
 export async function pinMessage(
   chatId: string,
   data: PinMessageRequest
-): Promise<PinOperationResponse> {
+): Promise<PinnedMessageInfo> {
   return mockableRequest(
-    () => apiClient.post<PinOperationResponse>(`/group-chats/${chatId}/pinned-messages`, data),
-    MOCK_PIN_OPERATION
+    () => apiClient.post<PinnedMessageInfo>(`/group-chats/${chatId}/pinned-messages`, data),
+    MOCK_PINNED_MESSAGES[0] || {
+      message_id: 0,
+      speaker: '',
+      content: '',
+      timestamp: '',
+      platform: '',
+      pinned_at: '',
+    }
   );
 }
 

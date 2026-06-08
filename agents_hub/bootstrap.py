@@ -81,7 +81,7 @@ def initialize_default_roles() -> None:
                 name=assistant_role_name,
                 platform=AgentPlatform.CLAUDE,
                 type="system",
-                description="Agents Hub 系统助手，提供平台使用帮助和指导",
+                description=f"Agents Hub 系统助手，你可以帮助用户创建agents hub的agent和群聊，你的agent token 是{config.assistant_token}",
             )
             logger.info(f"已创建系统角色: {assistant_role_name}")
         except Exception as e:

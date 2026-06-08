@@ -265,6 +265,10 @@ class Config:
         """快捷访问：设置是否默认使用 Docker 沙箱执行"""
         self.system.use_docker = value
 
+    @property
+    def assistant_token(self) -> str:
+        return "agents-hub-system"
+
 
 # ============ 全局单例 ============
 

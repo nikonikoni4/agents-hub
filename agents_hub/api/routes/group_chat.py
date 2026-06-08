@@ -152,7 +152,7 @@ async def get_pinned_messages(
 
 @router.post(
     "/{group_chat_id}/pinned-messages",
-    response_model=PinOperationResponse,
+    response_model=PinnedMessageInfo,
     responses={
         404: {"description": "群聊不存在"},
         422: {"description": "消息不存在"},
@@ -164,8 +164,7 @@ async def pin_message(
     service: GroupChatService = Depends(get_group_chat_service),
 ):
     """置顶指定消息"""
-    await service.pin_message(group_chat_id, body.message_id)
-    return PinOperationResponse()
+    return await service.pin_message(group_chat_id, body.message_id)
 
 
 @router.delete(

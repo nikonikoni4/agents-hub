@@ -67,14 +67,15 @@ export function usePinnedMessages(chatId: string | null) {
     async (messageId: number) => {
       if (!chatId) return;
       try {
-        await pinMessage(chatId, { message_id: messageId });
-        await refresh();
+        const newPin = await pinMessage(chatId, { message_id: messageId });
+        // 直接将返回的数据添加到 state，无需再次请求
+        setPinnedMessages((prev) => [...prev, newPin]);
       } catch (err) {
         console.error('Failed to pin message:', err);
         throw err;
       }
     },
-    [chatId, refresh]
+    [chatId]
   );
 
   // 取消置顶
@@ -83,13 +84,14 @@ export function usePinnedMessages(chatId: string | null) {
       if (!chatId) return;
       try {
         await unpinMessage(chatId, { message_id: messageId });
-        await refresh();
+        // 直接从 state 中移除该消息
+        setPinnedMessages((prev) => prev.filter((p) => p.message_id !== messageId));
       } catch (err) {
         console.error('Failed to unpin message:', err);
         throw err;
       }
     },
-    [chatId, refresh]
+    [chatId]
   );
 
   // 构建置顶消息查找集合

@@ -80,4 +80,4 @@
  - updated_at : 2026-06-08
  - path: docs/history-bugs/pin-message-refresh-bug.md
  - 触发规则：群聊中置顶/取消置顶消息后，右侧栏 Pinned 列表不自动更新，必须手动刷新
- - 内容摘要：后端 pin_message/unpin_message 方法缺少 broadcast_group_chat_refresh 调用，前端 usePinnedMessages 收不到 refresh 信号。修复：在 pin/unpin 成功写入后添加 refresh 广播
+ - 内容摘要：后端 pin_message 返回 None，前端需要额外 GET 请求。修复：改为 POST 后返回 PinnedMessageInfo，前端直接使用返回数据更新 state

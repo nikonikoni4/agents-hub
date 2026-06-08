@@ -24,6 +24,7 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatInfo,
     GroupChatMember,
     MessageInfo,
+    PinnedMessageInfo,
     TaskListInfo,
 )
 from agents_hub.config import config
@@ -715,12 +716,15 @@ class GroupChatService:
             pins = await self._read_pins(pins_path)
         return sorted(pins, key=lambda p: p.get("pinned_at", ""))
 
-    async def pin_message(self, group_chat_id: str, message_id: int) -> None:
+    async def pin_message(self, group_chat_id: str, message_id: int) -> PinnedMessageInfo:
         """置顶一条消息。幂等：已 pin 则跳过。422：消息不存在。
 
         Args:
             group_chat_id: 群聊 ID
             message_id: 消息 id
+
+        Returns:
+            PinnedMessageInfo: 创建的置顶消息信息
 
         Raises:
             ResourceNotFoundError: 群聊不存在
@@ -747,21 +751,19 @@ class GroupChatService:
             # 幂等检查：已存在则跳过
             for p in pins:
                 if p.get("message_id") == message_id:
-                    return
+                    return PinnedMessageInfo(**p)
             # 保存快照
-            pins.append(
-                {
-                    "message_id": message_id,
-                    "speaker": target.get("speaker", ""),
-                    "content": target.get("content", ""),
-                    "timestamp": target.get("timestamp", ""),
-                    "platform": target.get("platform", ""),
-                    "pinned_at": datetime.now(timezone.utc).isoformat(),
-                }
-            )
+            pin_data = {
+                "message_id": message_id,
+                "speaker": target.get("speaker", ""),
+                "content": target.get("content", ""),
+                "timestamp": target.get("timestamp", ""),
+                "platform": target.get("platform", ""),
+                "pinned_at": datetime.now(timezone.utc).isoformat(),
+            }
+            pins.append(pin_data)
             await self._write_pins(pins_path, pins)
-            # 必须发送 refresh 信号，否则前端 usePinnedMessages 不会自动刷新
-            await broadcast_group_chat_refresh(group_chat_id)
+            return PinnedMessageInfo(**pin_data)
 
     async def unpin_message(self, group_chat_id: str, message_id: int) -> None:
         """取消置顶。幂等：未 pin 则跳过。不要求消息存在于历史中。
@@ -781,8 +783,6 @@ class GroupChatService:
             new_pins = [p for p in pins if p.get("message_id") != message_id]
             if len(new_pins) != len(pins):
                 await self._write_pins(pins_path, new_pins)
-                # 必须发送 refresh 信号，否则前端 usePinnedMessages 不会自动刷新
-                await broadcast_group_chat_refresh(group_chat_id)
 
     # ==================== Group Chat Members Methods ====================
 
