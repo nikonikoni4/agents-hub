@@ -1,12 +1,12 @@
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from pathlib import Path
-import tempfile
-from unittest.mock import patch, MagicMock
 
-from agents_hub.api.routes.skills import get_skill_service
 from agents_hub.exceptions import AgentsHubError, ResourceNotFoundError
 
 

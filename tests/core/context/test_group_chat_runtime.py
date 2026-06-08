@@ -2,13 +2,13 @@ from datetime import datetime
 
 import pytest
 
-from .conftest import FakeRepository
-
 from agents_hub.core.context.group_chat_runtime import GroupChatRuntime
 from agents_hub.core.context.group_chat_runtime_state import GroupChatRuntimeState
-from agents_hub.core.context.group_chat_session import AgentMemberInfo, GroupChatSession
+from agents_hub.core.context.group_chat_session import GroupChatSession
 from agents_hub.core.context.group_metadata import GroupMetadata
 from agents_hub.core.foundation import GroupChatType, StateError
+
+from .conftest import FakeRepository
 
 
 def test_runtime_state_requires_loaded_session():
@@ -241,7 +241,7 @@ async def test_persistence_error_flag_set_on_failure():
 
     # Make save fail
     async def failing_save(metadata):
-        raise IOError("Disk full")
+        raise OSError("Disk full")
 
     repository.save_group_metadata = failing_save
 
@@ -269,7 +269,6 @@ async def test_persistence_error_cleared_on_success():
 
 
 async def test_group_chat_context_uses_runtime_for_message_and_session_commands():
-    from agents_hub.core.context.agent_context import AgentContext
     from agents_hub.core.context.group_chat_context import GroupChatContext
 
     repository = FakeRepository()

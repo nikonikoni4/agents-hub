@@ -113,9 +113,11 @@ class MessageRouter:
             raise AgentNotFoundError(message.send_from)
         if message.send_to not in self._agents_queue:
             logger.debug(
-                "消息校验失败: call_id=%s, 原因=接收者 '%s' 未注册",
+                "消息校验失败: call_id=%s, 原因=接收者 '%s' 未注册, 已注册agents=%s, MessageRouter_id=%s",
                 message.call_id,
                 message.send_to,
+                list(self._agents_queue.keys()),
+                id(self),
             )
             raise AgentNotFoundError(message.send_to)
 

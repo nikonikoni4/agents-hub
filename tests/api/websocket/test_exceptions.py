@@ -1,19 +1,18 @@
 """WebSocket exception classes unit tests"""
 
-import pytest
 
-from agents_hub.exceptions import (
-    AgentsHubError,
-    ExternalServiceError,
-    ResourceNotFoundError,
-    ValidationError,
-)
 from agents_hub.api.websocket.exceptions import (
     WebSocketBroadcastError,
     WebSocketConnectionError,
     WebSocketError,
     WebSocketRoomNotFoundError,
     WebSocketValidationError,
+)
+from agents_hub.exceptions import (
+    AgentsHubError,
+    ExternalServiceError,
+    ResourceNotFoundError,
+    ValidationError,
 )
 
 

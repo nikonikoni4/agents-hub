@@ -97,7 +97,7 @@ async def main():
 
     # 4. 使用 AgentBridge.execute() 执行（use_docker=True）
     prompt = "执行 `git branch` 命令并展示结果，不需要做其他任何事情"
-    print(f"\n[Step 4] 执行 AgentBridge.execute() (use_docker=True)")
+    print("\n[Step 4] 执行 AgentBridge.execute() (use_docker=True)")
     print(f"  prompt: {prompt}")
     print("-" * 50)
     result = await bridge.execute(

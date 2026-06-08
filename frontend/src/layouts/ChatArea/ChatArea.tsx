@@ -10,7 +10,9 @@ import { FileChangesCard } from '@/shared/components/FileChangesCard';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
+import { useSessionStore } from '@/features/session/store/sessionStore';
 import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
+import { wsManager } from '@/core/websocket/WebSocketManager';
 import {
   sendMessage,
   getMembers,
@@ -20,6 +22,7 @@ import {
 } from '@/core/api/groupChatApi';
 import type { MessageApiItem } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
+import { extractProjectName } from '@/shared/adapters/sessionAdapter';
 import { ChatInput } from './ChatInput';
 import styles from './ChatArea.module.css';
 
@@ -185,15 +188,46 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   } = useChatMessages();
   const { members } = useMembers();
   const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
+  const projectGroups = useSessionStore((s) => s.projectGroups);
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [quotedMessage, setQuotedMessage] = useState<MessageApiItem | null>(null);
   const [rightSidebarContent, setRightSidebarContent] = useState<RightSidebarContent | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const connectedSessionRef = useRef<string | null>(null);
+
+  // 切换 session 时断开旧的 WebSocket 连接
+  useEffect(() => {
+    return () => {
+      if (connectedSessionRef.current) {
+        wsManager.disconnect();
+        connectedSessionRef.current = null;
+      }
+    };
+  }, [activeSessionId]);
+
+  // 获取当前活跃会话的项目路径
+  const activeProjectPath = useMemo(() => {
+    if (!activeSessionId) return null;
+    for (const group of projectGroups) {
+      const session = group.sessions.find((s) => s.id === activeSessionId);
+      if (session) {
+        return session.projectPath;
+      }
+    }
+    return null;
+  }, [activeSessionId, projectGroups]);
 
   // 合并 API 消息和本地发送的消息（使用 useMemo 优化）
   const allMessages = useMemo(() => [...messages, ...localMessages], [messages, localMessages]);
+
+  // 服务端消息刷新后，清空乐观消息（服务端已包含最新数据）
+  useEffect(() => {
+    if (messages.length > 0 && localMessages.length > 0) {
+      setLocalMessages([]);
+    }
+  }, [messages]);
 
   // 自动滚动到底部（loadMore 恢复滚动位置期间跳过）
   useEffect(() => {
@@ -227,6 +261,12 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   const handleSend = useCallback(
     async (text: string) => {
       if (!activeSessionId) return;
+
+      // 发送第一条消息时才连接 WebSocket（已连接则跳过）
+      if (connectedSessionRef.current !== activeSessionId) {
+        wsManager.connect(activeSessionId);
+        connectedSessionRef.current = activeSessionId;
+      }
 
       // 如果有引用消息，用 MD 引用语法包裹
       let finalText = text;
@@ -320,7 +360,14 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     <div className={styles.chatArea}>
       {/* 对话头部 */}
       <div className={styles.chatHeader}>
-        <div className={styles.chatTitle}>{activeTitle ?? '会话'}</div>
+        <div className={styles.chatHeaderInfo}>
+          <div className={styles.chatTitle}>{activeTitle ?? '会话'}</div>
+          {activeProjectPath && (
+            <div className={styles.chatProjectPath} title={activeProjectPath}>
+              📁 {extractProjectName(activeProjectPath)}
+            </div>
+          )}
+        </div>
         <div className={styles.chatActions}>
           <button
             className={styles.iconBtn}

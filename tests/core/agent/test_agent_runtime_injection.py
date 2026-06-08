@@ -9,9 +9,8 @@
 - Worker 不包含 team_workboard
 """
 
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -20,12 +19,10 @@ from agents_hub.core.agent.base_agent import Agent
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
 from agents_hub.core.context import GroupChatContext
 from agents_hub.core.foundation import (
-    AgentMessage,
     CallStatus,
     MessageType,
     Role,
     RoleConfig,
-    SessionType,
 )
 
 
@@ -48,9 +45,10 @@ def mock_task_manager():
     manager = MagicMock(spec=TaskManager)
 
     # 模拟 get_active_task_list 返回任务列表
+    from datetime import datetime
+
     from agents_hub.core.communication.task import Task, TaskList
     from agents_hub.core.foundation.models import TaskListStatus, TaskStatus
-    from datetime import datetime
 
     task_list = TaskList(
         list_id="list_123",

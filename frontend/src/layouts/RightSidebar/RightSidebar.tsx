@@ -81,6 +81,16 @@ function MemberItem({
           {member.role?.type === 'leader' ? '负责人' : '成员'}
           <span className={styles.memberPlatform}>{member.role?.platform ?? 'unknown'}</span>
         </div>
+        {member.cwd && (
+          <div className={styles.memberCwd} title={member.cwd}>
+            📁 {member.cwd}
+          </div>
+        )}
+      </div>
+      <div className={styles.memberStatus}>
+        <span className={member.status === 'busy' ? styles.statusBusy : styles.statusIdle}>
+          {member.status === 'busy' ? '忙碌' : '空闲'}
+        </span>
       </div>
       <button
         className={styles.dockerToggle}

@@ -1,6 +1,8 @@
-import pytest
 from datetime import datetime
+
+import pytest
 from pydantic import ValidationError
+
 from agents_hub.api.schemas.group_chats import (
     GroupChatCreate,
     GroupChatInfo,

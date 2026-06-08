@@ -2,7 +2,9 @@
 
 from agents_hub.realtime.events import make_refresh_signal
 from agents_hub.realtime.manager import WebSocketManager
+from agents_hub.utils import get_logger
 
+logger = get_logger(__name__)
 _realtime_manager: WebSocketManager | None = None
 
 
@@ -25,6 +27,8 @@ async def broadcast_group_chat_refresh(
     manager: WebSocketManager | None = None,
 ):
     """Broadcast a refresh signal to a group chat room."""
+
     realtime_manager = manager or get_realtime_manager()
     signal = make_refresh_signal(group_chat_id)
+    logger.info("向前端发送刷新信号：broadcast_group_chat_refresh")
     await realtime_manager.broadcast(group_chat_id, signal.model_dump(mode="json"))

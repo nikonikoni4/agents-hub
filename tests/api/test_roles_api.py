@@ -1,10 +1,11 @@
 """Roles API 集成测试"""
 
+from unittest.mock import patch
+
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
 
 from agents_hub.api.routes.roles import router
 from agents_hub.config.types import AgentPlatform
@@ -20,7 +21,6 @@ from agents_hub.roles.exceptions import (
     SkillNotFoundError,
 )
 from agents_hub.roles.models import RoleInfo, RoleType, SkillInfo
-
 
 _STATUS_MAP: dict[type[AgentsHubError], int] = {
     ValidationError: 400,

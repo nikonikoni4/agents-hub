@@ -12,7 +12,7 @@
  * - 可独立测试
  */
 
-import { GroupChatInfoApiResponse } from '../types/api-schemas';
+import { GroupChatInfoApiResponse, SingleChatApiResponse } from '../types/api-schemas';
 
 // ==================== 导出类型 ====================
 
@@ -20,14 +20,16 @@ import { GroupChatInfoApiResponse } from '../types/api-schemas';
  * Session 项（前端数据模型）
  */
 export interface SessionItem {
-  /** 群聊 ID */
+  /** 群聊 ID 或单聊 ID */
   id: string;
-  /** 群聊名称 */
+  /** 名称 */
   title: string;
-  /** 预览文本（last_speaker: last_message） */
+  /** 预览文本 */
   preview: string;
   /** 最后更新时间 */
   lastUpdateAt: Date;
+  /** 上次观看时间 */
+  lastViewAt: Date | null;
   /** 是否未读 */
   isUnread: boolean;
   /** 成员数量 */
@@ -36,6 +38,12 @@ export interface SessionItem {
   projectPath: string;
   /** 成员头像列表（最多 4 个 SVG 字符串） */
   memberAvatars: (string | null)[];
+  /** 会话类型 */
+  type: 'group_chat' | 'single_chat';
+  /** 单聊的 agent 名称（仅 single_chat 类型） */
+  agentName?: string;
+  /** 单聊的平台（仅 single_chat 类型） */
+  platform?: string;
 }
 
 /**
@@ -53,17 +61,19 @@ export interface ProjectGroup {
 // ==================== 核心聚合函数 ====================
 
 /**
- * 按项目分组并聚合 sessions
+ * 按项目分组并聚合 sessions（群聊 + 单聊混合）
  *
  * @param chats - 后端返回的群聊列表
- * @param lastViewRecords - 本地存储的 last_view_at 记录 { group_chat_id: timestamp }
+ * @param singleChats - 后端返回的单聊列表
+ * @param lastViewRecords - 本地存储的 last_view_at 记录 { id: timestamp }
  * @returns 按项目分组的 sessions
  */
 export function groupSessionsByProject(
   chats: GroupChatInfoApiResponse[],
-  lastViewRecords: Record<string, string>
+  lastViewRecords: Record<string, string>,
+  singleChats: SingleChatApiResponse[] = []
 ): ProjectGroup[] {
-  // 1. 按 project_path 分组
+  // 1. 按 project_path 分组（群聊）
   const grouped = chats.reduce(
     (acc, chat) => {
       const projectName = extractProjectName(chat.project_path);
@@ -76,7 +86,9 @@ export function groupSessionsByProject(
         };
       }
 
-      // 2. 转换为 SessionItem
+      const lastViewTimestamp = lastViewRecords[chat.group_chat_id];
+      const lastViewAt = lastViewTimestamp ? new Date(lastViewTimestamp) : null;
+
       const sessionItem: SessionItem = {
         id: chat.group_chat_id,
         title: chat.group_chat_name,
@@ -84,13 +96,15 @@ export function groupSessionsByProject(
         lastUpdateAt: chat.last_update_at
           ? new Date(chat.last_update_at)
           : new Date(chat.created_at),
+        lastViewAt,
         isUnread: isUnread(
           chat.last_update_at || chat.created_at,
           lastViewRecords[chat.group_chat_id]
         ),
-        memberCount: 0, // 后端暂未提供，先设为 0
+        memberCount: 0,
         projectPath: chat.project_path,
-        memberAvatars: [], // 由 useSessionList hook 填充
+        memberAvatars: [],
+        type: 'group_chat',
       };
 
       acc[projectName]!.sessions.push(sessionItem);
@@ -98,6 +112,39 @@ export function groupSessionsByProject(
     },
     {} as Record<string, ProjectGroup>
   );
+
+  // 2. 将单聊合并到对应项目分组
+  for (const sc of singleChats) {
+    const projectName = extractProjectName(sc.cwd);
+
+    if (!grouped[projectName]) {
+      grouped[projectName] = {
+        projectPath: sc.cwd,
+        projectName,
+        sessions: [],
+      };
+    }
+
+    const lastViewTimestamp = lastViewRecords[sc.single_chat_id];
+    const lastViewAt = lastViewTimestamp ? new Date(lastViewTimestamp) : null;
+
+    const sessionItem: SessionItem = {
+      id: sc.single_chat_id,
+      title: sc.single_chat_name,
+      preview: `${sc.agent_name} · ${sc.platform}`,
+      lastUpdateAt: new Date(sc.last_active_at),
+      lastViewAt,
+      isUnread: false,
+      memberCount: 1,
+      projectPath: sc.cwd,
+      memberAvatars: [],
+      type: 'single_chat',
+      agentName: sc.agent_name,
+      platform: sc.platform,
+    };
+
+    grouped[projectName]!.sessions.push(sessionItem);
+  }
 
   // 3. 转为数组，组内按 lastUpdateAt 降序排序
   return Object.values(grouped).map((group) => ({

@@ -1,7 +1,5 @@
 """ClaudeExecutor 单元测试"""
 
-import os
-import pytest
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.config.types import CLAUDE_COMMAND

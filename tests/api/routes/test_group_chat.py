@@ -1,7 +1,8 @@
 """测试文件快照 API 端点"""
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
 
 from agents_hub.api.routes.group_chat import get_file_snapshot_content, get_file_snapshot_diff
 from agents_hub.exceptions import ResourceNotFoundError

@@ -1,11 +1,12 @@
 """CodexExecutor 单元测试"""
-
 import os
 from unittest.mock import MagicMock
-
 import pytest
 from agents_hub.agent_bridge.executors.codex import CodexExecutor, _sanitize_for_codex_cli
 from agents_hub.agent_bridge.executors.docker_codex import DockerCodexExecutor
+
+from agents_hub.agent_bridge.executors.codex import CodexExecutor
+
 from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.config.types import CODEX_COMMAND, DOCKER_CODEX_COMMAND
 from agents_hub.roles.models import RoleConfig

@@ -207,6 +207,12 @@ class GroupChat:
         self.message_router.register(config.default_user_name, asyncio.Queue())
         # 注册 heartbeat 系统身份，用于定时唤醒 manager
         self.message_router.register("__HEARTBEAT__", asyncio.Queue())
+        logger.info(
+            "agents 注册完成: group=%s, 已注册agents=%s, MessageRouter_id=%s",
+            self.group_chat_id,
+            list(self.message_router._agents_queue.keys()),
+            id(self.message_router),
+        )
 
     async def add_member(self, role_name: str) -> None:
         """增量添加单个成员（热重载安全）
@@ -393,6 +399,9 @@ class GroupChat:
         from agents_hub.agent_bridge.models import AgentResult
         from agents_hub.config.types import AgentPlatform
         from agents_hub.core.foundation import render_for_chat
+
+        # 0. 确保群聊已激活（懒加载）
+        await self.activate()
 
         # 1. 投递消息
         await self.message_router.send_message(message)

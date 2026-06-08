@@ -64,7 +64,12 @@ class GroupChatManager:
         if not isinstance(group_chat, GroupChat):
             raise ValueError("无效的 group_chat 类型")
         self._group_chats[group_chat_id] = group_chat
-        logger.info("GroupChat 已注册: id=%s", group_chat_id)
+        logger.info(
+            "GroupChat 已注册: id=%s, GroupChatManager_id=%s, 已注册群聊数=%d",
+            group_chat_id,
+            id(self),
+            len(self._group_chats),
+        )
 
     def is_active_group(self, group_chat_id: str) -> bool:
         """检查GroupChat的 agent 是否已激活（run() 任务是否在运行）"""
@@ -101,11 +106,21 @@ class GroupChatManager:
         # 1. 优先从内存获取
         group_chat = self._group_chats.get(group_chat_id)
         if group_chat:
-            logger.debug("从内存加载GroupChat: id=%s", group_chat_id)
+            logger.debug(
+                "从内存加载GroupChat: id=%s, GroupChatManager_id=%s, 已注册群聊数=%d",
+                group_chat_id,
+                id(self),
+                len(self._group_chats),
+            )
             return group_chat
 
         # 2. 从磁盘加载
-        logger.debug("内存未命中，从磁盘加载GroupChat: id=%s", group_chat_id)
+        logger.debug(
+            "内存未命中，从磁盘加载GroupChat: id=%s, GroupChatManager_id=%s, 已注册群聊数=%s",
+            group_chat_id,
+            id(self),
+            list(self._group_chats.keys()),
+        )
         try:
             return await self.load_group_chat_from_disk(group_chat_id)
         except FileNotFoundError as e:
@@ -350,10 +365,7 @@ class GroupChatManager:
         # 5. 加载GroupChat状态
         await group_chat.load()
 
-        # 6. 激活GroupChat（启动 agent 任务，标记为活跃）
-        await group_chat.activate()
-
-        # 7. 注册到 GroupChatManager
+        # 6. 注册到 GroupChatManager（不激活，激活应在用户发送消息时触发）
         self.register(group_chat_id, group_chat)
 
         logger.info("磁盘加载GroupChat完成: id=%s, members=%s", group_chat_id, team_members_name)

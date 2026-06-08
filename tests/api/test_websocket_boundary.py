@@ -5,19 +5,17 @@
 """
 
 import asyncio
-import contextlib
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
-from fastapi import FastAPI, WebSocketDisconnect
+import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from agents_hub.api.schemas.websocket import RefreshSignal
 from agents_hub.api.websocket.dependencies import get_ws_manager, reset_ws_manager
 from agents_hub.api.websocket.endpoint import handle_websocket_error, router
 from agents_hub.api.websocket.exceptions import WebSocketError
 from agents_hub.api.websocket.manager import WebSocketManager
-from agents_hub.api.schemas.websocket import RefreshSignal
-
 
 # ============================================================================
 # Fixtures

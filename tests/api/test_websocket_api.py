@@ -1,10 +1,11 @@
 """WebSocket 广播 API 集成测试"""
 
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock
 
 from agents_hub.api.routes.websocket import router
 from agents_hub.api.websocket.dependencies import get_ws_manager, reset_ws_manager

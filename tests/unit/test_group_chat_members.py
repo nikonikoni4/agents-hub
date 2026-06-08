@@ -5,12 +5,11 @@
 1. GroupChatService.add_group_chat_members - 添加群成员
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agents_hub.api.services.group_chat_service import GroupChatService
-from agents_hub.api.schemas.group_chats import GroupChatMember
+import pytest
 
+from agents_hub.api.services.group_chat_service import GroupChatService
 
 # ==================== 辅助类 ====================
 

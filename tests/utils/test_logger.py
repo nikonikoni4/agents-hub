@@ -3,7 +3,6 @@ Logger 模块测试
 """
 
 import logging
-from pathlib import Path
 
 import pytest
 

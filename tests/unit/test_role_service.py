@@ -1,7 +1,8 @@
 """RoleService 单元测试 - 契约驱动"""
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from agents_hub.api.schemas.roles import RoleCreateRequest, RoleUpdateRequest
 from agents_hub.api.services.role_service import RoleService

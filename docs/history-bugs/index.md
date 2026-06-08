@@ -81,3 +81,15 @@
  - path: docs/history-bugs/pin-message-refresh-bug.md
  - 触发规则：群聊中置顶/取消置顶消息后，右侧栏 Pinned 列表不自动更新，必须手动刷新
  - 内容摘要：后端 pin_message 返回 None，前端需要额外 GET 请求。修复：改为 POST 后返回 PinnedMessageInfo，前端直接使用返回数据更新 state
+
+## MCP 创建群聊后发送消息报"接收者未注册"
+ - updated_at : 2026-06-08
+ - path: docs/history-bugs/2026-06-08-mcp-created-group-chat-message-router-agent-not-registered.md
+ - 触发规则：通过 MCP create_group_chat 创建群聊后，在群聊中发送消息偶发报"接收者未注册"。成员已打招呼证明初始化成功，但后续消息路由找不到 agent
+ - 内容摘要：偶发 bug，未找到根因。已排除双实例问题（历史 bug 已修复）、显式 cleanup、GC 回收。最可能假设：MCP server 运行在独立进程导致 GroupChatManager 单例分裂，或 activate() 幂等性缺陷。已添加诊断日志（GroupChatManager 实例 ID、MessageRouter 注册状态），待下次复现时定位
+
+## load_group_chat_from_disk 自动激活群聊导致前端加载时启动 agent 任务
+ - updated_at : 2026-06-08
+ - path: docs/history-bugs/2026-06-08-load-group-chat-auto-activate.md
+ - 触发规则：前端加载 session 列表时，调用 getMembers API 触发 load_group_chat_from_disk，自动调用 activate() 启动所有 agent 任务
+ - 内容摘要：load_group_chat_from_disk 在加载时自动调用 activate()，违反"只读操作不应有副作用"原则。用户已明确说明"加载不是激活"，但 AI 执行时仍错误地在加载时调用激活。修复：移除 activate() 调用，激活延迟到发送消息时执行

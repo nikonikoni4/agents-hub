@@ -4,7 +4,7 @@ import asyncio
 import os
 import tempfile
 from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 

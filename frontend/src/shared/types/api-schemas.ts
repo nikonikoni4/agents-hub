@@ -234,6 +234,8 @@ export interface GroupChatMemberApiItem {
   cwd: string | null;
   /** 是否使用 Docker 沙箱 */
   use_docker: boolean;
+  /** Agent 状态：idle/busy */
+  status: 'idle' | 'busy';
 }
 
 // ==================== 会话相关 ====================

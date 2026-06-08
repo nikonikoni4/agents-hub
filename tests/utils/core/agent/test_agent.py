@@ -6,16 +6,14 @@ Agent 层单元测试
 2. Manager/Worker 是 Agent 子类
 """
 
-import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from agents_hub.core.agent.base_agent import Agent
 from agents_hub.core.agent.manager import Manager
 from agents_hub.core.agent.worker import Worker
-from agents_hub.core.foundation import MessageType, SessionType
 
 
 def create_mock_role(name: str = "test_agent"):

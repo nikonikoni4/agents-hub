@@ -7,7 +7,6 @@
     pytest tests/e2e/api/test_role_e2e.py -v
 """
 
-import pytest
 
 
 # ── 测试数据常量 ──────────────────────────────────────────────────────────

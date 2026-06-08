@@ -34,6 +34,7 @@ const mockMember: GroupChatMemberApiItem = {
   btw_session: [],
   cwd: '/tmp',
   use_docker: false,
+  status: 'idle',
 };
 
 describe('chatAdapter', () => {
