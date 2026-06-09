@@ -13,6 +13,8 @@
  * - 每个类型都标注对应的后端 schema 名称
  */
 
+import type { UploadedFileInfo } from './api-requests';
+
 // ==================== 枚举类型 ====================
 
 /**
@@ -118,6 +120,8 @@ export interface MessageApiItem {
   timestamp: string;
   /** 来源平台 */
   platform: string;
+  /** 文件列表 */
+  files?: UploadedFileInfo[];
   /** 当前工作目录 */
   cwd?: string;
   /** 文件修改信息列表 */

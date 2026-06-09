@@ -9,6 +9,16 @@ import type { AgentPlatform, RoleType, SingleChatType } from './api-schemas';
 // ==================== 群聊相关 ====================
 
 /**
+ * 上传文件信息
+ */
+export interface UploadedFileInfo {
+  file_name: string; // 原始文件名
+  file_path: string; // 存储路径（相对于项目根目录）
+  file_type: string; // 文件类型（mime type）
+  file_size: number; // 文件大小（字节）
+}
+
+/**
  * 创建群聊请求
  * 对应后端 GroupChatCreate
  */
@@ -25,6 +35,7 @@ export interface CreateGroupChatRequest {
 export interface SendMessageRequest {
   content: string; // 消息内容（非空）
   members: string[]; // 群聊中所有 agent 名称列表
+  files?: UploadedFileInfo[]; // 可选的文件列表
 }
 
 /**
