@@ -28,12 +28,14 @@ export interface MemberWithRole extends GroupChatMemberApiItem {
 
 export function useMembers() {
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const activeSessionType = useSessionStore((s) => s.activeSessionType);
 
   const [members, setMembers] = useState<MemberWithRole[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchMembers = useCallback(async () => {
-    if (!activeSessionId) {
+    // 单聊不支持成员列表，跳过 API 调用
+    if (!activeSessionId || activeSessionType === 'single_chat') {
       setMembers([]);
       return;
     }
@@ -57,15 +59,15 @@ export function useMembers() {
     } finally {
       setLoading(false);
     }
-  }, [activeSessionId]);
+  }, [activeSessionId, activeSessionType]);
 
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
 
-  // 监听 WebSocket refresh 信号
+  // 监听 WebSocket refresh 信号（单聊跳过）
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId || activeSessionType === 'single_chat') return;
 
     const handleRefresh = (data?: unknown) => {
       const signal = data as RefreshSignal;
@@ -79,7 +81,7 @@ export function useMembers() {
     return () => {
       wsManager.off('refresh', handleRefresh);
     };
-  }, [activeSessionId, fetchMembers]);
+  }, [activeSessionId, activeSessionType, fetchMembers]);
 
   const toggleDockerMode = useCallback(
     async (memberName: string) => {

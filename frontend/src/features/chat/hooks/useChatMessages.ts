@@ -90,8 +90,9 @@ export function useChatMessages() {
   }, [activeSessionId, activeSessionType]);
 
   // WebSocket refresh: 当前 session 收到新消息时，追加新消息（不覆盖已加载的历史）
+  // 单聊使用 SSE 流式，不走 WebSocket refresh
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId || activeSessionType === 'single_chat') return;
 
     const handleRefresh = (data?: unknown) => {
       const signal = data as { group_chat_id?: string };
@@ -117,11 +118,13 @@ export function useChatMessages() {
     return () => {
       wsManager.off('refresh', handleRefresh);
     };
-  }, [activeSessionId]);
+  }, [activeSessionId, activeSessionType]);
 
   // 内部加载方法：只负责 API 调用和状态更新，不处理滚动
+  // 单聊不支持增量加载（消息通过 SSE 流式获取）
   const loadMoreInternal = useCallback(async () => {
     const currentMessages = messagesRef.current;
+    if (activeSessionType === 'single_chat') return false;
     if (!activeSessionId || !hasMore || loadingMoreRef.current || currentMessages.length === 0) {
       return false; // 未实际加载
     }
@@ -141,7 +144,7 @@ export function useChatMessages() {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [activeSessionId, hasMore]);
+  }, [activeSessionId, activeSessionType, hasMore]);
 
   // 公开方法：加载更多并恢复滚动位置
   // 调用方只需传入容器元素，hook 内部处理防抖、状态管理、滚动恢复的完整生命周期

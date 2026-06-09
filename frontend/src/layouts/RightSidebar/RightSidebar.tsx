@@ -137,9 +137,12 @@ export function RightSidebar({
 }: RightSidebarProps) {
   const { members, loading, toggleDockerMode } = useMembers();
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
-  const { pinnedMessages, unpin } = usePinnedMessages(activeSessionId);
-  const { agentCalls, loading: callsLoading } = useAgentCalls(activeSessionId);
-  const { taskList, loading: tasksLoading } = useTasks(activeSessionId);
+  const activeSessionType = useSessionStore((s) => s.activeSessionType);
+  // 单聊不支持置顶、Agent 调用、任务列表，传 null 跳过 API 调用
+  const groupChatId = activeSessionType === 'group_chat' ? activeSessionId : null;
+  const { pinnedMessages, unpin } = usePinnedMessages(groupChatId);
+  const { agentCalls, loading: callsLoading } = useAgentCalls(groupChatId);
+  const { taskList, loading: tasksLoading } = useTasks(groupChatId);
   const toast = useToast();
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const displayLocation = useSingleChatStore((s) => s.displayLocation);

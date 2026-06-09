@@ -22,6 +22,7 @@ import {
   getFileSnapshotDiff,
   updatePermissionStatus,
 } from '@/core/api/groupChatApi';
+import { streamSSE } from '@/core/api/sseClient';
 import type { MessageApiItem } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { extractProjectName } from '@/shared/adapters/sessionAdapter';
@@ -283,12 +284,6 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     async (text: string) => {
       if (!activeSessionId) return;
 
-      // 发送第一条消息时才连接 WebSocket（已连接则跳过）
-      if (connectedSessionRef.current !== activeSessionId) {
-        wsManager.connect(activeSessionId);
-        connectedSessionRef.current = activeSessionId;
-      }
-
       // 如果有引用消息，用 MD 引用语法包裹
       let finalText = text;
       if (quotedMessage) {
@@ -310,9 +305,39 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
       setLocalMessages((prev) => [...prev, optimisticMsg]);
 
       try {
-        const members = await getMembers(activeSessionId);
-        const memberNames = members.map((m) => m.name);
-        await sendMessage(activeSessionId, { content: finalText, members: memberNames });
+        if (activeSessionType === 'single_chat') {
+          // 单聊：通过 SSE 流式发送
+          let fullText = '';
+          await streamSSE(
+            `/single-chats/${activeSessionId}/messages/stream`,
+            { content: finalText },
+            (event) => {
+              if (event.type === 'text_delta' && event.content?.text) {
+                fullText += event.content.text as string;
+              }
+            }
+          );
+          // 流式完成后添加助手消息
+          if (fullText) {
+            const assistantMsg: MessageApiItem = {
+              id: 0,
+              speaker: 'assistant',
+              content: fullText,
+              timestamp: new Date().toISOString(),
+              platform: 'claude',
+            };
+            setLocalMessages((prev) => [...prev, assistantMsg]);
+          }
+        } else {
+          // 群聊：发送第一条消息时才连接 WebSocket（已连接则跳过）
+          if (connectedSessionRef.current !== activeSessionId) {
+            wsManager.connect(activeSessionId);
+            connectedSessionRef.current = activeSessionId;
+          }
+          const members = await getMembers(activeSessionId);
+          const memberNames = members.map((m) => m.name);
+          await sendMessage(activeSessionId, { content: finalText, members: memberNames });
+        }
         // 发送成功后才清空引用状态
         setQuotedMessage(null);
       } catch (err) {
@@ -320,7 +345,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         // 发送失败时保留引用状态，用户可重试
       }
     },
-    [activeSessionId, quotedMessage]
+    [activeSessionId, activeSessionType, quotedMessage]
   );
 
   const handleQuote = useCallback((msg: MessageApiItem) => {
@@ -329,7 +354,8 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
 
   const handlePreview = useCallback(
     async (snapshotId: string, filePath: string) => {
-      if (!activeSessionId) return;
+      // 单聊不支持文件预览
+      if (!activeSessionId || activeSessionType === 'single_chat') return;
       try {
         const content = await getFileSnapshotContent(activeSessionId, snapshotId);
         setRightSidebarContent({ type: 'preview', content, filePath });
@@ -337,12 +363,13 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         console.error('Failed to load preview:', error);
       }
     },
-    [activeSessionId]
+    [activeSessionId, activeSessionType]
   );
 
   const handleDiff = useCallback(
     async (snapshotId: string, filePath: string) => {
-      if (!activeSessionId) return;
+      // 单聊不支持文件 diff
+      if (!activeSessionId || activeSessionType === 'single_chat') return;
       try {
         const diff = await getFileSnapshotDiff(activeSessionId, snapshotId);
         setRightSidebarContent({ type: 'diff', content: diff, filePath });
@@ -350,20 +377,21 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         console.error('Failed to load diff:', error);
       }
     },
-    [activeSessionId]
+    [activeSessionId, activeSessionType]
   );
 
   // 权限请求操作（调用 API，刷新由 WebSocket refresh 自动处理）
   const handlePermissionAction = useCallback(
     async (messageId: number, action: 'approved' | 'rejected') => {
-      if (!activeSessionId) return;
+      // 单聊不支持权限请求
+      if (!activeSessionId || activeSessionType === 'single_chat') return;
       try {
         await updatePermissionStatus(activeSessionId, messageId, action);
       } catch (err) {
         console.error('Failed to update permission status:', err);
       }
     },
-    [activeSessionId]
+    [activeSessionId, activeSessionType]
   );
 
   // 判断是否显示单聊
