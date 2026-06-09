@@ -5,11 +5,11 @@ from fastapi.responses import StreamingResponse
 
 from agents_hub.api.schemas.single_chat import (
     CreateSingleChatRequest,
-    CreateSingleChatResponse,
     MessageHistoryResponse,
     SendMessageRequest,
     SingleChatListResponse,
     SingleChatResponse,
+    SingleChatType,
 )
 from agents_hub.api.services.single_chat_service import SingleChatManager, single_chat_manager
 
@@ -19,15 +19,6 @@ router = APIRouter(prefix="/single-chats", tags=["single-chats"])
 def get_single_chat_manager() -> SingleChatManager:
     """获取 SingleChatManager 实例（依赖注入）"""
     return single_chat_manager
-
-
-@router.post("", response_model=CreateSingleChatResponse)
-async def create_single_chat(
-    request: CreateSingleChatRequest,
-    manager: SingleChatManager = Depends(get_single_chat_manager),
-):
-    """创建单聊"""
-    return await manager.create_single_chat(request)
 
 
 @router.get("", response_model=SingleChatListResponse)
@@ -47,13 +38,27 @@ async def get_single_chat(
     return manager.get_single_chat_response(single_chat_id)
 
 
-@router.post("/{single_chat_id}/messages/stream")
+@router.post("/messages/stream")
 async def send_message_stream(
-    single_chat_id: str,
     request: SendMessageRequest,
     manager: SingleChatManager = Depends(get_single_chat_manager),
 ):
-    """发送消息（流式）"""
+    """发送消息（流式）
+
+    当 request.single_chat_id 为空时，自动创建单聊（需要 agent_name）。
+    响应头 X-Single-Chat-Id 返回真实的 single_chat_id。
+    """
+    single_chat_id = request.single_chat_id
+
+    if not single_chat_id:
+        create_req = CreateSingleChatRequest(
+            type=request.type or SingleChatType.NEW,
+            single_chat_name=request.single_chat_name or request.agent_name or "新对话",
+            agent_name=request.agent_name or "default",
+            group_chat_id=request.group_chat_id,
+        )
+        resp = await manager.create_single_chat(create_req)
+        single_chat_id = resp.single_chat_id
 
     async def event_generator():
         async for event_json in manager.send_message_stream(single_chat_id, request.content):
@@ -65,6 +70,7 @@ async def send_message_stream(
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
+        headers={"X-Single-Chat-Id": single_chat_id},
     )
 
 

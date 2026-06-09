@@ -8,6 +8,7 @@ import { useCreateGroupChat } from '../hooks/useCreateGroupChat';
 import { useSessionStore } from '../store/sessionStore';
 import { useCreateChatData, useGroupChatMembers } from '@/shared/hooks';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
+import type { DraftChat } from '@/features/single-chat/store/singleChatStore';
 import styles from './CreateGroupChatDialog.module.css';
 
 export interface CreateGroupChatDialogProps {
@@ -37,13 +38,10 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
     roles: allRoles,
     groupChats,
     loading: singleLoading,
-    submitting: singleSubmitting,
-    submitSingleChat,
   } = useCreateChatData();
   const { members: groupMembers, loading: membersLoading } = useGroupChatMembers(selectedGroupChat);
   const selectGroupChat = useSessionStore((s) => s.selectGroupChat);
-  const addSingleChat = useSingleChatStore((s) => s.addSingleChat);
-  const openSingleChat = useSingleChatStore((s) => s.openSingleChat);
+  const openDraftChat = useSingleChatStore((s) => s.openDraftChat);
 
   const handleClose = () => {
     setChatMode('group');
@@ -122,33 +120,15 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
     } else {
       if (!selectedAgent) return;
       const chatName = name.trim() || `与 ${selectedAgent} 的对话`;
-      const chatId = await submitSingleChat(
-        {
-          type: singleMode === 'new' ? 'new' : 'fork',
-          single_chat_name: chatName,
-          agent_name: selectedAgent,
-          group_chat_id: singleMode === 'group' ? selectedGroupChat : undefined,
-        },
-        (id) => {
-          addSingleChat({
-            single_chat_id: id,
-            single_chat_name: chatName,
-            type: singleMode === 'new' ? 'new' : 'fork',
-            agent_name: selectedAgent,
-            platform: 'claude',
-            session_id: null,
-            group_chat_id: singleMode === 'group' ? selectedGroupChat : null,
-            cwd: '',
-            created_at: new Date().toISOString(),
-            last_active_at: new Date().toISOString(),
-          });
-          openSingleChat(id);
-        }
-      );
-      if (chatId) {
-        onSuccess?.();
-        handleClose();
-      }
+      const draft: DraftChat = {
+        type: singleMode === 'new' ? 'new' : 'fork',
+        single_chat_name: chatName,
+        agent_name: selectedAgent,
+        group_chat_id: singleMode === 'group' ? selectedGroupChat ?? undefined : undefined,
+      };
+      openDraftChat(draft);
+      onSuccess?.();
+      handleClose();
     }
   };
 
@@ -469,9 +449,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
             type="button"
             onClick={handleSubmit}
             className={styles.submitBtn}
-            disabled={!canSubmit || (chatMode === 'group' ? submitting : singleSubmitting)}
+            disabled={!canSubmit || submitting}
           >
-            {(chatMode === 'group' ? submitting : singleSubmitting) ? '创建中...' : '创建'}
+            {submitting ? '创建中...' : '创建'}
           </button>
         </div>
       </div>

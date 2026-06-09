@@ -43,7 +43,6 @@ export { listTeams, getTeam, createTeam, updateTeam, deleteTeam } from './teamAp
 
 // 单聊 API
 export {
-  createSingleChat,
   listSingleChats,
   getSingleChat,
   getSingleChatMessages,

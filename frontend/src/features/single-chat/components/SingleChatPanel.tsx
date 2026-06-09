@@ -5,6 +5,8 @@
  * - Agent 信息头部
  * - 消息列表
  * - 输入框
+ *
+ * 支持 draft 模式：无后端数据时直接显示输入界面
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -72,6 +74,7 @@ function MessageBubble({
 export function SingleChatPanel() {
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const singleChats = useSingleChatStore((s) => s.singleChats);
+  const draftChat = useSingleChatStore((s) => s.draftChat);
   const closeSingleChat = useSingleChatStore((s) => s.closeSingleChat);
   const toggleLocation = useSingleChatStore((s) => s.toggleLocation);
 
@@ -80,7 +83,23 @@ export function SingleChatPanel() {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const activeChat = singleChats.find((c) => c.single_chat_id === activeSingleChatId);
+  // 从已有列表中查找，或用 draft 构造临时对象
+  const activeChat = activeSingleChatId
+    ? singleChats.find((c) => c.single_chat_id === activeSingleChatId)
+    : null;
+
+  const displayChat = activeChat ?? (draftChat ? {
+    single_chat_id: 'draft',
+    single_chat_name: draftChat.single_chat_name,
+    type: draftChat.type,
+    agent_name: draftChat.agent_name,
+    platform: 'claude' as const,
+    session_id: null,
+    group_chat_id: draftChat.group_chat_id ?? null,
+    cwd: '',
+    created_at: '',
+    last_active_at: '',
+  } : null);
 
   // 点击移到主界面时，切换显示位置
   const handleToggleLocation = () => {
@@ -88,8 +107,8 @@ export function SingleChatPanel() {
   };
 
   // 获取 Agent 头像（通过群聊成员信息）
-  const { members } = useSingleChatMembers(activeChat?.group_chat_id ?? null);
-  const agentMember = members.find((m) => m.name === activeChat?.agent_name);
+  const { members } = useSingleChatMembers(displayChat?.group_chat_id ?? null);
+  const agentMember = members.find((m) => m.name === displayChat?.agent_name);
   const agentAvatar = agentMember?.role?.avatar ?? null;
 
   // 自动滚动到底部
@@ -111,7 +130,7 @@ export function SingleChatPanel() {
     }
   };
 
-  if (!activeChat) {
+  if (!displayChat) {
     return (
       <div className={styles.emptyState}>
         <p>创建一个单聊开始对话</p>
@@ -124,12 +143,12 @@ export function SingleChatPanel() {
       {/* Agent 信息头部 */}
       <div className={styles.agentHeader}>
         <div className={styles.agentAvatar}>
-          <AvatarImage avatar={agentAvatar} fallback={activeChat.agent_name} />
+          <AvatarImage avatar={agentAvatar} fallback={displayChat.agent_name} />
         </div>
         <div className={styles.agentInfo}>
-          <span className={styles.agentName}>{activeChat.agent_name}</span>
+          <span className={styles.agentName}>{displayChat.agent_name}</span>
           <span className={styles.chatType}>
-            {CHAT_TYPE_LABELS[activeChat.type] ?? activeChat.type}
+            {CHAT_TYPE_LABELS[displayChat.type] ?? displayChat.type}
           </span>
         </div>
         <button

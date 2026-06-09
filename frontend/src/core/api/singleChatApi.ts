@@ -6,19 +6,11 @@
 
 import apiClient, { mockableRequest } from './client';
 import type {
-  CreateSingleChatRequest,
-  CreateSingleChatApiResponse,
   SingleChatApiResponse,
   SingleChatMessageApiItem,
 } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
-
-const MOCK_CREATE_RESPONSE: CreateSingleChatApiResponse = {
-  single_chat_id: 'mock-sc-001',
-  single_chat_name: '开发助手对话',
-  type: 'new',
-};
 
 const MOCK_SINGLE_CHATS: SingleChatApiResponse[] = [
   {
@@ -66,18 +58,6 @@ const MOCK_MESSAGES: SingleChatMessageApiItem[] = [
 ];
 
 // ==================== API 函数 ====================
-
-/**
- * 创建单聊
- */
-export async function createSingleChat(
-  data: CreateSingleChatRequest
-): Promise<CreateSingleChatApiResponse> {
-  return mockableRequest(
-    () => apiClient.post<CreateSingleChatApiResponse>('/single-chats', data),
-    MOCK_CREATE_RESPONSE
-  );
-}
 
 /**
  * 获取单聊列表

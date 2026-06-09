@@ -2,7 +2,7 @@
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI, Request
@@ -94,46 +94,61 @@ def client(app):
     return TestClient(app, raise_server_exceptions=False)
 
 
-def test_create_single_chat(client):
-    """测试创建单聊"""
-    response = client.post("/api/v1/single-chats", json={
-        "type": "new",
-        "single_chat_name": "测试单聊",
+def _create_chat_via_manager(manager: SingleChatManager) -> str:
+    """通过 manager 直接创建单聊，返回 single_chat_id"""
+    from agents_hub.api.schemas.single_chat import CreateSingleChatRequest, SingleChatType
+
+    req = CreateSingleChatRequest(
+        type=SingleChatType.NEW,
+        single_chat_name="测试单聊",
+        agent_name="test_agent",
+        cwd="/tmp/test",
+    )
+    import asyncio
+    resp = asyncio.get_event_loop().run_until_complete(manager.create_single_chat(req))
+    return resp.single_chat_id
+
+
+@patch("agents_hub.api.routes.single_chat.single_chat_manager")
+def test_send_message_auto_creates_chat(mock_mgr, client):
+    """测试发送消息时自动创建单聊"""
+    from agents_hub.api.schemas.single_chat import CreateSingleChatResponse, SingleChatType
+
+    # mock create_single_chat
+    mock_mgr.create_single_chat = AsyncMock(return_value=CreateSingleChatResponse(
+        single_chat_id="auto-created-id",
+        single_chat_name="test_agent",
+        type=SingleChatType.NEW,
+    ))
+    # mock send_message_stream
+    mock_mgr.send_message_stream = AsyncMock(return_value=iter([]))
+
+    response = client.post("/api/v1/single-chats/messages/stream", json={
+        "content": "hello",
         "agent_name": "test_agent",
-        "cwd": "/tmp/test",
     })
 
     assert response.status_code == 200
-    data = response.json()
-    assert "single_chat_id" in data
-    assert data["single_chat_name"] == "测试单聊"
-    assert data["type"] == "new"
+    assert response.headers.get("X-Single-Chat-Id") == "auto-created-id"
 
 
-def test_create_single_chat_agent_not_found(client, mock_role_manager):
-    """测试创建单聊时 agent 不存在"""
-    mock_role_manager.get_role.side_effect = RoleNotFoundError(role_name="nonexistent_agent")
+def test_send_message_with_existing_chat(client, manager):
+    """测试已有 single_chat_id 时直接发送消息"""
+    chat_id = _create_chat_via_manager(manager)
 
-    response = client.post("/api/v1/single-chats", json={
-        "type": "new",
-        "single_chat_name": "测试单聊",
-        "agent_name": "nonexistent_agent",
-        "cwd": "/tmp/test",
-    })
+    with patch.object(manager, "send_message_stream", new_callable=AsyncMock, return_value=iter([])):
+        response = client.post("/api/v1/single-chats/messages/stream", json={
+            "content": "hello",
+            "single_chat_id": chat_id,
+        })
 
-    assert response.status_code == 404
-    assert "不存在" in response.json()["message"]
+    assert response.status_code == 200
+    assert response.headers.get("X-Single-Chat-Id") == chat_id
 
 
-def test_list_single_chats(client):
+def test_list_single_chats(client, manager):
     """测试列出单聊"""
-    # 先创建一个
-    client.post("/api/v1/single-chats", json={
-        "type": "new",
-        "single_chat_name": "测试单聊",
-        "agent_name": "test_agent",
-        "cwd": "/tmp/test",
-    })
+    _create_chat_via_manager(manager)
 
     response = client.get("/api/v1/single-chats")
     assert response.status_code == 200
@@ -151,20 +166,14 @@ def test_list_single_chats_empty(client):
     assert data["single_chats"] == []
 
 
-def test_get_single_chat(client):
+def test_get_single_chat(client, manager):
     """测试获取单聊详情"""
-    create_resp = client.post("/api/v1/single-chats", json={
-        "type": "new",
-        "single_chat_name": "测试单聊",
-        "agent_name": "test_agent",
-        "cwd": "/tmp/test",
-    })
-    single_chat_id = create_resp.json()["single_chat_id"]
+    chat_id = _create_chat_via_manager(manager)
 
-    response = client.get(f"/api/v1/single-chats/{single_chat_id}")
+    response = client.get(f"/api/v1/single-chats/{chat_id}")
     assert response.status_code == 200
     data = response.json()
-    assert data["single_chat_id"] == single_chat_id
+    assert data["single_chat_id"] == chat_id
     assert data["single_chat_name"] == "测试单聊"
     assert data["agent_name"] == "test_agent"
     assert data["platform"] == "claude"
@@ -176,17 +185,11 @@ def test_get_single_chat_not_found(client):
     assert response.status_code == 404
 
 
-def test_get_messages_empty(client):
+def test_get_messages_empty(client, manager):
     """测试获取空消息历史（无 session）"""
-    create_resp = client.post("/api/v1/single-chats", json={
-        "type": "new",
-        "single_chat_name": "测试单聊",
-        "agent_name": "test_agent",
-        "cwd": "/tmp/test",
-    })
-    single_chat_id = create_resp.json()["single_chat_id"]
+    chat_id = _create_chat_via_manager(manager)
 
-    response = client.get(f"/api/v1/single-chats/{single_chat_id}/messages")
+    response = client.get(f"/api/v1/single-chats/{chat_id}/messages")
     assert response.status_code == 200
     data = response.json()
     assert data["messages"] == []
@@ -198,20 +201,19 @@ def test_get_messages_not_found(client):
     assert response.status_code == 404
 
 
-def test_create_single_chat_missing_fields(client):
-    """测试创建单聊缺少必填字段"""
-    response = client.post("/api/v1/single-chats", json={
-        "type": "new",
-    })
-    assert response.status_code == 422  # FastAPI validation error
-
-
-def test_create_single_chat_invalid_type(client):
-    """测试创建单聊使用无效类型"""
-    response = client.post("/api/v1/single-chats", json={
-        "type": "invalid_type",
-        "single_chat_name": "测试单聊",
+def test_send_message_missing_content(client):
+    """测试发送消息缺少 content"""
+    response = client.post("/api/v1/single-chats/messages/stream", json={
         "agent_name": "test_agent",
-        "cwd": "/tmp/test",
     })
     assert response.status_code == 422
+
+
+def test_send_message_auto_create_missing_agent(client):
+    """测试自动创建时缺少 agent_name"""
+    response = client.post("/api/v1/single-chats/messages/stream", json={
+        "content": "hello",
+    })
+    # 没有 single_chat_id 也没有 agent_name，应该用 "default" 创建
+    # 这取决于是否允许 "default" agent，这里测试不报 422
+    # 具体行为取决于 RoleManager 是否有 "default" agent

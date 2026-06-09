@@ -72,9 +72,18 @@ class SingleChatListResponse(BaseModel):
 
 
 class SendMessageRequest(BaseModel):
-    """发送消息请求"""
+    """发送消息请求
+
+    当 single_chat_id 为空时，首次消息会自动创建单聊。
+    此时 agent_name 必填，single_chat_name 和 type 可选（默认 NEW）。
+    """
 
     content: str
+    single_chat_id: str | None = None
+    single_chat_name: str | None = None
+    agent_name: str | None = None
+    type: SingleChatType | None = None
+    group_chat_id: str | None = None
 
 
 class SessionMessageResponse(BaseModel):

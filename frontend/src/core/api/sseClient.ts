@@ -35,7 +35,8 @@ export async function streamSSE(
   path: string,
   body: Record<string, unknown>,
   onEvent: SSEEventCallback,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onHeaders?: (headers: Headers) => void
 ): Promise<void> {
   const response = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
@@ -51,6 +52,8 @@ export async function streamSSE(
   if (!response.body) {
     throw new Error('Response body is null');
   }
+
+  onHeaders?.(response.headers);
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

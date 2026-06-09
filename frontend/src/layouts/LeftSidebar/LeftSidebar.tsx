@@ -9,7 +9,6 @@ import {
 } from '@/shared/components';
 import { SessionList, CreateGroupChatDialog } from '@/features/session';
 import { useSessionStore } from '@/features/session/store/sessionStore';
-import { useCreateSingleChat } from '@/features/single-chat';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import styles from './LeftSidebar.module.css';
 
@@ -35,7 +34,7 @@ export function LeftSidebar({
   onViewModeChange,
 }: LeftSidebarProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const { createChat } = useCreateSingleChat();
+  const openDraftChat = useSingleChatStore((s) => s.openDraftChat);
 
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
@@ -48,8 +47,8 @@ export function LeftSidebar({
     }
   }, [activeSessionId, activeSingleChatId, lastSelectedAt, onViewModeChange]);
 
-  const handleCreateAssistantChat = async () => {
-    await createChat({
+  const handleCreateAssistantChat = () => {
+    openDraftChat({
       type: 'new',
       single_chat_name: 'Agents Hub 助手',
       agent_name: 'Agents-Hub-Assistant',
