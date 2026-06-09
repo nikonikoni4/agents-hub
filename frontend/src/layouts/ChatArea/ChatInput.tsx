@@ -6,6 +6,7 @@ import {
   UploadPreview,
   ImagePreviewModal,
 } from '@/shared/components';
+import { useFileUpload } from '@/shared/hooks';
 import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import styles from './ChatArea.module.css';
 
@@ -23,11 +24,14 @@ export const ChatInput = React.memo(
     const [showMention, setShowMention] = useState(false);
     const [mentionQuery, setMentionQuery] = useState('');
     const [mentionIndex, setMentionIndex] = useState(0);
-    const [uploadedFiles, setUploadedFiles] = useState<UploadedFileInfo[]>([]);
     const [showImagePreview, setShowImagePreview] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const { uploadedFiles, uploadFiles, removeFile, clearFiles } = useFileUpload({
+      chatId: activeSessionId || '',
+    });
 
     // 过滤匹配的成员（使用 useMemo 优化）
     const filteredMembers = useMemo(
@@ -101,9 +105,9 @@ export const ChatInput = React.memo(
 
       onSend(text, uploadedFiles);
       setInputValue('');
-      setUploadedFiles([]);
+      clearFiles();
       setShowMention(false);
-    }, [inputValue, activeSessionId, onSend, uploadedFiles]);
+    }, [inputValue, activeSessionId, onSend, uploadedFiles, clearFiles]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -149,10 +153,6 @@ export const ChatInput = React.memo(
       return () => document.removeEventListener('click', handleClickOutside);
     }, [showMention]);
 
-    const handleRemoveFile = useCallback((index: number) => {
-      setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-    }, []);
-
     const handleAttachmentClick = useCallback(() => {
       fileInputRef.current?.click();
     }, []);
@@ -162,20 +162,10 @@ export const ChatInput = React.memo(
         const files = e.target.files;
         if (!files) return;
 
-        const { uploadFile } = await import('@/core/api/groupChatApi');
-
-        for (const file of Array.from(files)) {
-          try {
-            const fileInfo = await uploadFile(activeSessionId || '', file);
-            setUploadedFiles((prev) => [...prev, fileInfo]);
-          } catch (err) {
-            console.error('Upload error:', err);
-          }
-        }
-
+        await uploadFiles(files);
         e.target.value = '';
       },
-      [activeSessionId]
+      [uploadFiles]
     );
 
     const handleImageClick = useCallback(
@@ -265,7 +255,7 @@ export const ChatInput = React.memo(
         {uploadedFiles.length > 0 && (
           <UploadPreview
             files={uploadedFiles}
-            onRemove={handleRemoveFile}
+            onRemove={removeFile}
             onImageClick={handleImageClick}
             groupChatId={activeSessionId || ''}
           />

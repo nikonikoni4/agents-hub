@@ -1067,6 +1067,7 @@ class GroupChatService:
 
         Raises:
             ResourceNotFoundError: 群聊不存在或文件不存在
+            ValidationError: 路径不合法（路径遍历攻击）
         """
         # 验证群聊存在
         try:
@@ -1078,7 +1079,13 @@ class GroupChatService:
             ) from e
 
         file_service = FileService()
-        full_path = file_service.get_file_path(file_path)
+        try:
+            full_path = file_service.get_file_path(file_path)
+        except ValueError as e:
+            raise ValidationError(
+                f"路径不合法: {file_path}",
+                details={"file_path": file_path, "error": str(e)},
+            ) from e
         if full_path is None:
             raise ResourceNotFoundError(
                 f"文件不存在: {file_path}",

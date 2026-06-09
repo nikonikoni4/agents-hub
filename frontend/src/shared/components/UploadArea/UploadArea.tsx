@@ -1,96 +1,25 @@
 import React, { useRef, useCallback } from 'react';
-import type { UploadedFileInfo } from '@/shared/types';
 import styles from './UploadArea.module.css';
 
 export interface UploadAreaProps {
-  chatId: string;
-  onUploadComplete: (fileInfo: UploadedFileInfo) => void;
-  onUploadError: (error: string) => void;
+  onFilesSelected: (files: FileList) => void;
   disabled?: boolean;
 }
 
-const ALLOWED_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  'application/pdf',
-  'text/plain',
-  'text/markdown',
-  'application/json',
-  'text/csv',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'text/javascript',
-  'text/typescript',
-  'text/x-python',
-  'text/x-java',
-  'text/x-c++src',
-  'text/x-csrc',
-  'text/x-chdr',
-  'text/css',
-  'text/html',
-  'text/xml',
-  'application/x-yaml',
-  'text/yaml',
-  'application/toml',
-  'application/zip',
-  'application/x-rar-compressed',
-  'application/x-7z-compressed',
-  'application/x-tar',
-  'application/gzip',
-];
-
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
 export const UploadArea = React.memo(
-  ({ chatId, onUploadComplete, onUploadError, disabled }: UploadAreaProps) => {
+  ({ onFilesSelected, disabled }: UploadAreaProps) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragOver, setIsDragOver] = React.useState(false);
-
-    const validateFile = useCallback((file: File): string | null => {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        return `不支持的文件类型: ${file.type}`;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        return `文件大小超过限制: ${(file.size / 1024 / 1024).toFixed(1)}MB > 50MB`;
-      }
-      return null;
-    }, []);
-
-    const handleUpload = useCallback(
-      async (file: File) => {
-        const error = validateFile(file);
-        if (error) {
-          onUploadError(error);
-          return;
-        }
-
-        try {
-          const { uploadFile } = await import('@/core/api/groupChatApi');
-          const fileInfo = await uploadFile(chatId, file);
-          onUploadComplete(fileInfo);
-        } catch (err) {
-          onUploadError(err instanceof Error ? err.message : '上传失败');
-        }
-      },
-      [chatId, onUploadComplete, onUploadError, validateFile]
-    );
 
     const handleFileSelect = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files) return;
 
-        Array.from(files).forEach(handleUpload);
+        onFilesSelected(files);
         e.target.value = '';
       },
-      [handleUpload]
+      [onFilesSelected]
     );
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -114,9 +43,9 @@ export const UploadArea = React.memo(
         const files = e.dataTransfer.files;
         if (!files) return;
 
-        Array.from(files).forEach(handleUpload);
+        onFilesSelected(files);
       },
-      [handleUpload]
+      [onFilesSelected]
     );
 
     const handleClick = useCallback(() => {
@@ -147,7 +76,6 @@ export const UploadArea = React.memo(
           ref={fileInputRef}
           type="file"
           multiple
-          accept={ALLOWED_TYPES.join(',')}
           onChange={handleFileSelect}
           className={styles.fileInput}
         />

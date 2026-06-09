@@ -62,6 +62,23 @@ class FileService:
             file_size=len(file_content),
         )
 
+    def _validate_path(self, file_path: str) -> Path:
+        """验证并规范化文件路径，防止路径遍历攻击
+
+        Args:
+            file_path: 相对于 data_path 的文件路径
+
+        Returns:
+            规范化后的完整路径
+
+        Raises:
+            ValueError: 如果路径试图访问 data_path 之外的文件
+        """
+        full_path = (config.data_path / file_path).resolve()
+        if not full_path.is_relative_to(config.data_path.resolve()):
+            raise ValueError(f"路径越界: {file_path}")
+        return full_path
+
     def get_file_path(self, file_path: str) -> Path | None:
         """获取文件完整路径
 
@@ -70,8 +87,11 @@ class FileService:
 
         Returns:
             Path 如果文件存在，否则 None
+
+        Raises:
+            ValueError: 如果路径试图访问 data_path 之外的文件
         """
-        full_path = config.data_path / file_path
+        full_path = self._validate_path(file_path)
         if full_path.exists():
             return full_path
         return None
@@ -84,8 +104,11 @@ class FileService:
 
         Returns:
             是否成功删除
+
+        Raises:
+            ValueError: 如果路径试图访问 data_path 之外的文件
         """
-        full_path = config.data_path / file_path
+        full_path = self._validate_path(file_path)
         if full_path.exists():
             full_path.unlink()
             return True
