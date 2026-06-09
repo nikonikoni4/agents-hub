@@ -175,6 +175,35 @@
   - 模式 B（新增）：`_generate_system_prompt_content` → 拼接到 system prompt 参数
   - 切换方式：Agent 配置中的 `prompt_injection_mode: "file" | "system_prompt"`
 
+### 30. Agent 质量提升四件套 ⭐
+- **来源**：用户直接输入
+- **状态**：⏳ 待开始
+- **创建时间**：2026-06-09
+- **背景**：CLI 模式下 Agent 表现"降智"——疯狂快速完成任务、缺乏架构理解、写 bug 多、审查不上心。根因：提醒机制缺少冷静期催促闭环、系统提示词引导不足、MCP 连接失败时无兜底机制、缺乏结构化的审查和上下文压缩流程。
+- **优先级**：26
+- **需求清单**：
+  1. **系统提示词优化**：优化 Manager/Worker 的 CLAUDE.md，引导 Manager 在 call_agent 时提供足够上下文（相关文件、架构约束、验收标准），引导 Worker 先理解再动手
+  2. **延缓闭合提醒**：当前 `_enqueue_finish_agent_call_reminder` 在消息处理完成后立即触发，打断 Agent 执行节奏。需加入冷静期（1-2 分钟延迟）再催促，同时优化提醒 prompt 措辞，从"快点闭环"改为"确保质量再闭环"
+  3. **MCP 连接失败检测与兜底**：当 agents-hub MCP 服务不可用时，Agent 会反复尝试调用陷入内部循环。需添加健康检查 + fallback prompt（"无法连接 MCP，请直接用文字回复"），阻断无限重试
+  4. **Hook 机制（before/after agent call）**：
+     - `before_agent_call`：上下文压缩（会话轮转）、注入额外上下文、检查前置条件、熔断（连续失败拦截）
+     - `after_agent_call`：自动审查、结果质量评分、触发后续流程、审计日志
+- **Hook 上下文压缩详细设计**：
+  - 核心思路：CLI 平台没有原生 compact API，通过会话轮转实现上下文压缩
+  - 流程：`before_agent_call` 触发 → 检测当前会话上下文大小 → 超阈值时：
+    1. 在当前会话中执行 hand-off（让 LLM 自行压缩上下文 → 输出 md 摘要文档）
+    2. 创建新 CLI 会话（新 session_id）
+    3. 新会话执行 hand-on（读取摘要文档 + system_message，恢复上下文）
+    4. 更新 main_session_id
+    5. 原始消息在新会话中继续执行
+  - 已解决：上下文大小检测、hand-off 执行方式、跨平台抽象
+  - 待解决：前端 session_id 变化时的展示问题
+- **子任务拆分**：
+  - 30.1 MCP 连接失败检测（优先级最高，防御性）
+  - 30.2 延缓闭合提醒（改动小，效果直接）
+  - 30.3 系统提示词优化（可持续迭代）
+  - 30.4 Hook 机制设计与实现（架构级改动，收益最大）
+
 ---
 
 ## 进行中
