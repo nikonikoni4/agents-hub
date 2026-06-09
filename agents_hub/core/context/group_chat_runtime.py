@@ -375,6 +375,68 @@ class GroupChatRuntime:
         )
         return agent_member_info
 
+    async def update_agent_context_window(
+        self, agent_name: str, context_window: int
+    ) -> AgentMemberInfo:
+        """
+        更新 Agent 的 context_window 并持久化
+
+        Args:
+            agent_name: Agent 名称
+            context_window: 上下文窗口大小（input_tokens/1000 取整）
+
+        Returns:
+            AgentMemberInfo: 更新后的会话信息
+        """
+        agent_member_info = self.get_or_create_agent_member_info(agent_name)
+        agent_member_info.context_window = context_window
+        await self._persist(
+            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+        )
+        return agent_member_info
+
+    async def update_agent_status(self, agent_name: str, status: str) -> AgentMemberInfo:
+        """
+        更新 Agent 的 status 并持久化
+
+        Args:
+            agent_name: Agent 名称
+            status: 状态值（idle/busy/chatting）
+
+        Returns:
+            AgentMemberInfo: 更新后的会话信息
+        """
+        agent_member_info = self.get_or_create_agent_member_info(agent_name)
+        agent_member_info.status = status
+        await self._persist(
+            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+        )
+        return agent_member_info
+
+    def get_agent_context(self) -> list[dict]:
+        """
+        获取所有 Agent 的 context_window
+
+        Returns:
+            list[dict]: Agent 上下文信息列表，每项包含 name 和 context_window
+        """
+        return [
+            {"name": name, "context_window": info.context_window}
+            for name, info in self.state.agent_member_infos.items()
+        ]
+
+    def get_agent_status(self) -> list[dict]:
+        """
+        获取所有 Agent 的 status
+
+        Returns:
+            list[dict]: Agent 状态信息列表，每项包含 name 和 status
+        """
+        return [
+            {"name": name, "status": info.status}
+            for name, info in self.state.agent_member_infos.items()
+        ]
+
     # ==================== Persistence Helper ====================
 
     async def _persist(self, save_call) -> None:

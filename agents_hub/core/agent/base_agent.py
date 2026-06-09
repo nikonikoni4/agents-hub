@@ -585,6 +585,15 @@ class Agent:
         call = self.agent_call_manager.get_call(msg.call_id)
         return call is not None and not call.has_agent_response
 
+    async def _sync_status(self, status: str):
+        """同步 Agent 状态到 AgentMemberInfo"""
+        try:
+            await self.group_chat_context.runtime.update_agent_status(self.name, status)
+        except Exception as e:
+            self.logger.warning(
+                "同步状态失败: agent=%s, status=%s, error=%s", self.name, status, str(e)
+            )
+
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
         self.logger.debug(
@@ -620,6 +629,8 @@ class Agent:
             # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
             self._is_processing = True
+            status = "chatting" if msg.session_type == SessionType.BTW else "busy"
+            await self._sync_status(status)
             self.logger.info(
                 "Agent %s 开始处理消息: call_id=%s, send_from=%s, message_type=%s, content=%s",
                 self.name,
@@ -630,6 +641,17 @@ class Agent:
             )
             try:
                 result = await self._process_message(msg, prompt)
+
+                # 更新 context_window
+                if result.usage and result.usage.input_tokens:
+                    context_window = result.usage.input_tokens // 1000
+                    try:
+                        await self.group_chat_context.runtime.update_agent_context_window(
+                            self.name, context_window
+                        )
+                    except Exception as e:
+                        self.logger.warning("更新 context_window 失败: %s", str(e))
+
                 self.logger.info(
                     "Agent %s 完成消息处理: call_id=%s, send_from=%s, result_text=%s",
                     self.name,
@@ -639,6 +661,7 @@ class Agent:
                 )
             finally:
                 self._is_processing = False
+                await self._sync_status("idle")
             # 5. TASK 必须由 finish_agent_call 显式闭环；普通执行文本默认私下保留。
             if self._needs_finish_agent_call_reminder(msg):
                 self._enqueue_finish_agent_call_reminder(msg)

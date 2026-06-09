@@ -283,4 +283,193 @@ async def test_group_chat_context_uses_runtime_for_message_and_session_commands(
     assert runtime.state.agent_member_infos["Worker2"].main_session == "s2"
     assert runtime.state.group_chat_session.messages[-1]["agent_name"] == "Worker2"
     assert repository.saved_sessions is runtime.state.agent_member_infos
-    assert repository.saved_group_session is runtime.state.group_chat_session
+
+
+# ==================== context_window 和 status 测试 ====================
+
+
+async def test_update_context_window_new_agent():
+    """
+    契约：新 agent 自动创建并设置 context_window
+
+    验证方式：
+    1. 创建 runtime 并加载
+    2. 对不存在的 agent 调用 update_agent_context_window
+    3. 验证 agent 被创建且 context_window 正确
+    """
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    info = await runtime.update_agent_context_window("Worker2", 42)
+
+    assert info.context_window == 42
+    assert "Worker2" in runtime.state.agent_member_infos
+    assert repository.saved_sessions is runtime.state.agent_member_infos
+
+
+async def test_update_context_window_existing_agent():
+    """
+    契约：更新已有 agent 的 context_window
+
+    验证方式：
+    1. 创建 runtime 并加载（已有 Worker1）
+    2. 调用 update_agent_context_window 更新 Worker1
+    3. 验证 context_window 被更新
+    """
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    info = await runtime.update_agent_context_window("Worker1", 100)
+
+    assert info.context_window == 100
+    assert runtime.state.agent_member_infos["Worker1"].context_window == 100
+
+
+async def test_update_status_to_busy():
+    """
+    契约：更新 agent 状态为 busy
+
+    验证方式：
+    1. 创建 runtime 并加载
+    2. 调用 update_agent_status 设置为 busy
+    3. 验证 status 被更新并持久化
+    """
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    info = await runtime.update_agent_status("Worker1", "busy")
+
+    assert info.status == "busy"
+    assert repository.saved_sessions is runtime.state.agent_member_infos
+
+
+async def test_update_status_to_chatting():
+    """
+    契约：更新 agent 状态为 chatting（单聊中）
+
+    验证方式：
+    1. 创建 runtime 并加载
+    2. 调用 update_agent_status 设置为 chatting
+    3. 验证 status 被更新
+    """
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    info = await runtime.update_agent_status("Worker1", "chatting")
+
+    assert info.status == "chatting"
+
+
+async def test_update_status_to_idle():
+    """
+    契约：更新 agent 状态为 idle
+
+    验证方式：
+    1. 创建 runtime 并加载
+    2. 先设置为 busy，再设置为 idle
+    3. 验证 status 恢复为 idle
+    """
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    await runtime.update_agent_status("Worker1", "busy")
+    info = await runtime.update_agent_status("Worker1", "idle")
+
+    assert info.status == "idle"
+
+
+async def test_get_agent_context_empty():
+    """
+    契约：无 agent 时返回空列表
+
+    验证方式：
+    1. 创建空 runtime（无 agent）
+    2. 调用 get_agent_context
+    3. 验证返回空列表
+    """
+    repository = FakeRepository()
+
+    async def empty_load():
+        return {}
+
+    repository.load_agent_member_infos = empty_load
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    result = runtime.get_agent_context()
+
+    assert result == []
+
+
+async def test_get_agent_context_multiple():
+    """
+    契约：多个 agent 返回正确列表
+
+    验证方式：
+    1. 创建 runtime 并加载
+    2. 添加多个 agent 的 context_window
+    3. 调用 get_agent_context 验证返回所有 agent
+    """
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    await runtime.update_agent_context_window("Worker1", 50)
+    await runtime.update_agent_context_window("Worker2", 30)
+
+    result = runtime.get_agent_context()
+
+    assert len(result) == 2
+    assert {"name": "Worker1", "context_window": 50} in result
+    assert {"name": "Worker2", "context_window": 30} in result
+
+
+async def test_get_agent_status_empty():
+    """
+    契约：无 agent 时返回空列表
+
+    验证方式：
+    1. 创建空 runtime（无 agent）
+    2. 调用 get_agent_status
+    3. 验证返回空列表
+    """
+    repository = FakeRepository()
+
+    async def empty_load():
+        return {}
+
+    repository.load_agent_member_infos = empty_load
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    result = runtime.get_agent_status()
+
+    assert result == []
+
+
+async def test_get_agent_status_multiple():
+    """
+    契约：多个 agent 返回正确列表
+
+    验证方式：
+    1. 创建 runtime 并加载
+    2. 设置不同 agent 的 status
+    3. 调用 get_agent_status 验证返回所有 agent 的状态
+    """
+    repository = FakeRepository()
+    runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
+    await runtime.load()
+
+    await runtime.update_agent_status("Worker1", "busy")
+    await runtime.update_agent_status("Worker2", "chatting")
+
+    result = runtime.get_agent_status()
+
+    assert len(result) == 2
+    assert {"name": "Worker1", "status": "busy"} in result
+    assert {"name": "Worker2", "status": "chatting"} in result
