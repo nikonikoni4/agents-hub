@@ -161,6 +161,15 @@
   color: var(--text-secondary);
 }
 
+.memberContext {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-bubble);
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
 .memberCwd {
   font-size: 11px;
   color: var(--text-tertiary);
