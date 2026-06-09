@@ -448,7 +448,10 @@ class GroupChatRuntime:
     async def _notify_change(self) -> None:
         """通知外部状态变更（通过 on_change 回调）"""
         if self._on_change:
-            await self._on_change(self.group_chat_id)
+            try:
+                await self._on_change(self.group_chat_id)
+            except Exception:
+                logger.warning("on_change 回调失败", exc_info=True)
 
     async def _persist(self, save_call) -> None:
         """
