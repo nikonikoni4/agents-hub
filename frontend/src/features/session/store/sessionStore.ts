@@ -41,11 +41,12 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   setProjectGroups: (groups) => set({ projectGroups: groups }),
 
-  selectSession: (sessionId, type) => set({
-    activeSessionId: sessionId,
-    activeSessionType: type,
-    lastSelectedAt: Date.now()
-  }),
+  selectSession: (sessionId, type) =>
+    set({
+      activeSessionId: sessionId,
+      activeSessionType: type,
+      lastSelectedAt: Date.now(),
+    }),
 
   updateSession: (sessionId, updates) =>
     set((state) => ({

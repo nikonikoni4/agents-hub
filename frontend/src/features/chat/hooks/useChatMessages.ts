@@ -64,9 +64,10 @@ export function useChatMessages() {
     let cancelled = false;
     setLoading(true);
 
-    const loadMessages = activeSessionType === 'single_chat'
-      ? getSingleChatMessages(activeSessionId).then(adaptSingleChatMessages)
-      : getMessages(activeSessionId, PAGE_SIZE, undefined);
+    const loadMessages =
+      activeSessionType === 'single_chat'
+        ? getSingleChatMessages(activeSessionId).then(adaptSingleChatMessages)
+        : getMessages(activeSessionId, PAGE_SIZE, undefined);
 
     Promise.all([loadMessages, buildRoleAvatarMap()])
       .then(([msgData, avatarMap]) => {

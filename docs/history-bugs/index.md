@@ -93,3 +93,9 @@
  - path: docs/history-bugs/2026-06-08-load-group-chat-auto-activate.md
  - 触发规则：前端加载 session 列表时，调用 getMembers API 触发 load_group_chat_from_disk，自动调用 activate() 启动所有 agent 任务
  - 内容摘要：load_group_chat_from_disk 在加载时自动调用 activate()，违反"只读操作不应有副作用"原则。用户已明确说明"加载不是激活"，但 AI 执行时仍错误地在加载时调用激活。修复：移除 activate() 调用，激活延迟到发送消息时执行
+
+## 单聊双位置显示：API 调用未完全区分单聊/群聊
+ - updated_at : 2026-06-09
+ - path: docs/history-bugs/2026-06-09-single-chat-dual-location-api-leak.md
+ - 触发规则：点击单聊时控制台报 "GroupChat 'xxx' 不存在"，单聊消息显示在主界面而非右侧栏
+ - 内容摘要：ChatArea 组件内多个 hook（usePinnedMessages, useMembers, useTasks 等）未根据 activeSessionType 区分，单聊 ID 被传给群聊 API。已缓解部分问题（usePinnedMessages 条件调用），但残留其他 hook 未隔离和 displayLocation 状态竞争问题。待后续彻底修复
