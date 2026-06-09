@@ -40,6 +40,7 @@ class RoleInfo:
         abilities: 能力标签列表，用于展示和调度。
         type: 角色类型，可选值为 leader、team_member 或 system。
         scope: 所属群聊列表，MVP 阶段不实现逻辑。
+        disabled_tools: 禁用的工具名称列表，可为空。
     """
 
     name: str
@@ -49,6 +50,7 @@ class RoleInfo:
     type: RoleType | None = RoleType.TEAM_MEMBER
     description: str | None = None
     scope: list[str] | None = None
+    disabled_tools: list[str] | None = None
 
 
 @dataclass

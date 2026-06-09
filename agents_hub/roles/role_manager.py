@@ -145,6 +145,7 @@ class RoleManager:
                                 type=role_type,
                                 description=data.get("description"),
                                 scope=data.get("scope"),
+                                disabled_tools=data.get("disabled_tools"),
                             )
                         )
                     except (json.JSONDecodeError, KeyError):

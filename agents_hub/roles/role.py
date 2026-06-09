@@ -90,6 +90,7 @@ class Role:
             type=role_type,
             description=data.get("description"),
             scope=data.get("scope"),
+            disabled_tools=data.get("disabled_tools"),
         )
 
     def update_name(self, new_name: str) -> None:
@@ -129,6 +130,16 @@ class Role:
         """
         data = self._read_role_json()
         data["avatar"] = avatar_filename
+        self._write_role_json(data)
+
+    def update_disabled_tools(self, disabled_tools: list[str]) -> None:
+        """更新禁用工具列表。
+
+        Args:
+            disabled_tools: 新的禁用工具名称列表。
+        """
+        data = self._read_role_json()
+        data["disabled_tools"] = disabled_tools
         self._write_role_json(data)
 
     def update_abilities(self, abilities: list[str]) -> None:
