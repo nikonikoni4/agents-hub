@@ -62,10 +62,10 @@ export function SessionItem({ session, isActive = false, onSelectSingleChat }: S
     if (showMenu) return;
 
     if (isSingleChat) {
-      // 单聊：设置 activeSessionType 和 displayLocation
-      selectSession(session.id, 'single_chat');
-      setActiveSingleChat(session.id);
-      setLocation('sidebar'); // 默认右侧
+      // 单聊：先设置位置为右侧，再激活 session（避免状态更新竞争）
+      setLocation('sidebar'); // 1. 先重置位置
+      setActiveSingleChat(session.id); // 2. 激活单聊
+      selectSession(session.id, 'single_chat'); // 3. 设置类型
 
       // 标记单聊为已读
       const now = new Date().toISOString();
@@ -78,8 +78,8 @@ export function SessionItem({ session, isActive = false, onSelectSingleChat }: S
       }
     } else {
       // 群聊：设置 activeSessionType，单聊回到默认位置
-      selectSession(session.id, 'group_chat');
       setLocation('sidebar');
+      selectSession(session.id, 'group_chat');
       handleSelectSession(session.id, 'group_chat');
     }
   };

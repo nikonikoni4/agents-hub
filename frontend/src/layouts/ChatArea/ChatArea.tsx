@@ -188,10 +188,15 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     loadMoreWithRestore,
   } = useChatMessages();
   const { members } = useMembers();
-  const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
   const projectGroups = useSessionStore((s) => s.projectGroups);
   const activeSessionType = useSessionStore((s) => s.activeSessionType);
   const { singleChats, displayLocation, toggleLocation } = useSingleChatStore();
+
+  // 只有群聊才加载置顶消息，单聊不支持置顶
+  const { pin, unpin, isPinned } = usePinnedMessages(
+    activeSessionType === 'group_chat' ? activeSessionId : null
+  );
+
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [quotedMessage, setQuotedMessage] = useState<MessageApiItem | null>(null);
