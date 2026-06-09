@@ -12,6 +12,7 @@ sourc_spec: null
 related_plan: null
 code_scope:
   - frontend/src/shared/components/UploadArea/
+  - frontend/src/shared/components/UploadPreview/
   - frontend/src/shared/components/FilePreviewCard/
   - frontend/src/shared/components/ImagePreviewModal/
   - frontend/src/core/api/groupChatApi.ts
@@ -114,12 +115,35 @@ contract_refs:
 
 ### 2. 文件预览功能
 
-#### 2.1 预览组件
+#### 2.1 两种预览场景
 
-**FilePreviewCard 组件：**
-- 图片文件：显示缩略图，点击可放大
-- 文档文件：显示文件图标 + 文件名 + 大小
+**场景1：上传后预览（输入框旁边）**
+- **位置**：输入框上方
+- **时机**：文件上传后立即显示
+- **功能**：预览文件、删除文件
+- **样式**：紧凑，显示缩略图/图标 + 文件名 + 删除按钮
+- **交互**：点击图片可预览，点击删除按钮移除文件
+
+**场景2：发送后预览（消息中）**
+- **位置**：消息内容下方
+- **时机**：消息发送后显示
+- **功能**：查看文件、图片点击放大、文档下载
+- **样式**：复用 FileChangesCard 风格
+- **交互**：图片点击放大，文档点击下载
+
+#### 2.2 预览组件
+
+**UploadPreview 组件（上传后预览）：**
+- 显示在输入框上方
+- 图片文件：显示缩略图（小尺寸，最大 100px）
+- 文档文件：显示文件图标 + 文件名
 - 删除按钮：移除已上传的文件
+- 紧凑布局，支持多文件横向排列
+
+**FilePreviewCard 组件（发送后预览）：**
+- 显示在消息内容下方
+- 图片文件：显示缩略图（较大尺寸，最大 300px），点击可放大
+- 文档文件：显示文件图标 + 文件名 + 大小
 - 复用 `FileChangesCard` 的视觉风格
 
 **ImagePreviewModal 组件：**
@@ -128,19 +152,20 @@ contract_refs:
 - 关闭按钮
 - 点击背景关闭
 
-#### 2.2 预览样式
+#### 2.3 预览样式
 
-**图片预览：**
-- 圆角缩略图
-- 最大宽度 300px
-- 最大高度 200px
-- 点击可放大查看
+**上传后预览样式：**
+- 紧凑布局，横向排列
+- 图片：圆角缩略图，最大宽度 100px，最大高度 100px
+- 文档：小图标 + 文件名（截断）
+- 删除按钮：右上角 X 按钮
+- 背景：浅灰色，圆角
 
-**文档预览：**
-- 灰色背景卡片
-- 文件图标（根据类型显示不同图标）
-- 文件名（截断过长名称）
-- 文件大小（格式化显示）
+**发送后预览样式：**
+- 垂直排列，间距 8px
+- 图片：圆角缩略图，最大宽度 300px，最大高度 200px，点击可放大
+- 文档：灰色背景卡片，文件图标 + 文件名 + 大小
+- 复用 FileChangesCard 的视觉风格
 
 ### 3. 消息发送
 
@@ -179,9 +204,13 @@ export interface MessageApiItem {
 
 **渲染逻辑：**
 - 检查 `message.files` 是否存在
-- 如果有文件，渲染 `FilePreviewCard` 组件
+- 如果有文件，渲染 `FilePreviewCard` 组件（发送后预览）
 - 图片文件：显示缩略图，点击可放大
 - 文档文件：显示图标 + 文件名，点击可下载
+
+**两种预览的使用场景：**
+1. **上传后预览（UploadPreview）**：显示在输入框上方，用于发送前确认
+2. **发送后预览（FilePreviewCard）**：显示在消息中，用于查看已发送的文件
 
 ### 4. 存储策略
 
@@ -356,17 +385,26 @@ interface UploadAreaProps {
 }
 ```
 
-#### 3.2 FilePreviewCard 组件
+#### 3.2 UploadPreview 组件（上传后预览）
+
+```typescript
+interface UploadPreviewProps {
+  files: UploadedFileInfo[];
+  onRemove: (index: number) => void;
+  onImageClick?: (filePath: string) => void;  // 图片点击预览
+}
+```
+
+#### 3.3 FilePreviewCard 组件（发送后预览）
 
 ```typescript
 interface FilePreviewCardProps {
   files: UploadedFileInfo[];
-  onRemove: (index: number) => void;
   onImageClick?: (filePath: string) => void;  // 图片点击放大
 }
 ```
 
-#### 3.3 ImagePreviewModal 组件
+#### 3.4 ImagePreviewModal 组件
 
 ```typescript
 interface ImagePreviewModalProps {
