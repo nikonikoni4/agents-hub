@@ -67,6 +67,13 @@ class PermissionRequestInfo(BaseModel):
     requested_by: str = Field(..., description="请求发起者名称（agent 角色名）")
 
 
+class WebPreviewInfo(BaseModel):
+    """网页预览信息（嵌入在 MessageInfo 中）"""
+
+    url: str = Field(..., description="预览页面 URL")
+    title: str | None = Field(None, description="页面标题")
+
+
 class MessageInfo(BaseModel):
     """消息信息"""
 
@@ -79,6 +86,7 @@ class MessageInfo(BaseModel):
     modified_files: list[dict] | None = Field(None, description="修改的文件列表")
     git_diff_range: str | None = Field(None, description="Git diff 范围")
     permission_request: PermissionRequestInfo | None = Field(None, description="权限请求信息")
+    web_preview: WebPreviewInfo | None = Field(None, description="网页预览信息")
 
 
 # --- Permission Request Schemas ---

@@ -24,6 +24,7 @@ class DockerExecutor(ABC):
         session_id: str | None,
         *,
         fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> list[str]:
         """构建容器内执行的命令（子类实现）"""
         pass
@@ -36,6 +37,7 @@ class DockerExecutor(ABC):
         cwd: str | None = None,
         group_chat_id: str | None = None,
         fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         """在 Docker 容器内执行命令"""
         if not cwd:
@@ -52,7 +54,9 @@ class DockerExecutor(ABC):
             cwd=cwd,
         )
 
-        command = self._build_command(prompt, config, session_id, fork_from=fork_from)
+        command = self._build_command(
+            prompt, config, session_id, fork_from=fork_from, system_prompt=system_prompt
+        )
 
         async for line in container.exec(command, cwd="/workspace"):
             yield line

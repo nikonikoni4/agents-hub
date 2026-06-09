@@ -3,11 +3,22 @@
 import asyncio
 import logging
 import os
+import shlex
 from collections.abc import AsyncIterator
 
 from agents_hub.agent_bridge.exceptions import CLIExecutionError, CLINotFoundError
 from agents_hub.config.types import CODEX_COMMAND
 from agents_hub.roles.models import RoleConfig
+
+
+def _sanitize_for_codex_cli(text: str) -> str:
+    """清理文本，适配 Codex CLI -c 参数。
+
+    Codex CLI 的 -c 参数不支持换行符，且 value 中的单引号需要正确转义。
+    """
+    cleaned = text.replace("\n", " ").replace("\r", " ")
+    return shlex.quote(cleaned)
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +33,7 @@ class CodexExecutor:
         session_id: str | None = None,
         cwd: str | None = None,
         fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         """
         启动 Codex CLI 并返回原始输出流
@@ -32,6 +44,7 @@ class CodexExecutor:
             session_id: 会话 ID（可选，用于恢复会话）
             cwd: 项目目录路径（可选，通过 -C 参数指定工作目录）
             fork_from: 源会话 ID（可选，用于从群聊 fork 会话到单聊）
+            system_prompt: 系统提示词（可选，通过 -c instructions 注入）
 
         Returns:
             AsyncIterator[str]: 原始 JSON 字符串流
@@ -40,9 +53,12 @@ class CodexExecutor:
         # 参考: docs/history-bugs/2026-05-28-cli-system-prompt-blocks-simple-requests.md
         prompt = prompt.replace("\n", " ").replace("\r", " ")
 
-        cmd = self._build_command(prompt, config, session_id, cwd, fork_from)
+        cmd = self._build_command(
+            prompt, config, session_id, cwd, fork_from, system_prompt=system_prompt
+        )
         env = self._build_env(config)
 
+        logger.info("Codex CLI: %s", " ".join(cmd))
         try:
             process = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env
@@ -75,33 +91,26 @@ class CodexExecutor:
         session_id: str | None,
         cwd: str | None = None,
         fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> list:
-        """构建 Codex CLI 命令"""
+        """构建 Codex CLI 命令。-C 必须在子命令之前。"""
+        cmd = [CODEX_COMMAND]
+        if cwd:
+            cmd.extend(["-C", cwd])
+
         if fork_from:
-            # fork 会话：从源会话创建新分支
-            cmd = [CODEX_COMMAND, "fork", fork_from, prompt]
-            if cwd:
-                cmd.extend(["-C", cwd])
+            cmd.extend(["fork", fork_from, prompt])
+            if system_prompt:
+                cmd.extend(["-c", f"instructions={_sanitize_for_codex_cli(system_prompt)}"])
             return cmd
 
         if session_id:
-            # 恢复已有会话
-            cmd = [
-                CODEX_COMMAND,
-                "exec",
-                "resume",
-                "--json",
-                session_id,
-            ]
+            cmd.extend(["exec", "resume", "--json", session_id])
         else:
-            cmd = [
-                CODEX_COMMAND,
-                "exec",
-                "--json",
-            ]
+            cmd.extend(["exec", "--json"])
 
-        if cwd:
-            cmd.extend(["-C", cwd])
+        if system_prompt:
+            cmd.extend(["-c", f"instructions={_sanitize_for_codex_cli(system_prompt)}"])
 
         cmd.append(prompt)
         return cmd

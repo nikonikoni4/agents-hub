@@ -7,6 +7,7 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatCreate,
     GroupChatInfo,
     GroupChatMember,
+    MessageInfo,
 )
 from agents_hub.core.foundation.models import GroupChatType
 
@@ -137,3 +138,71 @@ def test_group_chat_member_optional_fields():
     schema = GroupChatMember(**data)
     assert schema.use_docker is False  # 默认值
     assert schema.main_session is None
+
+
+def test_message_info_with_web_preview():
+    """
+    契约：MessageInfo 支持 web_preview 可选字段，包含 url 和 title
+
+    验证方式：
+    1. 构造包含 web_preview 的 MessageInfo
+    2. 验证字段正确解析
+
+    如果失败，说明：MessageInfo 缺少 web_preview 字段定义
+    """
+    data = {
+        "id": 1,
+        "speaker": "agent1",
+        "content": "网页已生成",
+        "timestamp": "2026-06-09T10:00:00",
+        "platform": "claude",
+        "web_preview": {"url": "http://localhost:3000", "title": "预览页面"},
+    }
+    schema = MessageInfo(**data)
+    assert schema.web_preview is not None
+    assert schema.web_preview.url == "http://localhost:3000"
+    assert schema.web_preview.title == "预览页面"
+
+
+def test_message_info_without_web_preview():
+    """
+    契约：MessageInfo 不传 web_preview 时默认为 None
+
+    验证方式：
+    1. 构造不包含 web_preview 的 MessageInfo
+    2. 验证字段为 None
+
+    如果失败，说明：web_preview 默认值配置错误
+    """
+    data = {
+        "id": 1,
+        "speaker": "agent1",
+        "content": "任务完成",
+        "timestamp": "2026-06-09T10:00:00",
+        "platform": "claude",
+    }
+    schema = MessageInfo(**data)
+    assert schema.web_preview is None
+
+
+def test_message_info_web_preview_without_title():
+    """
+    契约：web_preview 的 title 字段可选
+
+    验证方式：
+    1. 构造 web_preview 只有 url、没有 title 的 MessageInfo
+    2. 验证 url 正确，title 为 None
+
+    如果失败，说明：WebPreviewInfo.title 不是可选字段
+    """
+    data = {
+        "id": 1,
+        "speaker": "agent1",
+        "content": "网页已生成",
+        "timestamp": "2026-06-09T10:00:00",
+        "platform": "claude",
+        "web_preview": {"url": "http://localhost:3000"},
+    }
+    schema = MessageInfo(**data)
+    assert schema.web_preview.url == "http://localhost:3000"
+    assert schema.web_preview.title is None

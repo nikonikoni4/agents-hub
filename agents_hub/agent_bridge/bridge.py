@@ -59,6 +59,7 @@ class AgentBridge:
         session_id: str | None = None,
         cwd: str | None = None,
         fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """
         流式执行 Agent 调用
@@ -90,7 +91,9 @@ class AgentBridge:
         parser = self._parsers[config.platform]
 
         try:
-            raw_stream = executor.execute(prompt, config, session_id, cwd, fork_from=fork_from)
+            raw_stream = executor.execute(
+                prompt, config, session_id, cwd, fork_from=fork_from, system_prompt=system_prompt
+            )
             async for raw_line in raw_stream:
                 if raw_line.strip():
                     try:
@@ -116,6 +119,7 @@ class AgentBridge:
         cwd: str | None = None,
         use_docker: bool = False,
         group_chat_id: str | None = None,
+        system_prompt: str | None = None,
     ) -> AgentResult:
         """
         非流式执行，返回完整结果
@@ -140,7 +144,9 @@ class AgentBridge:
         if use_docker:
             # Docker 模式：直接使用 Docker executor
             executor = self._docker_executors[config.platform]
-            async for raw_line in executor.execute(prompt, config, session_id, cwd, group_chat_id):
+            async for raw_line in executor.execute(
+                prompt, config, session_id, cwd, group_chat_id, system_prompt=system_prompt
+            ):
                 if raw_line.strip():
                     try:
                         parsed_event = self._parsers[config.platform].parse_event(raw_line)
@@ -156,7 +162,9 @@ class AgentBridge:
                         continue
         else:
             # 本地模式：使用本地 executor
-            async for event in self.execute_stream(prompt, config, session_id, cwd):
+            async for event in self.execute_stream(
+                prompt, config, session_id, cwd, system_prompt=system_prompt
+            ):
                 if event.type == AgentEventType.TEXT_DELTA:
                     full_text.append(event.content["text"])
                 elif event.type == AgentEventType.TURN_COMPLETE:

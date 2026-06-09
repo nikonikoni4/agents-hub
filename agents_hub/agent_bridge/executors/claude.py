@@ -22,6 +22,7 @@ class ClaudeExecutor:
         session_id: str | None = None,
         cwd: str | None = None,
         fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         """
         启动 Claude CLI 并返回原始输出流
@@ -32,11 +33,14 @@ class ClaudeExecutor:
             session_id: 会话 ID（可选，用于恢复会话）
             cwd: 项目目录路径（可选，设置 CLI 工作目录）
             fork_from: 源会话 ID（可选，用于从群聊 fork 会话到单聊）
+            system_prompt: 系统提示词（可选，通过 --append-system-prompt 注入）
 
         Returns:
             AsyncIterator[str]: 原始 JSON 字符串流
         """
-        cmd = self._build_command(prompt, config, session_id, fork_from)
+        cmd = self._build_command(
+            prompt, config, session_id, fork_from, system_prompt=system_prompt
+        )
         env = self._build_env(config)
 
         try:
@@ -78,7 +82,12 @@ class ClaudeExecutor:
             )
 
     def _build_command(
-        self, prompt: str, config: RoleConfig, session_id: str | None, fork_from: str | None = None
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: str | None,
+        fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> list:
         """构建 Claude CLI 命令"""
         cmd = [
@@ -99,6 +108,9 @@ class ClaudeExecutor:
         elif session_id:
             # 恢复已有会话
             cmd.extend(["--resume", session_id])
+
+        if system_prompt:
+            cmd.extend(["--append-system-prompt", system_prompt])
 
         cmd.append(prompt)
         return cmd

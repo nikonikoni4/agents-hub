@@ -70,6 +70,13 @@
 - 触发规则：当设计或修改 speak_in_group_chat/finish_agent_call 的使用边界、Worker 阻塞判定规则、Manager 阻塞处理流程时阅读
 - 内容摘要：收窄 speak_in_group_chat 为任务汇报工具，所有成果/问题/风险通过 finish_agent_call 汇报；阻塞判定标准为"影响范围是否超出任务边界"
 
+## mcp-transport-and-platform-migration
+- updated_at: 2026-06-09
+- path: `docs/design-decisions/0012-mcp-transport-and-platform-migration.md`
+- 状态：decided
+- 触发规则：当设计或修改 MCP 传输模式、Agent 平台选型时阅读
+- 内容摘要：MCP 传输从 HTTP 切到 stdio 后发现跨进程内存隔离问题（token 丢失、消息断裂），决定回归 HTTP；同时放弃 Codex 改用 OpenCode
+
 ## user-design-summary
 - updated_at: 2026-06-04
 - path: `docs/design-decisions/user-design-summary.md`

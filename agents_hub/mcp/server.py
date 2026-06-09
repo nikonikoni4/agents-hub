@@ -121,6 +121,7 @@ def _make_chat_result(
     cwd: str | None = None,
     modified_files: list | None = None,
     git_diff_range: str | None = None,
+    web_preview: dict | None = None,
 ) -> AgentResult:
     agent = _find_agent(group_chat, agent_name)
     platform = getattr(getattr(agent, "role_config", None), "platform", AgentPlatform.CLAUDE)
@@ -136,6 +137,7 @@ def _make_chat_result(
         cwd=cwd,
         modified_files=modified_files,
         git_diff_range=git_diff_range,
+        web_preview=web_preview,
     )
 
 
@@ -531,6 +533,8 @@ async def finish_agent_call(
     success: bool = True,
     modified_files: list[str] | None = None,
     git_diff_range: str | None = None,
+    web_preview_url: str | None = None,
+    web_preview_title: str | None = None,
 ) -> dict:
     """
     结束一个需要回复的 AgentCall，并向原调用方投递完成通知以唤醒下一轮处理。
@@ -542,6 +546,8 @@ async def finish_agent_call(
         success: True 表示完成，False 表示阻塞或失败
         modified_files: 修改的文件列表（相对路径）
         git_diff_range: Git diff 范围（格式：commit..commit）
+        web_preview_url: 网页预览 URL（可选）,当你完成了一个网页时需要推送这个网页的本地url
+        web_preview_title: 网页预览标题（可选）
 
     Returns:
         成功: {"call_id": "...", "status": "completed|failed"}
@@ -642,6 +648,10 @@ async def finish_agent_call(
             success=success,
         )
         # 6. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
+        web_preview = None
+        if web_preview_url:
+            web_preview = {"url": web_preview_url, "title": web_preview_title}
+
         if config.is_user_name(call.send_from):
             await group_chat.group_chat_context.add_message(
                 _make_chat_result(
@@ -651,6 +661,7 @@ async def finish_agent_call(
                     cwd=agent_cwd,
                     modified_files=file_metadata_list,
                     git_diff_range=git_diff_range,
+                    web_preview=web_preview,
                 )
             )
             await broadcast_group_chat_refresh(group_chat_id)

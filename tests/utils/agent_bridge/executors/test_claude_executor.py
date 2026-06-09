@@ -27,12 +27,36 @@ class TestClaudeExecutor:
         assert "审查代码" in cmd
 
     def test_build_command_no_system_prompt_flag(self):
-        """测试命令不再包含 --append-system-prompt（由 CLI 从目录自动加载）"""
+        """测试不传 system_prompt 时命令不包含 --append-system-prompt"""
         config = RoleConfig(
             name="test",
             platform=AgentPlatform.CLAUDE,
         )
         cmd = self.executor._build_command("测试", config, None)
+
+        assert "--append-system-prompt" not in cmd
+
+    def test_build_command_with_system_prompt(self):
+        """契约：传入 system_prompt 时命令包含 --append-system-prompt"""
+        config = RoleConfig(
+            name="test",
+            platform=AgentPlatform.CLAUDE,
+        )
+        cmd = self.executor._build_command(
+            "测试", config, None, system_prompt="You are a helpful assistant."
+        )
+
+        assert "--append-system-prompt" in cmd
+        sp_idx = cmd.index("--append-system-prompt")
+        assert cmd[sp_idx + 1] == "You are a helpful assistant."
+
+    def test_build_command_system_prompt_none(self):
+        """契约：system_prompt=None 时不注入 --append-system-prompt"""
+        config = RoleConfig(
+            name="test",
+            platform=AgentPlatform.CLAUDE,
+        )
+        cmd = self.executor._build_command("测试", config, None, system_prompt=None)
 
         assert "--append-system-prompt" not in cmd
 

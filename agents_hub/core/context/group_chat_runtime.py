@@ -158,6 +158,8 @@ class GroupChatRuntime:
                 item["git_diff_range"] = msg["git_diff_range"]
             if "permission_request" in msg:
                 item["permission_request"] = msg["permission_request"]
+            if "web_preview" in msg:
+                item["web_preview"] = msg["web_preview"]
             result.append(item)
         return result
 

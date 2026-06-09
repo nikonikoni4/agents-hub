@@ -2,6 +2,7 @@
 
 import logging
 
+from agents_hub.agent_bridge.executors.codex import _sanitize_for_codex_cli
 from agents_hub.agent_bridge.executors.docker_base import DockerExecutor
 from agents_hub.config.types import DOCKER_CODEX_COMMAND
 from agents_hub.roles.models import RoleConfig
@@ -19,10 +20,13 @@ class DockerCodexExecutor(DockerExecutor):
         session_id: str | None,
         *,
         fork_from: str | None = None,
+        system_prompt: str | None = None,
     ) -> list[str]:
         """构建 Codex CLI 命令（强制跳过审批和沙箱）"""
         if fork_from:
             cmd = [DOCKER_CODEX_COMMAND, "fork", fork_from, prompt]
+            if system_prompt:
+                cmd.extend(["-c", f"instructions={_sanitize_for_codex_cli(system_prompt)}"])
             return cmd
 
         cmd = [
@@ -35,6 +39,9 @@ class DockerCodexExecutor(DockerExecutor):
 
         if session_id:
             cmd.extend(["--resume", session_id])
+
+        if system_prompt:
+            cmd.extend(["-c", f"instructions={_sanitize_for_codex_cli(system_prompt)}"])
 
         cmd.append(prompt)
         return cmd

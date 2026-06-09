@@ -5,6 +5,7 @@ import {
   AvatarImage,
   MarkdownRenderer,
   PermissionRequest,
+  WebPreviewCard,
 } from '@/shared/components';
 import { FileChangesCard } from '@/shared/components/FileChangesCard';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
@@ -82,6 +83,8 @@ const MessageBubble = React.memo(
     onPreview,
     onDiff,
     onPermissionAction,
+    onWebPreview,
+    activeWebUrl,
   }: {
     msg: MessageApiItem;
     avatar?: string | null;
@@ -92,6 +95,8 @@ const MessageBubble = React.memo(
     onPreview: (snapshotId: string, filePath: string) => void;
     onDiff: (snapshotId: string, filePath: string) => void;
     onPermissionAction: (messageId: number, action: 'approved' | 'rejected') => void;
+    onWebPreview: (url: string, title?: string) => void;
+    activeWebUrl?: string | null;
   }) => {
     const isUser = msg.speaker === 'user';
 
@@ -156,6 +161,14 @@ const MessageBubble = React.memo(
             modifiedFiles={msg.modified_files}
             onPreview={onPreview}
             onDiff={onDiff}
+          />
+        )}
+        {msg.web_preview && (
+          <WebPreviewCard
+            url={msg.web_preview.url}
+            title={msg.web_preview.title}
+            isActive={activeWebUrl === msg.web_preview.url}
+            onClick={() => onWebPreview(msg.web_preview!.url, msg.web_preview!.title)}
           />
         )}
         <div className={`${styles.messageActions} ${isUser ? styles.actionsRight : ''}`}>
@@ -360,6 +373,17 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     return singleChats.find((chat) => chat.single_chat_id === activeSessionId);
   }, [activeSessionId, singleChats]);
 
+  // 网页预览：在右侧栏打开
+  const handleWebPreview = useCallback((url: string, title?: string) => {
+    setRightSidebarContent({ type: 'web', url, title });
+  }, []);
+
+  // 当前右侧栏打开的网页 URL
+  const activeWebUrl = useMemo(
+    () => (rightSidebarContent?.type === 'web' ? rightSidebarContent.url : null),
+    [rightSidebarContent]
+  );
+
   // 未选择会话时的空态
   if (!activeSessionType) {
     return (
@@ -406,6 +430,8 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
                 onPreview={handlePreview}
                 onDiff={handleDiff}
                 onPermissionAction={handlePermissionAction}
+                onWebPreview={handleWebPreview}
+                activeWebUrl={activeWebUrl}
               />
             ))
           )}
@@ -476,6 +502,8 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
               onPreview={handlePreview}
               onDiff={handleDiff}
               onPermissionAction={handlePermissionAction}
+              onWebPreview={handleWebPreview}
+              activeWebUrl={activeWebUrl}
             />
           ))
         )}
