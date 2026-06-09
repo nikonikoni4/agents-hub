@@ -25,8 +25,9 @@ class ClaudeParser:
         解析单行 JSON 事件
 
         Claude 流式输出事件类型：
-        - stream_event.content_block_delta → text_delta
-        - system.init → init
+        - stream_event.content_block_delta → TEXT_DELTA
+        - stream_event.message_delta → TURN_COMPLETE (含 usage)
+        - system.init → INIT
         """
         try:
             event = json.loads(raw_line)
@@ -65,6 +66,10 @@ class ClaudeParser:
         # 内容块结束：emit 缓存的 tool_use 事件
         if inner_type == "content_block_stop":
             return self._handle_content_block_stop(inner_event, session_id)
+
+        # 消息结束：提取 usage 信息
+        if inner_type == "message_delta":
+            return self._handle_message_delta(inner_event, session_id)
 
         return None
 
@@ -122,6 +127,40 @@ class ClaudeParser:
                 "tool_name": block["name"],
                 "input": input_data,
             },
+            session_id=session_id,
+            timestamp=datetime.now().isoformat(),
+            agent_name="",
+            platform=AgentPlatform.CLAUDE,
+            role_type=RoleType.TEAM_MEMBER,
+        )
+
+    def _handle_message_delta(self, inner_event: dict, session_id: str) -> StreamEvent | None:
+        """
+        处理 message_delta：提取 usage 信息并生成 TURN_COMPLETE 事件
+
+        Claude API message_delta.usage 字段格式：
+        {
+            "input_tokens": int,                    # 输入 token 数
+            "output_tokens": int,                   # 输出 token 数
+            "cache_creation_input_tokens": int,     # 缓存创建的输入 token
+            "cache_read_input_tokens": int          # 缓存读取的输入 token
+        }
+
+        原始事件结构：
+        {
+            "type": "stream_event",
+            "event": {
+                "type": "message_delta",
+                "delta": {"stop_reason": "end_turn"},
+                "usage": { ... }
+            },
+            "session_id": "..."
+        }
+        """
+        usage = inner_event.get("usage", {})
+        return StreamEvent(
+            type=AgentEventType.TURN_COMPLETE,
+            content={"usage": usage},
             session_id=session_id,
             timestamp=datetime.now().isoformat(),
             agent_name="",
