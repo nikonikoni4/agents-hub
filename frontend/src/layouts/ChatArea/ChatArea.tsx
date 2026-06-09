@@ -6,6 +6,8 @@ import {
   MarkdownRenderer,
   PermissionRequest,
   WebPreviewCard,
+  FilePreviewCard,
+  ImagePreviewModal,
 } from '@/shared/components';
 import { FileChangesCard } from '@/shared/components/FileChangesCard';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
@@ -76,6 +78,7 @@ const MessageBubble = React.memo(
     msg,
     avatar,
     pinned,
+    groupChatId,
     onPin,
     onUnpin,
     onQuote,
@@ -88,6 +91,7 @@ const MessageBubble = React.memo(
     msg: MessageApiItem;
     avatar?: string | null;
     pinned: boolean;
+    groupChatId: string;
     onPin: () => void;
     onUnpin: () => void;
     onQuote: () => void;
@@ -98,6 +102,18 @@ const MessageBubble = React.memo(
     activeWebUrl?: string | null;
   }) => {
     const isUser = msg.speaker === 'user';
+    const [showImagePreview, setShowImagePreview] = React.useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = React.useState('');
+
+    const handleImageClick = React.useCallback(
+      (filePath: string) => {
+        setPreviewImageUrl(
+          `/api/v1/group-chats/${groupChatId}/files/${encodeURIComponent(filePath)}`
+        );
+        setShowImagePreview(true);
+      },
+      [groupChatId]
+    );
 
     // 权限请求消息：渲染 PermissionRequest 卡片
     if (msg.permission_request) {
@@ -155,6 +171,13 @@ const MessageBubble = React.memo(
         >
           <MarkdownRenderer content={msg.content} />
         </div>
+        {msg.files && msg.files.length > 0 && (
+          <FilePreviewCard
+            files={msg.files}
+            onImageClick={handleImageClick}
+            groupChatId={groupChatId}
+          />
+        )}
         {msg.modified_files && msg.modified_files.length > 0 && (
           <FileChangesCard
             modifiedFiles={msg.modified_files}
@@ -182,6 +205,11 @@ const MessageBubble = React.memo(
             <QuoteIcon />
           </button>
         </div>
+        <ImagePreviewModal
+          isOpen={showImagePreview}
+          imageUrl={previewImageUrl}
+          onClose={() => setShowImagePreview(false)}
+        />
       </div>
     );
   }
@@ -427,6 +455,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
               msg={msg}
               avatar={roleAvatarMap.get(msg.speaker)}
               pinned={isPinned(msg.id)}
+              groupChatId={activeSessionId}
               onPin={() => pin(msg.id)}
               onUnpin={() => unpin(msg.id)}
               onQuote={() => handleQuote(msg)}

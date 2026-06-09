@@ -2,6 +2,7 @@ export * from './AvatarImage';
 export * from './Button';
 export * from './CompositeAvatar';
 export * from './DiffViewer';
+export * from './FilePreviewCard';
 export * from './Icon';
 export * from './Input';
 export * from './MarkdownRenderer';
