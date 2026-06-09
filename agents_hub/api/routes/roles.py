@@ -9,6 +9,9 @@ from agents_hub.api.schemas.roles import (
     RoleSkillRequest,
     RoleSkillResponse,
     RoleUpdateRequest,
+    ToolCatalogResponse,
+    ToolGroupResponse,
+    ToolInfoResponse,
 )
 from agents_hub.api.services.role_service import RoleService
 
@@ -42,6 +45,23 @@ def get_avatar_file(filename: str, service: RoleService = Depends(get_role_servi
     file_path = service.get_avatar_file_path(filename)
     media_type = "image/svg+xml" if filename.endswith(".svg") else None
     return FileResponse(file_path, media_type=media_type)
+
+
+@router.get("/tools/catalog", response_model=ToolCatalogResponse)
+def get_tool_catalog(
+    service: RoleService = Depends(get_role_service),
+) -> ToolCatalogResponse:
+    catalog = service.get_tool_catalog()
+    return ToolCatalogResponse(
+        groups=[
+            ToolGroupResponse(
+                name=g.name,
+                icon=g.icon,
+                tools=[ToolInfoResponse(name=t.name, description=t.description) for t in g.tools],
+            )
+            for g in catalog
+        ]
+    )
 
 
 @router.get("/{name}", response_model=RoleResponse)

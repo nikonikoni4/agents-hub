@@ -7,6 +7,7 @@ from agents_hub.config.types import AgentPlatform
 from agents_hub.roles.exceptions import ValidationError
 from agents_hub.roles.models import RoleInfo, SkillInfo
 from agents_hub.roles.role_manager import RoleManager
+from agents_hub.tools.catalog import ALL_TOOLS, get_all_tool_names
 
 
 class RoleService:
@@ -31,6 +32,10 @@ class RoleService:
         """获取单个角色（含 skills）"""
         role = self.role_manager.get_role(name)
         return role.get_info(), role.list_skills()
+
+    def get_tool_catalog(self) -> list:
+        """返回工具目录"""
+        return ALL_TOOLS
 
     def create_role(self, request: RoleCreateRequest) -> RoleInfo:
         """创建角色"""
@@ -60,6 +65,10 @@ class RoleService:
             role.update_abilities(request.abilities)
         if request.description is not None:
             role.update_description(request.description)
+        if request.enabled_tools is not None:
+            all_names = get_all_tool_names()
+            disabled = [n for n in all_names if n not in request.enabled_tools]
+            role.update_disabled_tools(disabled)
         return role.get_info(), role.list_skills()
 
     def list_role_skills(self, name: str) -> list[SkillInfo]:
