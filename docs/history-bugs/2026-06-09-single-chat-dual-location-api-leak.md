@@ -2,7 +2,7 @@
 
 - 发现时间：2026-06-09
 - 影响范围：点击单聊时，控制台报错 "GroupChat 'xxx' 不存在"
-- 状态：未修复（已缓解部分问题，仍需后续处理）
+- 状态：已修复（2026-06-09，通过 Tab 分区重构彻底解决）
 
 ## 问题描述
 
@@ -51,14 +51,7 @@ selectSession(session.id, 'single_chat');
 
 ## 残留问题
 
-修复后仍有以下问题未完全解决：
-
-1. **控制台报错**：点击单聊时仍会输出 "群聊不存在" 错误，说明还有其他 hook 或组件在单聊时调用了群聊 API（如 `useMembers`, `useTasks`, `useAgentCalls` 等）
-
-2. **显示位置错误**：点击单聊后，右侧栏切换到 single-chat tab，但单聊消息仍显示在中间主界面而非右侧栏。可能原因：
-   - `displayLocation` 状态更新时序问题
-   - ChatArea 的条件渲染逻辑（`showingSingleChat = activeSessionType === 'single_chat' && displayLocation === 'main'`）在某些场景下判断不准确
-   - 多个 store 的状态更新存在竞争
+~~修复后仍有以下问题未完全解决：~~ 已通过重构彻底解决。
 
 ## 根因分析
 
@@ -68,8 +61,23 @@ selectSession(session.id, 'single_chat');
 
 3. **测试覆盖不足**：没有端到端测试覆盖单聊切换场景，仅靠单元测试无法发现这类多组件状态协调问题
 
-## 修复方向（后续）
+## 最终修复（2026-06-09 Tab 分区重构）
 
-1. **彻底隔离 API 调用**：在 ChatArea 中，当 `activeSessionType === 'single_chat'` 时，禁用所有群聊专属 hook 的 API 调用
-2. **简化状态管理**：考虑合并或统一管理 `activeSessionType` 和 `displayLocation`，减少状态竞争的可能性
-3. **添加集成测试**：编写覆盖单聊切换场景的端到端测试
+**修复思路**：不再试图在同一个组件中区分单聊/群聊，而是彻底分离为两个独立 feature。
+
+**具体措施**：
+
+1. **Store 解耦**：`sessionStore` 只管群聊（移除 `activeSessionType`），`singleChatStore` 只管单聊，两个 store 零耦合
+
+2. **组件分离**：`ChatArea` 只负责群聊，移除所有单聊相关代码；`SingleChatPanel` 作为自包含组件，不管渲染在右侧栏还是主界面，内部逻辑不变
+
+3. **布局层切换**：`MainLayout` 根据 `displayLocation` 状态决定渲染 `ChatArea` 还是 `SingleChatPanel`（组件替换，不是数据替换）
+
+4. **Tab 导航**：`SessionList` 增加"群聊"/"单聊" Tab，两个列表完全独立，各自调用各自的 API
+
+5. **点击行为**：点击单聊不再改变主界面状态（移除 `sessionStore.clearActive()`），主界面保持显示当前群聊
+
+**效果**：
+- 点击单聊不再触发群聊 API 调用（根因消除）
+- 单聊始终在右侧栏显示，可通过"移到主界面"按钮切换到主界面
+- 群聊和单聊的状态完全隔离，不存在竞争条件
