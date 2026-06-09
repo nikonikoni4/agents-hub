@@ -33,6 +33,7 @@ export {
   addSkillToRole,
   removeSkillFromRole,
   listAvatars,
+  getToolCatalog,
 } from './roleApi';
 
 // Skill 管理 API

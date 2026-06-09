@@ -5,7 +5,7 @@
  */
 
 import apiClient, { mockableRequest } from './client';
-import type { RoleApiResponse, RoleSkillApiItem } from '@/shared/types/api-schemas';
+import type { RoleApiResponse, RoleSkillApiItem, ToolCatalogResponse } from '@/shared/types/api-schemas';
 import type {
   CreateRoleRequest,
   UpdateRoleRequest,
@@ -203,4 +203,14 @@ export async function removeSkillFromRole(name: string, skillId: string): Promis
  */
 export async function listAvatars(): Promise<string[]> {
   return mockableRequest(() => apiClient.get<string[]>('/roles/avatars'), MOCK_AVATARS);
+}
+
+/**
+ * 获取工具目录
+ */
+export async function getToolCatalog(): Promise<ToolCatalogResponse> {
+  return mockableRequest(
+    () => apiClient.get<ToolCatalogResponse>('/roles/tools/catalog'),
+    { groups: [] }
+  );
 }
