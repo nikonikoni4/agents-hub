@@ -4,6 +4,7 @@
 提供群聊的统一访问接口，管理 State 和 Repository。
 """
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 
@@ -35,6 +36,7 @@ class GroupChatRuntime:
         project_path: str,
         repository: GroupChatRepository | None = None,
         state: GroupChatRuntimeState | None = None,
+        on_change: Callable[[str], Awaitable[None]] | None = None,
     ) -> None:
         self.group_chat_id = group_chat_id
         self.project_path = project_path
@@ -43,6 +45,7 @@ class GroupChatRuntime:
             group_chat_id=group_chat_id,
             project_path=project_path,
         )
+        self._on_change = on_change
 
     # ==================== Load ====================
 
@@ -394,6 +397,7 @@ class GroupChatRuntime:
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )
+        await self._notify_change()
         return agent_member_info
 
     async def update_agent_status(self, agent_name: str, status: str) -> AgentMemberInfo:
@@ -412,6 +416,7 @@ class GroupChatRuntime:
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )
+        await self._notify_change()
         return agent_member_info
 
     def get_agent_context(self) -> list[dict]:
@@ -439,6 +444,11 @@ class GroupChatRuntime:
         ]
 
     # ==================== Persistence Helper ====================
+
+    async def _notify_change(self) -> None:
+        """通知外部状态变更（通过 on_change 回调）"""
+        if self._on_change:
+            await self._on_change(self.group_chat_id)
 
     async def _persist(self, save_call) -> None:
         """
