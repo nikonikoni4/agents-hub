@@ -768,16 +768,11 @@ export async function updatePermissionStatus(
  * @param file - 文件对象
  * @returns 上传文件信息
  */
-export async function uploadFile(
-  chatId: string,
-  file: File
-): Promise<UploadedFileInfo> {
+export async function uploadFile(chatId: string, file: File): Promise<UploadedFileInfo> {
   const formData = new FormData();
   formData.append('file', file);
 
-  return apiClient.post<UploadedFileInfo>(
-    `/group-chats/${chatId}/upload`,
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
-  );
+  return apiClient.post<UploadedFileInfo>(`/group-chats/${chatId}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 }

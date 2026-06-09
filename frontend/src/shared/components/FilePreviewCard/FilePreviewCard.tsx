@@ -1,12 +1,12 @@
 import React from 'react';
 import type { UploadedFileInfo } from '@/shared/types';
-import styles from './UploadPreview.module.css';
+import styles from './FilePreviewCard.module.css';
 
-export interface UploadPreviewProps {
+export interface FilePreviewCardProps {
   groupChatId: string;
   files: UploadedFileInfo[];
-  onRemove: (index: number) => void;
   onImageClick?: (filePath: string) => void;
+  onDocumentClick?: (filePath: string) => void;
 }
 
 function formatFileSize(bytes: number): string {
@@ -19,8 +19,8 @@ function FileIcon({ fileType }: { fileType: string }) {
   if (fileType.startsWith('image/')) {
     return (
       <svg
-        width="16"
-        height="16"
+        width="14"
+        height="14"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -35,8 +35,8 @@ function FileIcon({ fileType }: { fileType: string }) {
 
   return (
     <svg
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -51,8 +51,8 @@ function FileIcon({ fileType }: { fileType: string }) {
   );
 }
 
-export const UploadPreview = React.memo(
-  ({ groupChatId, files, onRemove, onImageClick }: UploadPreviewProps) => {
+export const FilePreviewCard = React.memo(
+  ({ groupChatId, files, onImageClick, onDocumentClick }: FilePreviewCardProps) => {
     if (files.length === 0) return null;
 
     return (
@@ -71,7 +71,7 @@ export const UploadPreview = React.memo(
                 }}
                 role="button"
                 tabIndex={0}
-                aria-label={`预览图片 ${file.file_name}`}
+                aria-label={`查看图片 ${file.file_name}`}
               >
                 <img
                   src={`/api/v1/group-chats/${groupChatId}/files/${encodeURIComponent(file.file_path)}`}
@@ -80,22 +80,26 @@ export const UploadPreview = React.memo(
                 />
               </div>
             ) : (
-              <div className={styles.fileInfo}>
-                <FileIcon fileType={file.file_type} />
+              <div
+                className={styles.fileInfo}
+                onClick={() => onDocumentClick?.(file.file_path)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onDocumentClick?.(file.file_path);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`下载文件 ${file.file_name}`}
+              >
+                <span className={styles.fileIcon}>
+                  <FileIcon fileType={file.file_type} />
+                </span>
                 <span className={styles.fileName}>{file.file_name}</span>
                 <span className={styles.fileSize}>{formatFileSize(file.file_size)}</span>
               </div>
             )}
-            <button
-              className={styles.removeBtn}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(index);
-              }}
-              aria-label={`删除文件 ${file.file_name}`}
-            >
-              ✕
-            </button>
           </div>
         ))}
       </div>
@@ -103,4 +107,4 @@ export const UploadPreview = React.memo(
   }
 );
 
-UploadPreview.displayName = 'UploadPreview';
+FilePreviewCard.displayName = 'FilePreviewCard';

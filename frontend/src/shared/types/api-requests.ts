@@ -4,19 +4,9 @@
  * 与后端 Pydantic request/response schemas 对应
  */
 
-import type { AgentPlatform, RoleType, SingleChatType } from './api-schemas';
+import type { AgentPlatform, RoleType, SingleChatType, UploadedFileInfo } from './api-schemas';
 
 // ==================== 群聊相关 ====================
-
-/**
- * 上传文件信息
- */
-export interface UploadedFileInfo {
-  file_name: string; // 原始文件名
-  file_path: string; // 存储路径（相对于项目根目录）
-  file_type: string; // 文件类型（mime type）
-  file_size: number; // 文件大小（字节）
-}
 
 /**
  * 创建群聊请求

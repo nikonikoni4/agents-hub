@@ -23,34 +23,19 @@ const mockImageFiles: UploadedFileInfo[] = [
 
 describe('FilePreviewCard', () => {
   it('renders file name for document files', () => {
-    render(
-      <FilePreviewCard
-        files={mockDocumentFiles}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<FilePreviewCard files={mockDocumentFiles} groupChatId="test-chat" />);
 
     screen.getByText('report.pdf');
   });
 
   it('renders file size for document files', () => {
-    render(
-      <FilePreviewCard
-        files={mockDocumentFiles}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<FilePreviewCard files={mockDocumentFiles} groupChatId="test-chat" />);
 
     screen.getByText('2.0 KB');
   });
 
   it('renders image thumbnail for image files', () => {
-    render(
-      <FilePreviewCard
-        files={mockImageFiles}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<FilePreviewCard files={mockImageFiles} groupChatId="test-chat" />);
 
     const img = screen.getByRole('img', { name: 'screenshot.png' }) as HTMLImageElement;
     expect(img).toBeTruthy();
@@ -58,28 +43,15 @@ describe('FilePreviewCard', () => {
   });
 
   it('renders nothing when files array is empty', () => {
-    const { container } = render(
-      <FilePreviewCard
-        files={[]}
-        groupChatId="test-chat"
-      />,
-    );
+    const { container } = render(<FilePreviewCard files={[]} groupChatId="test-chat" />);
 
     expect(container.innerHTML).toBe('');
   });
 
   it('renders multiple files', () => {
-    const multipleFiles: UploadedFileInfo[] = [
-      ...mockDocumentFiles,
-      ...mockImageFiles,
-    ];
+    const multipleFiles: UploadedFileInfo[] = [...mockDocumentFiles, ...mockImageFiles];
 
-    render(
-      <FilePreviewCard
-        files={multipleFiles}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<FilePreviewCard files={multipleFiles} groupChatId="test-chat" />);
 
     screen.getByText('report.pdf');
     screen.getByRole('img', { name: 'screenshot.png' });
@@ -88,11 +60,7 @@ describe('FilePreviewCard', () => {
   it('calls onImageClick when image is clicked', () => {
     const onImageClick = vi.fn();
     render(
-      <FilePreviewCard
-        files={mockImageFiles}
-        groupChatId="test-chat"
-        onImageClick={onImageClick}
-      />,
+      <FilePreviewCard files={mockImageFiles} groupChatId="test-chat" onImageClick={onImageClick} />
     );
 
     const imageButton = screen.getByLabelText('查看图片 screenshot.png');
@@ -108,7 +76,7 @@ describe('FilePreviewCard', () => {
         files={mockDocumentFiles}
         groupChatId="test-chat"
         onDocumentClick={onDocumentClick}
-      />,
+      />
     );
 
     const docButton = screen.getByLabelText('下载文件 report.pdf');

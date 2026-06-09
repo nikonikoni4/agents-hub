@@ -115,6 +115,14 @@ const MessageBubble = React.memo(
       [groupChatId]
     );
 
+    const handleDocumentClick = React.useCallback(
+      (filePath: string) => {
+        const url = `/api/v1/group-chats/${groupChatId}/files/${encodeURIComponent(filePath)}`;
+        window.open(url, '_blank');
+      },
+      [groupChatId]
+    );
+
     // 权限请求消息：渲染 PermissionRequest 卡片
     if (msg.permission_request) {
       const pr = msg.permission_request;
@@ -175,6 +183,7 @@ const MessageBubble = React.memo(
           <FilePreviewCard
             files={msg.files}
             onImageClick={handleImageClick}
+            onDocumentClick={handleDocumentClick}
             groupChatId={groupChatId}
           />
         )}

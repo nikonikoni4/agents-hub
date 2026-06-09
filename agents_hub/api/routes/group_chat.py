@@ -1,6 +1,9 @@
 """群聊 API 路由"""
 
-from fastapi import APIRouter, Depends, Query
+import mimetypes
+
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import FileResponse
 
 from agents_hub.api.schemas.group_chats import (
     AddMembersRequest,
@@ -16,6 +19,7 @@ from agents_hub.api.schemas.group_chats import (
     PinnedMessageInfo,
     PinOperationResponse,
     TaskListInfo,
+    UploadedFileInfo,
     UseDockerUpdate,
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
@@ -234,6 +238,18 @@ async def get_file_snapshot_diff(
     return {"diff": diff}
 
 
+@router.get("/{group_chat_id}/files/{file_path:path}")
+async def get_uploaded_file(
+    group_chat_id: str,
+    file_path: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取上传的文件"""
+    full_path = await service.get_uploaded_file_path(group_chat_id, file_path)
+    content_type = mimetypes.guess_type(str(full_path))[0] or "application/octet-stream"
+    return FileResponse(path=str(full_path), filename=full_path.name, media_type=content_type)
+
+
 @router.patch(
     "/{group_chat_id}/messages/{message_id}/permission",
     response_model=PermissionUpdateResponse,
@@ -253,4 +269,27 @@ async def update_permission_status(
     return PermissionUpdateResponse(
         message_id=result["message_id"],
         new_status=result["new_status"],
+    )
+
+
+@router.post(
+    "/{group_chat_id}/upload",
+    response_model=UploadedFileInfo,
+    responses={
+        400: {"description": "文件类型不支持或文件大小超限"},
+        404: {"description": "群聊不存在"},
+    },
+)
+async def upload_file(
+    group_chat_id: str,
+    file: UploadFile = File(...),
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """上传文件到群聊"""
+    file_content = await file.read()
+    return await service.upload_file(
+        group_chat_id=group_chat_id,
+        file_content=file_content,
+        original_filename=file.filename or "unknown",
+        content_type=file.content_type or "application/octet-stream",
     )

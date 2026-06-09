@@ -23,37 +23,19 @@ const mockImageFiles: UploadedFileInfo[] = [
 
 describe('UploadPreview', () => {
   it('renders file name for document files', () => {
-    render(
-      <UploadPreview
-        files={mockFiles}
-        onRemove={vi.fn()}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<UploadPreview files={mockFiles} onRemove={vi.fn()} groupChatId="test-chat" />);
 
     screen.getByText('test.pdf');
   });
 
   it('renders file size for document files', () => {
-    render(
-      <UploadPreview
-        files={mockFiles}
-        onRemove={vi.fn()}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<UploadPreview files={mockFiles} onRemove={vi.fn()} groupChatId="test-chat" />);
 
     screen.getByText('1.0 KB');
   });
 
   it('renders image preview for image files', () => {
-    render(
-      <UploadPreview
-        files={mockImageFiles}
-        onRemove={vi.fn()}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<UploadPreview files={mockImageFiles} onRemove={vi.fn()} groupChatId="test-chat" />);
 
     const img = screen.getByRole('img', { name: 'photo.png' }) as HTMLImageElement;
     expect(img).toBeTruthy();
@@ -62,11 +44,7 @@ describe('UploadPreview', () => {
 
   it('renders nothing when files array is empty', () => {
     const { container } = render(
-      <UploadPreview
-        files={[]}
-        onRemove={vi.fn()}
-        groupChatId="test-chat"
-      />,
+      <UploadPreview files={[]} onRemove={vi.fn()} groupChatId="test-chat" />
     );
 
     expect(container.innerHTML).toBe('');
@@ -74,13 +52,7 @@ describe('UploadPreview', () => {
 
   it('calls onRemove with correct index when remove button clicked', () => {
     const onRemove = vi.fn();
-    render(
-      <UploadPreview
-        files={mockFiles}
-        onRemove={onRemove}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<UploadPreview files={mockFiles} onRemove={onRemove} groupChatId="test-chat" />);
 
     fireEvent.click(screen.getByLabelText('删除文件 test.pdf'));
     expect(onRemove).toHaveBeenCalledWith(0);
@@ -98,13 +70,7 @@ describe('UploadPreview', () => {
     ];
 
     const onRemove = vi.fn();
-    render(
-      <UploadPreview
-        files={multipleFiles}
-        onRemove={onRemove}
-        groupChatId="test-chat"
-      />,
-    );
+    render(<UploadPreview files={multipleFiles} onRemove={onRemove} groupChatId="test-chat" />);
 
     screen.getByText('test.pdf');
     screen.getByRole('img', { name: 'image.jpg' });
@@ -121,7 +87,7 @@ describe('UploadPreview', () => {
         onRemove={vi.fn()}
         groupChatId="test-chat"
         onImageClick={onImageClick}
-      />,
+      />
     );
 
     const imagePreview = screen.getByLabelText('预览图片 photo.png');

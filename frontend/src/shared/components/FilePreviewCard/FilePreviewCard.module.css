@@ -1,0 +1,61 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  background: var(--bg-bubble);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: background 0.15s;
+}
+
+.item:hover {
+  background: var(--bg-shadow, rgba(0, 0, 0, 0.04));
+}
+
+.imagePreview {
+  cursor: pointer;
+}
+
+.thumbnail {
+  max-width: 300px;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.fileInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.fileIcon {
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.fileName {
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.fileSize {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}

@@ -1,18 +1,24 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import styles from './ImagePreviewModal.module.css';
 
 export interface ImagePreviewModalProps {
   isOpen: boolean;
   imageUrl: string;
+  alt?: string;
   onClose: () => void;
 }
 
+const SCALE_MIN = 0.1;
+const SCALE_MAX = 5;
+const ZOOM_FACTOR = 1.2;
+
 export const ImagePreviewModal = React.memo(
-  ({ isOpen, imageUrl, onClose }: ImagePreviewModalProps) => {
+  ({ isOpen, imageUrl, alt = '预览图片', onClose }: ImagePreviewModalProps) => {
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
       if (isOpen) {
@@ -21,11 +27,20 @@ export const ImagePreviewModal = React.memo(
       }
     }, [isOpen, imageUrl]);
 
-    const handleWheel = useCallback((e: React.WheelEvent) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      setScale((prev) => Math.min(Math.max(0.1, prev * delta), 5));
-    }, []);
+    // Native addEventListener for wheel (requires passive: false)
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container || !isOpen) return;
+
+      const handleWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        setScale((prev) => Math.min(Math.max(SCALE_MIN, prev * delta), SCALE_MAX));
+      };
+
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
+    }, [isOpen]);
 
     const handleMouseDown = useCallback(
       (e: React.MouseEvent) => {
@@ -71,24 +86,36 @@ export const ImagePreviewModal = React.memo(
       return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, handleKeyDown]);
 
+    const handleZoomIn = useCallback(() => {
+      setScale((prev) => Math.min(prev * ZOOM_FACTOR, SCALE_MAX));
+    }, []);
+
+    const handleZoomOut = useCallback(() => {
+      setScale((prev) => Math.max(prev / ZOOM_FACTOR, SCALE_MIN));
+    }, []);
+
+    const handleReset = useCallback(() => {
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    }, []);
+
     if (!isOpen) return null;
 
     return (
-      <div className={styles.overlay} onClick={onClose}>
-        <div
-          className={styles.container}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className={styles.closeBtn}
-            onClick={onClose}
-            aria-label="关闭"
-          >
+      <div
+        className={styles.overlay}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label="图片预览"
+      >
+        <div className={styles.container} onClick={(e) => e.stopPropagation()}>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="关闭">
             ✕
           </button>
           <div
+            ref={containerRef}
             className={styles.imageContainer}
-            onWheel={handleWheel}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -96,7 +123,7 @@ export const ImagePreviewModal = React.memo(
           >
             <img
               src={imageUrl}
-              alt="预览图片"
+              alt={alt}
               className={styles.image}
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
@@ -105,22 +132,13 @@ export const ImagePreviewModal = React.memo(
             />
           </div>
           <div className={styles.controls}>
-            <button
-              onClick={() => setScale((prev) => Math.min(prev * 1.2, 5))}
-            >
+            <button onClick={handleZoomIn} aria-label="放大">
               放大
             </button>
-            <button
-              onClick={() => setScale((prev) => Math.max(prev * 0.8, 0.1))}
-            >
+            <button onClick={handleZoomOut} aria-label="缩小">
               缩小
             </button>
-            <button
-              onClick={() => {
-                setScale(1);
-                setPosition({ x: 0, y: 0 });
-              }}
-            >
+            <button onClick={handleReset} aria-label="重置">
               重置
             </button>
           </div>

@@ -63,7 +63,7 @@ class MessageCreate(BaseModel):
     """发送消息请求"""
 
     content: str = Field(..., min_length=1, description="消息内容")
-    members: list[str] = Field(..., min_length=1, description="群聊中所有 agent 名称列表")
+    members: list[str] = Field(..., description="群聊中所有 agent 名称列表")
     files: list[UploadedFileInfo] | None = Field(None, description="可选的文件列表")
 
 
