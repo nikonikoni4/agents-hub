@@ -1,5 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { PlusIcon, CheckCircleIcon, SendIcon, UploadPreview, ImagePreviewModal } from '@/shared/components';
+import {
+  PlusIcon,
+  CheckCircleIcon,
+  SendIcon,
+  UploadPreview,
+  ImagePreviewModal,
+} from '@/shared/components';
 import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import styles from './ChatArea.module.css';
 
@@ -21,6 +27,7 @@ export const ChatInput = React.memo(
     const [showImagePreview, setShowImagePreview] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 过滤匹配的成员（使用 useMemo 优化）
     const filteredMembers = useMemo(
@@ -146,6 +153,31 @@ export const ChatInput = React.memo(
       setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
     }, []);
 
+    const handleAttachmentClick = useCallback(() => {
+      fileInputRef.current?.click();
+    }, []);
+
+    const handleFileSelect = useCallback(
+      async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+
+        const { uploadFile } = await import('@/core/api/groupChatApi');
+
+        for (const file of Array.from(files)) {
+          try {
+            const fileInfo = await uploadFile(activeSessionId || '', file);
+            setUploadedFiles((prev) => [...prev, fileInfo]);
+          } catch (err) {
+            console.error('Upload error:', err);
+          }
+        }
+
+        e.target.value = '';
+      },
+      [activeSessionId]
+    );
+
     const handleImageClick = useCallback(
       (filePath: string) => {
         setPreviewImageUrl(
@@ -200,9 +232,16 @@ export const ChatInput = React.memo(
               ))}
             </div>
           )}
-          <button className={styles.iconBtn} aria-label="添加附件">
+          <button className={styles.iconBtn} onClick={handleAttachmentClick} aria-label="添加附件">
             <PlusIcon />
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+          />
           <textarea
             ref={textareaRef}
             rows={2}

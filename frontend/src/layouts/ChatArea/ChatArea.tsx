@@ -273,7 +273,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   }, [rightSidebarContent, onContentChange]);
 
   const handleSend = useCallback(
-    async (text: string, _files?: UploadedFileInfo[]) => {
+    async (text: string, files?: UploadedFileInfo[]) => {
       if (!activeSessionId) return;
 
       // 如果有引用消息，用 MD 引用语法包裹
@@ -293,6 +293,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         content: finalText,
         timestamp: new Date().toISOString(),
         platform: 'user',
+        files: files,
       };
       setLocalMessages((prev) => [...prev, optimisticMsg]);
 
@@ -304,7 +305,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         }
         const members = await getMembers(activeSessionId);
         const memberNames = members.map((m) => m.name);
-        await sendMessage(activeSessionId, { content: finalText, members: memberNames });
+        await sendMessage(activeSessionId, { content: finalText, members: memberNames, files });
         // 发送成功后才清空引用状态
         setQuotedMessage(null);
       } catch (err) {
