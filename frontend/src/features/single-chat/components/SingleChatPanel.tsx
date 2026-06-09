@@ -12,6 +12,7 @@ import { AvatarImage, MarkdownRenderer } from '@/shared/components';
 import { NavigationCard } from '@/shared/components/NavigationCard/NavigationCard';
 import { parseNavigationMark } from '@/shared/utils/navigationParser';
 import { useSingleChatStore } from '../store/singleChatStore';
+import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useSingleChatMessages } from '../hooks/useSingleChatMessages';
 import { useSingleChatMembers } from '../hooks/useSingleChatMembers';
 import { useNavigationHandler } from '../hooks/useNavigationHandler';
@@ -64,6 +65,7 @@ export function SingleChatPanel() {
   const singleChats = useSingleChatStore((s) => s.singleChats);
   const closeSingleChat = useSingleChatStore((s) => s.closeSingleChat);
   const toggleLocation = useSingleChatStore((s) => s.toggleLocation);
+  const selectSession = useSessionStore((s) => s.selectSession);
 
   const { messages, loading, streaming, streamingText, sendMessage } = useSingleChatMessages();
   const { handleNavigation } = useNavigationHandler();
@@ -71,6 +73,14 @@ export function SingleChatPanel() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeChat = singleChats.find((c) => c.single_chat_id === activeSingleChatId);
+
+  // 点击移到主界面时，同时激活单聊 session
+  const handleToggleLocation = () => {
+    if (activeSingleChatId) {
+      selectSession(activeSingleChatId, 'single_chat');
+    }
+    toggleLocation();
+  };
 
   // 获取 Agent 头像（通过群聊成员信息）
   const { members } = useSingleChatMembers(activeChat?.group_chat_id ?? null);
@@ -120,7 +130,7 @@ export function SingleChatPanel() {
         <button
           type="button"
           className={styles.toggleLocationBtn}
-          onClick={toggleLocation}
+          onClick={handleToggleLocation}
           title="移到主界面"
         >
           📍
