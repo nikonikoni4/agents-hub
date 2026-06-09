@@ -207,11 +207,9 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
         onClose={() => setShowToolSelector(false)}
         onSave={(enabled) => setEnabledTools(enabled)}
         catalog={toolCatalog}
-        disabledTools={
-          toolCatalog
-            .flatMap((g) => g.tools.map((t) => t.name))
-            .filter((n) => !enabledTools.includes(n))
-        }
+        disabledTools={toolCatalog
+          .flatMap((g) => g.tools.map((t) => t.name))
+          .filter((n) => !enabledTools.includes(n))}
       />
     </div>
   );

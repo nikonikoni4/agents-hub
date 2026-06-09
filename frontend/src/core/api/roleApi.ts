@@ -5,7 +5,11 @@
  */
 
 import apiClient, { mockableRequest } from './client';
-import type { RoleApiResponse, RoleSkillApiItem, ToolCatalogResponse } from '@/shared/types/api-schemas';
+import type {
+  RoleApiResponse,
+  RoleSkillApiItem,
+  ToolCatalogResponse,
+} from '@/shared/types/api-schemas';
 import type {
   CreateRoleRequest,
   UpdateRoleRequest,
@@ -209,8 +213,7 @@ export async function listAvatars(): Promise<string[]> {
  * 获取工具目录
  */
 export async function getToolCatalog(): Promise<ToolCatalogResponse> {
-  return mockableRequest(
-    () => apiClient.get<ToolCatalogResponse>('/roles/tools/catalog'),
-    { groups: [] }
-  );
+  return mockableRequest(() => apiClient.get<ToolCatalogResponse>('/roles/tools/catalog'), {
+    groups: [],
+  });
 }

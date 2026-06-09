@@ -19,9 +19,7 @@ export function ToolSelectorModal({
   disabledTools,
 }: ToolSelectorModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [localDisabled, setLocalDisabled] = useState<Set<string>>(
-    () => new Set(disabledTools)
-  );
+  const [localDisabled, setLocalDisabled] = useState<Set<string>>(() => new Set(disabledTools));
 
   // Reset on open
   const [prevIsOpen, setPrevIsOpen] = useState(false);
@@ -52,9 +50,7 @@ export function ToolSelectorModal({
       .map((group) => ({
         ...group,
         tools: group.tools.filter(
-          (t) =>
-            t.name.toLowerCase().includes(q) ||
-            t.description.toLowerCase().includes(q)
+          (t) => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
         ),
       }))
       .filter((group) => group.tools.length > 0);

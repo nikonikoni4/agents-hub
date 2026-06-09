@@ -109,7 +109,9 @@
   cursor: pointer;
   text-align: left;
   position: relative;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .toolCard:hover {
