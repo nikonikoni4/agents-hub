@@ -15,6 +15,15 @@ import styles from './RightSidebar.module.css';
 
 type SidebarTab = 'single-chat' | 'chat' | 'tasks' | 'preview' | 'diff' | 'web';
 
+/** 将 file:/// URL 转换为后端 HTTP 代理 URL */
+function toPreviewUrl(url: string): string {
+  if (url.startsWith('file:///')) {
+    const filePath = decodeURIComponent(url.slice(8));
+    return `/api/v1/files/preview?path=${encodeURIComponent(filePath)}`;
+  }
+  return url;
+}
+
 const TAB_LABELS: Record<SidebarTab, string> = {
   'single-chat': '单聊',
   chat: '群聊',
@@ -288,32 +297,29 @@ export function RightSidebar({
       )}
 
       {activeTab === 'web' && (
-        <div className={styles.rightModule}>
-          <div className={styles.moduleTitle}>
+        <div className={styles.webPreviewPanel}>
+          <div className={styles.webPreviewHeader}>
             <GlobeIcon />
-            网页预览
+            <span>网页预览</span>
+            {content && content.type === 'web' && (
+              <a
+                className={styles.webPreviewOpenBtn}
+                href={toPreviewUrl(content.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                在浏览器中打开
+              </a>
+            )}
           </div>
           {content && content.type === 'web' ? (
-            <div className={styles.webPreviewContainer}>
-              <div className={styles.webPreviewHeader}>
-                <span className={styles.webPreviewTitle}>{content.title || content.url}</span>
-                <a
-                  className={styles.webPreviewOpenBtn}
-                  href={content.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  在浏览器中打开
-                </a>
-              </div>
-              <iframe
-                className={styles.webPreviewIframe}
-                src={content.url}
-                sandbox="allow-scripts allow-same-origin allow-forms"
-                loading="lazy"
-                title={content.title || '网页预览'}
-              />
-            </div>
+            <iframe
+              className={styles.webPreviewIframe}
+              src={toPreviewUrl(content.url)}
+              sandbox="allow-scripts allow-same-origin allow-forms"
+              loading="lazy"
+              title={content.title || '网页预览'}
+            />
           ) : (
             <div className={styles.emptyText}>点击消息中的预览卡片查看网页</div>
           )}

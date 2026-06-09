@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        .card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Manager Dashboard</h1>
+            <p>团队协作管理系统 - 任务监控面板</p>
+        </div>
+
+        <div class="card-grid">
+            <div class="card">
+                <h3>任务状态</h3>
+                <p>当前系统运行正常，所有核心功能已就绪。支持实时任务分配、进度跟踪和团队协作。</p>
+                <span class="status-badge status-active">● 运行中</span>
+            </div>
+
+            <div class="card">
+                <h3>团队协作</h3>
+                <p>智能任务分配系统，支持多角色协作。Manager可指挥Worker完成复杂任务，实现高效团队配合。</p>
+                <span class="status-badge status-active">● 已启用</span>
+            </div>
+
+            <div class="card">
+                <h3>MCP集成</h3>
+                <p>集成agents-hub和mimo-image两个MCP服务器，提供团队协作管理和图像处理能力。</p>
+                <span class="status-badge status-active">● 已连接</span>
+            </div>
+
+            <div class="card">
+                <h3>实时监控</h3>
+                <p>支持任务状态查询、进度追踪和结果汇总。通过群聊实现透明化沟通。</p>
+                <span class="status-badge status-pending">● 监控中</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>由 Manager AI Agent 驱动 | 生成时间: 2026-06-09</p>
+        </div>
+    </div>
+
+    <script>
+        // 添加一些简单的交互效果
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('click', function() {
+                this.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 200);
+            });
+        });
+
+        // 显示当前时间
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-CN');
+            console.log('当前时间:', timeString);
+        }
+        updateTime();
+    </script>
+</body>
+</html>

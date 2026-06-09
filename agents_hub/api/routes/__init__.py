@@ -1,6 +1,7 @@
 """API routes package."""
 
 from .config import router as config_router
+from .files import router as files_router
 from .group_chat import router as group_chats_router
 from .roles import router as roles_router
 from .single_chat import router as single_chat_router
@@ -9,6 +10,7 @@ from .teams import router as teams_router
 
 __all__ = [
     "config_router",
+    "files_router",
     "roles_router",
     "single_chat_router",
     "skills_router",

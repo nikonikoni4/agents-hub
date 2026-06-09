@@ -217,6 +217,11 @@ class Agent:
 
         # 3. 构建 system_prompt（通过 CLI 参数注入，避免文件竞态条件）
         system_prompt = self._build_system_prompt(self.task_manager)
+        self.logger.info(
+            "Agent %s system_prompt: %s",
+            self.name,
+            system_prompt[:500] if system_prompt else "",
+        )
 
         self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
         self.logger.debug(
@@ -547,18 +552,33 @@ class Agent:
             )
 
             # 3. 注入 runtime 和工具使用说明到 CLAUDE.md/AGENTS.md
-            try:
-                self._inject_runtime_to_files(self.task_manager)
-                self._inject_tool_usage_to_files()
-            except Exception as e:
-                # 注入失败不应该影响消息处理
-                self.logger.debug("Runtime 注入失败: agent=%s, error=%s", self.name, str(e))
+            # try:
+            #     self._inject_runtime_to_files(self.task_manager)
+            #     self._inject_tool_usage_to_files()
+            # except Exception as e:
+            #     # 注入失败不应该影响消息处理
+            #     self.logger.debug("Runtime 注入失败: agent=%s, error=%s", self.name, str(e))
 
             # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
             self._is_processing = True
+            self.logger.info(
+                "Agent %s 开始处理消息: call_id=%s, send_from=%s, message_type=%s, content=%s",
+                self.name,
+                msg.call_id,
+                msg.send_from,
+                msg.message_type,
+                msg.content[:100] if msg.content else "",
+            )
             try:
-                await self._process_message(msg, prompt)
+                result = await self._process_message(msg, prompt)
+                self.logger.info(
+                    "Agent %s 完成消息处理: call_id=%s, send_from=%s, result_text=%s",
+                    self.name,
+                    msg.call_id,
+                    msg.send_from,
+                    result.text[:200] if result.text else "",
+                )
             finally:
                 self._is_processing = False
             # 5. TASK 必须由 finish_agent_call 显式闭环；普通执行文本默认私下保留。
