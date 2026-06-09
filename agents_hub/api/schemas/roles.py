@@ -25,6 +25,7 @@ class RoleUpdateRequest(BaseModel):
     avatar: str | None = None
     abilities: list[str] | None = None
     description: str | None = None
+    enabled_tools: list[str] | None = None
 
 
 class RoleSkillRequest(BaseModel):
@@ -43,6 +44,7 @@ class RoleResponse(BaseModel):
     type: Literal["leader", "team_member", "system"] | None = None
     scope: list[str] | None = None
     description: str | None = None
+    disabled_tools: list[str] = []
     skills: list["RoleSkillResponse"] = []
 
     @classmethod
@@ -58,6 +60,7 @@ class RoleResponse(BaseModel):
             type=role_info.type.value if role_info.type else None,
             scope=role_info.scope,
             description=role_info.description,
+            disabled_tools=role_info.disabled_tools or [],
             skills=[RoleSkillResponse.from_domain(s) for s in (skills or [])],
         )
 
@@ -77,3 +80,18 @@ class RoleSkillResponse(BaseModel):
             name=skill_info.name,
             description=skill_info.description,
         )
+
+
+class ToolInfoResponse(BaseModel):
+    name: str
+    description: str
+
+
+class ToolGroupResponse(BaseModel):
+    name: str
+    icon: str
+    tools: list[ToolInfoResponse]
+
+
+class ToolCatalogResponse(BaseModel):
+    groups: list[ToolGroupResponse]
