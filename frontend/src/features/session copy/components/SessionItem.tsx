@@ -31,8 +31,7 @@ export function SessionItem({ session, isActive = false, onSelectSingleChat }: S
   const updateSession = useSessionStore((s) => s.updateSession);
   const selectSession = useSessionStore((s) => s.selectSession);
   const { deleteChat, deleting } = useDeleteGroupChat();
-  const setActiveSingleChat = useSingleChatStore((s) => s.setActiveSingleChat);
-  const setLocation = useSingleChatStore((s) => s.setLocation);
+  const openSingleChat = useSingleChatStore((s) => s.openSingleChat);
   const [showMenu, setShowMenu] = useState(false);
 
   const isSingleChat = session.type === 'single_chat';
@@ -62,10 +61,9 @@ export function SessionItem({ session, isActive = false, onSelectSingleChat }: S
     if (showMenu) return;
 
     if (isSingleChat) {
-      // 单聊：先设置位置为右侧，再激活 session（避免状态更新竞争）
-      setLocation('sidebar'); // 1. 先重置位置
-      setActiveSingleChat(session.id); // 2. 激活单聊
-      selectSession(session.id, 'single_chat'); // 3. 设置类型
+      // 单聊：使用 openSingleChat 确保 displayLocation 重置为 sidebar
+      openSingleChat(session.id);
+      selectSession(session.id, 'single_chat');
 
       // 标记单聊为已读
       const now = new Date().toISOString();
@@ -77,8 +75,7 @@ export function SessionItem({ session, isActive = false, onSelectSingleChat }: S
         onSelectSingleChat(session.id);
       }
     } else {
-      // 群聊：设置 activeSessionType，单聊回到默认位置
-      setLocation('sidebar');
+      // 群聊：设置 activeSessionType
       selectSession(session.id, 'group_chat');
       handleSelectSession(session.id, 'group_chat');
     }

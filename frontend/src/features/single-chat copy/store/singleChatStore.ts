@@ -27,7 +27,7 @@ interface SingleChatState {
   setSingleChats: (chats: SingleChatApiResponse[]) => void;
   /** 设置活跃单聊 */
   setActiveSingleChat: (id: string | null) => void;
-  /** 打开单聊面板并激活指定单聊 */
+  /** 打开单聊面板并激活指定单聊（始终重置为 sidebar） */
   openSingleChat: (id: string) => void;
   /** 关闭单聊面板（保留 activeSingleChatId 以便快速重新打开） */
   closeSingleChat: () => void;
