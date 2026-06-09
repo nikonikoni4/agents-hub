@@ -12,9 +12,7 @@ import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useSessionStore } from '@/features/session/store/sessionStore';
-import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
-import { ToolCallCard } from '@/features/single-chat/components/ToolCallCard';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import {
   sendMessage,
@@ -23,8 +21,7 @@ import {
   getFileSnapshotDiff,
   updatePermissionStatus,
 } from '@/core/api/groupChatApi';
-import { streamSSE } from '@/core/api/sseClient';
-import type { MessageApiItem, ToolCall } from '@/shared/types';
+import type { MessageApiItem } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { extractProjectName } from '@/shared/adapters/sessionAdapter';
 import { ChatInput } from './ChatInput';
@@ -156,14 +153,6 @@ const MessageBubble = React.memo(
         <div
           className={`${styles.messageBubble} ${isUser ? styles.bubbleUser : styles.bubbleAgent}`}
         >
-          {/* 工具调用卡片 */}
-          {msg.tool_calls && msg.tool_calls.length > 0 && (
-            <div className={styles.toolCalls}>
-              {msg.tool_calls.map((toolCall) => (
-                <ToolCallCard key={toolCall.id} toolCall={toolCall} />
-              ))}
-            </div>
-          )}
           <MarkdownRenderer content={msg.content} />
         </div>
         {msg.modified_files && msg.modified_files.length > 0 && (
@@ -212,13 +201,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   } = useChatMessages();
   const { members } = useMembers();
   const projectGroups = useSessionStore((s) => s.projectGroups);
-  const activeSessionType = useSessionStore((s) => s.activeSessionType);
-  const { singleChats, displayLocation, toggleLocation } = useSingleChatStore();
-
-  // 只有群聊才加载置顶消息，单聊不支持置顶
-  const { pin, unpin, isPinned } = usePinnedMessages(
-    activeSessionType === 'group_chat' ? activeSessionId : null
-  );
+  const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
 
   const [localMessages, setLocalMessages] = useState<MessageApiItem[]>([]);
   const [showManageMembers, setShowManageMembers] = useState(false);
@@ -314,48 +297,14 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
       setLocalMessages((prev) => [...prev, optimisticMsg]);
 
       try {
-        if (activeSessionType === 'single_chat') {
-          // 单聊：通过 SSE 流式发送
-          let fullText = '';
-          const toolCalls: ToolCall[] = [];
-          await streamSSE(
-            `/single-chats/${activeSessionId}/messages/stream`,
-            { content: finalText },
-            (event) => {
-              if (event.type === 'text_delta' && event.content?.text) {
-                fullText += event.content.text as string;
-              }
-              if (event.type === 'tool_use') {
-                toolCalls.push({
-                  id: event.content.tool_id as string,
-                  name: event.content.tool_name as string,
-                  input: event.content.input as Record<string, unknown>,
-                });
-              }
-            }
-          );
-          // 流式完成后添加助手消息
-          if (fullText || toolCalls.length > 0) {
-            const assistantMsg: MessageApiItem = {
-              id: 0,
-              speaker: 'assistant',
-              content: fullText,
-              timestamp: new Date().toISOString(),
-              platform: 'claude',
-              tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
-            };
-            setLocalMessages((prev) => [...prev, assistantMsg]);
-          }
-        } else {
-          // 群聊：发送第一条消息时才连接 WebSocket（已连接则跳过）
-          if (connectedSessionRef.current !== activeSessionId) {
-            wsManager.connect(activeSessionId);
-            connectedSessionRef.current = activeSessionId;
-          }
-          const members = await getMembers(activeSessionId);
-          const memberNames = members.map((m) => m.name);
-          await sendMessage(activeSessionId, { content: finalText, members: memberNames });
+        // 发送第一条消息时才连接 WebSocket（已连接则跳过）
+        if (connectedSessionRef.current !== activeSessionId) {
+          wsManager.connect(activeSessionId);
+          connectedSessionRef.current = activeSessionId;
         }
+        const members = await getMembers(activeSessionId);
+        const memberNames = members.map((m) => m.name);
+        await sendMessage(activeSessionId, { content: finalText, members: memberNames });
         // 发送成功后才清空引用状态
         setQuotedMessage(null);
       } catch (err) {
@@ -363,7 +312,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         // 发送失败时保留引用状态，用户可重试
       }
     },
-    [activeSessionId, activeSessionType, quotedMessage]
+    [activeSessionId, quotedMessage]
   );
 
   const handleQuote = useCallback((msg: MessageApiItem) => {
@@ -372,8 +321,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
 
   const handlePreview = useCallback(
     async (snapshotId: string, filePath: string) => {
-      // 单聊不支持文件预览
-      if (!activeSessionId || activeSessionType === 'single_chat') return;
+      if (!activeSessionId) return;
       try {
         const content = await getFileSnapshotContent(activeSessionId, snapshotId);
         setRightSidebarContent({ type: 'preview', content, filePath });
@@ -381,13 +329,12 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         console.error('Failed to load preview:', error);
       }
     },
-    [activeSessionId, activeSessionType]
+    [activeSessionId]
   );
 
   const handleDiff = useCallback(
     async (snapshotId: string, filePath: string) => {
-      // 单聊不支持文件 diff
-      if (!activeSessionId || activeSessionType === 'single_chat') return;
+      if (!activeSessionId) return;
       try {
         const diff = await getFileSnapshotDiff(activeSessionId, snapshotId);
         setRightSidebarContent({ type: 'diff', content: diff, filePath });
@@ -395,29 +342,21 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         console.error('Failed to load diff:', error);
       }
     },
-    [activeSessionId, activeSessionType]
+    [activeSessionId]
   );
 
   // 权限请求操作（调用 API，刷新由 WebSocket refresh 自动处理）
   const handlePermissionAction = useCallback(
     async (messageId: number, action: 'approved' | 'rejected') => {
-      // 单聊不支持权限请求
-      if (!activeSessionId || activeSessionType === 'single_chat') return;
+      if (!activeSessionId) return;
       try {
         await updatePermissionStatus(activeSessionId, messageId, action);
       } catch (err) {
         console.error('Failed to update permission status:', err);
       }
     },
-    [activeSessionId, activeSessionType]
+    [activeSessionId]
   );
-
-  // 判断是否显示单聊
-  const showingSingleChat = activeSessionType === 'single_chat' && displayLocation === 'main';
-  const activeSingleChat = useMemo(() => {
-    if (!activeSessionId) return null;
-    return singleChats.find((chat) => chat.single_chat_id === activeSessionId);
-  }, [activeSessionId, singleChats]);
 
   // 网页预览：在右侧栏打开
   const handleWebPreview = useCallback((url: string, title?: string) => {
@@ -431,7 +370,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   );
 
   // 未选择会话时的空态
-  if (!activeSessionType) {
+  if (!activeSessionId) {
     return (
       <div className={styles.chatArea}>
         <div className={styles.emptyState}>
@@ -441,73 +380,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     );
   }
 
-  // 单聊在 sidebar 模式时，主界面显示空态（避免落入群聊分支调用群聊 API）
-  if (activeSessionType === 'single_chat' && displayLocation === 'sidebar') {
-    return (
-      <div className={styles.chatArea}>
-        <div className={styles.emptyState}>
-          <p className={styles.emptyText}>单聊已在右侧面板打开</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 单聊界面（displayLocation === 'main'）
-  if (showingSingleChat) {
-    return (
-      <div className={styles.chatArea}>
-        {/* 标题栏 */}
-        <div className={styles.chatHeader}>
-          <h2 className={styles.chatTitle}>{activeSingleChat?.single_chat_name ?? '单聊'}</h2>
-          <div className={styles.chatActions}>
-            <button className={styles.toggleLocationBtn} onClick={toggleLocation} title="返回右侧">
-              返回右侧
-            </button>
-            <button className={styles.iconBtn} onClick={onToggleRightSidebar}>
-              <RightPanelIcon />
-            </button>
-          </div>
-        </div>
-
-        {/* 消息列表 */}
-        <div className={styles.chatMessages} ref={messagesContainerRef} onScroll={handleScroll}>
-          {loadingMore && <div className={styles.loadingText}>加载更多消息...</div>}
-          {loading && allMessages.length === 0 ? (
-            <div className={styles.loadingText}>加载中...</div>
-          ) : (
-            allMessages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                msg={msg}
-                avatar={roleAvatarMap.get(msg.speaker)}
-                pinned={isPinned(msg.id)}
-                onPin={() => pin(msg.id)}
-                onUnpin={() => unpin(msg.id)}
-                onQuote={() => handleQuote(msg)}
-                onPreview={handlePreview}
-                onDiff={handleDiff}
-                onPermissionAction={handlePermissionAction}
-                onWebPreview={handleWebPreview}
-                activeWebUrl={activeWebUrl}
-              />
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* 输入框 */}
-        <ChatInput
-          activeSessionId={activeSessionId}
-          members={members}
-          onSend={handleSend}
-          quotedMessage={quotedMessage}
-          onClearQuote={() => setQuotedMessage(null)}
-        />
-      </div>
-    );
-  }
-
-  // 群聊界面（原有逻辑）
+  // 群聊界面
   return (
     <div className={styles.chatArea}>
       {/* 对话头部 */}
