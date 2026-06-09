@@ -102,10 +102,8 @@ class SingleChatManager:
             return None
         if platform == AgentPlatform.CLAUDE:
             search_dir = Path(work_root) / "projects"
-        elif platform == AgentPlatform.CODEX:
+        elif platform in (AgentPlatform.CODEX, AgentPlatform.OPENCODE):
             search_dir = Path(work_root) / "sessions"
-        else:
-            return None  # type: ignore[unreachable]
         if not search_dir.exists():
             return None
         for f in search_dir.rglob(f"*{session_id}*.jsonl"):
