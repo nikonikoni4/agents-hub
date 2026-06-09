@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useGroupChatList } from '../hooks/useGroupChatList';
-import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
+import { useSingleChatList } from '@/features/single-chat/hooks/useSingleChatList';
 import { groupSingleChatsByProject } from '@/shared/adapters/sessionAdapter';
 import { ProjectGroup } from './ProjectGroup';
 import './SessionList.css';
@@ -10,12 +10,9 @@ type SessionTab = 'group' | 'single';
 export function SessionList() {
   const [activeTab, setActiveTab] = useState<SessionTab>('group');
   const { projectGroups: groupChatGroups } = useGroupChatList();
-  const singleChats = useSingleChatStore((s) => s.singleChats);
+  const { singleChats } = useSingleChatList();
 
-  const singleChatGroups = useMemo(
-    () => groupSingleChatsByProject(singleChats),
-    [singleChats]
-  );
+  const singleChatGroups = useMemo(() => groupSingleChatsByProject(singleChats), [singleChats]);
 
   const groups = activeTab === 'group' ? groupChatGroups : singleChatGroups;
 
