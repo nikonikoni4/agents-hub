@@ -34,11 +34,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
   const [selectedGroupChat, setSelectedGroupChat] = useState<string | null>(null);
 
   const { leaders, workers, teams, loading, submitting, createChat } = useCreateGroupChat();
-  const {
-    roles: allRoles,
-    groupChats,
-    loading: singleLoading,
-  } = useCreateChatData();
+  const { roles: allRoles, groupChats, loading: singleLoading } = useCreateChatData();
   const { members: groupMembers, loading: membersLoading } = useGroupChatMembers(selectedGroupChat);
   const selectGroupChat = useSessionStore((s) => s.selectGroupChat);
   const openDraftChat = useSingleChatStore((s) => s.openDraftChat);
@@ -124,7 +120,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
         type: singleMode === 'new' ? 'new' : 'fork',
         single_chat_name: chatName,
         agent_name: selectedAgent,
-        group_chat_id: singleMode === 'group' ? selectedGroupChat ?? undefined : undefined,
+        group_chat_id: singleMode === 'group' ? (selectedGroupChat ?? undefined) : undefined,
       };
       openDraftChat(draft);
       onSuccess?.();

@@ -22,9 +22,7 @@ export function useGroupChatList() {
       const groups = groupSessionsByProject(chats, lastViewRecords, []);
 
       // 加载成员头像
-      const groupChatSessionIds = groups.flatMap((g) =>
-        g.sessions.map((s) => s.id)
-      );
+      const groupChatSessionIds = groups.flatMap((g) => g.sessions.map((s) => s.id));
 
       const roleAvatarMap = await buildRoleAvatarMap();
 
@@ -63,7 +61,9 @@ export function useGroupChatList() {
       }
     };
     wsManager.on('refresh', handleRefresh);
-    return () => { wsManager.off('refresh', handleRefresh); };
+    return () => {
+      wsManager.off('refresh', handleRefresh);
+    };
   }, [refreshGroupChats, activeSessionId]);
 
   return { projectGroups, refreshGroupChats };

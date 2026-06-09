@@ -27,11 +27,7 @@ export function ProjectGroup({ group, type }: ProjectGroupProps) {
       {isExpanded && (
         <div className="sessions">
           {group.sessions.map((session) => (
-            <SessionItem
-              key={session.id}
-              session={session}
-              isActive={session.id === activeId}
-            />
+            <SessionItem key={session.id} session={session} isActive={session.id === activeId} />
           ))}
         </div>
       )}

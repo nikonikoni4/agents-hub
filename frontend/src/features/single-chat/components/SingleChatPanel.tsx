@@ -88,18 +88,22 @@ export function SingleChatPanel() {
     ? singleChats.find((c) => c.single_chat_id === activeSingleChatId)
     : null;
 
-  const displayChat = activeChat ?? (draftChat ? {
-    single_chat_id: 'draft',
-    single_chat_name: draftChat.single_chat_name,
-    type: draftChat.type,
-    agent_name: draftChat.agent_name,
-    platform: 'claude' as const,
-    session_id: null,
-    group_chat_id: draftChat.group_chat_id ?? null,
-    cwd: '',
-    created_at: '',
-    last_active_at: '',
-  } : null);
+  const displayChat =
+    activeChat ??
+    (draftChat
+      ? {
+          single_chat_id: 'draft',
+          single_chat_name: draftChat.single_chat_name,
+          type: draftChat.type,
+          agent_name: draftChat.agent_name,
+          platform: 'claude' as const,
+          session_id: null,
+          group_chat_id: draftChat.group_chat_id ?? null,
+          cwd: '',
+          created_at: '',
+          last_active_at: '',
+        }
+      : null);
 
   // 点击移到主界面时，切换显示位置
   const handleToggleLocation = () => {

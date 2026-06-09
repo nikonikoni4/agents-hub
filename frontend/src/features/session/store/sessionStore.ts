@@ -41,16 +41,13 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   setProjectGroups: (groups) => set({ projectGroups: groups }),
 
-  selectGroupChat: (id) =>
-    set({ activeSessionId: id, lastSelectedAt: Date.now() }),
+  selectGroupChat: (id) => set({ activeSessionId: id, lastSelectedAt: Date.now() }),
 
   updateSession: (id, updates) =>
     set((state) => ({
       projectGroups: state.projectGroups.map((group) => ({
         ...group,
-        sessions: group.sessions.map((s) =>
-          s.id === id ? { ...s, ...updates } : s
-        ),
+        sessions: group.sessions.map((s) => (s.id === id ? { ...s, ...updates } : s)),
       })),
     })),
 

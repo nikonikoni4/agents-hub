@@ -5,10 +5,7 @@
  */
 
 import apiClient, { mockableRequest } from './client';
-import type {
-  SingleChatApiResponse,
-  SingleChatMessageApiItem,
-} from '@/shared/types';
+import type { SingleChatApiResponse, SingleChatMessageApiItem } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
 

@@ -28,7 +28,9 @@ export function useSingleChatList() {
       }
     };
     wsManager.on('refresh', handleRefresh);
-    return () => { wsManager.off('refresh', handleRefresh); };
+    return () => {
+      wsManager.off('refresh', handleRefresh);
+    };
   }, [refreshSingleChats]);
 
   return { singleChats, refreshSingleChats };

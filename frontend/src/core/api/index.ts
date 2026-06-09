@@ -42,8 +42,4 @@ export { listSkills, getSkill, deleteSkill, addSkill } from './skillApi';
 export { listTeams, getTeam, createTeam, updateTeam, deleteTeam } from './teamApi';
 
 // 单聊 API
-export {
-  listSingleChats,
-  getSingleChat,
-  getSingleChatMessages,
-} from './singleChatApi';
+export { listSingleChats, getSingleChat, getSingleChatMessages } from './singleChatApi';

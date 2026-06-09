@@ -47,9 +47,7 @@ export function SessionItem({ session, isActive = false }: SessionItemProps) {
     >
       <div className="session-content">
         <div className="session-title">
-          <span className="session-type-badge">
-            {isSingleChat ? '单聊' : '群聊'}
-          </span>
+          <span className="session-type-badge">{isSingleChat ? '单聊' : '群聊'}</span>
           {session.title}
         </div>
         <div className="session-preview">{session.preview}</div>
@@ -66,18 +64,17 @@ export function SessionItem({ session, isActive = false }: SessionItemProps) {
         <div className="session-actions">
           <button
             className="menu-button"
-            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
             title="更多操作"
           >
             ⋮
           </button>
           {showMenu && (
             <div className="context-menu">
-              <button
-                className="menu-item danger"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
+              <button className="menu-item danger" onClick={handleDelete} disabled={deleting}>
                 {deleting ? '删除中...' : '删除群聊'}
               </button>
             </div>

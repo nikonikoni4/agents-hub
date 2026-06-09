@@ -229,9 +229,7 @@ export function formatRelativeTime(date: Date): string {
 /**
  * 将单聊列表按 cwd 分组为 ProjectGroup 格式
  */
-export function groupSingleChatsByProject(
-  singleChats: SingleChatApiResponse[]
-): ProjectGroup[] {
+export function groupSingleChatsByProject(singleChats: SingleChatApiResponse[]): ProjectGroup[] {
   const grouped: Record<string, ProjectGroup> = {};
   for (const sc of singleChats) {
     const projectName = extractProjectName(sc.cwd);
@@ -259,8 +257,6 @@ export function groupSingleChatsByProject(
   }
   return Object.values(grouped).map((group) => ({
     ...group,
-    sessions: group.sessions.sort(
-      (a, b) => b.lastUpdateAt.getTime() - a.lastUpdateAt.getTime()
-    ),
+    sessions: group.sessions.sort((a, b) => b.lastUpdateAt.getTime() - a.lastUpdateAt.getTime()),
   }));
 }

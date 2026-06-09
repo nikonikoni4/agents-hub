@@ -11,10 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { listRoles } from '@/core/api/roleApi';
 import { listGroupChatInfos } from '@/core/api/groupChatApi';
-import type {
-  RoleApiResponse,
-  GroupChatInfoApiResponse,
-} from '@/shared/types';
+import type { RoleApiResponse, GroupChatInfoApiResponse } from '@/shared/types';
 
 export function useCreateChatData() {
   const [roles, setRoles] = useState<RoleApiResponse[]>([]);

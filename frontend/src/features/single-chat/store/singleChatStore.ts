@@ -32,9 +32,11 @@ export const useSingleChatStore = create<SingleChatState>((set) => ({
 
   setSingleChats: (chats) => set({ singleChats: chats }),
 
-  openSingleChat: (id) => set({ activeSingleChatId: id, draftChat: null, displayLocation: 'sidebar' }),
+  openSingleChat: (id) =>
+    set({ activeSingleChatId: id, draftChat: null, displayLocation: 'sidebar' }),
 
-  openDraftChat: (draft) => set({ activeSingleChatId: null, draftChat: draft, displayLocation: 'sidebar' }),
+  openDraftChat: (draft) =>
+    set({ activeSingleChatId: null, draftChat: draft, displayLocation: 'sidebar' }),
 
   closeSingleChat: () => set({ activeSingleChatId: null, draftChat: null }),
 
