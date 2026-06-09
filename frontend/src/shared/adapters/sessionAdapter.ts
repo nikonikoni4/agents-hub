@@ -225,3 +225,42 @@ export function formatRelativeTime(date: Date): string {
   // 超过 30 天，显示日期
   return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' });
 }
+
+/**
+ * 将单聊列表按 cwd 分组为 ProjectGroup 格式
+ */
+export function groupSingleChatsByProject(
+  singleChats: SingleChatApiResponse[]
+): ProjectGroup[] {
+  const grouped: Record<string, ProjectGroup> = {};
+  for (const sc of singleChats) {
+    const projectName = extractProjectName(sc.cwd);
+    if (!grouped[projectName]) {
+      grouped[projectName] = {
+        projectPath: sc.cwd,
+        projectName,
+        sessions: [],
+      };
+    }
+    grouped[projectName]!.sessions.push({
+      id: sc.single_chat_id,
+      title: sc.single_chat_name,
+      preview: `${sc.agent_name} · ${sc.platform}`,
+      lastUpdateAt: new Date(sc.last_active_at),
+      lastViewAt: null,
+      isUnread: false,
+      memberCount: 1,
+      projectPath: sc.cwd,
+      memberAvatars: [],
+      type: 'single_chat',
+      agentName: sc.agent_name,
+      platform: sc.platform,
+    });
+  }
+  return Object.values(grouped).map((group) => ({
+    ...group,
+    sessions: group.sessions.sort(
+      (a, b) => b.lastUpdateAt.getTime() - a.lastUpdateAt.getTime()
+    ),
+  }));
+}

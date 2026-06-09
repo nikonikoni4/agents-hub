@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   PlusIcon,
   UsersIcon,
@@ -8,7 +8,9 @@ import {
   ResizeHandle,
 } from '@/shared/components';
 import { SessionList, CreateGroupChatDialog } from '@/features/session';
-import { useCreateSingleChat, useSingleChatStore } from '@/features/single-chat';
+import { useSessionStore } from '@/features/session/store/sessionStore';
+import { useCreateSingleChat } from '@/features/single-chat';
+import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
@@ -34,7 +36,17 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { createChat } = useCreateSingleChat();
-  const openSingleChat = useSingleChatStore((s) => s.openSingleChat);
+
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
+  const lastSelectedAt = useSessionStore((s) => s.lastSelectedAt);
+
+  // Auto-switch to chat view when a session is selected
+  useEffect(() => {
+    if (activeSessionId || activeSingleChatId) {
+      onViewModeChange?.('chat');
+    }
+  }, [activeSessionId, activeSingleChatId, lastSelectedAt, onViewModeChange]);
 
   const handleCreateAssistantChat = async () => {
     await createChat({
@@ -44,14 +56,6 @@ export function LeftSidebar({
     });
     onViewModeChange?.('chat');
   };
-
-  const handleSelectSingleChat = useCallback(
-    (id: string) => {
-      openSingleChat(id);
-      onViewModeChange?.('chat');
-    },
-    [openSingleChat, onViewModeChange]
-  );
 
   return (
     <div
@@ -107,7 +111,7 @@ export function LeftSidebar({
 
       {/* Session 列表区（按项目分组） */}
       <div className={styles.sidebarSessions}>
-        <SessionList onSelectSingleChat={handleSelectSingleChat} />
+        <SessionList />
       </div>
 
       {/* 设置按钮 */}

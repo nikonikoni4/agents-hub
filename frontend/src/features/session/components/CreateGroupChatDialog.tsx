@@ -41,7 +41,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
     submitSingleChat,
   } = useCreateChatData();
   const { members: groupMembers, loading: membersLoading } = useGroupChatMembers(selectedGroupChat);
-  const selectSession = useSessionStore((s) => s.selectSession);
+  const selectGroupChat = useSessionStore((s) => s.selectGroupChat);
   const addSingleChat = useSingleChatStore((s) => s.addSingleChat);
   const openSingleChat = useSingleChatStore((s) => s.openSingleChat);
 
@@ -115,7 +115,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
         project_path: projectPath.trim(),
       });
       if (chatId) {
-        selectSession(chatId, 'group_chat');
+        selectGroupChat(chatId);
         onSuccess?.();
         handleClose();
       }

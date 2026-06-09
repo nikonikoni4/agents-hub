@@ -1,26 +1,21 @@
-/**
- * ProjectGroup 组件
- *
- * 职责：
- * - 显示项目分组
- * - 管理折叠/展开状态
- * - 渲染该项目下的所有 sessions
- */
-
 import { useState } from 'react';
 import { ProjectGroup as ProjectGroupType } from '@/shared/adapters/sessionAdapter';
 import { SessionItem } from './SessionItem';
 import { useSessionStore } from '../store/sessionStore';
+import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import './ProjectGroup.css';
 
 interface ProjectGroupProps {
   group: ProjectGroupType;
-  onSelectSingleChat?: (id: string) => void;
+  type: 'group_chat' | 'single_chat';
 }
 
-export function ProjectGroup({ group, onSelectSingleChat }: ProjectGroupProps) {
+export function ProjectGroup({ group, type }: ProjectGroupProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const activeSessionId = useSessionStore((state) => state.activeSessionId);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
+
+  const activeId = type === 'group_chat' ? activeSessionId : activeSingleChatId;
 
   return (
     <div className="project-group">
@@ -29,15 +24,13 @@ export function ProjectGroup({ group, onSelectSingleChat }: ProjectGroupProps) {
         <span className="project-name">{group.projectName}</span>
         <span className="session-count">{group.sessions.length}</span>
       </div>
-
       {isExpanded && (
         <div className="sessions">
           {group.sessions.map((session) => (
             <SessionItem
               key={session.id}
               session={session}
-              isActive={session.id === activeSessionId}
-              onSelectSingleChat={onSelectSingleChat}
+              isActive={session.id === activeId}
             />
           ))}
         </div>

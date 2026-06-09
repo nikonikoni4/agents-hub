@@ -6,6 +6,8 @@ import { RightSidebar } from '../RightSidebar';
 import { RoleManagement } from '../RoleManagement';
 import { SkillSquare } from '@/features/skills';
 import { useSessionStore } from '@/features/session/store/sessionStore';
+import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
+import { SingleChatPanel } from '@/features/single-chat/components/SingleChatPanel';
 import { ToastContainer } from '@/shared/components';
 import styles from './MainLayout.module.css';
 
@@ -50,12 +52,22 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const lastSelectedAt = useSessionStore((s) => s.lastSelectedAt);
 
+  const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
+  const displayLocation = useSingleChatStore((s) => s.displayLocation);
+
   // 当 session 被选中时，自动切换到 chat 视图
   useEffect(() => {
     if (activeSessionId) {
       setViewMode('chat');
     }
   }, [activeSessionId, lastSelectedAt]);
+
+  // When single chat is activated, auto-switch to chat view
+  useEffect(() => {
+    if (activeSingleChatId) {
+      setViewMode('chat');
+    }
+  }, [activeSingleChatId]);
 
   // 当有新的预览/diff 内容时，自动展开右侧栏
   useEffect(() => {
@@ -102,10 +114,16 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
           onViewModeChange={handleViewModeChange}
         />
         {viewMode === 'chat' && (
-          <ChatArea
-            onToggleRightSidebar={handleToggleRightSidebar}
-            onContentChange={setRightSidebarContent}
-          />
+          <>
+            {displayLocation === 'main' && activeSingleChatId ? (
+              <SingleChatPanel />
+            ) : (
+              <ChatArea
+                onToggleRightSidebar={handleToggleRightSidebar}
+                onContentChange={setRightSidebarContent}
+              />
+            )}
+          </>
         )}
         {viewMode === 'role' && <RoleManagement />}
         {viewMode === 'skill' && <SkillSquare />}

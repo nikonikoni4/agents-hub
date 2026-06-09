@@ -15,9 +15,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import { getMessages } from '@/core/api/groupChatApi';
-import { getSingleChatMessages } from '@/core/api/singleChatApi';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
-import { adaptSingleChatMessages } from '@/shared/adapters/singleChatMessageAdapter';
 import type { MessageApiItem } from '@/shared/types';
 
 // 与后端 API 默认 limit 保持一致 (routes/group_chat.py)
@@ -27,7 +25,6 @@ const LOAD_MORE_COOLDOWN_MS = 100;
 
 export function useChatMessages() {
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
-  const activeSessionType = useSessionStore((s) => s.activeSessionType);
   const projectGroups = useSessionStore((s) => s.projectGroups);
 
   const [messages, setMessages] = useState<MessageApiItem[]>([]);
@@ -54,7 +51,7 @@ export function useChatMessages() {
 
   // 初始加载最新消息
   useEffect(() => {
-    if (!activeSessionId || !activeSessionType) {
+    if (!activeSessionId) {
       setMessages([]);
       setRoleAvatarMap(new Map());
       setHasMore(true);
@@ -64,12 +61,7 @@ export function useChatMessages() {
     let cancelled = false;
     setLoading(true);
 
-    const loadMessages =
-      activeSessionType === 'single_chat'
-        ? getSingleChatMessages(activeSessionId).then(adaptSingleChatMessages)
-        : getMessages(activeSessionId, PAGE_SIZE, undefined);
-
-    Promise.all([loadMessages, buildRoleAvatarMap()])
+    Promise.all([getMessages(activeSessionId, PAGE_SIZE, undefined), buildRoleAvatarMap()])
       .then(([msgData, avatarMap]) => {
         if (!cancelled) {
           setMessages(msgData);
@@ -87,12 +79,11 @@ export function useChatMessages() {
     return () => {
       cancelled = true;
     };
-  }, [activeSessionId, activeSessionType]);
+  }, [activeSessionId]);
 
   // WebSocket refresh: 当前 session 收到新消息时，追加新消息（不覆盖已加载的历史）
-  // 单聊使用 SSE 流式，不走 WebSocket refresh
   useEffect(() => {
-    if (!activeSessionId || activeSessionType === 'single_chat') return;
+    if (!activeSessionId) return;
 
     const handleRefresh = (data?: unknown) => {
       const signal = data as { group_chat_id?: string };
@@ -118,13 +109,11 @@ export function useChatMessages() {
     return () => {
       wsManager.off('refresh', handleRefresh);
     };
-  }, [activeSessionId, activeSessionType]);
+  }, [activeSessionId]);
 
   // 内部加载方法：只负责 API 调用和状态更新，不处理滚动
-  // 单聊不支持增量加载（消息通过 SSE 流式获取）
   const loadMoreInternal = useCallback(async () => {
     const currentMessages = messagesRef.current;
-    if (activeSessionType === 'single_chat') return false;
     if (!activeSessionId || !hasMore || loadingMoreRef.current || currentMessages.length === 0) {
       return false; // 未实际加载
     }
@@ -144,7 +133,7 @@ export function useChatMessages() {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [activeSessionId, activeSessionType, hasMore]);
+  }, [activeSessionId, hasMore]);
 
   // 公开方法：加载更多并恢复滚动位置
   // 调用方只需传入容器元素，hook 内部处理防抖、状态管理、滚动恢复的完整生命周期
