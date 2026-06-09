@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 class ClaudeParser:
     """解析 Claude CLI 的流式输出"""
 
-    # 工具调用解析开关，默认关闭，未来按需启用
-    ENABLE_TOOL_USE_PARSING = False
+    # 工具调用解析开关
+    ENABLE_TOOL_USE_PARSING = True
 
     def __init__(self):
         self._tool_use_blocks: dict[int, dict] = {}

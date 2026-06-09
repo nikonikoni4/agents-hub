@@ -141,6 +141,10 @@
   border-bottom-left-radius: 4px;
 }
 
+.toolCalls {
+  margin-bottom: 8px;
+}
+
 .cursor {
   display: inline-block;
   width: 6px;

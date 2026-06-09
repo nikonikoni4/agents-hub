@@ -14,6 +14,7 @@ import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
+import { ToolCallCard } from '@/features/single-chat/components/ToolCallCard';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import {
   sendMessage,
@@ -23,7 +24,7 @@ import {
   updatePermissionStatus,
 } from '@/core/api/groupChatApi';
 import { streamSSE } from '@/core/api/sseClient';
-import type { MessageApiItem } from '@/shared/types';
+import type { MessageApiItem, ToolCall } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { extractProjectName } from '@/shared/adapters/sessionAdapter';
 import { ChatInput } from './ChatInput';
@@ -155,6 +156,14 @@ const MessageBubble = React.memo(
         <div
           className={`${styles.messageBubble} ${isUser ? styles.bubbleUser : styles.bubbleAgent}`}
         >
+          {/* 工具调用卡片 */}
+          {msg.tool_calls && msg.tool_calls.length > 0 && (
+            <div className={styles.toolCalls}>
+              {msg.tool_calls.map((toolCall) => (
+                <ToolCallCard key={toolCall.id} toolCall={toolCall} />
+              ))}
+            </div>
+          )}
           <MarkdownRenderer content={msg.content} />
         </div>
         {msg.modified_files && msg.modified_files.length > 0 && (
@@ -308,6 +317,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         if (activeSessionType === 'single_chat') {
           // 单聊：通过 SSE 流式发送
           let fullText = '';
+          const toolCalls: ToolCall[] = [];
           await streamSSE(
             `/single-chats/${activeSessionId}/messages/stream`,
             { content: finalText },
@@ -315,16 +325,24 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
               if (event.type === 'text_delta' && event.content?.text) {
                 fullText += event.content.text as string;
               }
+              if (event.type === 'tool_use') {
+                toolCalls.push({
+                  id: event.content.tool_id as string,
+                  name: event.content.tool_name as string,
+                  input: event.content.input as Record<string, unknown>,
+                });
+              }
             }
           );
           // 流式完成后添加助手消息
-          if (fullText) {
+          if (fullText || toolCalls.length > 0) {
             const assistantMsg: MessageApiItem = {
               id: 0,
               speaker: 'assistant',
               content: fullText,
               timestamp: new Date().toISOString(),
               platform: 'claude',
+              tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
             };
             setLocalMessages((prev) => [...prev, assistantMsg]);
           }
@@ -423,7 +441,18 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     );
   }
 
-  // 单聊界面
+  // 单聊在 sidebar 模式时，主界面显示空态（避免落入群聊分支调用群聊 API）
+  if (activeSessionType === 'single_chat' && displayLocation === 'sidebar') {
+    return (
+      <div className={styles.chatArea}>
+        <div className={styles.emptyState}>
+          <p className={styles.emptyText}>单聊已在右侧面板打开</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 单聊界面（displayLocation === 'main'）
   if (showingSingleChat) {
     return (
       <div className={styles.chatArea}>

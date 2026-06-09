@@ -16,6 +16,7 @@ import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useSingleChatMessages } from '../hooks/useSingleChatMessages';
 import { useSingleChatMembers } from '../hooks/useSingleChatMembers';
 import { useNavigationHandler } from '../hooks/useNavigationHandler';
+import { ToolCallCard } from './ToolCallCard';
 import type { SingleChatMessageApiItem } from '@/shared/types';
 import styles from './SingleChatPanel.module.css';
 
@@ -54,6 +55,15 @@ function MessageBubble({
   return (
     <div className={`${styles.messageRow} ${isUser ? styles.userRow : styles.assistantRow}`}>
       <div className={`${styles.bubble} ${isUser ? styles.userBubble : styles.assistantBubble}`}>
+        {/* 工具调用卡片 */}
+        {msg.tool_calls && msg.tool_calls.length > 0 && (
+          <div className={styles.toolCalls}>
+            {msg.tool_calls.map((toolCall) => (
+              <ToolCallCard key={toolCall.id} toolCall={toolCall} />
+            ))}
+          </div>
+        )}
+        {/* 消息内容 */}
         {isUser ? <span>{msg.content}</span> : <MarkdownRenderer content={msg.content} />}
       </div>
     </div>

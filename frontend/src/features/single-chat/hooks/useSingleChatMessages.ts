@@ -11,7 +11,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSingleChatMessages } from '@/core/api/singleChatApi';
 import { streamSSE } from '@/core/api/sseClient';
 import { useSingleChatStore } from '../store/singleChatStore';
-import type { SingleChatMessageApiItem } from '@/shared/types';
+import type { SingleChatMessageApiItem, ToolCall } from '@/shared/types';
 
 export function useSingleChatMessages() {
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
@@ -71,6 +71,7 @@ export function useSingleChatMessages() {
       abortRef.current = controller;
 
       let fullText = '';
+      const toolCalls: ToolCall[] = [];
 
       try {
         await streamSSE(
@@ -81,17 +82,25 @@ export function useSingleChatMessages() {
               fullText += event.content.text as string;
               setStreamingText(fullText);
             }
+            if (event.type === 'tool_use') {
+              toolCalls.push({
+                id: event.content.tool_id as string,
+                name: event.content.tool_name as string,
+                input: event.content.input as Record<string, unknown>,
+              });
+            }
           },
           controller.signal
         );
 
-        if (fullText) {
+        if (fullText || toolCalls.length > 0) {
           const assistantMsg: SingleChatMessageApiItem = {
             id: `assistant-${Date.now()}`,
             role: 'assistant',
             content: fullText,
             timestamp: new Date().toISOString(),
             model: null,
+            tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
           };
           setMessages((prev) => [...prev, assistantMsg]);
         }

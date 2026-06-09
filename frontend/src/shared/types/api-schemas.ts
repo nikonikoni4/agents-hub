@@ -128,6 +128,8 @@ export interface MessageApiItem {
   permission_request?: PermissionRequestInfo;
   /** 网页预览信息 */
   web_preview?: WebPreviewInfo;
+  /** 工具调用列表 */
+  tool_calls?: ToolCall[];
 }
 
 /**
@@ -503,6 +505,13 @@ export interface CreateSingleChatApiResponse {
   type: SingleChatType;
 }
 
+/** 工具调用信息 */
+export interface ToolCall {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
 /** 单聊消息 - 对应后端 SessionMessageResponse */
 export interface SingleChatMessageApiItem {
   id: string;
@@ -510,4 +519,5 @@ export interface SingleChatMessageApiItem {
   content: string;
   timestamp: string;
   model: string | null;
+  tool_calls?: ToolCall[];
 }

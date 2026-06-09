@@ -20,5 +20,6 @@ export function adaptSingleChatMessages(
     platform: m.model || 'claude', // 使用 model 字段作为 platform
     modified_files: [],
     permission_request: undefined,
+    tool_calls: m.tool_calls,
   }));
 }

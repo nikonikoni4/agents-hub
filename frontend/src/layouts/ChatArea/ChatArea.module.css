@@ -150,6 +150,10 @@
   border-top-left-radius: 4px;
 }
 
+.toolCalls {
+  margin-bottom: 8px;
+}
+
 /* User 气泡：强调色背景 */
 .bubbleUser {
   background: var(--accent-color);
