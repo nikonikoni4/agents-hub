@@ -137,16 +137,15 @@ export function RightSidebar({
 }: RightSidebarProps) {
   const { members, loading, toggleDockerMode } = useMembers();
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
-  const activeSessionType = useSessionStore((s) => s.activeSessionType);
+  const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
+  const displayLocation = useSingleChatStore((s) => s.displayLocation);
+  const toggleLocation = useSingleChatStore((s) => s.toggleLocation);
   // 单聊不支持置顶、Agent 调用、任务列表，传 null 跳过 API 调用
-  const groupChatId = activeSessionType === 'group_chat' ? activeSessionId : null;
+  const groupChatId = activeSessionId && !activeSingleChatId ? activeSessionId : null;
   const { pinnedMessages, unpin } = usePinnedMessages(groupChatId);
   const { agentCalls, loading: callsLoading } = useAgentCalls(groupChatId);
   const { taskList, loading: tasksLoading } = useTasks(groupChatId);
   const toast = useToast();
-  const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
-  const displayLocation = useSingleChatStore((s) => s.displayLocation);
-  const setLocation = useSingleChatStore((s) => s.setLocation);
   const [activeTab, setActiveTab] = useState<SidebarTab>('chat');
 
   // content 变化时自动切换到对应 tab
@@ -207,7 +206,7 @@ export function RightSidebar({
           {displayLocation === 'main' ? (
             <div className={styles.placeholder}>
               <p className={styles.placeholderText}>单聊已移至主界面</p>
-              <button className={styles.placeholderBtn} onClick={() => setLocation('sidebar')}>
+              <button className={styles.placeholderBtn} onClick={() => toggleLocation()}>
                 返回右侧
               </button>
             </div>
