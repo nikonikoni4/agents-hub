@@ -24,6 +24,7 @@ from agents_hub.core.foundation import (
     StateError,
 )
 from agents_hub.core.foundation.token import generate_token
+from agents_hub.realtime import broadcast_group_chat_refresh
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_logger
 
@@ -64,7 +65,11 @@ class GroupChat:
 
         # 依赖组件（按依赖顺序初始化）
 
-        self.runtime = GroupChatRuntime(group_chat_id, project_path)
+        self.runtime = GroupChatRuntime(
+            group_chat_id,
+            project_path,
+            on_change=broadcast_group_chat_refresh,
+        )
         self.group_chat_context = GroupChatContext(self.runtime)
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
