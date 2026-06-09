@@ -30,9 +30,7 @@ export function ToolCallCard({ toolCall, defaultExpanded = false }: ToolCallCard
       </button>
       {expanded && (
         <div className={styles.content}>
-          <pre className={styles.input}>
-            {JSON.stringify(toolCall.input, null, 2)}
-          </pre>
+          <pre className={styles.input}>{JSON.stringify(toolCall.input, null, 2)}</pre>
         </div>
       )}
     </div>
