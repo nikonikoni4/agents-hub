@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { PlusIcon, CheckCircleIcon, SendIcon } from '@/shared/components';
-import type { MessageApiItem } from '@/shared/types';
+import { PlusIcon, CheckCircleIcon, SendIcon, UploadPreview, ImagePreviewModal } from '@/shared/components';
+import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import styles from './ChatArea.module.css';
 
 export interface ChatInputProps {
   activeSessionId: string | null;
   members: { name: string }[];
-  onSend: (text: string) => void;
+  onSend: (text: string, files?: UploadedFileInfo[]) => void;
   quotedMessage?: MessageApiItem | null;
   onClearQuote?: () => void;
 }
@@ -17,6 +17,9 @@ export const ChatInput = React.memo(
     const [showMention, setShowMention] = useState(false);
     const [mentionQuery, setMentionQuery] = useState('');
     const [mentionIndex, setMentionIndex] = useState(0);
+    const [uploadedFiles, setUploadedFiles] = useState<UploadedFileInfo[]>([]);
+    const [showImagePreview, setShowImagePreview] = useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // 过滤匹配的成员（使用 useMemo 优化）
@@ -89,10 +92,11 @@ export const ChatInput = React.memo(
       const text = inputValue.trim();
       if (!text || !activeSessionId) return;
 
-      onSend(text);
+      onSend(text, uploadedFiles);
       setInputValue('');
+      setUploadedFiles([]);
       setShowMention(false);
-    }, [inputValue, activeSessionId, onSend]);
+    }, [inputValue, activeSessionId, onSend, uploadedFiles]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -137,6 +141,20 @@ export const ChatInput = React.memo(
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }, [showMention]);
+
+    const handleRemoveFile = useCallback((index: number) => {
+      setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+    }, []);
+
+    const handleImageClick = useCallback(
+      (filePath: string) => {
+        setPreviewImageUrl(
+          `/api/v1/group-chats/${activeSessionId}/files/${encodeURIComponent(filePath)}`
+        );
+        setShowImagePreview(true);
+      },
+      [activeSessionId]
+    );
 
     return (
       <div className={styles.chatInputContainer}>
@@ -203,6 +221,23 @@ export const ChatInput = React.memo(
             <SendIcon />
           </button>
         </div>
+
+        {/* 文件上传预览区域 */}
+        {uploadedFiles.length > 0 && (
+          <UploadPreview
+            files={uploadedFiles}
+            onRemove={handleRemoveFile}
+            onImageClick={handleImageClick}
+            groupChatId={activeSessionId || ''}
+          />
+        )}
+
+        {/* 图片预览模态框 */}
+        <ImagePreviewModal
+          isOpen={showImagePreview}
+          imageUrl={previewImageUrl}
+          onClose={() => setShowImagePreview(false)}
+        />
       </div>
     );
   }

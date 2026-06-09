@@ -10,4 +10,7 @@ export * from './ResizeHandle';
 export * from './SkillSelectorModal';
 export * from './Toast';
 export * from './ToolSelectorModal';
+export * from './UploadArea';
+export * from './UploadPreview';
+export * from './ImagePreviewModal';
 export * from './WebPreviewCard';

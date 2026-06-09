@@ -21,7 +21,7 @@ import {
   getFileSnapshotDiff,
   updatePermissionStatus,
 } from '@/core/api/groupChatApi';
-import type { MessageApiItem } from '@/shared/types';
+import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { extractProjectName } from '@/shared/adapters/sessionAdapter';
 import { ChatInput } from './ChatInput';
@@ -273,7 +273,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   }, [rightSidebarContent, onContentChange]);
 
   const handleSend = useCallback(
-    async (text: string) => {
+    async (text: string, _files?: UploadedFileInfo[]) => {
       if (!activeSessionId) return;
 
       // 如果有引用消息，用 MD 引用语法包裹
