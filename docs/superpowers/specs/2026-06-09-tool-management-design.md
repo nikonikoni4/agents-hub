@@ -26,7 +26,41 @@ ALL_TOOLS: list[ToolGroup] = [...]
 ```
 
 工具分组：
-
+- CronCreate
+  - CronDelete
+  - CronList
+  - Edit
+  - EnterPlanMode
+  - EnterWorktree
+  - ExitPlanMode
+  - ExitWorktree
+  - Glob
+  - Grep
+  - ListMcpResourcesTool
+  - NotebookEdit
+  - PowerShell
+  - Read
+  - ReadMcpResourceTool
+  - ScheduleWakeup
+  - Skill
+  - TaskOutput
+  - TaskStop
+  - TodoWrite
+  - WebFetch
+  - WebSearch
+  - Write
+  
+  **MCP 服务工具：**
+  - mcp__agents-hub__archive_task_list
+  - mcp__agents-hub__assign_tasks_to_team
+  - mcp__agents-hub__call_agent
+  - mcp__agents-hub__check_agent_call
+  - mcp__agents-hub__create_agent
+  - mcp__agents-hub__create_group_chat
+  - mcp__agents-hub__finish_agent_call
+  - mcp__agents-hub__health_check
+  - mcp__agents-hub__speak_in_group_chat
+  - mcp__mimo-image__understand_image
 | 分组 | 图标 | 工具 |
 |------|------|------|
 | 文件操作 | 📁 | Read, Write, Edit, Glob, NotebookEdit |
