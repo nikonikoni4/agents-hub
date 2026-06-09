@@ -99,3 +99,9 @@
  - path: docs/history-bugs/2026-06-09-single-chat-dual-location-api-leak.md
  - 触发规则：点击单聊时控制台报 "GroupChat 'xxx' 不存在"，单聊消息显示在主界面而非右侧栏
  - 内容摘要：ChatArea 组件内多个 hook（usePinnedMessages, useMembers, useTasks 等）未根据 activeSessionType 区分，单聊 ID 被传给群聊 API。已缓解部分问题（usePinnedMessages 条件调用），但残留其他 hook 未隔离和 displayLocation 状态竞争问题。待后续彻底修复
+
+## Manager 工具调用无限循环
+ - updated_at : 2026-06-09
+ - path: docs/history-bugs/2026-06-09-manager-tool-call-infinite-loop.md
+ - 触发规则：Manager agent 处理多步骤任务且需要等待其他 Agent 调用结果时
+ - 内容摘要：Manager agent 陷入无限循环，反复执行 TodoWrite 和 Read 工具调用（50+ 次），导致上下文空间被大量重复内容占用（约 150K-180K tokens）。根因是模型的"安全行为"模式和缺乏"已完成"状态感知。TodoWrite 未持久化到 TaskList 也是原因之一。建议：限制工具调用频率、添加 heartbeat 机制、TodoWrite 应持久化

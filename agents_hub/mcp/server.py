@@ -906,6 +906,24 @@ async def create_agent(
 
 
 # ============================================================================
+# Tool 10: health_check
+# ============================================================================
+
+
+async def health_check() -> dict:
+    """
+    健康检查端点
+
+    Returns:
+        成功: {"status": "healthy", "timestamp": "..."}
+    """
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+# ============================================================================
 # 注册工具到 FastMCP
 # ============================================================================
 
@@ -918,3 +936,4 @@ mcp.tool()(finish_agent_call)
 # mcp.tool()(request_permission)
 mcp.tool()(create_group_chat)
 mcp.tool()(create_agent)
+mcp.tool()(health_check)

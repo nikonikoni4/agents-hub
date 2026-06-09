@@ -117,6 +117,54 @@ claude -p \
 
 **注意：** `--tools` 标志实测无法正确注册 Bash 工具，推荐始终使用 `--allowedTools`。
 
+## 关键实测发现（2026-06-09）
+
+### `--allowedTools` 无法阻止子 Agent 调用
+
+**测试命令：**
+```bash
+claude -p --allowedTools "Bash" "请启动一个子agent来分析项目架构"
+```
+
+**结果：** 子 Agent 成功调用，使用了 Read、Glob 等 36 次工具调用，`permission_denials: []`。
+
+**结论：`--allowedTools` 是增量白名单，无法可靠阻止未列出的工具（尤其是 Agent）。**
+
+### `--disallowedTools` 是唯一可靠的禁用方式
+
+**测试 1：禁用 Agent**
+```bash
+claude -p --disallowedTools "Agent" "你有名为Agent的工具吗？"
+```
+**结果：** Agent 工具直接不在可用工具列表中，Claude 明确回答"没有名为 Agent 的工具"。
+
+**测试 2：禁用 Read**
+```bash
+claude -p --disallowedTools "Read" "使用Read工具读取文件"
+```
+**结果：** Claude 尝试调用 Read 时收到错误：
+```
+Error: No such tool available: Read. Read exists but is not enabled in this context.
+```
+
+**测试 3：禁用 MCP 工具**
+```bash
+claude -p --disallowedTools='mcp__agents-hub__health_check' '使用mcp__agents-hub__health_check工具检查服务状态'
+```
+**结果：** Claude 明确回答工具不可用，列出了剩余可用的 MCP 工具。`--disallowedTools` 对 MCP 工具同样有效，命名格式为 `mcp__<server>__<tool>`。
+
+### `--disallowedTools` 的工作机制
+
+| 层面 | 是否被过滤 | 说明 |
+|------|-----------|------|
+| API `tools` 参数 | ✅ 被移除 | 工具定义不会发送给模型 |
+| System Prompt 文本 | ❌ 未过滤 | 系统提示词中仍然描述了该工具 |
+
+- 工具定义在 API 请求构建时被移除（模型看不到工具 schema）
+- 但系统提示词仍会提及该工具，Claude 从训练数据中"知道"它的存在
+- 调用时会收到 `"exists but is not enabled in this context"` 错误
+- `bypassPermissions` 模式也无法覆盖 `disallowedTools`
+
 ## 注意事项
 
 1. `--tools` 和 `--allowedTools` 语义不同：`--tools` 是严格白名单，`--allowedTools` 是细粒度控制
@@ -124,3 +172,5 @@ claude -p \
 3. `--allowedTools` 的通配符只对 `Bash` 有效，对其他工具无意义
 4. `--dangerously-skip-permissions` 会跳过所有安全检查，CI 环境慎用
 5. 多个标志可以组合使用，效果叠加
+6. **禁用工具必须用 `--disallowedTools`，`--allowedTools` 无法阻止 Agent 等元工具**
+7. `--disallowedTools` 从 API 层面移除工具定义，但系统提示词不会同步清理
