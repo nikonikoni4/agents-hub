@@ -11,7 +11,7 @@ class RoleCreateRequest(BaseModel):
     """创建角色请求"""
 
     name: str
-    platform: Literal["claude", "codex"]
+    platform: Literal["claude", "codex", "opencode"]
     avatar: str | None = None
     abilities: list[str] = []
     type: Literal["leader", "team_member", "system"] | None = None
@@ -38,7 +38,7 @@ class RoleResponse(BaseModel):
     """角色响应"""
 
     name: str
-    platform: Literal["claude", "codex"]
+    platform: Literal["claude", "codex", "opencode"]
     avatar: str | None = None
     abilities: list[str] = []
     type: Literal["leader", "team_member", "system"] | None = None

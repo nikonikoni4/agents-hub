@@ -12,9 +12,11 @@ from agents_hub.agent_bridge.exceptions import (
 )
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
-from agents_hub.agent_bridge.models import AgentEventType, AgentResult, StreamEvent
+from agents_hub.agent_bridge.executors.opencode import OpenCodeExecutor
+from agents_hub.agent_bridge.models import AgentEventType, AgentResult, StreamEvent, Usage
 from agents_hub.agent_bridge.parsers.claude import ClaudeParser
 from agents_hub.agent_bridge.parsers.codex import CodexParser
+from agents_hub.agent_bridge.parsers.opencode import OpenCodeParser
 from agents_hub.config.types import AgentPlatform
 from agents_hub.roles import RoleManager
 from agents_hub.roles.models import RoleConfig
@@ -29,13 +31,15 @@ class AgentBridge:
 
     def __init__(self):
         # 创建执行器和解析器实例（可复用）
-        self._executors: dict[AgentPlatform, ClaudeExecutor | CodexExecutor] = {
+        self._executors: dict[AgentPlatform, ClaudeExecutor | CodexExecutor | OpenCodeExecutor] = {
             AgentPlatform.CLAUDE: ClaudeExecutor(),
             AgentPlatform.CODEX: CodexExecutor(),
+            AgentPlatform.OPENCODE: OpenCodeExecutor(),
         }
-        self._parsers: dict[AgentPlatform, ClaudeParser | CodexParser] = {
+        self._parsers: dict[AgentPlatform, ClaudeParser | CodexParser | OpenCodeParser] = {
             AgentPlatform.CLAUDE: ClaudeParser(),
             AgentPlatform.CODEX: CodexParser(),
+            AgentPlatform.OPENCODE: OpenCodeParser(),
         }
 
         # Docker manager 和 executors（延迟导入，避免循环依赖）
@@ -95,7 +99,13 @@ class AgentBridge:
                 prompt, config, session_id, cwd, fork_from=fork_from, system_prompt=system_prompt
             )
             async for raw_line in raw_stream:
-                if raw_line.strip():
+                # OpenCode executor 返回 dict，其他返回 str
+                if isinstance(raw_line, dict):
+                    # OpenCode 已经转换好的事件
+                    parsed_event = self._dict_to_stream_event(raw_line, config)
+                    if parsed_event is not None:
+                        yield parsed_event
+                elif isinstance(raw_line, str) and raw_line.strip():
                     try:
                         parsed_event = parser.parse_event(raw_line)
                         if parsed_event is not None:
@@ -110,6 +120,49 @@ class AgentBridge:
         except (CLINotFoundError, CLIExecutionError):
             # CLI 错误：直接向上传递
             raise
+
+    def _dict_to_stream_event(self, event_dict: dict, config: RoleConfig) -> StreamEvent | None:
+        """将 dict 转换为 StreamEvent（用于 OpenCode）"""
+        event_type = event_dict.get("type", "")
+
+        if event_type == "init":
+            return StreamEvent(
+                type=AgentEventType.INIT,
+                content=event_dict.get("data", {}),
+                session_id=event_dict.get("session_id", ""),
+                timestamp=event_dict.get("timestamp", ""),
+                agent_name=config.name,
+                platform=config.platform,
+                role_type=config.role_type,
+            )
+        elif event_type == "text_delta":
+            return StreamEvent(
+                type=AgentEventType.TEXT_DELTA,
+                content={"text": event_dict.get("text", "")},
+                session_id=event_dict.get("session_id", ""),
+                timestamp=event_dict.get("timestamp", ""),
+                agent_name=config.name,
+                platform=config.platform,
+                role_type=config.role_type,
+            )
+        elif event_type == "turn_complete":
+            tokens = event_dict.get("tokens", {})
+            return StreamEvent(
+                type=AgentEventType.TURN_COMPLETE,
+                content={
+                    "usage": {
+                        "input_tokens": tokens.get("input", 0),
+                    },
+                    "cost": event_dict.get("cost", 0),
+                    "reason": event_dict.get("reason", ""),
+                },
+                session_id=event_dict.get("session_id", ""),
+                timestamp=event_dict.get("timestamp", ""),
+                agent_name=config.name,
+                platform=config.platform,
+                role_type=config.role_type,
+            )
+        return None
 
     async def execute(
         self,
@@ -154,7 +207,11 @@ class AgentBridge:
                             if parsed_event.type == AgentEventType.TEXT_DELTA:
                                 full_text.append(parsed_event.content["text"])
                             elif parsed_event.type == AgentEventType.TURN_COMPLETE:
-                                usage = parsed_event.content.get("usage")
+                                usage = Usage(
+                                    input_tokens=parsed_event.content.get("usage", {}).get(
+                                        "input_tokens", 0
+                                    )
+                                )
                             if not result_session_id and parsed_event.session_id:
                                 result_session_id = parsed_event.session_id
                     except ParseError:
@@ -168,7 +225,9 @@ class AgentBridge:
                 if event.type == AgentEventType.TEXT_DELTA:
                     full_text.append(event.content["text"])
                 elif event.type == AgentEventType.TURN_COMPLETE:
-                    usage = event.content.get("usage")
+                    usage = Usage(
+                        input_tokens=event.content.get("usage", {}).get("input_tokens", 0)
+                    )
                 if not result_session_id and event.session_id:
                     result_session_id = event.session_id
 

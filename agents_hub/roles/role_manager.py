@@ -279,8 +279,10 @@ class RoleManager:
         try:
             if platform == AgentPlatform.CLAUDE:
                 self._init_claude_config(work_root)
-            else:
+            elif platform == AgentPlatform.CODEX:
                 self._init_codex_config(work_root)
+            elif platform == AgentPlatform.OPENCODE:
+                self._init_opencode_config(work_root)
             self._init_agents_hub_mcp(platform, work_root)
         except Exception:
             shutil.rmtree(role_dir, ignore_errors=True)
@@ -378,6 +380,19 @@ class RoleManager:
             agents_md_content = "<AGENT_RUNTIME_START/>\n<AGENT_RUNTIME_END/>\n"
             agents_md_path.write_text(agents_md_content, encoding="utf-8")
 
+    def _init_opencode_config(self, work_root: Path) -> None:
+        """初始化 OpenCode 平台配置。
+
+        创建 agents/ 目录用于存放 agent 提示词文件。
+        OpenCode 通过 OPENCODE_CONFIG_DIR 环境变量指向 work_root。
+
+        Args:
+            work_root: 角色的 work_root 目录路径。
+        """
+        # 创建 agents 目录用于存放 agent 提示词文件
+        agents_dir = work_root / "agents"
+        agents_dir.mkdir(exist_ok=True)
+
     def _init_agents_hub_mcp(self, platform: AgentPlatform, work_root: Path) -> None:
         """Initialize the fixed agents-hub MCP for this role's platform config root."""
         env = os.environ.copy()
@@ -396,7 +411,8 @@ class RoleManager:
                 "--",
                 mcp_url,
             ]
-        else:
+            subprocess.run(cmd, check=True, env=env)
+        elif platform == AgentPlatform.CODEX:
             from agents_hub.config.types import CODEX_COMMAND
 
             env["CODEX_HOME"] = str(work_root)
@@ -408,4 +424,20 @@ class RoleManager:
                 "--url",
                 mcp_url,
             ]
-        subprocess.run(cmd, check=True, env=env)
+            subprocess.run(cmd, check=True, env=env)
+        elif platform == AgentPlatform.OPENCODE:
+            # OpenCode 使用 opencode.json 配置 MCP
+            opencode_json = work_root / "opencode.json"
+            mcp_config = {
+                "$schema": "https://opencode.ai/config.json",
+                "mcp": {
+                    "agents-hub": {
+                        "type": "remote",
+                        "url": mcp_url,
+                        "enabled": True,
+                    }
+                },
+            }
+            opencode_json.write_text(
+                json.dumps(mcp_config, ensure_ascii=False, indent=2), encoding="utf-8"
+            )

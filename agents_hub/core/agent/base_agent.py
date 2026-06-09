@@ -482,18 +482,76 @@ class Agent:
     def _build_system_prompt(self, task_manager=None) -> str:
         """构建完整的 system_prompt，用于 CLI 参数注入。
 
-        将 runtime 和 tool_usage 内容拼接为字符串，通过 CLI 参数直接注入，
-        避免多 Agent 并行时写入 CLAUDE.md/AGENTS.md 的文件竞态条件。
+        根据平台类型选择不同的构建方式：
+        - Claude/Codex: 直接拼接 runtime 和 tool_usage 内容
+        - OpenCode: 写入文件，返回文件名作为 system_prompt
 
         Args:
             task_manager: TaskManager 实例（可选，仅 Manager 需要）
 
         Returns:
-            拼接后的 system_prompt 字符串
+            拼接后的 system_prompt 字符串（Claude/Codex）或文件名（OpenCode）
         """
+        from agents_hub.config.types import AgentPlatform
+
+        # OpenCode 平台：写入文件，返回文件名
+        if self.role_config.platform == AgentPlatform.OPENCODE:
+            return self._build_opencode_system_prompt(task_manager)
+
+        # Claude/Codex 平台：直接拼接内容
         runtime_content = self._generate_runtime_content(task_manager)
         tool_usage_content = self._generate_tool_usage_content()
         return f"{runtime_content}\n\n{tool_usage_content}"
+
+    def _build_opencode_system_prompt(self, task_manager=None) -> str:
+        """为 OpenCode 构建系统提示词，写入文件并返回文件名。
+
+        文件名格式：{agent_name}_{group_chat_id}.md
+        这样可以避免跨群聊使用（因为 auth_token 也会放进去）。
+
+        Args:
+            task_manager: TaskManager 实例（可选，仅 Manager 需要）
+
+        Returns:
+            agent 文件名（不含 .md 后缀），用于 opencode --agent 参数
+        """
+        from pathlib import Path
+
+        # 生成内容
+        runtime_content = self._generate_runtime_content(task_manager)
+        tool_usage_content = self._generate_tool_usage_content()
+
+        # 构建文件名：{agent_name}_{group_chat_id}
+        group_chat_id = self.group_chat_context.group_chat_id
+        agent_filename = f"{self.name}_{group_chat_id}"
+
+        # 获取 work_root
+        if not self.role_config.work_root:
+            return agent_filename
+
+        work_root = Path(self.role_config.work_root)
+        agents_dir = work_root / "agents"
+        agents_dir.mkdir(exist_ok=True)
+
+        # 写入 agent 文件
+        agent_file = agents_dir / f"{agent_filename}.md"
+
+        # 组装完整内容
+        full_content = f"""# {self.name} - {group_chat_id}
+
+{runtime_content}
+
+{tool_usage_content}
+"""
+        agent_file.write_text(full_content, encoding="utf-8")
+
+        self.logger.info(
+            "OpenCode system_prompt 写入文件: %s, 内容长度: %d",
+            agent_file,
+            len(full_content),
+        )
+
+        return agent_filename
 
     def _enqueue_finish_agent_call_reminder(self, msg: AgentMessage):
         """提醒 Agent 使用 finish_agent_call 显式闭环当前任务调用。"""
@@ -526,6 +584,15 @@ class Agent:
             return False
         call = self.agent_call_manager.get_call(msg.call_id)
         return call is not None and not call.has_agent_response
+
+    async def _sync_status(self, status: str):
+        """同步 Agent 状态到 AgentMemberInfo"""
+        try:
+            await self.group_chat_context.runtime.update_agent_status(self.name, status)
+        except Exception as e:
+            self.logger.warning(
+                "同步状态失败: agent=%s, status=%s, error=%s", self.name, status, str(e)
+            )
 
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
@@ -562,6 +629,8 @@ class Agent:
             # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
             self._is_processing = True
+            status = "chatting" if msg.session_type == SessionType.BTW else "busy"
+            await self._sync_status(status)
             self.logger.info(
                 "Agent %s 开始处理消息: call_id=%s, send_from=%s, message_type=%s, content=%s",
                 self.name,
@@ -572,6 +641,17 @@ class Agent:
             )
             try:
                 result = await self._process_message(msg, prompt)
+
+                # 更新 context_window
+                if result.usage and result.usage.input_tokens:
+                    context_window = result.usage.input_tokens // 1000
+                    try:
+                        await self.group_chat_context.runtime.update_agent_context_window(
+                            self.name, context_window
+                        )
+                    except Exception as e:
+                        self.logger.warning("更新 context_window 失败: %s", str(e))
+
                 self.logger.info(
                     "Agent %s 完成消息处理: call_id=%s, send_from=%s, result_text=%s",
                     self.name,
@@ -581,6 +661,7 @@ class Agent:
                 )
             finally:
                 self._is_processing = False
+                await self._sync_status("idle")
             # 5. TASK 必须由 finish_agent_call 显式闭环；普通执行文本默认私下保留。
             if self._needs_finish_agent_call_reminder(msg):
                 self._enqueue_finish_agent_call_reminder(msg)

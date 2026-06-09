@@ -21,7 +21,9 @@ def _make_mock_role(name: str) -> MagicMock:
     return role
 
 
-def _make_mock_agent_result(agent_name: str = "test_agent", session_id: str = "test_session") -> MagicMock:
+def _make_mock_agent_result(
+    agent_name: str = "test_agent", session_id: str = "test_session"
+) -> MagicMock:
     """创建带有正确属性的 mock AgentResult"""
     result = MagicMock()
     result.agent_name = agent_name
@@ -39,7 +41,11 @@ def _mock_team_validation():
     """跳过 Team 的 RoleManager 验证，允许任意 role_name"""
     mock_role_manager = MagicMock()
     mock_role_manager.list_role_names.return_value = [
-        "小王", "小李", _MANAGER_DISPLAY_NAME, "Worker1", "manager",
+        "小王",
+        "小李",
+        _MANAGER_DISPLAY_NAME,
+        "Worker1",
+        "manager",
     ]
 
     def _get_role(name):
@@ -50,7 +56,15 @@ def _mock_team_validation():
 
     mock_role_manager.get_role.side_effect = _get_role
 
-    def _execute_side_effect(prompt, config=None, session_id=None, cwd=None, use_docker=False, group_chat_id=None):
+    def _execute_side_effect(
+        prompt,
+        config=None,
+        session_id=None,
+        cwd=None,
+        use_docker=False,
+        group_chat_id=None,
+        system_prompt=None,
+    ):
         return _make_mock_agent_result(
             agent_name=session_id or "unknown",
             session_id=session_id or "mock_session",
@@ -59,14 +73,18 @@ def _mock_team_validation():
     mock_bridge = MagicMock()
     mock_bridge.execute = AsyncMock(side_effect=_execute_side_effect)
 
-    with patch(
-        "agents_hub.core.orchestration.group_chat.RoleManager",
-        return_value=mock_role_manager,
-    ), patch(
-        "agents_hub.api.services.group_chat_service.RoleManager",
-        return_value=mock_role_manager,
-    ), patch(
-        "agents_hub.core.agent.base_agent.agent_platform_client",
-        mock_bridge,
+    with (
+        patch(
+            "agents_hub.core.orchestration.group_chat.RoleManager",
+            return_value=mock_role_manager,
+        ),
+        patch(
+            "agents_hub.api.services.group_chat_service.RoleManager",
+            return_value=mock_role_manager,
+        ),
+        patch(
+            "agents_hub.core.agent.base_agent.agent_platform_client",
+            mock_bridge,
+        ),
     ):
         yield

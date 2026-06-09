@@ -92,7 +92,18 @@ class CodexParser:
         return None
 
     def _parse_turn_completed(self, event: dict) -> StreamEvent | None:
-        """解析回合完成事件"""
+        """解析回合完成事件
+
+        Codex turn.completed 事件的 usage 字段结构：
+        {
+            "input_tokens": int,          # 输入 token 数
+            "cached_input_tokens": int,   # 缓存的输入 token 数
+            "output_tokens": int,         # 输出 token 数
+            "reasoning_output_tokens": int # 推理输出 token 数（思维链）
+        }
+
+        注意：usage 数据最终会传递到 AgentResult.usage
+        """
         usage = event.get("usage", {})
         return StreamEvent(
             type=AgentEventType.TURN_COMPLETE,

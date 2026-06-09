@@ -249,3 +249,70 @@ class TestClaudeParserToolUse:
         })
         result = self.parser.parse_event(start_line)
         assert result is None
+
+
+class TestClaudeParserMessageDelta:
+    """message_delta 事件解析测试"""
+
+    def setup_method(self):
+        self.parser = ClaudeParser()
+
+    def test_parse_message_delta_with_usage(self):
+        """
+        契约：message_delta 事件提取 usage 信息并生成 TURN_COMPLETE 事件
+
+        验证方式：
+        1. 发送 message_delta 事件，包含 usage 信息
+        2. 验证返回 TURN_COMPLETE 事件
+        3. 验证 usage 字段正确传递
+        """
+        raw_line = json.dumps({
+            "type": "stream_event",
+            "event": {
+                "type": "message_delta",
+                "delta": {
+                    "stop_reason": "end_turn",
+                    "stop_sequence": None
+                },
+                "usage": {
+                    "input_tokens": 100,
+                    "output_tokens": 50,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0
+                }
+            },
+            "session_id": "test-session-789"
+        })
+        result = self.parser.parse_event(raw_line)
+
+        assert result is not None
+        assert result.type == AgentEventType.TURN_COMPLETE
+        assert result.content["usage"]["input_tokens"] == 100
+        assert result.content["usage"]["output_tokens"] == 50
+        assert result.session_id == "test-session-789"
+
+    def test_parse_message_delta_with_empty_usage(self):
+        """
+        契约：message_delta 事件即使 usage 为空也能正确解析
+
+        验证方式：
+        1. 发送 message_delta 事件，usage 为空 dict
+        2. 验证返回 TURN_COMPLETE 事件
+        3. 验证 usage 为空 dict
+        """
+        raw_line = json.dumps({
+            "type": "stream_event",
+            "event": {
+                "type": "message_delta",
+                "delta": {
+                    "stop_reason": "end_turn"
+                }
+            },
+            "session_id": "test-session-abc"
+        })
+        result = self.parser.parse_event(raw_line)
+
+        assert result is not None
+        assert result.type == AgentEventType.TURN_COMPLETE
+        assert result.content["usage"] == {}
+        assert result.session_id == "test-session-abc"
