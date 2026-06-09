@@ -82,6 +82,9 @@ class GroupChatSession:
         if agent_result.web_preview is not None:
             message["web_preview"] = agent_result.web_preview
 
+        if agent_result.files is not None:
+            message["files"] = agent_result.files
+
         self.messages.append(message)
         self.next_message_id += 1
 

@@ -11,6 +11,8 @@
 
 import re
 
+from agents_hub.config import config
+
 from .exceptions import InvalidMessageError
 from .message import AgentMessage
 
@@ -48,6 +50,13 @@ def render_for_llm(msg: AgentMessage) -> str:
         f"发送给：{msg.send_to}（你）\n"
         f"内容：{msg.content}"
     )
+    if msg.files:
+        file_lines = "\n".join(
+            f"- {f['file_name']} ({f['file_type']}, {f['file_size']}B): "
+            f"{str((config.data_path / f['file_path']).resolve())}"
+            for f in msg.files
+        )
+        body += f"\n\n[附件]\n{file_lines}"
     return wrap_xml(Tag.INCOMING_MESSAGE, body)
 
 

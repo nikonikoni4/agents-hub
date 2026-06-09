@@ -124,6 +124,7 @@ async def send_message(
         group_chat_id,
         content=request.content,
         members=request.members,
+        files=request.files,
     )
     return {"message": "消息已发送"}
 

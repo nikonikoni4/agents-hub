@@ -97,6 +97,7 @@ class MessageInfo(BaseModel):
     git_diff_range: str | None = Field(None, description="Git diff 范围")
     permission_request: PermissionRequestInfo | None = Field(None, description="权限请求信息")
     web_preview: WebPreviewInfo | None = Field(None, description="网页预览信息")
+    files: list[UploadedFileInfo] | None = Field(None, description="上传的文件列表")
 
 
 # --- Permission Request Schemas ---

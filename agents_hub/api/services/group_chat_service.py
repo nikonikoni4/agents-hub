@@ -28,6 +28,7 @@ from agents_hub.api.schemas.group_chats import (
     TaskListInfo,
     UploadedFileInfo,
 )
+from agents_hub.api.services.file_service import FileService
 from agents_hub.config import config
 from agents_hub.core.context.group_metadata import GroupMetadata
 from agents_hub.core.foundation import (
@@ -49,7 +50,6 @@ from agents_hub.exceptions import (
 )
 from agents_hub.realtime import broadcast_group_chat_refresh
 from agents_hub.roles import RoleManager
-from agents_hub.services.file_service import FileService
 from agents_hub.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -401,6 +401,7 @@ class GroupChatService:
         group_chat_id: str,
         content: str,
         members: list[str],
+        files: list[UploadedFileInfo] | None = None,
     ) -> None:
         """向群聊发送消息
 
@@ -408,6 +409,7 @@ class GroupChatService:
             group_chat_id: 群聊 ID
             content: 消息内容
             members: 群聊中所有 agent 名称列表
+            files: 可选的文件列表
 
         Raises:
             ResourceNotFoundError: 群聊不存在
@@ -457,12 +459,14 @@ class GroupChatService:
         logger.debug("AgentCall 已创建: call_id=%s", call.call_id)
 
         # 5. 构建并发送 AgentMessage
+        files_dicts = [f.model_dump() for f in files] if files else None
         message = AgentMessage(
             call_id=call.call_id,
             content=content,
             send_from=config.default_user_name,
             send_to=send_to,
             message_type=MessageType.TASK,
+            files=files_dicts,
         )
         logger.debug("投递消息到 MessageRouter: call_id=%s, to=%s", call.call_id, send_to)
         await group_chat.send_message_to_agent(message)
@@ -1040,9 +1044,8 @@ class GroupChatService:
 
         # 3. 验证群聊存在
         await self.group_chat_manager.load_group_chat(group_chat_id)
-        # 从群聊运行时获取 project_path，使用其 hash 作为 team_id 的简单替代
         # FileService 存储路径：{data_path}/teams/{team_id}/{group_chat_id}/file_snapshots/
-        team_id = "default"
+        team_id = config.team_id
 
         # 4. 调用 FileService 上传
         file_service = FileService()

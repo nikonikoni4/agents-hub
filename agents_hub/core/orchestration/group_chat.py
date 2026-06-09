@@ -424,6 +424,7 @@ class GroupChat:
             agent_name=message.send_from,
             platform=platform,
             role_type=role_type,
+            files=message.files,
         )
         await self.group_chat_context.add_message(sender_result)
 

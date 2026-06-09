@@ -6,6 +6,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 from .models import MessageType, SessionType
 
@@ -21,3 +22,6 @@ class AgentMessage:
     session_type: SessionType = SessionType.MAIN  # 用于判断是单聊还是群聊
     message_type: MessageType = MessageType.NOTIFICATION  # 用于判断系统是否需要自动回复
     timestamp: datetime = field(default_factory=datetime.now)
+    # 上传文件列表，每个 dict 对应 UploadedFileInfo 的序列化：
+    # {"file_name": str, "file_path": str, "file_type": str, "file_size": int}
+    files: list[dict[str, Any]] | None = None

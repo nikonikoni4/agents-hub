@@ -25,6 +25,7 @@ class SystemConfig:
     # 默认配置
     _default_config: dict = {
         "data_path": None,  # None 表示使用环境默认路径
+        "team_id": "default",  # 团队标识，用于文件存储路径
         "mcp_port": 8765,  # MCP 服务器运行端口
         "default_manager_name": "manager",  # 默认 manager 角色名
         "default_user_name": "user",  # 默认用户身份名
@@ -88,14 +89,14 @@ class SystemConfig:
         # 1. 用户配置的迁移路径
         user_path = self._config_data.get("data_path")
         if user_path:
-            return Path(user_path)
+            return Path(user_path).resolve()
 
         # 2. 打包环境默认路径
         if not self._is_dev:
-            return Path.home() / "AppData" / "Local" / "AgentsHub" / "data"
+            return (Path.home() / "AppData" / "Local" / "AgentsHub" / "data").resolve()
 
         # 3. 开发环境路径
-        return Path("local_data")
+        return Path("local_data").resolve()
 
     def set_data_path(self, new_path: Path):
         """
@@ -106,6 +107,11 @@ class SystemConfig:
         """
         self._config_data["data_path"] = str(new_path)
         self._save_config()
+
+    @property
+    def team_id(self) -> str:
+        """团队标识，用于文件存储路径"""
+        return self._config_data["team_id"]
 
     @property
     def mcp_port(self) -> int:
@@ -211,6 +217,11 @@ class Config:
     def set_data_path(self, new_path: Path):
         """快捷访问：设置数据迁移路径"""
         self.system.set_data_path(new_path)
+
+    @property
+    def team_id(self) -> str:
+        """快捷访问：团队标识"""
+        return self.system.team_id
 
     @property
     def mcp_port(self) -> int:
