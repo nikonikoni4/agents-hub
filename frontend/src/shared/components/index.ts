@@ -9,4 +9,5 @@ export * from './PermissionRequest';
 export * from './ResizeHandle';
 export * from './SkillSelectorModal';
 export * from './Toast';
+export * from './ToolSelectorModal';
 export * from './WebPreviewCard';
