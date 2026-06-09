@@ -105,7 +105,7 @@ export function ToolSelectorModal({
                     <button
                       key={tool.name}
                       type="button"
-                      className={`${styles.toolCard} ${isDisabled ? styles.disabled : styles.enabled}`}
+                      className={`${styles.toolCard} ${isDisabled ? styles.disabled : ''}`}
                       onClick={() => toggleTool(tool.name)}
                     >
                       <div className={styles.toolName}>{tool.name}</div>

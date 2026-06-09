@@ -59,7 +59,7 @@
 }
 
 .searchBox:focus-within {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-color);
 }
 
 .searchInput {
@@ -115,12 +115,8 @@
 }
 
 .toolCard:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-color);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.toolCard.enabled {
-  border-left: 3px solid var(--accent);
 }
 
 .toolCard.disabled {
@@ -156,7 +152,7 @@
 }
 
 .badgeEnabled {
-  background: var(--accent);
+  background: var(--accent-color);
   color: white;
 }
 
@@ -188,7 +184,7 @@
 }
 
 .saveBtn {
-  background: var(--accent);
+  background: var(--accent-color);
   color: white;
 }
 
