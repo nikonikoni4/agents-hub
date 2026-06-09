@@ -32,7 +32,8 @@ ALL_TOOLS: list[ToolGroup] = [
         name="执行",
         icon="⚡",
         tools=[
-            ToolInfo("Bash", "执行 shell 命令"),
+            ToolInfo("Bash", "执行 shell 命令（Linux/macOS）"),
+            ToolInfo("PowerShell", "执行 PowerShell 命令（Windows）"),
             ToolInfo("Agent", "启动子代理执行任务"),
         ],
     ),
@@ -49,10 +50,9 @@ ALL_TOOLS: list[ToolGroup] = [
         name="任务管理",
         icon="📋",
         tools=[
-            ToolInfo("TaskCreate", "创建任务"),
-            ToolInfo("TaskUpdate", "更新任务状态"),
-            ToolInfo("TaskOutput", "获取任务输出"),
-            ToolInfo("TaskStop", "停止任务"),
+            ToolInfo("TodoWrite", "创建和管理待办事项"),
+            ToolInfo("TaskOutput", "获取后台任务输出"),
+            ToolInfo("TaskStop", "停止后台任务"),
         ],
     ),
     ToolGroup(
@@ -70,6 +70,7 @@ ALL_TOOLS: list[ToolGroup] = [
             ToolInfo("AskUserQuestion", "向用户提问"),
             ToolInfo("ListMcpResourcesTool", "列出 MCP 资源"),
             ToolInfo("ReadMcpResourceTool", "读取 MCP 资源"),
+            ToolInfo("Skill", "调用已安装的 Skill"),
         ],
     ),
     ToolGroup(
