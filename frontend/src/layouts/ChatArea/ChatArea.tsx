@@ -369,12 +369,12 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     [rightSidebarContent]
   );
 
-  // 未选择会话时的空态
+  // 未选择群聊时的空态
   if (!activeSessionId) {
     return (
       <div className={styles.chatArea}>
         <div className={styles.emptyState}>
-          <p className={styles.emptyText}>选择一个会话开始对话</p>
+          <p className={styles.emptyText}>选择一个群聊开始对话</p>
         </div>
       </div>
     );

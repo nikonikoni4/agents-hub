@@ -116,7 +116,9 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
         {viewMode === 'chat' && (
           <>
             {displayLocation === 'main' && activeSingleChatId ? (
-              <SingleChatPanel />
+              <div className={styles.chatAreaWrapper}>
+                <SingleChatPanel />
+              </div>
             ) : (
               <ChatArea
                 onToggleRightSidebar={handleToggleRightSidebar}

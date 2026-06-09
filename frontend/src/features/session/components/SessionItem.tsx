@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { SessionItem as SessionItemType } from '@/shared/adapters/sessionAdapter';
-import { useSessionStore } from '../store/sessionStore';
 import { useSessionActions } from '../hooks/useSessionActions';
 import { useDeleteGroupChat } from '../hooks/useDeleteGroupChat';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
@@ -15,9 +14,7 @@ interface SessionItemProps {
 export function SessionItem({ session, isActive = false }: SessionItemProps) {
   const { handleSelectSession } = useSessionActions();
   const { deleteChat, deleting } = useDeleteGroupChat();
-  const clearActive = useSingleChatStore((s) => s.clearActive);
   const openSingleChat = useSingleChatStore((s) => s.openSingleChat);
-  const clearGroupActive = useSessionStore((s) => s.clearActive);
   const [showMenu, setShowMenu] = useState(false);
 
   const isSingleChat = session.type === 'single_chat';
@@ -38,10 +35,8 @@ export function SessionItem({ session, isActive = false }: SessionItemProps) {
     if (showMenu) return;
     if (isSingleChat) {
       openSingleChat(session.id);
-      clearGroupActive();
     } else {
       handleSelectSession(session.id);
-      clearActive();
     }
   };
 
