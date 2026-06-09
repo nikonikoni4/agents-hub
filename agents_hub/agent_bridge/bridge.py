@@ -13,7 +13,7 @@ from agents_hub.agent_bridge.exceptions import (
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
 from agents_hub.agent_bridge.executors.opencode import OpenCodeExecutor
-from agents_hub.agent_bridge.models import AgentEventType, AgentResult, StreamEvent
+from agents_hub.agent_bridge.models import AgentEventType, AgentResult, StreamEvent, Usage
 from agents_hub.agent_bridge.parsers.claude import ClaudeParser
 from agents_hub.agent_bridge.parsers.codex import CodexParser
 from agents_hub.agent_bridge.parsers.opencode import OpenCodeParser
@@ -146,10 +146,13 @@ class AgentBridge:
                 role_type=config.role_type,
             )
         elif event_type == "turn_complete":
+            tokens = event_dict.get("tokens", {})
             return StreamEvent(
                 type=AgentEventType.TURN_COMPLETE,
                 content={
-                    "usage": event_dict.get("tokens", {}),
+                    "usage": {
+                        "input_tokens": tokens.get("input", 0),
+                    },
                     "cost": event_dict.get("cost", 0),
                     "reason": event_dict.get("reason", ""),
                 },
@@ -204,7 +207,11 @@ class AgentBridge:
                             if parsed_event.type == AgentEventType.TEXT_DELTA:
                                 full_text.append(parsed_event.content["text"])
                             elif parsed_event.type == AgentEventType.TURN_COMPLETE:
-                                usage = parsed_event.content.get("usage")
+                                usage = Usage(
+                                    input_tokens=parsed_event.content.get("usage", {}).get(
+                                        "input_tokens", 0
+                                    )
+                                )
                             if not result_session_id and parsed_event.session_id:
                                 result_session_id = parsed_event.session_id
                     except ParseError:
@@ -218,7 +225,9 @@ class AgentBridge:
                 if event.type == AgentEventType.TEXT_DELTA:
                     full_text.append(event.content["text"])
                 elif event.type == AgentEventType.TURN_COMPLETE:
-                    usage = event.content.get("usage")
+                    usage = Usage(
+                        input_tokens=event.content.get("usage", {}).get("input_tokens", 0)
+                    )
                 if not result_session_id and event.session_id:
                     result_session_id = event.session_id
 

@@ -14,6 +14,7 @@ from agents_hub.agent_bridge.models import (
     AgentEventType,
     AgentResult,
     StreamEvent,
+    Usage,
 )
 from agents_hub.config.types import (
     CLAUDE_COMMAND,
@@ -40,4 +41,5 @@ __all__ = [
     "ParseError",
     "PlatformNotSupportedError",
     "AgentTimeoutError",
+    "Usage",
 ]

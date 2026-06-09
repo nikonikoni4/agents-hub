@@ -34,6 +34,14 @@ class StreamEvent:
 
 
 @dataclass
+class Usage:
+    """Token 使用统计"""
+
+    input_tokens: int = 0
+
+
+# TODO 当前AgentResult模型已经承载了过多了语义，需要重构
+@dataclass
 class AgentResult:
     """完整结果格式（非流式调用的返回值）"""
 
@@ -43,7 +51,7 @@ class AgentResult:
     agent_name: str  # 当前 agent 名称
     platform: AgentPlatform  # agent 所属平台
     role_type: RoleType  # 角色类型
-    usage: dict | None = None  # token 使用统计
+    usage: Usage | None = None  # token 使用统计
     cwd: str | None = None  # Agent 工作目录
     modified_files: list[FileMetadata] | None = None  # 修改的文件列表元数据
     git_diff_range: str | None = None  # Git diff 范围
@@ -56,4 +64,4 @@ AgentEvent = StreamEvent
 
 
 # 导出 FileMetadata 保持向后兼容
-__all__ = ["FileMetadata", "AgentEventType", "StreamEvent", "AgentResult", "AgentEvent"]
+__all__ = ["FileMetadata", "AgentEventType", "StreamEvent", "AgentResult", "AgentEvent", "Usage"]

@@ -95,5 +95,5 @@ class TestAgentBridge:
 
         assert isinstance(result, AgentResult)
         assert result.text == "你好"
-        assert result.usage["input_tokens"] == 100
+        assert result.usage.input_tokens == 100
         assert result.session_id == "123"

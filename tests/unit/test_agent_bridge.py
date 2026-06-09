@@ -360,7 +360,7 @@ class TestExecute:
         with patch.object(bridge, "execute_stream", side_effect=mock_execute_stream):
             result = await bridge.execute("test", opencode_config)
 
-        assert result.usage == {"input_tokens": 10, "output_tokens": 20}
+        assert result.usage.input_tokens == 10
 
     @pytest.mark.asyncio
     async def test_execute_uses_provided_session_id(self, bridge, opencode_config):

@@ -68,6 +68,8 @@ class OpenCodeParser:
             )
 
         # 步骤完成事件
+        # OpenCode CLI 原始 tokens 结构:
+        # {"total": int, "input": int, "output": int, "reasoning": int, "cache": {"read": int, "write": int}}
         if event_type == "step_finish":
             tokens = part.get("tokens", {})
             return StreamEvent(
@@ -75,10 +77,6 @@ class OpenCodeParser:
                 content={
                     "usage": {
                         "input_tokens": tokens.get("input", 0),
-                        "output_tokens": tokens.get("output", 0),
-                        "total_tokens": tokens.get("total", 0),
-                        "cache_read": tokens.get("cache", {}).get("read", 0),
-                        "cache_write": tokens.get("cache", {}).get("write", 0),
                     },
                     "cost": part.get("cost", 0),
                     "reason": part.get("reason", ""),
