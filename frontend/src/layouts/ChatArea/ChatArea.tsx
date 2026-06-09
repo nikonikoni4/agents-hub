@@ -359,12 +359,9 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   );
 
   // 网页预览：在右侧栏打开
-  const handleWebPreview = useCallback(
-    (url: string, title?: string) => {
-      setRightSidebarContent({ type: 'web', url, title });
-    },
-    []
-  );
+  const handleWebPreview = useCallback((url: string, title?: string) => {
+    setRightSidebarContent({ type: 'web', url, title });
+  }, []);
 
   // 当前右侧栏打开的网页 URL
   const activeWebUrl = useMemo(
