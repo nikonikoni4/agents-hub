@@ -61,6 +61,7 @@ export interface UpdateRoleRequest {
   avatar?: string | null;
   abilities?: string[] | null;
   description?: string | null;
+  enabled_tools?: string[] | null;
 }
 
 /**

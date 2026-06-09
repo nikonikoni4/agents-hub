@@ -45,6 +45,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
         description: '系统架构分析和设计方案推荐',
       },
     ],
+    disabled_tools: [],
   },
   {
     name: 'Designer',
@@ -61,6 +62,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
         description: '根据代码自动生成技术文档和API说明',
       },
     ],
+    disabled_tools: [],
   },
   {
     name: 'Developer',
@@ -82,6 +84,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
         description: '智能生成单元测试和集成测试用例',
       },
     ],
+    disabled_tools: [],
   },
   {
     name: 'Tester',
@@ -92,6 +95,7 @@ const MOCK_ROLES: RoleApiResponse[] = [
     scope: null,
     description: '测试工程师，负责质量保障',
     skills: [],
+    disabled_tools: [],
   },
 ];
 
@@ -104,6 +108,7 @@ const MOCK_NEW_ROLE: RoleApiResponse = {
   scope: null,
   description: 'Newly created role',
   skills: [],
+  disabled_tools: [],
 };
 
 const MOCK_AVATARS: string[] = [

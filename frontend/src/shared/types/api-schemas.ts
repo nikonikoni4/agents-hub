@@ -187,6 +187,8 @@ export interface RoleApiResponse {
   description: string | null;
   /** 关联的 Skills */
   skills: RoleSkillApiItem[];
+  /** 禁用的工具列表 */
+  disabled_tools: string[];
 }
 
 /**
@@ -520,4 +522,33 @@ export interface SingleChatMessageApiItem {
   timestamp: string;
   model: string | null;
   tool_calls?: ToolCall[];
+}
+
+// ==================== 工具目录相关 ====================
+
+/**
+ * 工具信息
+ * 对应后端: ToolInfoResponse schema
+ */
+export interface ToolInfoResponse {
+  name: string;
+  description: string;
+}
+
+/**
+ * 工具分组信息
+ * 对应后端: ToolGroupResponse schema
+ */
+export interface ToolGroupResponse {
+  name: string;
+  icon: string;
+  tools: ToolInfoResponse[];
+}
+
+/**
+ * 工具目录响应
+ * 对应后端: ToolCatalogResponse schema
+ */
+export interface ToolCatalogResponse {
+  groups: ToolGroupResponse[];
 }

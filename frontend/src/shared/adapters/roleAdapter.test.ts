@@ -24,6 +24,7 @@ describe('roleAdapter', () => {
         scope: null,
         description: '前端设计师',
         skills: [{ id: 'skill-1', name: 'design', description: '设计技能' }],
+        disabled_tools: [],
       };
 
       vi.mocked(roleApi.getRoleInfo).mockResolvedValue(mockRole);
@@ -48,6 +49,7 @@ describe('roleAdapter', () => {
           scope: null,
           description: 'A',
           skills: [],
+          disabled_tools: [],
         },
         {
           name: 'Developer',
@@ -58,6 +60,7 @@ describe('roleAdapter', () => {
           scope: null,
           description: 'B',
           skills: [{ id: 'skill-1', name: 'code-review', description: '代码审查' }],
+          disabled_tools: [],
         },
       ];
 

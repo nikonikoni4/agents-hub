@@ -37,6 +37,9 @@ export type {
   CreateSingleChatApiResponse,
   SingleChatMessageApiItem,
   ToolCall,
+  ToolInfoResponse,
+  ToolGroupResponse,
+  ToolCatalogResponse,
 } from './api-schemas';
 
 // API 请求类型
