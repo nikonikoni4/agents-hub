@@ -113,6 +113,7 @@ class GroupChatRuntime:
                     "cwd": agent_member_info.cwd,
                     "use_docker": agent_member_info.use_docker,
                     "status": agent_member_info.status,
+                    "context_window": agent_member_info.context_window,
                 }
             )
         return members
