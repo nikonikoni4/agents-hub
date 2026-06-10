@@ -75,7 +75,13 @@ def app(manager):
 
     @_app.exception_handler(AgentsHubError)
     async def agents_hub_error_handler(request: Request, exc: AgentsHubError) -> JSONResponse:
-        status = 404 if isinstance(exc, ResourceNotFoundError) else 400 if isinstance(exc, ValidationError) else 500
+        status = (
+            404
+            if isinstance(exc, ResourceNotFoundError)
+            else 400
+            if isinstance(exc, ValidationError)
+            else 500
+        )
         return JSONResponse(status_code=status, content=exc.to_dict())
 
     @_app.exception_handler(Exception)
@@ -105,6 +111,7 @@ def _create_chat_via_manager(manager: SingleChatManager) -> str:
         cwd="/tmp/test",
     )
     import asyncio
+
     resp = asyncio.get_event_loop().run_until_complete(manager.create_single_chat(req))
     return resp.single_chat_id
 
@@ -115,18 +122,23 @@ def test_send_message_auto_creates_chat(mock_mgr, client):
     from agents_hub.api.schemas.single_chat import CreateSingleChatResponse, SingleChatType
 
     # mock create_single_chat
-    mock_mgr.create_single_chat = AsyncMock(return_value=CreateSingleChatResponse(
-        single_chat_id="auto-created-id",
-        single_chat_name="test_agent",
-        type=SingleChatType.NEW,
-    ))
+    mock_mgr.create_single_chat = AsyncMock(
+        return_value=CreateSingleChatResponse(
+            single_chat_id="auto-created-id",
+            single_chat_name="test_agent",
+            type=SingleChatType.NEW,
+        )
+    )
     # mock send_message_stream
     mock_mgr.send_message_stream = AsyncMock(return_value=iter([]))
 
-    response = client.post("/api/v1/single-chats/messages/stream", json={
-        "content": "hello",
-        "agent_name": "test_agent",
-    })
+    response = client.post(
+        "/api/v1/single-chats/messages/stream",
+        json={
+            "content": "hello",
+            "agent_name": "test_agent",
+        },
+    )
 
     assert response.status_code == 200
     assert response.headers.get("X-Single-Chat-Id") == "auto-created-id"
@@ -136,11 +148,16 @@ def test_send_message_with_existing_chat(client, manager):
     """测试已有 single_chat_id 时直接发送消息"""
     chat_id = _create_chat_via_manager(manager)
 
-    with patch.object(manager, "send_message_stream", new_callable=AsyncMock, return_value=iter([])):
-        response = client.post("/api/v1/single-chats/messages/stream", json={
-            "content": "hello",
-            "single_chat_id": chat_id,
-        })
+    with patch.object(
+        manager, "send_message_stream", new_callable=AsyncMock, return_value=iter([])
+    ):
+        response = client.post(
+            "/api/v1/single-chats/messages/stream",
+            json={
+                "content": "hello",
+                "single_chat_id": chat_id,
+            },
+        )
 
     assert response.status_code == 200
     assert response.headers.get("X-Single-Chat-Id") == chat_id
@@ -203,17 +220,23 @@ def test_get_messages_not_found(client):
 
 def test_send_message_missing_content(client):
     """测试发送消息缺少 content"""
-    response = client.post("/api/v1/single-chats/messages/stream", json={
-        "agent_name": "test_agent",
-    })
+    response = client.post(
+        "/api/v1/single-chats/messages/stream",
+        json={
+            "agent_name": "test_agent",
+        },
+    )
     assert response.status_code == 422
 
 
 def test_send_message_auto_create_missing_agent(client):
     """测试自动创建时缺少 agent_name"""
-    response = client.post("/api/v1/single-chats/messages/stream", json={
-        "content": "hello",
-    })
+    response = client.post(
+        "/api/v1/single-chats/messages/stream",
+        json={
+            "content": "hello",
+        },
+    )
     # 没有 single_chat_id 也没有 agent_name，应该用 "default" 创建
     # 这取决于是否允许 "default" agent，这里测试不报 422
     # 具体行为取决于 RoleManager 是否有 "default" agent

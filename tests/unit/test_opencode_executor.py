@@ -355,12 +355,17 @@ class TestExecute:
 
         如果失败，说明：事件流处理逻辑错误
         """
-        output = json.dumps({
-            "type": "text",
-            "sessionID": "sess_123",
-            "timestamp": 1234567890,
-            "part": {"text": "hello"},
-        }) + "\n"
+        output = (
+            json.dumps(
+                {
+                    "type": "text",
+                    "sessionID": "sess_123",
+                    "timestamp": 1234567890,
+                    "part": {"text": "hello"},
+                }
+            )
+            + "\n"
+        )
 
         mock_process = AsyncMock()
         mock_process.stdout = AsyncMock()

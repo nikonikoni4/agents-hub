@@ -12,7 +12,7 @@ from pathlib import Path
 def count_lines(file_path):
     """统计文件行数"""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             return len(f.readlines())
     except Exception as e:
         print(f"Error reading {file_path}: {e}", file=sys.stderr)
@@ -24,13 +24,13 @@ def find_rule_files(project_root):
     rule_files = []
 
     # 查找所有 CLAUDE.md 文件
-    for claude_file in Path(project_root).rglob('CLAUDE.md'):
+    for claude_file in Path(project_root).rglob("CLAUDE.md"):
         rule_files.append(claude_file)
 
     # 查找 docs/coding-rules/ 下的所有 md 文件
-    coding_rules_dir = Path(project_root) / 'docs' / 'coding-rules'
+    coding_rules_dir = Path(project_root) / "docs" / "coding-rules"
     if coding_rules_dir.exists():
-        for md_file in coding_rules_dir.rglob('*.md'):
+        for md_file in coding_rules_dir.rglob("*.md"):
             rule_files.append(md_file)
 
     return rule_files
@@ -78,7 +78,7 @@ def check_line_counts(project_root, max_lines=200):
         return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) > 1:
         project_root = sys.argv[1]
     else:

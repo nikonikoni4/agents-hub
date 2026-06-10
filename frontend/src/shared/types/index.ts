@@ -40,6 +40,7 @@ export type {
   ToolInfoResponse,
   ToolGroupResponse,
   ToolCatalogResponse,
+  UploadedFileInfo,
 } from './api-schemas';
 
 // API 请求类型

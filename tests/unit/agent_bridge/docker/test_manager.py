@@ -228,9 +228,7 @@ async def test_get_or_create_container_creates_new():
         )
 
     assert result is mock_container
-    mock_create.assert_called_once_with(
-        "小李", "chat-123", "/home/ai-user/.claude", "/workspace"
-    )
+    mock_create.assert_called_once_with("小李", "chat-123", "/home/ai-user/.claude", "/workspace")
 
 
 @pytest.mark.asyncio

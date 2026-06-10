@@ -6,6 +6,8 @@ import {
   MarkdownRenderer,
   PermissionRequest,
   WebPreviewCard,
+  FilePreviewCard,
+  ImagePreviewModal,
 } from '@/shared/components';
 import { FileChangesCard } from '@/shared/components/FileChangesCard';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
@@ -21,7 +23,7 @@ import {
   getFileSnapshotDiff,
   updatePermissionStatus,
 } from '@/core/api/groupChatApi';
-import type { MessageApiItem } from '@/shared/types';
+import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { extractProjectName } from '@/shared/adapters/sessionAdapter';
 import { ChatInput } from './ChatInput';
@@ -76,6 +78,7 @@ const MessageBubble = React.memo(
     msg,
     avatar,
     pinned,
+    groupChatId,
     onPin,
     onUnpin,
     onQuote,
@@ -88,6 +91,7 @@ const MessageBubble = React.memo(
     msg: MessageApiItem;
     avatar?: string | null;
     pinned: boolean;
+    groupChatId: string;
     onPin: () => void;
     onUnpin: () => void;
     onQuote: () => void;
@@ -98,6 +102,26 @@ const MessageBubble = React.memo(
     activeWebUrl?: string | null;
   }) => {
     const isUser = msg.speaker === 'user';
+    const [showImagePreview, setShowImagePreview] = React.useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = React.useState('');
+
+    const handleImageClick = React.useCallback(
+      (filePath: string) => {
+        setPreviewImageUrl(
+          `/api/v1/group-chats/${groupChatId}/files/${encodeURIComponent(filePath)}`
+        );
+        setShowImagePreview(true);
+      },
+      [groupChatId]
+    );
+
+    const handleDocumentClick = React.useCallback(
+      (filePath: string) => {
+        const url = `/api/v1/group-chats/${groupChatId}/files/${encodeURIComponent(filePath)}`;
+        window.open(url, '_blank');
+      },
+      [groupChatId]
+    );
 
     // 权限请求消息：渲染 PermissionRequest 卡片
     if (msg.permission_request) {
@@ -155,6 +179,14 @@ const MessageBubble = React.memo(
         >
           <MarkdownRenderer content={msg.content} />
         </div>
+        {msg.files && msg.files.length > 0 && (
+          <FilePreviewCard
+            files={msg.files}
+            onImageClick={handleImageClick}
+            onDocumentClick={handleDocumentClick}
+            groupChatId={groupChatId}
+          />
+        )}
         {msg.modified_files && msg.modified_files.length > 0 && (
           <FileChangesCard
             modifiedFiles={msg.modified_files}
@@ -182,6 +214,11 @@ const MessageBubble = React.memo(
             <QuoteIcon />
           </button>
         </div>
+        <ImagePreviewModal
+          isOpen={showImagePreview}
+          imageUrl={previewImageUrl}
+          onClose={() => setShowImagePreview(false)}
+        />
       </div>
     );
   }
@@ -273,7 +310,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   }, [rightSidebarContent, onContentChange]);
 
   const handleSend = useCallback(
-    async (text: string) => {
+    async (text: string, files?: UploadedFileInfo[]) => {
       if (!activeSessionId) return;
 
       // 如果有引用消息，用 MD 引用语法包裹
@@ -293,6 +330,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         content: finalText,
         timestamp: new Date().toISOString(),
         platform: 'user',
+        files: files,
       };
       setLocalMessages((prev) => [...prev, optimisticMsg]);
 
@@ -304,7 +342,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         }
         const members = await getMembers(activeSessionId);
         const memberNames = members.map((m) => m.name);
-        await sendMessage(activeSessionId, { content: finalText, members: memberNames });
+        await sendMessage(activeSessionId, { content: finalText, members: memberNames, files });
         // 发送成功后才清空引用状态
         setQuotedMessage(null);
       } catch (err) {
@@ -426,6 +464,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
               msg={msg}
               avatar={roleAvatarMap.get(msg.speaker)}
               pinned={isPinned(msg.id)}
+              groupChatId={activeSessionId}
               onPin={() => pin(msg.id)}
               onUnpin={() => unpin(msg.id)}
               onQuote={() => handleQuote(msg)}

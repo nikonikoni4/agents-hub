@@ -30,7 +30,7 @@
 ### 1. MCP Server 工具定义
 - **位置**：MCP Server 章节
 - **文档描述**：提供了 3 个 MCP Tools（call_agent、list_agents、get_chat_history）
-- **实际情况**：代码中提供了 6 个 MCP Tools（call_agent、assign_tasks_to_team、archive_task_list、check_agent_call、speak_in_group_chat、finish_agent_call）
+- **实际情况**：代码中提供了 6 个 MCP Tools（call_agent、assign_tasks_to_team、archive_task_list、check_agent_call、report_progress、complete_task）
 - **严重程度**：Critical
 - **建议修复**：更新文档，反映实际的 MCP Tools 列表
 

@@ -34,8 +34,8 @@ def main():
 
         # 1. 主界面（会话页）- 点击"测试"会话加载消息
         page.goto(URL, wait_until="networkidle")
-        page.locator('.session-item').first.click()
-        page.wait_for_load_state('networkidle')
+        page.locator(".session-item").first.click()
+        page.wait_for_load_state("networkidle")
         screenshot(page, "main.png")
 
         # # 2. 技能广场
@@ -47,7 +47,7 @@ def main():
         screenshot(page, "role_management_teams.png")
 
         # # 4. 角色管理 - 角色面板
-        page.locator('text=角色管理').last.click()
+        page.locator("text=角色管理").last.click()
         screenshot(page, "role_management_roles.png")
 
         browser.close()

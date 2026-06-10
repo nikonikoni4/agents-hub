@@ -424,6 +424,7 @@ class GroupChat:
             agent_name=message.send_from,
             platform=platform,
             role_type=role_type,
+            files=message.files,
         )
         await self.group_chat_context.add_message(sender_result)
 
@@ -600,7 +601,7 @@ class GroupChat:
                 if stopped_workers:
                     content = (
                         f"[Heartbeat] 以下成员已因连续执行失败自动停止: {', '.join(stopped_workers)}。"
-                        "当前没有自动重启机制，请通过 speak_in_group_chat 向 user 说明情况。"
+                        "当前没有自动重启机制，请通过 report_progress 向 user 说明情况。"
                     )
                 else:
                     content = "[Heartbeat] 定时检查：请查看当前任务进度。"

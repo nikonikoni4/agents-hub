@@ -57,6 +57,7 @@ class AgentResult:
     git_diff_range: str | None = None  # Git diff 范围
     permission_request: dict | None = None  # 权限请求数据
     web_preview: dict | None = None  # 网页预览数据 {"url": "...", "title": "..."}
+    files: list[dict] | None = None  # 上传文件列表
 
 
 # 向后兼容别名（待废弃）

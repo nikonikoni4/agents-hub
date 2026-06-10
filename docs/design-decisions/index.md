@@ -33,7 +33,7 @@
 - path: `docs/design-decisions/0006-explicit-group-chat-speech.md`
 - 状态：decided
 - 触发规则：当修改 Agent.run() 的出口 A/B 写入逻辑、新增/调整对外发言相关工具、或 LLM 中间过程污染群聊历史的问题再次浮现时阅读
-- 内容摘要：群聊发言从隐式自动写入（出口 A/B）改为显式 MCP 工具调用。普通公开发言使用 speak_in_group_chat；需要回复的 AgentCall 使用 finish_agent_call 闭环。目的是分离 LLM 私下执行文本、公开群聊发言和调用状态闭环
+- 内容摘要：群聊发言从隐式自动写入（出口 A/B）改为显式 MCP 工具调用。普通公开发言使用 report_progress；需要回复的 AgentCall 使用 complete_task 闭环。目的是分离 LLM 私下执行文本、公开群聊发言和调用状态闭环
 
 ## agent-token-identity-model
 - updated_at: 2026-05-31
@@ -67,8 +67,8 @@
 - updated_at: 2026-06-08
 - path: `docs/design-decisions/0011-agent-tool-semantics-and-blocking-rules.md`
 - 状态：decided
-- 触发规则：当设计或修改 speak_in_group_chat/finish_agent_call 的使用边界、Worker 阻塞判定规则、Manager 阻塞处理流程时阅读
-- 内容摘要：收窄 speak_in_group_chat 为任务汇报工具，所有成果/问题/风险通过 finish_agent_call 汇报；阻塞判定标准为"影响范围是否超出任务边界"
+- 触发规则：当设计或修改 report_progress/complete_task 的使用边界、Worker 阻塞判定规则、Manager 阻塞处理流程时阅读
+- 内容摘要：收窄 report_progress 为任务汇报工具，所有成果/问题/风险通过 complete_task 汇报；阻塞判定标准为"影响范围是否超出任务边界"
 
 ## mcp-transport-and-platform-migration
 - updated_at: 2026-06-09
@@ -76,6 +76,13 @@
 - 状态：decided
 - 触发规则：当设计或修改 MCP 传输模式、Agent 平台选型时阅读
 - 内容摘要：MCP 传输从 HTTP 切到 stdio 后发现跨进程内存隔离问题（token 丢失、消息断裂），决定回归 HTTP；同时放弃 Codex 改用 OpenCode
+
+## prompt-architecture-refactor
+- updated_at: 2026-06-10
+- path: `docs/design-decisions/0013-prompt-architecture-refactor.md`
+- 状态：decided
+- 触发规则：当设计或修改 Agent 提示词结构、runtime 信息传递方式、call_id 可见性、CLAUDE/AGENTS.md 写入时机时阅读
+- 内容摘要：将 runtime 信息从 system prompt 移到 user message，解决 Agent 找不到 call_id 和身份信息缺失的问题。system prompt 不再动态生成，CLAUDE/AGENTS.md 在 role 创建时写入
 
 ## user-design-summary
 - updated_at: 2026-06-04

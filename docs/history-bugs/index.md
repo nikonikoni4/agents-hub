@@ -105,3 +105,15 @@
  - path: docs/history-bugs/2026-06-09-manager-tool-call-infinite-loop.md
  - 触发规则：Manager agent 处理多步骤任务且需要等待其他 Agent 调用结果时
  - 内容摘要：Manager agent 陷入无限循环，反复执行 TodoWrite 和 Read 工具调用（50+ 次），导致上下文空间被大量重复内容占用（约 150K-180K tokens）。根因是模型的"安全行为"模式和缺乏"已完成"状态感知。TodoWrite 未持久化到 TaskList 也是原因之一。建议：限制工具调用频率、添加 heartbeat 机制、TodoWrite 应持久化
+
+## MCP 多进程访问导致连接冲突和消息卡住
+ - updated_at : 2026-06-10
+ - path: docs/history-bugs/2026-06-10-mcp-multi-process-connection-conflict.md
+ - 触发规则：多个进程同时访问同一个 MCP 服务器，其中一个进程突然中断连接时
+ - 内容摘要：多进程同时访问 MCP 服务器时，一个进程突然关闭会导致连接竞争，消息排队但不处理，延迟数分钟。日志中出现 ConnectionResetError 和 OSError [WinError 64]。解决方案：避免多进程同时访问，或实现连接重连机制
+
+## MCP 工具命名导致 Agent 无法正确调用
+ - updated_at : 2026-06-10
+ - path: docs/history-bugs/2026-06-10-mcp-tool-naming-confusion.md
+ - 触发规则：Agent 处理任务时无法正确调用 report_progress 和 finish_agent_call 工具
+ - 内容摘要：MCP 工具使用从平台角度编写的名称，Agent 不理解其含义导致调用失败。改名为 report_progress 和 complete_task 后效果改善。后续改进方向：从显式工具调用闭环 → 输出标签识别的降级方案

@@ -20,6 +20,7 @@ import type {
   PinOperationResponse,
   AgentCallInfo,
   TaskListInfo,
+  UploadedFileInfo,
 } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
@@ -756,4 +757,22 @@ export async function updatePermissionStatus(
       ),
     { ok: true, message_id: messageId, new_status: status }
   );
+}
+
+/**
+ * 上传文件
+ *
+ * 注意：不使用 mockableRequest，因为文件上传没有有意义的 mock 等价物
+ *
+ * @param chatId - 群聊 ID
+ * @param file - 文件对象
+ * @returns 上传文件信息
+ */
+export async function uploadFile(chatId: string, file: File): Promise<UploadedFileInfo> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return apiClient.post<UploadedFileInfo>(`/group-chats/${chatId}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 }

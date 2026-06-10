@@ -130,8 +130,18 @@ class TestGroupChatRepositorySession:
 
         old_messages = [
             {"_type": "meta_data", "last_compact_loc": 0},
-            {"agent_name": "agent1", "content": "msg1", "timestamp": "2026-01-01T00:00:00", "platform": "claude"},
-            {"agent_name": "agent2", "content": "msg2", "timestamp": "2026-01-01T00:00:01", "platform": "codex"},
+            {
+                "agent_name": "agent1",
+                "content": "msg1",
+                "timestamp": "2026-01-01T00:00:00",
+                "platform": "claude",
+            },
+            {
+                "agent_name": "agent2",
+                "content": "msg2",
+                "timestamp": "2026-01-01T00:00:01",
+                "platform": "codex",
+            },
         ]
 
         with open(messages_file, "w", encoding="utf-8") as f:
@@ -161,8 +171,20 @@ class TestGroupChatRepositorySession:
 
         new_messages = [
             {"_type": "meta_data", "last_compact_loc": 0, "next_message_id": 10},
-            {"id": 5, "agent_name": "agent1", "content": "msg1", "timestamp": "2026-01-01T00:00:00", "platform": "claude"},
-            {"id": 8, "agent_name": "agent2", "content": "msg2", "timestamp": "2026-01-01T00:00:01", "platform": "codex"},
+            {
+                "id": 5,
+                "agent_name": "agent1",
+                "content": "msg1",
+                "timestamp": "2026-01-01T00:00:00",
+                "platform": "claude",
+            },
+            {
+                "id": 8,
+                "agent_name": "agent2",
+                "content": "msg2",
+                "timestamp": "2026-01-01T00:00:01",
+                "platform": "codex",
+            },
         ]
 
         with open(messages_file, "w", encoding="utf-8") as f:
@@ -190,7 +212,13 @@ class TestGroupChatRepositorySession:
 
         messages = [
             {"_type": "meta_data", "last_compact_loc": 0, "next_message_id": 100},
-            {"id": 1, "agent_name": "agent1", "content": "msg1", "timestamp": "2026-01-01T00:00:00", "platform": "claude"},
+            {
+                "id": 1,
+                "agent_name": "agent1",
+                "content": "msg1",
+                "timestamp": "2026-01-01T00:00:00",
+                "platform": "claude",
+            },
         ]
 
         with open(messages_file, "w", encoding="utf-8") as f:
@@ -217,9 +245,24 @@ class TestGroupChatRepositorySession:
 
         old_messages = [
             {"_type": "meta_data", "last_compact_loc": 0},
-            {"agent_name": "agent1", "content": "msg1", "timestamp": "2026-01-01T00:00:00", "platform": "claude"},
-            {"agent_name": "agent2", "content": "msg2", "timestamp": "2026-01-01T00:00:01", "platform": "codex"},
-            {"agent_name": "agent1", "content": "msg3", "timestamp": "2026-01-01T00:00:02", "platform": "claude"},
+            {
+                "agent_name": "agent1",
+                "content": "msg1",
+                "timestamp": "2026-01-01T00:00:00",
+                "platform": "claude",
+            },
+            {
+                "agent_name": "agent2",
+                "content": "msg2",
+                "timestamp": "2026-01-01T00:00:01",
+                "platform": "codex",
+            },
+            {
+                "agent_name": "agent1",
+                "content": "msg3",
+                "timestamp": "2026-01-01T00:00:02",
+                "platform": "claude",
+            },
         ]
 
         with open(messages_file, "w", encoding="utf-8") as f:
@@ -419,18 +462,31 @@ class TestGroupChatServicePin:
         # 创建 mock 群聊
         mock_group_chat = MagicMock()
         mock_group_chat.runtime.get_message_dicts.return_value = [
-            {"id": 1, "speaker": "agent1", "content": "msg1", "timestamp": "2026-01-01T00:00:00", "platform": "claude"},
-            {"id": 2, "speaker": "agent2", "content": "msg2", "timestamp": "2026-01-01T00:00:01", "platform": "codex"},
+            {
+                "id": 1,
+                "speaker": "agent1",
+                "content": "msg1",
+                "timestamp": "2026-01-01T00:00:00",
+                "platform": "claude",
+            },
+            {
+                "id": 2,
+                "speaker": "agent2",
+                "content": "msg2",
+                "timestamp": "2026-01-01T00:00:01",
+                "platform": "codex",
+            },
         ]
         mock_group_chat.runtime.repository.group_chat_session_path = "/tmp/test"
         mock_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
         # Mock _get_pins_path 和 _read_pins/_write_pins
-        with patch.object(service, "_get_pins_path", return_value=Path("/tmp/pins.json")), \
-             patch.object(service, "_get_pins_lock", return_value=AsyncMock()), \
-             patch.object(service, "_read_pins", new_callable=AsyncMock, return_value=[]), \
-             patch.object(service, "_write_pins", new_callable=AsyncMock) as mock_write:
-
+        with (
+            patch.object(service, "_get_pins_path", return_value=Path("/tmp/pins.json")),
+            patch.object(service, "_get_pins_lock", return_value=AsyncMock()),
+            patch.object(service, "_read_pins", new_callable=AsyncMock, return_value=[]),
+            patch.object(service, "_write_pins", new_callable=AsyncMock) as mock_write,
+        ):
             await service.pin_message("test-chat", 1)
 
             # 验证 _write_pins 被调用
@@ -454,19 +510,33 @@ class TestGroupChatServicePin:
 
         mock_group_chat = MagicMock()
         mock_group_chat.runtime.get_message_dicts.return_value = [
-            {"id": 1, "speaker": "agent1", "content": "msg1", "timestamp": "2026-01-01T00:00:00", "platform": "claude"},
+            {
+                "id": 1,
+                "speaker": "agent1",
+                "content": "msg1",
+                "timestamp": "2026-01-01T00:00:00",
+                "platform": "claude",
+            },
         ]
         mock_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
         existing_pins = [
-            {"message_id": 1, "speaker": "agent1", "content": "msg1", "timestamp": "2026-01-01T00:00:00", "platform": "claude", "pinned_at": "2026-01-01T00:01:00"},
+            {
+                "message_id": 1,
+                "speaker": "agent1",
+                "content": "msg1",
+                "timestamp": "2026-01-01T00:00:00",
+                "platform": "claude",
+                "pinned_at": "2026-01-01T00:01:00",
+            },
         ]
 
-        with patch.object(service, "_get_pins_path", return_value=Path("/tmp/pins.json")), \
-             patch.object(service, "_get_pins_lock", return_value=AsyncMock()), \
-             patch.object(service, "_read_pins", new_callable=AsyncMock, return_value=existing_pins), \
-             patch.object(service, "_write_pins", new_callable=AsyncMock) as mock_write:
-
+        with (
+            patch.object(service, "_get_pins_path", return_value=Path("/tmp/pins.json")),
+            patch.object(service, "_get_pins_lock", return_value=AsyncMock()),
+            patch.object(service, "_read_pins", new_callable=AsyncMock, return_value=existing_pins),
+            patch.object(service, "_write_pins", new_callable=AsyncMock) as mock_write,
+        ):
             await service.pin_message("test-chat", 1)
 
             # 幂等：_write_pins 不应被调用
@@ -488,7 +558,13 @@ class TestGroupChatServicePin:
 
         mock_group_chat = MagicMock()
         mock_group_chat.runtime.get_message_dicts.return_value = [
-            {"id": 1, "speaker": "agent1", "content": "msg1", "timestamp": "2026-01-01T00:00:00", "platform": "claude"},
+            {
+                "id": 1,
+                "speaker": "agent1",
+                "content": "msg1",
+                "timestamp": "2026-01-01T00:00:00",
+                "platform": "claude",
+            },
         ]
         mock_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
@@ -515,11 +591,12 @@ class TestGroupChatServicePin:
             {"message_id": 2, "speaker": "agent2", "content": "msg2"},
         ]
 
-        with patch.object(service, "_get_pins_path", return_value=Path("/tmp/pins.json")), \
-             patch.object(service, "_get_pins_lock", return_value=AsyncMock()), \
-             patch.object(service, "_read_pins", new_callable=AsyncMock, return_value=existing_pins), \
-             patch.object(service, "_write_pins", new_callable=AsyncMock) as mock_write:
-
+        with (
+            patch.object(service, "_get_pins_path", return_value=Path("/tmp/pins.json")),
+            patch.object(service, "_get_pins_lock", return_value=AsyncMock()),
+            patch.object(service, "_read_pins", new_callable=AsyncMock, return_value=existing_pins),
+            patch.object(service, "_write_pins", new_callable=AsyncMock) as mock_write,
+        ):
             await service.unpin_message("test-chat", 1)
 
             mock_write.assert_called_once()
@@ -546,11 +623,12 @@ class TestGroupChatServicePin:
             {"message_id": 1, "speaker": "agent1", "content": "msg1"},
         ]
 
-        with patch.object(service, "_get_pins_path", return_value=Path("/tmp/pins.json")), \
-             patch.object(service, "_get_pins_lock", return_value=AsyncMock()), \
-             patch.object(service, "_read_pins", new_callable=AsyncMock, return_value=existing_pins), \
-             patch.object(service, "_write_pins", new_callable=AsyncMock) as mock_write:
-
+        with (
+            patch.object(service, "_get_pins_path", return_value=Path("/tmp/pins.json")),
+            patch.object(service, "_get_pins_lock", return_value=AsyncMock()),
+            patch.object(service, "_read_pins", new_callable=AsyncMock, return_value=existing_pins),
+            patch.object(service, "_write_pins", new_callable=AsyncMock) as mock_write,
+        ):
             await service.unpin_message("test-chat", 999)
 
             # 幂等：_write_pins 不应被调用

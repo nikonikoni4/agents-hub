@@ -155,7 +155,7 @@ def check_agent_call(
 
 ### ADR 0006 群聊发言重构（deferred）
 
-把出口 A/B 的隐式自动写入改为显式 `speak_in_group_chat` 工具。完整讨论见 ADR 0006。在 MCP 主流程跑通后立项实施。
+把出口 A/B 的隐式自动写入改为显式 `report_progress` 工具。完整讨论见 ADR 0006。在 MCP 主流程跑通后立项实施。
 
 ---
 

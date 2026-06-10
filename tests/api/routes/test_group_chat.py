@@ -44,8 +44,7 @@ async def test_get_file_snapshot_content_not_found(mock_service):
     snapshot_id = "nonexistent_snapshot"
 
     mock_service.get_file_snapshot_content.side_effect = ResourceNotFoundError(
-        "快照不存在",
-        details={"snapshot_id": snapshot_id}
+        "快照不存在", details={"snapshot_id": snapshot_id}
     )
 
     # Act & Assert
@@ -62,8 +61,7 @@ async def test_get_file_snapshot_content_group_chat_not_found(mock_service):
     snapshot_id = "call_001_0"
 
     mock_service.get_file_snapshot_content.side_effect = ResourceNotFoundError(
-        "群聊不存在",
-        details={"group_chat_id": group_chat_id}
+        "群聊不存在", details={"group_chat_id": group_chat_id}
     )
 
     # Act & Assert
@@ -105,8 +103,7 @@ async def test_get_file_snapshot_diff_not_found(mock_service):
     snapshot_id = "nonexistent_snapshot"
 
     mock_service.get_file_snapshot_diff.side_effect = ResourceNotFoundError(
-        "快照不存在",
-        details={"snapshot_id": snapshot_id}
+        "快照不存在", details={"snapshot_id": snapshot_id}
     )
 
     # Act & Assert

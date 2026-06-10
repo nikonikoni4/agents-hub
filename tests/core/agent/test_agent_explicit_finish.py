@@ -1,4 +1,4 @@
-"""测试 Agent.run 的显式 finish_agent_call 闭环行为"""
+"""测试 Agent.run 的显式 complete_task 闭环行为"""
 
 from datetime import datetime
 
@@ -86,7 +86,9 @@ def make_result(text: str = "internal execution text") -> AgentResult:
 
 
 @pytest.mark.asyncio
-async def test_run_does_not_write_process_result_to_group_chat(agent, agent_call_manager, monkeypatch):
+async def test_run_does_not_write_process_result_to_group_chat(
+    agent, agent_call_manager, monkeypatch
+):
     """契约：_process_message 的普通结果不再通过出口 A 自动写入群聊"""
 
     async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
@@ -130,7 +132,7 @@ async def test_run_does_not_write_process_result_to_group_chat(agent, agent_call
 async def test_unfinished_task_sends_system_prompt_to_finish_call(
     agent, agent_call_manager, monkeypatch
 ):
-    """契约：TASK 执行结束但未显式回复时，系统提示 Agent 调用 finish_agent_call"""
+    """契约：TASK 执行结束但未显式回复时，系统提示 Agent 调用 complete_task"""
 
     async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
         return make_result("private draft")
@@ -172,13 +174,13 @@ async def test_unfinished_task_sends_system_prompt_to_finish_call(
     assert reminder.call_id == call.call_id
     assert reminder.send_from == "__SYSTEM__"
     assert reminder.send_to == "worker"
-    assert "finish_agent_call" in reminder.content
+    assert "complete_task" in reminder.content
     assert call.call_id in reminder.content
 
 
 @pytest.mark.asyncio
 async def test_finished_task_does_not_send_system_prompt(agent, agent_call_manager, monkeypatch):
-    """契约：TASK 已通过 finish_agent_call 闭环时，不再发送系统提示"""
+    """契约：TASK 已通过 complete_task 闭环时，不再发送系统提示"""
 
     async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):
         call.has_agent_response = True
@@ -297,8 +299,8 @@ async def test_consecutive_no_finish_increments_counter(agent, agent_call_manage
         msg = await agent.message_queue.get()
         prompt = f"process {i}"
         await agent._process_message(msg, prompt)
-        if agent._needs_finish_agent_call_reminder(msg):
-            agent._enqueue_finish_agent_call_reminder(msg)
+        if agent._needs_complete_task_reminder(msg):
+            agent._enqueue_complete_task_reminder(msg)
             agent._consecutive_no_finish_count += 1
         else:
             agent._consecutive_no_finish_count = 0

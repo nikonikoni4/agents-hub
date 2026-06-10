@@ -6,8 +6,8 @@ MCP Server 和 8 个工具
 2. assign_tasks_to_team: 覆盖式更新任务列表
 3. archive_task_list: 归档当前 ACTIVE 列表
 4. check_agent_call: 查询 AgentCall 状态
-5. speak_in_group_chat: 在群聊中公开发言
-6. finish_agent_call: 结束一个需要回复的 AgentCall
+5. report_progress: 复杂任务过程汇报
+6. complete_task: 最终任务总结
 7. create_group_chat: 创建新群聊（系统助手专用）
 8. create_agent: 创建新的成员角色（系统助手专用）
 
@@ -27,6 +27,7 @@ MCP Server 和 8 个工具
 # 只能做提醒或者强行关闭一致错误的agent（调用错误可能是系统问题，直接停止是比较好的选择）
 
 from datetime import datetime
+from pathlib import Path
 
 from fastmcp import FastMCP
 from mcp.types import JSONRPCMessage
@@ -464,17 +465,20 @@ async def check_agent_call(agent_token: str, call_id: str) -> dict:
 
 
 # ============================================================================
-# Tool 5: speak_in_group_chat
+# Tool 5: report_progress
 # ============================================================================
 
 
-async def speak_in_group_chat(agent_token: str, content: str, send_to: str | None = None) -> dict:
+async def report_progress(agent_token: str, content: str, send_to: str | None = None) -> dict:
     """
-    任务汇报：向群聊发送进展信息，让 user 和 manager 知道当前状态。
+    复杂任务过程汇报：在你执行复杂任务（需要花费1min以上的任务）时调用该工具进行汇报说明。
+    使用时机：
+    - 任务开始前：收到，我将执行<任务名称>
+    - 任务中间：已完成XX，接下来将进行XX
 
     Args:
         agent_token: 调用者的身份令牌
-        content: 汇报内容
+        content: 简短的进展汇报
         send_to: 可选的 @ 对象；为空时表示普通群聊发言
 
     Returns:
@@ -505,7 +509,7 @@ async def speak_in_group_chat(agent_token: str, content: str, send_to: str | Non
         )
         # TODO : [DESIGN] 当前在agent_Context中使用了_get_filtered_messages，会忽略掉所有@agent或agent发起的信息，
         # 所以如果这里的群聊信息如果是使用了speak_in_the_group@某个agent，这个agent实际上是不会收到这个消息的
-        # 需要某个机制去区分finish_agent_call 和 speak_in_group_chat的区别
+        # 需要某个机制去区分complete_task 和 report_progress的区别
         # 这里暂时不做处理
         await group_chat.group_chat_context.add_message(
             _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)
@@ -522,23 +526,24 @@ async def speak_in_group_chat(agent_token: str, content: str, send_to: str | Non
 
 
 # ============================================================================
-# Tool 6: finish_agent_call
+# Tool 6: complete_task
 # ============================================================================
 
 
-async def finish_agent_call(
+async def complete_task(
     agent_token: str,
     call_id: str,
     content: str,
+    modified_files: list[str] | None,
+    git_diff_range: str | None,
+    web_preview_url: str | None,
+    web_preview_title: str | None,
     success: bool = True,
-    modified_files: list[str] | None = None,
-    git_diff_range: str | None = None,
-    web_preview_url: str | None = None,
-    web_preview_title: str | None = None,
 ) -> dict:
     """
-    结束一个需要回复的 AgentCall，并向原调用方投递完成通知以唤醒下一轮处理。
-
+    最终任务总结：当你结束这一轮对话之前，必须调用该工具进行任务汇报。
+    若有改动的文件必须使用modified_files和git_diff_range
+    若有HTML或网页需要用于预览，必须使用web_preview_url
     Args:
         agent_token: 调用者的身份令牌
         call_id: 要结束的 AgentCall ID
@@ -546,8 +551,11 @@ async def finish_agent_call(
         success: True 表示完成，False 表示阻塞或失败
         modified_files: 修改的文件列表（相对路径）
         git_diff_range: Git diff 范围（格式：commit..commit）
-        web_preview_url: 网页预览 URL（可选）,当你完成了一个网页时需要推送这个网页的本地url
-        web_preview_title: 网页预览标题（可选）
+        web_preview_url: 网页预览 URL（可选）。当完成了一个网页（HTML 文件）时，需要传入此参数让用户预览。
+                        格式:
+                          - 静态 HTML 文件: 文件相对路径，如 "index.html"、"dist/index.html"
+                          - 本地服务器: 完整 URL，如 "http://localhost:3000"、"http://localhost:8000/api"
+        web_preview_title: 网页预览标题（可选），如 "首页"、"登录页面" 等
 
     Returns:
         成功: {"call_id": "...", "status": "completed|failed"}
@@ -591,30 +599,33 @@ async def finish_agent_call(
         if call.message_type != MessageType.TASK:
             return make_error_response(
                 INVALID_AGENT_CALL_STATE,
-                "该 AgentCall 是 notification，不需要回复，不能调用 finish_agent_call,可以使用speak_in_the_group在群聊进行非正式回复",
+                "该 AgentCall 是 notification，不需要回复，不能调用 complete_task,可以使用speak_in_the_group在群聊进行非正式回复",
                 details={"call_id": call_id, "message_type": call.message_type.value},
             )
 
         if call.has_agent_response:
             return make_error_response(
                 INVALID_AGENT_CALL_STATE,
-                "该 AgentCall 已经通过 finish_agent_call 闭环，不能重复结束",
+                "该 AgentCall 已经通过 complete_task 闭环，不能重复结束",
                 details={"call_id": call_id},
             )
         # 3. 将token信息从返回的信息中剥离
         safe_content = redact_token(content)
 
-        # 4. 创建文件快照（如果有修改文件）
+        # 4. 参数校验：空值时跳过对应处理
         file_metadata_list = None
-        agent_cwd = None
+        agent_cwd: str | None = None
+        has_modified_files = modified_files is not None and len(modified_files) > 0
+        has_web_preview = web_preview_url is not None and web_preview_url.strip() != ""
 
-        if modified_files:
-            # 获取 Agent 工作目录
+        # 获取 Agent 工作目录（modified_files 和 web_preview_url 都需要）
+        if has_modified_files or has_web_preview:
             agent = _find_agent(group_chat, agent_name)
             agent_cwd = (
                 agent.cwd if agent and hasattr(agent, "cwd") else group_chat.runtime.project_path
             )
 
+        if has_modified_files:
             # 构造快照目录
             snapshot_dir = group_chat_paths.file_snapshots_dir(
                 group_chat_id, group_chat.runtime.project_path
@@ -622,6 +633,10 @@ async def finish_agent_call(
 
             # 为每个文件创建快照
             file_metadata_list = []
+            assert modified_files is not None, (
+                "has_modified_files 为 True 时 modified_files 必须非空"
+            )
+            assert agent_cwd is not None, "modified_files 存在时 agent_cwd 必须已初始化"
             for index, file_path in enumerate(modified_files):
                 try:
                     metadata = create_file_snapshot(
@@ -641,7 +656,7 @@ async def finish_agent_call(
         # TODO : [DESIGN] 这里会把结果发在result中，但是当前也会在直接发送给agent信息，
         # 如果agent调用check_agent_call，实际上会得到2份结果，但是这里先不管
         # 一个可行的方法是使用 "agent call结束，具体内容{agent_name}会直接发送信息给你"
-        logger.debug(f"finish_agent_call :call_id:{call_id} {success} {safe_content}")
+        logger.debug(f"complete_task :call_id:{call_id} {success} {safe_content}")
         group_chat.agent_call_manager.mark_agent_response(
             call_id=call_id,
             content=safe_content,  #  "agent call结束，具体内容{agent_name}会直接发送信息给你"
@@ -649,7 +664,15 @@ async def finish_agent_call(
         )
         # 6. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
         web_preview = None
-        if web_preview_url:
+        if has_web_preview:
+            assert web_preview_url is not None, (
+                "has_web_preview 为 True 时 web_preview_url 必须非空"
+            )
+            assert agent_cwd is not None, "web_preview_url 存在时 agent_cwd 必须已初始化"
+            # 只对相对路径转换为 file:/// 绝对路径，HTTP/HTTPS URL 保持不变
+            if not web_preview_url.startswith(("file:///", "http://", "https://")):
+                abs_path = Path(agent_cwd) / web_preview_url
+                web_preview_url = f"file:///{abs_path.as_posix()}"
             web_preview = {"url": web_preview_url, "title": web_preview_title}
 
         if config.is_user_name(call.send_from):
@@ -931,8 +954,8 @@ mcp.tool()(call_agent)
 mcp.tool()(assign_tasks_to_team)
 mcp.tool()(archive_task_list)
 mcp.tool()(check_agent_call)
-mcp.tool()(speak_in_group_chat)
-mcp.tool()(finish_agent_call)
+mcp.tool()(report_progress)
+mcp.tool()(complete_task)
 # mcp.tool()(request_permission)
 mcp.tool()(create_group_chat)
 mcp.tool()(create_agent)

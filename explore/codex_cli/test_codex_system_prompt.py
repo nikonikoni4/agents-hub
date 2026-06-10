@@ -16,7 +16,10 @@ class CodexChatSessionTests(unittest.TestCase):
         )
 
     def test_session_defaults_working_directory_to_current_process_directory(self):
-        with patch("tests.explore.codex_system_prompt.os.getcwd", return_value=r"D:\desktop\软件开发\agents-hub"):
+        with patch(
+            "tests.explore.codex_system_prompt.os.getcwd",
+            return_value=r"D:\desktop\软件开发\agents-hub",
+        ):
             session = CodexChatSession(codex_home=r"D:\desktop\软件开发\test-codex")
 
         self.assertEqual(session.working_dir, r"D:\desktop\软件开发\agents-hub")

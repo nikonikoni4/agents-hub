@@ -333,7 +333,7 @@
   - 优化 Manager 的 finish_agent_call 工具说明：强调安排任务后即可闭环，无需等待 Worker 完成
   - 优化 Worker 的 finish_agent_call 工具说明：强调完成实际工作后才闭环
   - 改进 Task 未闭环提醒：包含 call_id、来源、原始请求摘要，Manager 额外说明可提前闭环
-  - 改进 Heartbeat 内容：Worker 停止时指示 Manager 通过 speak_in_group_chat 向 user 说明
+  - 改进 Heartbeat 内容：Worker 停止时指示 Manager 通过 report_progress 向 user 说明
   - 添加 `[Agents Hub 平台消息]` 标识到 render_for_llm，让 Agent 识别消息来源平台
   - 更新 render_for_llm 测试用例适配新格式
   - 创建 Agent 提示词系统 spec 文档
@@ -348,7 +348,7 @@
 - **完成内容**：
   - 在 `base_agent.py` 中添加了 `_generate_tool_usage_content` 方法，区分 Manager/Worker 生成不同的工具使用说明
   - 添加了 `_inject_tool_usage_to_files` 方法，将工具使用说明注入到 CLAUDE.md/AGENTS.md 的 TOOL_USAGE 标记中
-  - Manager 说明所有工具，Worker 只说明 speak_in_group_chat 和 finish_agent_call
+  - Manager 说明所有工具，Worker 只说明 report_progress 和 finish_agent_call
   - 说明了群聊消息显示规则和工具使用场景
 
 ### 3. 群聊信息显示问题排查

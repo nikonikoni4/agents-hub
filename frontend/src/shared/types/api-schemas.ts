@@ -13,6 +13,18 @@
  * - 每个类型都标注对应的后端 schema 名称
  */
 
+// ==================== 通用类型 ====================
+
+/**
+ * 上传文件信息
+ */
+export interface UploadedFileInfo {
+  file_name: string; // 原始文件名
+  file_path: string; // 存储路径（相对于项目根目录）
+  file_type: string; // 文件类型（mime type）
+  file_size: number; // 文件大小（字节）
+}
+
 // ==================== 枚举类型 ====================
 
 /**
@@ -118,6 +130,8 @@ export interface MessageApiItem {
   timestamp: string;
   /** 来源平台 */
   platform: string;
+  /** 文件列表 */
+  files?: UploadedFileInfo[];
   /** 当前工作目录 */
   cwd?: string;
   /** 文件修改信息列表 */

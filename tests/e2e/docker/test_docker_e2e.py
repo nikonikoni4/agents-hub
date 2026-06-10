@@ -37,7 +37,8 @@ def cleanup_containers() -> None:
     """停止并删除所有测试相关的容器"""
     result = subprocess.run(
         ["docker", "ps", "-q"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     if result.stdout.strip():
         subprocess.run(["docker", "stop"] + result.stdout.strip().split(), check=False)
@@ -56,9 +57,9 @@ def restore_git_refs() -> None:
 
 def print_git_refs(label: str) -> None:
     """打印两个 git 引用文件的内容"""
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"[{label}] Git 引用状态")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     print(f"  .git    ({GIT_FILE}):")
     print(f"    {GIT_FILE.read_text(encoding='utf-8').strip()}")
     print(f"  gitdir  ({GITDIR_FILE}):")

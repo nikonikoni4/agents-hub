@@ -41,9 +41,7 @@ def test_add_message_includes_web_preview():
     如果失败，说明：add_message 未透传 web_preview
     """
     session = GroupChatSession()
-    result = _make_agent_result(
-        web_preview={"url": "http://localhost:3000", "title": "预览"}
-    )
+    result = _make_agent_result(web_preview={"url": "http://localhost:3000", "title": "预览"})
 
     session.add_message(result)
 
@@ -89,7 +87,13 @@ def test_add_message_web_preview_coexists_with_permission_request():
     session = GroupChatSession()
     result = _make_agent_result(
         web_preview={"url": "http://localhost:3000", "title": "预览"},
-        permission_request={"request_id": "r1", "title": "权限", "content": "请求", "status": "pending", "requested_by": "agent"},
+        permission_request={
+            "request_id": "r1",
+            "title": "权限",
+            "content": "请求",
+            "status": "pending",
+            "requested_by": "agent",
+        },
     )
 
     session.add_message(result)

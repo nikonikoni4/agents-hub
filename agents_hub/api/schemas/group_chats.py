@@ -50,11 +50,21 @@ class UseDockerUpdate(BaseModel):
     use_docker: bool = Field(..., description="是否启用 Docker 沙箱执行")
 
 
+class UploadedFileInfo(BaseModel):
+    """上传文件信息"""
+
+    file_name: str = Field(..., description="原始文件名")
+    file_path: str = Field(..., description="存储路径（相对于项目根目录）")
+    file_type: str = Field(..., description="文件类型（mime type）")
+    file_size: int = Field(..., description="文件大小（字节）")
+
+
 class MessageCreate(BaseModel):
     """发送消息请求"""
 
     content: str = Field(..., min_length=1, description="消息内容")
-    members: list[str] = Field(..., min_length=1, description="群聊中所有 agent 名称列表")
+    members: list[str] = Field(..., description="群聊中所有 agent 名称列表")
+    files: list[UploadedFileInfo] | None = Field(None, description="可选的文件列表")
 
 
 class PermissionRequestInfo(BaseModel):
@@ -87,6 +97,7 @@ class MessageInfo(BaseModel):
     git_diff_range: str | None = Field(None, description="Git diff 范围")
     permission_request: PermissionRequestInfo | None = Field(None, description="权限请求信息")
     web_preview: WebPreviewInfo | None = Field(None, description="网页预览信息")
+    files: list[UploadedFileInfo] | None = Field(None, description="上传的文件列表")
 
 
 # --- Permission Request Schemas ---

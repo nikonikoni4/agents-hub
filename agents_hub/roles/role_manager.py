@@ -16,6 +16,7 @@ from agents_hub.roles.exceptions import (
     RoleNotFoundError,
 )
 from agents_hub.roles.models import RoleInfo, RoleType
+from agents_hub.roles.prompt_file import build_system_file_content
 from agents_hub.roles.role import Role
 
 logger = logging.getLogger(__name__)
@@ -284,6 +285,24 @@ class RoleManager:
             elif platform == AgentPlatform.OPENCODE:
                 self._init_opencode_config(work_root)
             self._init_agents_hub_mcp(platform, work_root)
+
+            # 写入系统提示文件（CLAUDE.md / AGENTS.md）
+            role_type = (
+                type
+                if isinstance(type, RoleType)
+                else RoleType(type)
+                if type
+                else RoleType.TEAM_MEMBER
+            )
+            system_file_content = build_system_file_content(
+                name=name,
+                role_type=role_type,
+                description=description,
+            )
+            if platform == AgentPlatform.CLAUDE:
+                (work_root / "CLAUDE.md").write_text(system_file_content, encoding="utf-8")
+            elif platform == AgentPlatform.CODEX:
+                (work_root / "AGENTS.md").write_text(system_file_content, encoding="utf-8")
         except Exception:
             shutil.rmtree(role_dir, ignore_errors=True)
             raise
@@ -325,8 +344,8 @@ class RoleManager:
     def _init_claude_config(self, work_root: Path) -> None:
         """初始化 Claude 平台配置。
 
-        从 ~/.claude 复制 settings.json，创建空白 CLAUDE.md。
-        生成 .mcp.json 配置文件和 AGENT_RUNTIME 标记。
+        从 ~/.claude 复制 settings.json。
+        CLAUDE.md 由 create_role() 统一写入。
 
         Args:
             work_root: 角色的 work_root 目录路径。
@@ -342,18 +361,11 @@ class RoleManager:
         if settings_src.exists():
             shutil.copy2(settings_src, work_root / "settings.json")
 
-        # 创建 CLAUDE.md 并预置 AGENT_RUNTIME 标记（如果不存在）
-        claude_md_path = work_root / "CLAUDE.md"
-        if not claude_md_path.exists():
-            claude_md_content = "<AGENT_RUNTIME_START/>\n<AGENT_RUNTIME_END/>\n"
-            claude_md_path.write_text(claude_md_content, encoding="utf-8")
-
     def _init_codex_config(self, work_root: Path) -> None:
         """初始化 Codex 平台配置。
 
-        从 ~/.codex 复制 auth.json、config.toml 和 rules/ 目录，
-        创建空白 AGENTS.md。
-        生成 .mcp.json 配置文件和 AGENT_RUNTIME 标记。
+        从 ~/.codex 复制 auth.json、config.toml 和 rules/ 目录。
+        AGENTS.md 由 create_role() 统一写入。
 
         Args:
             work_root: 角色的 work_root 目录路径。
@@ -373,12 +385,6 @@ class RoleManager:
         rules_src = home_codex / "rules"
         if rules_src.exists():
             shutil.copytree(rules_src, work_root / "rules")
-
-        # 创建 AGENTS.md 并预置 AGENT_RUNTIME 标记（如果不存在）
-        agents_md_path = work_root / "AGENTS.md"
-        if not agents_md_path.exists():
-            agents_md_content = "<AGENT_RUNTIME_START/>\n<AGENT_RUNTIME_END/>\n"
-            agents_md_path.write_text(agents_md_content, encoding="utf-8")
 
     def _init_opencode_config(self, work_root: Path) -> None:
         """初始化 OpenCode 平台配置。

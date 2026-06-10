@@ -71,23 +71,17 @@ class TestAgentMessage:
 
     def test_default_timestamp(self):
         """契约：创建时自动填充 timestamp 默认值"""
-        msg = AgentMessage(
-            call_id="c1", content="hi", send_from="a", send_to="b"
-        )
+        msg = AgentMessage(call_id="c1", content="hi", send_from="a", send_to="b")
         assert msg.timestamp is not None
 
     def test_default_session_type(self):
         """契约：session_type 默认为 MAIN"""
-        msg = AgentMessage(
-            call_id="c1", content="hi", send_from="a", send_to="b"
-        )
+        msg = AgentMessage(call_id="c1", content="hi", send_from="a", send_to="b")
         assert msg.session_type == SessionType.MAIN
 
     def test_default_message_type(self):
         """契约：message_type 默认为 NOTIFICATION"""
-        msg = AgentMessage(
-            call_id="c1", content="hi", send_from="a", send_to="b"
-        )
+        msg = AgentMessage(call_id="c1", content="hi", send_from="a", send_to="b")
         assert msg.message_type == MessageType.NOTIFICATION
 
 

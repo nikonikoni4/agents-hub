@@ -49,32 +49,24 @@ class TestAgentCallDefaults:
 
     def test_default_status_pending(self):
         """契约：创建时 status 默认 PENDING"""
-        call = AgentCall(
-            send_from="a", send_to="b", content="c", message_type=MessageType.TASK
-        )
+        call = AgentCall(send_from="a", send_to="b", content="c", message_type=MessageType.TASK)
         assert call.status == CallStatus.PENDING
 
     def test_default_call_id_generated(self):
         """契约：call_id 自动生成"""
-        call = AgentCall(
-            send_from="a", send_to="b", content="c", message_type=MessageType.TASK
-        )
+        call = AgentCall(send_from="a", send_to="b", content="c", message_type=MessageType.TASK)
         assert call.call_id is not None
         assert len(call.call_id) == 8
 
     def test_default_timestamps_none(self):
         """契约：started_at 和 completed_at 默认 None"""
-        call = AgentCall(
-            send_from="a", send_to="b", content="c", message_type=MessageType.TASK
-        )
+        call = AgentCall(send_from="a", send_to="b", content="c", message_type=MessageType.TASK)
         assert call.started_at is None
         assert call.completed_at is None
 
     def test_default_has_agent_response_false(self):
         """契约：创建时默认尚未被 Agent 显式回复闭环"""
-        call = AgentCall(
-            send_from="a", send_to="b", content="c", message_type=MessageType.TASK
-        )
+        call = AgentCall(send_from="a", send_to="b", content="c", message_type=MessageType.TASK)
         assert call.has_agent_response is False
 
 
@@ -221,6 +213,16 @@ class TestAgentCallCanBeDeleted:
         with patch("agents_hub.core.communication.agent_call.datetime") as mock_dt:
             mock_dt.now.return_value = now
             # 自定义：NOTIFICATION 完成后保留 5 秒
-            assert call.can_be_deleted({"notification_completed": 5, "task_completed": 3600, "failed": 86400}) is True
+            assert (
+                call.can_be_deleted(
+                    {"notification_completed": 5, "task_completed": 3600, "failed": 86400}
+                )
+                is True
+            )
             # 自定义：NOTIFICATION 完成后保留 15 秒
-            assert call.can_be_deleted({"notification_completed": 15, "task_completed": 3600, "failed": 86400}) is False
+            assert (
+                call.can_be_deleted(
+                    {"notification_completed": 15, "task_completed": 3600, "failed": 86400}
+                )
+                is False
+            )

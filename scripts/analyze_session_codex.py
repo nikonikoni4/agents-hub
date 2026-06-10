@@ -108,12 +108,14 @@ def extract_conversation(messages: list[dict]) -> list[dict]:
                     texts.append(block.get("text", ""))
 
             if texts:
-                conversation.append({
-                    "role": role,
-                    "content": "\n".join(texts),
-                    "timestamp": timestamp,
-                    "source": "response_item",
-                })
+                conversation.append(
+                    {
+                        "role": role,
+                        "content": "\n".join(texts),
+                        "timestamp": timestamp,
+                        "source": "response_item",
+                    }
+                )
 
         elif msg_type == "event_msg":
             payload = msg.get("payload", {})
@@ -125,38 +127,44 @@ def extract_conversation(messages: list[dict]) -> list[dict]:
             if event_type == "token_count":
                 info = payload.get("info", {})
                 usage = info.get("total_token_usage", {})
-                conversation.append({
-                    "role": "system",
-                    "content": "[token_usage]",
-                    "timestamp": timestamp,
-                    "source": "event_msg",
-                    "token_usage": {
-                        "input_tokens": usage.get("input_tokens", 0),
-                        "cached_input_tokens": usage.get("cached_input_tokens", 0),
-                        "output_tokens": usage.get("output_tokens", 0),
-                        "reasoning_output_tokens": usage.get("reasoning_output_tokens", 0),
-                        "total_tokens": usage.get("total_tokens", 0),
-                    },
-                    "context_window": info.get("model_context_window", 0),
-                })
+                conversation.append(
+                    {
+                        "role": "system",
+                        "content": "[token_usage]",
+                        "timestamp": timestamp,
+                        "source": "event_msg",
+                        "token_usage": {
+                            "input_tokens": usage.get("input_tokens", 0),
+                            "cached_input_tokens": usage.get("cached_input_tokens", 0),
+                            "output_tokens": usage.get("output_tokens", 0),
+                            "reasoning_output_tokens": usage.get("reasoning_output_tokens", 0),
+                            "total_tokens": usage.get("total_tokens", 0),
+                        },
+                        "context_window": info.get("model_context_window", 0),
+                    }
+                )
 
             elif event_type == "task_started":
-                conversation.append({
-                    "role": "system",
-                    "content": f"[task_started] turn_id={payload.get('turn_id', '')}",
-                    "timestamp": timestamp,
-                    "source": "event_msg",
-                })
+                conversation.append(
+                    {
+                        "role": "system",
+                        "content": f"[task_started] turn_id={payload.get('turn_id', '')}",
+                        "timestamp": timestamp,
+                        "source": "event_msg",
+                    }
+                )
 
             elif event_type == "task_complete":
                 dur = payload.get("duration_ms", 0)
                 ttft = payload.get("time_to_first_token_ms", 0)
-                conversation.append({
-                    "role": "system",
-                    "content": f"[task_complete] duration={dur}ms, time_to_first_token={ttft}ms",
-                    "timestamp": timestamp,
-                    "source": "event_msg",
-                })
+                conversation.append(
+                    {
+                        "role": "system",
+                        "content": f"[task_complete] duration={dur}ms, time_to_first_token={ttft}ms",
+                        "timestamp": timestamp,
+                        "source": "event_msg",
+                    }
+                )
 
     # 按时间戳排序
     conversation.sort(key=lambda x: x["timestamp"])
@@ -187,7 +195,9 @@ def is_turn_context_content(content: str) -> bool:
     return "AGENTS.md instructions for" in content
 
 
-def analyze_session(config_dir: str, show_tool_calls: bool, session_path: str = None, output_md: str = None):
+def analyze_session(
+    config_dir: str, show_tool_calls: bool, session_path: str = None, output_md: str = None
+):
     """主分析函数。"""
     if session_path:
         session_file = Path(session_path).expanduser().resolve()
@@ -298,13 +308,8 @@ def analyze_session(config_dir: str, show_tool_calls: bool, session_path: str = 
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="分析 Codex 平台会话历史 JSONL 文件"
-    )
-    parser.add_argument(
-        "--path",
-        help="直接指定 JSONL 文件路径"
-    )
+    parser = argparse.ArgumentParser(description="分析 Codex 平台会话历史 JSONL 文件")
+    parser.add_argument("--path", help="直接指定 JSONL 文件路径")
     parser.add_argument(
         "--config-dir",
         default="~/.codex",
@@ -319,7 +324,7 @@ def main():
         "--output-md",
         nargs="?",
         const="auto",
-        help="将输出保存为 Markdown 文件（不指定文件名时自动生成）"
+        help="将输出保存为 Markdown 文件（不指定文件名时自动生成）",
     )
 
     args = parser.parse_args()

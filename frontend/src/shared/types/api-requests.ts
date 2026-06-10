@@ -4,7 +4,7 @@
  * 与后端 Pydantic request/response schemas 对应
  */
 
-import type { AgentPlatform, RoleType, SingleChatType } from './api-schemas';
+import type { AgentPlatform, RoleType, SingleChatType, UploadedFileInfo } from './api-schemas';
 
 // ==================== 群聊相关 ====================
 
@@ -25,6 +25,7 @@ export interface CreateGroupChatRequest {
 export interface SendMessageRequest {
   content: string; // 消息内容（非空）
   members: string[]; // 群聊中所有 agent 名称列表
+  files?: UploadedFileInfo[]; // 可选的文件列表
 }
 
 /**

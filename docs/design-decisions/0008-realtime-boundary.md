@@ -2,7 +2,7 @@
 version: 1.1
 created_at: 2026-06-04
 updated_at: 2026-06-04
-last_updated: 对齐 finish_agent_call 对 Agent 调用方投递完成通知，对 user 调用方写入群聊消息
+last_updated: 对齐 complete_task 对 Agent 调用方投递完成通知，对 user 调用方写入群聊消息
 abstract: 为避免 MCP Server 依赖 API WebSocket 模块导致循环依赖和职责混乱，决定将实时广播能力抽离为独立 realtime 边界，API 与 MCP 共同依赖该边界；refresh 可由群聊消息写入或 AgentCall 完成状态变化触发。
 status: decided
 ---
@@ -14,13 +14,13 @@ status: decided
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建文档初稿 |
-| 1.1 | 对齐 finish_agent_call 对 Agent 调用方投递完成通知，对 user 调用方写入群聊消息，二者都触发 refresh |
+| 1.1 | 对齐 complete_task 对 Agent 调用方投递完成通知，对 user 调用方写入群聊消息，二者都触发 refresh |
 
 ## 问题界定
 
 ### 问题简述
 
-当前 WebSocket 连接管理位于 API 文件夹中。随着 MCP Server 新增 `speak_in_group_chat` 和 `finish_agent_call`，MCP tool 在公开群聊发言或完成 AgentCall 后需要通知前端刷新。如果 MCP 直接导入 API WebSocket 模块，就会出现 `mcp -> api` 的依赖方向。
+当前 WebSocket 连接管理位于 API 文件夹中。随着 MCP Server 新增 `report_progress` 和 `complete_task`，MCP tool 在公开群聊发言或完成 AgentCall 后需要通知前端刷新。如果 MCP 直接导入 API WebSocket 模块，就会出现 `mcp -> api` 的依赖方向。
 
 这会让 API transport、MCP tool ingress 和实时通知服务混在一起。未来 API 路由、MCP Server、WebSocket manager 之间更容易形成循环依赖，也会让 WebSocket 这个本应独立的实时能力被误认为 API 的内部细节。
 
@@ -52,7 +52,7 @@ status: decided
 
 现有 WebSocket 模块在 API 目录中，连接管理器由 API dependency 提供。WebSocket 后端 spec 当前定义的是 MVP 模式：Agent 产生消息后广播 refresh，前端再拉取最新消息。
 
-新增显式群聊发言与 AgentCall 闭环后，MCP Server 的 `speak_in_group_chat` 成为群聊消息写入入口，`finish_agent_call` 成为 AgentCall 闭环入口。`finish_agent_call` 对 Agent 调用方投递完成通知，对 user 调用方写入群聊消息；二者都会改变前端需要感知的协作状态，因此都需要触发 refresh 通知。
+新增显式群聊发言与 AgentCall 闭环后，MCP Server 的 `report_progress` 成为群聊消息写入入口，`complete_task` 成为 AgentCall 闭环入口。`complete_task` 对 Agent 调用方投递完成通知，对 user 调用方写入群聊消息；二者都会改变前端需要感知的协作状态，因此都需要触发 refresh 通知。
 
 不能忽略的风险是：如果 MCP 直接依赖 `agents_hub.api.websocket`，API 将不再只是前端通信入口，而变成 MCP 的运行时依赖。这个方向与模块职责不匹配。
 
@@ -118,6 +118,6 @@ status: decided
 
 - `agents_hub/api/websocket` 中的连接管理能力应迁移到 `agents_hub/realtime`。
 - API WebSocket endpoint 保留在 API 侧，但只负责连接生命周期入口。
-- MCP 的 `speak_in_group_chat` 在写入群聊消息后触发 realtime refresh；`finish_agent_call` 在投递完成通知或写入 user 可见群聊消息后触发 realtime refresh。
+- MCP 的 `report_progress` 在写入群聊消息后触发 realtime refresh；`complete_task` 在投递完成通知或写入 user 可见群聊消息后触发 realtime refresh。
 - 测试需要覆盖 MCP 写入后 refresh 被广播，以及 realtime 不依赖 API/MCP。
 - 如果未来启用多 worker 或分布式部署，需要将进程内 realtime 升级为 pub/sub。

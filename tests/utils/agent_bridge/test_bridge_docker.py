@@ -28,13 +28,13 @@ class TestAgentBridgeDockerInit:
     def test_creates_docker_manager(self):
         """契约 1：__init__() 创建 DockerManager"""
         bridge = AgentBridge()
-        assert hasattr(bridge, '_docker_manager')
+        assert hasattr(bridge, "_docker_manager")
         assert isinstance(bridge._docker_manager, DockerManager)
 
     def test_creates_docker_executors(self):
         """契约 1：__init__() 创建 Docker executors"""
         bridge = AgentBridge()
-        assert hasattr(bridge, '_docker_executors')
+        assert hasattr(bridge, "_docker_executors")
         assert AgentPlatform.CLAUDE in bridge._docker_executors
         assert AgentPlatform.CODEX in bridge._docker_executors
         assert isinstance(bridge._docker_executors[AgentPlatform.CLAUDE], DockerClaudeExecutor)
@@ -74,6 +74,7 @@ class TestAgentBridgeExecuteDocker:
         # Mock parser - return appropriate StreamEvent based on input line
         def mock_parse(line):
             import json
+
             data = json.loads(line)
             subtype = data.get("subtype", "")
             if subtype == "text_delta":
@@ -202,23 +203,25 @@ class TestAgentExecuteDocker:
         )
 
         # Mock agent_platform_client.execute
-        with patch('agents_hub.core.agent.base_agent.agent_platform_client') as mock_client:
-            mock_client.execute = AsyncMock(return_value=SimpleNamespace(
-                text="response",
-                session_id="s1",
-                timestamp="t",
-                agent_name="test_agent",
-                platform=SimpleNamespace(value="claude"),
-                role_type=SimpleNamespace(value="team_member"),
-                usage=None,
-            ))
+        with patch("agents_hub.core.agent.base_agent.agent_platform_client") as mock_client:
+            mock_client.execute = AsyncMock(
+                return_value=SimpleNamespace(
+                    text="response",
+                    session_id="s1",
+                    timestamp="t",
+                    agent_name="test_agent",
+                    platform=SimpleNamespace(value="claude"),
+                    role_type=SimpleNamespace(value="team_member"),
+                    usage=None,
+                )
+            )
 
             await agent.execute("test prompt", use_docker=True, group_chat_id="gc_test_123")
 
             # 验证参数传递
             call_kwargs = mock_client.execute.call_args
-            assert call_kwargs[1]['use_docker'] is True
-            assert call_kwargs[1]['group_chat_id'] == "gc_test_123"
+            assert call_kwargs[1]["use_docker"] is True
+            assert call_kwargs[1]["group_chat_id"] == "gc_test_123"
 
 
 class TestAgentProcessMessageDocker:
@@ -268,8 +271,12 @@ class TestAgentProcessMessageDocker:
             role_type=SimpleNamespace(value="team_member"),
             usage=None,
         )
-        with patch.object(agent, 'execute', new_callable=AsyncMock, return_value=mock_result) as mock_execute:
-            with patch.object(agent.agent_context, 'get_context', new_callable=AsyncMock, return_value=None):
+        with patch.object(
+            agent, "execute", new_callable=AsyncMock, return_value=mock_result
+        ) as mock_execute:
+            with patch.object(
+                agent.agent_context, "get_context", new_callable=AsyncMock, return_value=None
+            ):
                 msg = AgentMessage(
                     call_id="call_1",
                     send_from="user",
@@ -284,8 +291,8 @@ class TestAgentProcessMessageDocker:
                 # 验证 execute 被调用时传递了 use_docker 和 group_chat_id
                 mock_execute.assert_called_once()
                 call_kwargs = mock_execute.call_args
-                assert call_kwargs[1]['use_docker'] is True
-                assert call_kwargs[1]['group_chat_id'] == "gc_test_123"
+                assert call_kwargs[1]["use_docker"] is True
+                assert call_kwargs[1]["group_chat_id"] == "gc_test_123"
 
     @pytest.mark.asyncio
     async def test_process_message_no_agent_member_info(self):
@@ -322,8 +329,12 @@ class TestAgentProcessMessageDocker:
             role_type=SimpleNamespace(value="team_member"),
             usage=None,
         )
-        with patch.object(agent, 'execute', new_callable=AsyncMock, return_value=mock_result) as mock_execute:
-            with patch.object(agent.agent_context, 'get_context', new_callable=AsyncMock, return_value=None):
+        with patch.object(
+            agent, "execute", new_callable=AsyncMock, return_value=mock_result
+        ) as mock_execute:
+            with patch.object(
+                agent.agent_context, "get_context", new_callable=AsyncMock, return_value=None
+            ):
                 msg = AgentMessage(
                     call_id="call_1",
                     send_from="user",
@@ -338,5 +349,5 @@ class TestAgentProcessMessageDocker:
                 # 验证 use_docker 默认为 False
                 mock_execute.assert_called_once()
                 call_kwargs = mock_execute.call_args
-                assert call_kwargs[1]['use_docker'] is False
-                assert call_kwargs[1]['group_chat_id'] == "gc_test_123"
+                assert call_kwargs[1]["use_docker"] is False
+                assert call_kwargs[1]["group_chat_id"] == "gc_test_123"

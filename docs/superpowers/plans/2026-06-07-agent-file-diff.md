@@ -4,7 +4,7 @@
 
 **Goal:** 当 Agent 完成代码任务后，消息下方显示修改的文件列表，支持预览文件内容和查看 diff
 
-**Architecture:** 后端在 `finish_agent_call` 时运行 git diff 并保存快照到磁盘，前端渲染折叠的文件卡片，用户点击时通过 API 获取快照内容并在右侧栏显示
+**Architecture:** 后端在 `complete_task` 时运行 git diff 并保存快照到磁盘，前端渲染折叠的文件卡片，用户点击时通过 API 获取快照内容并在右侧栏显示
 
 **Tech Stack:** Python (FastAPI), TypeScript (React), Git CLI, file I/O
 
@@ -24,7 +24,7 @@ agents_hub/
 ├── agent_bridge/
 │   └── models.py                     [修改] AgentResult 增加字段
 ├── mcp/
-│   └── server.py                     [修改] finish_agent_call 增加参数
+│   └── server.py                     [修改] complete_task 增加参数
 ├── api/
 │   └── routes/
 │       └── group_chat.py             [修改] 新增 API 端点
@@ -442,13 +442,13 @@ git commit -m "feat: 实现文件快照工具模块
 
 ---
 
-## Task 3: 扩展 finish_agent_call MCP tool
+## Task 3: 扩展 complete_task MCP tool
 
 **Files:**
 - Modify: `agents_hub/mcp/server.py:495-600`
 - Read: `agents_hub/core/orchestration/group_chat_manager.py`
 
-- [ ] **Step 1: 查看现有 finish_agent_call 函数签名**
+- [ ] **Step 1: 查看现有 complete_task 函数签名**
 
 确认参数插入位置和现有逻辑。
 
@@ -457,7 +457,7 @@ git commit -m "feat: 实现文件快照工具模块
 ```python
 # agents_hub/mcp/server.py
 
-async def finish_agent_call(
+async def complete_task(
     agent_token: str,
     call_id: str,
     content: str,
@@ -478,12 +478,12 @@ async def finish_agent_call(
     """
 ```
 
-- [ ] **Step 3: 在 finish_agent_call 中集成文件快照逻辑**
+- [ ] **Step 3: 在 complete_task 中集成文件快照逻辑**
 
 在现有的 `_send_agent_call_completion_notification` 调用之前插入：
 
 ```python
-# agents_hub/mcp/server.py (在 finish_agent_call 函数内)
+# agents_hub/mcp/server.py (在 complete_task 函数内)
 
 from pathlib import Path
 from agents_hub.core.foundation.file_snapshot import create_file_snapshot
@@ -529,7 +529,7 @@ if modified_files:
 
 - [ ] **Step 4: 修改 AgentResult 构造，传入文件元数据**
 
-在 finish_agent_call 中构造 AgentResult 时添加新字段：
+在 complete_task 中构造 AgentResult 时添加新字段：
 
 ```python
 # 构造 AgentResult（在现有逻辑基础上添加）
@@ -556,7 +556,7 @@ if file_metadata_list:
 1. 启动 MCP server
 2. 模拟 Agent 调用：
 ```python
-finish_agent_call(
+complete_task(
     agent_token="<valid_token>",
     call_id="<existing_call_id>",
     content="任务完成",
@@ -573,7 +573,7 @@ finish_agent_call(
 
 ```bash
 git add agents_hub/mcp/server.py
-git commit -m "feat: finish_agent_call 支持文件快照
+git commit -m "feat: complete_task 支持文件快照
 
 新增参数：
 - modified_files: 文件路径列表
@@ -1425,7 +1425,7 @@ git commit -m "feat: 右侧栏支持预览和 Diff 显示（简化版）
 
 - [x] 数据结构设计 - AgentResult 扩展（Task 1）
 - [x] 文件快照存储 - file_snapshot.py（Task 2）
-- [x] MCP tool 扩展 - finish_agent_call（Task 3）
+- [x] MCP tool 扩展 - complete_task（Task 3）
 - [x] 消息持久化 - GroupChatContext（Task 4）
 - [x] API 端点 - 获取快照（Task 5）
 - [x] 前端类型定义（Task 6）

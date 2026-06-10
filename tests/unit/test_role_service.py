@@ -72,9 +72,7 @@ def test_create_role_already_exists(service, mock_role_manager):
     3. 验证：抛出 RoleAlreadyExistsError
     """
     # 准备
-    mock_role_manager.create_role.side_effect = RoleAlreadyExistsError(
-        role_name="test-role"
-    )
+    mock_role_manager.create_role.side_effect = RoleAlreadyExistsError(role_name="test-role")
 
     request = RoleCreateRequest(name="test-role", platform="claude")
 
@@ -145,9 +143,7 @@ def test_get_role_not_found(service, mock_role_manager):
     3. 验证：抛出 RoleNotFoundError
     """
     # 准备
-    mock_role_manager.get_role.side_effect = RoleNotFoundError(
-        role_name="nonexistent"
-    )
+    mock_role_manager.get_role.side_effect = RoleNotFoundError(role_name="nonexistent")
 
     # 执行 & 验证
     with pytest.raises(RoleNotFoundError):
@@ -183,9 +179,7 @@ def test_delete_role_not_found(service, mock_role_manager):
     3. 验证：抛出 RoleNotFoundError
     """
     # 准备
-    mock_role_manager.delete_role.side_effect = RoleNotFoundError(
-        role_name="nonexistent"
-    )
+    mock_role_manager.delete_role.side_effect = RoleNotFoundError(role_name="nonexistent")
 
     # 执行 & 验证
     with pytest.raises(RoleNotFoundError):
@@ -239,9 +233,7 @@ def test_update_role_not_found(service, mock_role_manager):
     3. 验证：抛出 RoleNotFoundError
     """
     # 准备
-    mock_role_manager.get_role.side_effect = RoleNotFoundError(
-        role_name="nonexistent"
-    )
+    mock_role_manager.get_role.side_effect = RoleNotFoundError(role_name="nonexistent")
 
     request = RoleUpdateRequest(avatar="new-avatar.png")
 

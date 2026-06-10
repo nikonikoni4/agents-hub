@@ -11,6 +11,8 @@
 
 import re
 
+from agents_hub.config import config
+
 from .exceptions import InvalidMessageError
 from .message import AgentMessage
 
@@ -44,10 +46,19 @@ def render_for_llm(msg: AgentMessage) -> str:
     """AgentMessage → 喂给 LLM 的 prompt 字符串（含 <incoming_message> 包裹）"""
     body = (
         f"[Agents Hub 平台消息]\n"
+        f"call_id: {msg.call_id}\n"
         f"来自：{msg.send_from}\n"
         f"发送给：{msg.send_to}（你）\n"
+        f"类型：{msg.message_type.value}\n"
         f"内容：{msg.content}"
     )
+    if msg.files:
+        file_lines = "\n".join(
+            f"- {f['file_name']} ({f['file_type']}, {f['file_size']}B): "
+            f"{str((config.data_path / f['file_path']).resolve())}"
+            for f in msg.files
+        )
+        body += f"\n\n[附件]\n{file_lines}"
     return wrap_xml(Tag.INCOMING_MESSAGE, body)
 
 

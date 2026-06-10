@@ -1,4 +1,5 @@
 """测试 GroupChatContext 的消息压缩机制"""
+
 import asyncio
 from team import Team, GroupChat, GroupChatType
 from agents_hub.roles import RoleManager
@@ -13,31 +14,26 @@ async def test_compact():
 
     # 创建带有描述的角色
     role_manager.create_role(
-        "小李",
-        AgentPlatform.CLAUDE,
-        type=RoleType.TEAM_MEMBER,
-        description="负责前端开发和UI设计"
+        "小李", AgentPlatform.CLAUDE, type=RoleType.TEAM_MEMBER, description="负责前端开发和UI设计"
     )
     role_manager.create_role(
         "小赵",
         AgentPlatform.CODEX,
         type=RoleType.TEAM_MEMBER,
-        description="负责后端开发和数据库设计"
+        description="负责后端开发和数据库设计",
     )
     role_manager.create_role(
         "Leader",
         AgentPlatform.CLAUDE,
         type=RoleType.LEADER,
-        description="团队领导，负责任务分配和协调"
+        description="团队领导，负责任务分配和协调",
     )
 
     # 2. 创建团队和群聊
     team_member_list = ["小李", "小赵"]
     team = Team(team_name="测试", team_members_name=team_member_list)
     group_chat = GroupChat(
-        team,
-        GroupChatType.MANAGER_ORCHESTRATE,
-        project_path='D:/desktop/软件开发/agents-hub'
+        team, GroupChatType.MANAGER_ORCHESTRATE, project_path="D:/desktop/软件开发/agents-hub"
     )
 
     # 3. 启动群聊（会生成初始消息）
@@ -69,7 +65,7 @@ async def test_compact():
             session_id="test_session_1",
             platform=AgentPlatform.CLAUDE,
             role_type=RoleType.LEADER,
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         ),
         AgentResult(
             agent_name="小李",
@@ -77,7 +73,7 @@ async def test_compact():
             session_id="test_session_2",
             platform=AgentPlatform.CLAUDE,
             role_type=RoleType.TEAM_MEMBER,
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         ),
         AgentResult(
             agent_name="小赵",
@@ -85,7 +81,7 @@ async def test_compact():
             session_id="test_session_3",
             platform=AgentPlatform.CODEX,
             role_type=RoleType.TEAM_MEMBER,
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         ),
     ]
 
@@ -112,7 +108,7 @@ async def test_compact():
             print(f"时间: {record['create_at']}")
             print(f"总体摘要: {record['content']['summary']}")
             for agent_name in ["Leader", "小李", "小赵"]:
-                if agent_name in record['content']:
+                if agent_name in record["content"]:
                     print(f"{agent_name} 专属信息: {record['content'][agent_name]}")
     else:
         print("暂无压缩记录（消息 token 数量可能未达到阈值 1000）")
@@ -127,7 +123,9 @@ async def test_compact():
 
     # 9. 验证 last_compacted_loc 更新
     print("\n" + "=" * 50)
-    print(f"last_compacted_loc: {group_chat.group_chat_context.group_chat_session.last_compacted_loc}")
+    print(
+        f"last_compacted_loc: {group_chat.group_chat_context.group_chat_session.last_compacted_loc}"
+    )
     print(f"总消息数: {len(group_chat.group_chat_context.group_chat_session.messages)}")
 
 

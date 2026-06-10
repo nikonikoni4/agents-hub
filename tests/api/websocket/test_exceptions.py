@@ -1,6 +1,5 @@
 """WebSocket exception classes unit tests"""
 
-
 from agents_hub.api.websocket.exceptions import (
     WebSocketBroadcastError,
     WebSocketConnectionError,

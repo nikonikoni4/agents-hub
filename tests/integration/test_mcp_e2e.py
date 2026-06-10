@@ -4,7 +4,7 @@ MCP 工具端到端集成测试
 测试完整的 MCP 工具系统流程：
 1. 创建 GroupChat，验证 token 生成
 2. Manager 调用 call_agent 派活给 Worker
-3. Worker 完成任务，通过 finish_agent_call 显式闭环
+3. Worker 完成任务，通过 complete_task 显式闭环
 4. Manager 调用 check_agent_call 查询状态
 5. Manager 调用 assign_tasks_to_team 分配任务
 6. Manager 调用 archive_task_list 归档任务
@@ -21,7 +21,7 @@ from agents_hub.mcp.server import (
     assign_tasks_to_team,
     call_agent,
     check_agent_call,
-    finish_agent_call,
+    complete_task,
 )
 from agents_hub.utils.logger import setup_logging
 
@@ -163,7 +163,7 @@ class TestScenario2CallAgent:
         call = group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
         # Worker 的 run() 任务会将 TASK 从 PENDING -> RUNNING；
-        # COMPLETED 只能由 finish_agent_call 显式闭环产生。
+        # COMPLETED 只能由 complete_task 显式闭环产生。
         assert call.status == CallStatus.RUNNING, (
             f"Worker 应该已收到并处理消息，状态应该是 RUNNING，实际: {call.status}"
         )
@@ -194,13 +194,13 @@ class TestScenario3WorkerResponse:
         call_id = result["call_id"]
 
         worker_token = group_chat.group_chat_context.agent_session_id["小王"].token
-        finish_result = await finish_agent_call(
+        finish_result = await complete_task(
             agent_token=worker_token,
             call_id=call_id,
             content="任务 C 已完成",
             success=True,
         )
-        assert "error" not in finish_result, "finish_agent_call 不应该有错误"
+        assert "error" not in finish_result, "complete_task 不应该有错误"
 
         # 轮询等待显式闭环写入（最多等待 15 秒）
         max_wait = 15
@@ -213,7 +213,9 @@ class TestScenario3WorkerResponse:
         # 验证 AgentCall 状态已更新为 COMPLETED
         call = group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
-        assert call.status == CallStatus.COMPLETED, f"AgentCall 状态应该是 COMPLETED，实际: {call.status}"
+        assert call.status == CallStatus.COMPLETED, (
+            f"AgentCall 状态应该是 COMPLETED，实际: {call.status}"
+        )
         assert call.has_agent_response is True, "AgentCall 应该已显式回复闭环"
         assert call.result == "任务 C 已完成", "完成内容应该记录在 AgentCall result 中"
 
@@ -271,7 +273,9 @@ class TestScenario4CheckAgentCall:
 
         # 验证返回错误
         assert "error" in result, "应该返回错误"
-        assert result["error"]["code"] == "AGENT_CALL_NOT_FOUND", "错误码应该是 AGENT_CALL_NOT_FOUND"
+        assert result["error"]["code"] == "AGENT_CALL_NOT_FOUND", (
+            "错误码应该是 AGENT_CALL_NOT_FOUND"
+        )
 
 
 # ============================================================================
@@ -346,7 +350,12 @@ class TestScenario5AssignTasks:
         await asyncio.sleep(0.1)
 
         tasks = [
-            {"task_id": "task_4", "owner": "小王", "content": "任务 4（已更新）", "status": "running"},
+            {
+                "task_id": "task_4",
+                "owner": "小王",
+                "content": "任务 4（已更新）",
+                "status": "running",
+            },
         ]
 
         result2 = await assign_tasks_to_team(agent_token=manager_token, tasks=tasks)

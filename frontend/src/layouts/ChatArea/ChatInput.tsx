@@ -1,12 +1,19 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { PlusIcon, CheckCircleIcon, SendIcon } from '@/shared/components';
-import type { MessageApiItem } from '@/shared/types';
+import {
+  PlusIcon,
+  CheckCircleIcon,
+  SendIcon,
+  UploadPreview,
+  ImagePreviewModal,
+} from '@/shared/components';
+import { useFileUpload } from '@/shared/hooks';
+import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import styles from './ChatArea.module.css';
 
 export interface ChatInputProps {
   activeSessionId: string | null;
   members: { name: string }[];
-  onSend: (text: string) => void;
+  onSend: (text: string, files?: UploadedFileInfo[]) => void;
   quotedMessage?: MessageApiItem | null;
   onClearQuote?: () => void;
 }
@@ -17,7 +24,14 @@ export const ChatInput = React.memo(
     const [showMention, setShowMention] = useState(false);
     const [mentionQuery, setMentionQuery] = useState('');
     const [mentionIndex, setMentionIndex] = useState(0);
+    const [showImagePreview, setShowImagePreview] = useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const { uploadedFiles, uploadFiles, removeFile, clearFiles } = useFileUpload({
+      chatId: activeSessionId || '',
+    });
 
     // 过滤匹配的成员（使用 useMemo 优化）
     const filteredMembers = useMemo(
@@ -89,10 +103,11 @@ export const ChatInput = React.memo(
       const text = inputValue.trim();
       if (!text || !activeSessionId) return;
 
-      onSend(text);
+      onSend(text, uploadedFiles);
       setInputValue('');
+      clearFiles();
       setShowMention(false);
-    }, [inputValue, activeSessionId, onSend]);
+    }, [inputValue, activeSessionId, onSend, uploadedFiles, clearFiles]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -138,6 +153,31 @@ export const ChatInput = React.memo(
       return () => document.removeEventListener('click', handleClickOutside);
     }, [showMention]);
 
+    const handleAttachmentClick = useCallback(() => {
+      fileInputRef.current?.click();
+    }, []);
+
+    const handleFileSelect = useCallback(
+      async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+
+        await uploadFiles(files);
+        e.target.value = '';
+      },
+      [uploadFiles]
+    );
+
+    const handleImageClick = useCallback(
+      (filePath: string) => {
+        setPreviewImageUrl(
+          `/api/v1/group-chats/${activeSessionId}/files/${encodeURIComponent(filePath)}`
+        );
+        setShowImagePreview(true);
+      },
+      [activeSessionId]
+    );
+
     return (
       <div className={styles.chatInputContainer}>
         {/* 引用消息框 */}
@@ -182,9 +222,16 @@ export const ChatInput = React.memo(
               ))}
             </div>
           )}
-          <button className={styles.iconBtn} aria-label="添加附件">
+          <button className={styles.iconBtn} onClick={handleAttachmentClick} aria-label="添加附件">
             <PlusIcon />
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+          />
           <textarea
             ref={textareaRef}
             rows={2}
@@ -203,6 +250,23 @@ export const ChatInput = React.memo(
             <SendIcon />
           </button>
         </div>
+
+        {/* 文件上传预览区域 */}
+        {uploadedFiles.length > 0 && (
+          <UploadPreview
+            files={uploadedFiles}
+            onRemove={removeFile}
+            onImageClick={handleImageClick}
+            groupChatId={activeSessionId || ''}
+          />
+        )}
+
+        {/* 图片预览模态框 */}
+        <ImagePreviewModal
+          isOpen={showImagePreview}
+          imageUrl={previewImageUrl}
+          onClose={() => setShowImagePreview(false)}
+        />
       </div>
     );
   }

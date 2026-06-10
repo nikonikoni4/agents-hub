@@ -171,9 +171,7 @@ def test_create_role_success(client, mock_role_service):
 
 def test_create_role_already_exists(client, mock_role_service):
     """测试：创建已存在的角色 -> 400"""
-    mock_role_service.create_role.side_effect = RoleAlreadyExistsError(
-        role_name="existing-role"
-    )
+    mock_role_service.create_role.side_effect = RoleAlreadyExistsError(role_name="existing-role")
 
     response = client.post(
         "/api/v1/roles",
@@ -197,9 +195,7 @@ def test_delete_role_success(client, mock_role_service):
 
 def test_delete_role_not_found(client, mock_role_service):
     """测试：删除不存在的角色 -> 404"""
-    mock_role_service.delete_role.side_effect = RoleNotFoundError(
-        role_name="nonexistent"
-    )
+    mock_role_service.delete_role.side_effect = RoleNotFoundError(role_name="nonexistent")
 
     response = client.delete("/api/v1/roles/nonexistent")
     assert response.status_code == 404
@@ -235,9 +231,7 @@ def test_update_role_success(client, mock_role_service):
 
 def test_update_role_not_found(client, mock_role_service):
     """测试：更新不存在的角色 -> 404"""
-    mock_role_service.update_role.side_effect = RoleNotFoundError(
-        role_name="nonexistent"
-    )
+    mock_role_service.update_role.side_effect = RoleNotFoundError(role_name="nonexistent")
 
     response = client.patch(
         "/api/v1/roles/nonexistent",
@@ -269,9 +263,7 @@ def test_add_role_skill_success(client, mock_role_service):
 
 def test_add_role_skill_not_found(client, mock_role_service):
     """测试：添加不存在的 skill -> 404"""
-    mock_role_service.add_role_skill.side_effect = SkillNotFoundError(
-        skill_id="nonexistent"
-    )
+    mock_role_service.add_role_skill.side_effect = SkillNotFoundError(skill_id="nonexistent")
 
     response = client.post(
         "/api/v1/roles/test-role/skills",
@@ -310,9 +302,7 @@ def test_remove_role_skill_success(client, mock_role_service):
 
 def test_remove_role_skill_not_found(client, mock_role_service):
     """测试：移除不存在的 skill -> 404"""
-    mock_role_service.remove_role_skill.side_effect = SkillNotFoundError(
-        skill_id="nonexistent"
-    )
+    mock_role_service.remove_role_skill.side_effect = SkillNotFoundError(skill_id="nonexistent")
 
     response = client.delete("/api/v1/roles/test-role/skills/nonexistent")
     assert response.status_code == 404

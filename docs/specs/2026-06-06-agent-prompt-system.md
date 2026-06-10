@@ -30,7 +30,7 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | `<AGENT_RUNTIME>` 新增 `<pinned_messages>` 区块，Pin 消息通过 runtime 注入而非 prompt 拼接 |
-| 1.2 | AgentContext 按角色差异化交付（Worker 不接收 raw messages）；工具提示词重构为 ROLE_INSTRUCTIONS 类变量；收窄 speak_in_group_chat 语义；新增阻塞判定规则 |
+| 1.2 | AgentContext 按角色差异化交付（Worker 不接收 raw messages）；工具提示词重构为 ROLE_INSTRUCTIONS 类变量；收窄 report_progress 语义；新增阻塞判定规则 |
 
 ## Overview
 
@@ -113,17 +113,17 @@ Agent 收到的完整 prompt 由以下部分组成：
 
 | 角色 | 工具范围 |
 |------|---------|
-| Manager | 全部 6 个工具：call_agent、assign_tasks_to_team、archive_task_list、check_agent_call、speak_in_group_chat、finish_agent_call |
-| Worker | 2 个工具：speak_in_group_chat、finish_agent_call |
+| Manager | 全部 6 个工具：call_agent、assign_tasks_to_team、archive_task_list、check_agent_call、report_progress、complete_task |
+| Worker | 2 个工具：report_progress、complete_task |
 
 **工具语义**：
 
 | 工具 | 用途 |
 |------|------|
-| speak_in_group_chat | 任务汇报，让 user 和 manager 知道当前进展 |
-| finish_agent_call | 闭环 AgentCall，汇报成果（成功/失败/阻塞） |
+| report_progress | 任务汇报，让 user 和 manager 知道当前进展 |
+| complete_task | 闭环 AgentCall，汇报成果（成功/失败/阻塞） |
 
-**finish_agent_call 的角色差异说明**：
+**complete_task 的角色差异说明**：
 
 | 角色 | 何时闭环 | 说明 |
 |------|---------|------|
@@ -132,7 +132,7 @@ Agent 收到的完整 prompt 由以下部分组成：
 
 **Worker 阻塞判定规则**：
 
-遇到以下情况，Worker 用 finish_agent_call 标记失败（success=false）：
+遇到以下情况，Worker 用 complete_task 标记失败（success=false）：
 
 | 类型 | 判断标准 |
 |------|----------|
@@ -209,20 +209,20 @@ Worker 不接收 raw messages，因为 Worker 的工作模式是「接任务 →
 **有 Worker 停止时**：
 ```
 [Heartbeat] 以下成员已因连续执行失败自动停止: {成员列表}。
-当前没有自动重启机制，请通过 speak_in_group_chat 向 user 说明情况。
+当前没有自动重启机制，请通过 report_progress 向 user 说明情况。
 ```
 
 **消息属性**：消息类型为 `NOTIFICATION`，不触发 Task 未闭环提醒。
 
 ### 7. Task 未闭环提醒
 
-**触发条件**：Agent 处理 TASK 类型消息后未调用 `finish_agent_call` 闭环。
+**触发条件**：Agent 处理 TASK 类型消息后未调用 `complete_task` 闭环。
 
 **基础提醒内容**：
 ```
 系统提醒：你刚刚处理了来自 [{send_from}] 的 TASK 调用（call_id={call_id}），
 原始请求：{content 截断 100 字}。
-该调用尚未闭环，请调用 finish_agent_call，传入对应的 call_id，
+该调用尚未闭环，请调用 complete_task，传入对应的 call_id，
 并用 content 说明任务完成、失败或无法继续的结果。
 ```
 
@@ -275,7 +275,7 @@ Worker 不接收 raw messages，因为 Worker 的工作模式是「接任务 →
 - Manager 和 Worker 的 ROLE_INSTRUCTIONS 内容必须有差异
 - render_for_llm 输出必须包含 `[Agents Hub 平台消息]` 标识
 - Task 未闭环提醒必须包含 call_id 和原始请求摘要
-- Manager 的 finish_agent_call 说明必须强调"安排后即可闭环"
+- Manager 的 complete_task 说明必须强调"安排后即可闭环"
 - Worker 的 AgentContext 不得包含 `<recent_messages>`
 - Worker 的 ROLE_INSTRUCTIONS 必须包含阻塞判定规则
 - Manager 的 ROLE_INSTRUCTIONS 必须包含阻塞处理流程

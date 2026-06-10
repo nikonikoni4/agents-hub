@@ -42,6 +42,7 @@ def reset_logging():
 
     # 重置模块级状态
     import agents_hub.utils.logger as logger_module
+
     logger_module._initialized = False
     logger_module._global_log_dir = None
 
@@ -152,8 +153,13 @@ class TestRotatingFileHandler:
         handler.setFormatter(logging.Formatter("%(message)s"))
         for _ in range(50):
             record = logging.LogRecord(
-                name="test", level=logging.INFO, pathname="test.py",
-                lineno=1, msg="x" * 10, args=(), exc_info=None,
+                name="test",
+                level=logging.INFO,
+                pathname="test.py",
+                lineno=1,
+                msg="x" * 10,
+                args=(),
+                exc_info=None,
             )
             handler.emit(record)
         handler.close()
@@ -165,8 +171,13 @@ class TestRotatingFileHandler:
         handler.setFormatter(logging.Formatter("%(message)s"))
         for _ in range(50):
             record = logging.LogRecord(
-                name="test", level=logging.INFO, pathname="test.py",
-                lineno=1, msg="y" * 10, args=(), exc_info=None,
+                name="test",
+                level=logging.INFO,
+                pathname="test.py",
+                lineno=1,
+                msg="y" * 10,
+                args=(),
+                exc_info=None,
             )
             handler.emit(record)
         handler.close()
@@ -308,9 +319,7 @@ class TestGetSpecializedLogger:
         custom_dir = temp_log_dir / "custom" / "path"
 
         logger = get_specialized_logger(
-            name="custom_logger",
-            log_filename="custom.log",
-            log_dir=custom_dir
+            name="custom_logger", log_filename="custom.log", log_dir=custom_dir
         )
         logger.info("自定义路径消息")
 

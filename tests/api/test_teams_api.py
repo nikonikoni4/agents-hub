@@ -16,6 +16,7 @@ def client():
 def cleanup_teams(monkeypatch, tmp_path):
     """清理测试数据"""
     from agents_hub.config import config
+
     # Monkeypatch the internal _config_data dictionary to use tmp_path
     monkeypatch.setitem(config.system._config_data, "data_path", str(tmp_path))
     yield
@@ -27,12 +28,12 @@ def cleanup_teams(monkeypatch, tmp_path):
 @pytest.fixture
 def mock_roles(monkeypatch):
     """Mock RoleManager"""
+
     def mock_list_role_names(self):
         return ["alice", "bob", "charlie"]
 
     monkeypatch.setattr(
-        "agents_hub.teams.team_manager.RoleManager.list_role_names",
-        mock_list_role_names
+        "agents_hub.teams.team_manager.RoleManager.list_role_names", mock_list_role_names
     )
 
 

@@ -23,7 +23,7 @@
   - `unpin_message()` - 第 720 行
   - `add_group_chat_members()` - 第 758 行
 - [x] 移除 `broadcast_group_chat_refresh` 导入
-- [x] 保留 MCP 工具中的 broadcast（`speak_in_group_chat`、`finish_agent_call`）
+- [x] 保留 MCP 工具中的 broadcast（`report_progress`、`complete_task`）
 - [x] 通过所有测试（类型检查、ESLint、格式化）
 
 ### 阶段 2：前端高优先级修复（已完成 ✅）
@@ -119,7 +119,7 @@
 | 文件 | 修改状态 | 说明 |
 |------|----------|------|
 | `agents_hub/api/services/group_chat_service.py` | ✅ 已修改 | 移除 5 处 broadcast 调用和导入 |
-| `agents_hub/mcp/server.py` | 未修改 | 保留正确的 broadcast 使用（speak_in_group_chat、finish_agent_call） |
+| `agents_hub/mcp/server.py` | 未修改 | 保留正确的 broadcast 使用（report_progress、complete_task） |
 
 ### 前端文件
 

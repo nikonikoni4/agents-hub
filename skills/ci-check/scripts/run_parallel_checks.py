@@ -30,11 +30,7 @@ TODAY = date.today().isoformat()
 def get_next_run_dir() -> Path:
     """获取下一次检查的编号目录，如 001, 002, 003..."""
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
-    existing = [
-        d.name
-        for d in GENERATED_DIR.iterdir()
-        if d.is_dir() and d.name.isdigit()
-    ]
+    existing = [d.name for d in GENERATED_DIR.iterdir() if d.is_dir() and d.name.isdigit()]
     next_num = max((int(n) for n in existing), default=0) + 1
     run_dir = GENERATED_DIR / f"{next_num:03d}"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -224,8 +220,7 @@ def run_check(name: str, config: dict) -> tuple[str, bool, str]:
             print(f"[{name}] ❌ 失败")
             # 即使失败也写入输出文件，记录错误
             output_path.write_text(
-                f"# {config['description']} — 执行失败\n\n"
-                f"```\n{error_msg}\n```\n",
+                f"# {config['description']} — 执行失败\n\n```\n{error_msg}\n```\n",
                 encoding="utf-8",
             )
             return name, False, str(output_path)
@@ -283,8 +278,7 @@ def main():
     # 并行执行所有检查
     with ProcessPoolExecutor(max_workers=len(checks_to_run)) as executor:
         futures = {
-            executor.submit(run_check, name, config): name
-            for name, config in checks_to_run.items()
+            executor.submit(run_check, name, config): name for name, config in checks_to_run.items()
         }
 
         for future in as_completed(futures):

@@ -26,7 +26,9 @@ from agents_hub.api.schemas.group_chats import (
     MessageInfo,
     PinnedMessageInfo,
     TaskListInfo,
+    UploadedFileInfo,
 )
+from agents_hub.api.services.file_service import FileService
 from agents_hub.config import config
 from agents_hub.core.context.group_metadata import GroupMetadata
 from agents_hub.core.foundation import (
@@ -399,6 +401,7 @@ class GroupChatService:
         group_chat_id: str,
         content: str,
         members: list[str],
+        files: list[UploadedFileInfo] | None = None,
     ) -> None:
         """向群聊发送消息
 
@@ -406,6 +409,7 @@ class GroupChatService:
             group_chat_id: 群聊 ID
             content: 消息内容
             members: 群聊中所有 agent 名称列表
+            files: 可选的文件列表
 
         Raises:
             ResourceNotFoundError: 群聊不存在
@@ -455,12 +459,14 @@ class GroupChatService:
         logger.debug("AgentCall 已创建: call_id=%s", call.call_id)
 
         # 5. 构建并发送 AgentMessage
+        files_dicts = [f.model_dump() for f in files] if files else None
         message = AgentMessage(
             call_id=call.call_id,
             content=content,
             send_from=config.default_user_name,
             send_to=send_to,
             message_type=MessageType.TASK,
+            files=files_dicts,
         )
         logger.debug("投递消息到 MessageRouter: call_id=%s, to=%s", call.call_id, send_to)
         await group_chat.send_message_to_agent(message)
@@ -959,3 +965,133 @@ class GroupChatService:
         await broadcast_group_chat_refresh(group_chat_id)
 
         return {"message_id": message_id, "new_status": status}
+
+    # ==================== File Upload Methods ====================
+
+    _ALLOWED_CONTENT_TYPES: list[str] = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/svg+xml",
+        "application/pdf",
+        "text/plain",
+        "text/markdown",
+        "application/json",
+        "text/csv",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/javascript",
+        "text/typescript",
+        "text/x-python",
+        "text/x-java",
+        "text/x-c++src",
+        "text/x-csrc",
+        "text/x-chdr",
+        "text/css",
+        "text/html",
+        "text/xml",
+        "application/x-yaml",
+        "text/yaml",
+        "application/toml",
+        "application/zip",
+        "application/x-rar-compressed",
+        "application/x-7z-compressed",
+        "application/x-tar",
+        "application/gzip",
+    ]
+    _MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
+
+    async def upload_file(
+        self,
+        group_chat_id: str,
+        file_content: bytes,
+        original_filename: str,
+        content_type: str,
+    ) -> UploadedFileInfo:
+        """上传文件到群聊
+
+        Args:
+            group_chat_id: 群聊 ID
+            file_content: 文件内容（字节）
+            original_filename: 原始文件名
+            content_type: 文件 MIME 类型
+
+        Returns:
+            UploadedFileInfo: 上传后的文件信息
+
+        Raises:
+            ValidationError: 文件类型不支持或文件大小超限
+            ResourceNotFoundError: 群聊不存在
+        """
+        # 1. 验证文件类型
+        if content_type not in self._ALLOWED_CONTENT_TYPES:
+            raise ValidationError(
+                f"不支持的文件类型: {content_type}",
+                details={"content_type": content_type, "filename": original_filename},
+            )
+
+        # 2. 验证文件大小
+        if len(file_content) > self._MAX_FILE_SIZE:
+            raise ValidationError(
+                f"文件大小超过限制（最大 {self._MAX_FILE_SIZE // (1024 * 1024)}MB）",
+                details={"file_size": len(file_content), "max_size": self._MAX_FILE_SIZE},
+            )
+
+        # 3. 验证群聊存在
+        await self.group_chat_manager.load_group_chat(group_chat_id)
+        # FileService 存储路径：{data_path}/teams/{team_id}/{group_chat_id}/file_snapshots/
+        team_id = config.team_id
+
+        # 4. 调用 FileService 上传
+        file_service = FileService()
+        result = await file_service.upload_file(
+            team_id=team_id,
+            group_chat_id=group_chat_id,
+            file_content=file_content,
+            original_filename=original_filename,
+            content_type=content_type,
+        )
+        return result
+
+    async def get_uploaded_file_path(self, group_chat_id: str, file_path: str) -> Path:
+        """获取上传文件的完整路径
+
+        Args:
+            group_chat_id: 群聊 ID
+            file_path: 相对于 data_path 的文件路径
+
+        Returns:
+            Path: 文件完整路径
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在或文件不存在
+            ValidationError: 路径不合法（路径遍历攻击）
+        """
+        # 验证群聊存在
+        try:
+            await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        file_service = FileService()
+        try:
+            full_path = file_service.get_file_path(file_path)
+        except ValueError as e:
+            raise ValidationError(
+                f"路径不合法: {file_path}",
+                details={"file_path": file_path, "error": str(e)},
+            ) from e
+        if full_path is None:
+            raise ResourceNotFoundError(
+                f"文件不存在: {file_path}",
+                details={"file_path": file_path},
+            )
+        return full_path
