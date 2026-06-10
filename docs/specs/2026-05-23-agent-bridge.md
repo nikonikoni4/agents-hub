@@ -156,6 +156,7 @@ bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续
 | `TEXT_DELTA` | 文本增量（流式主要内容） | `text` |
 | `TOOL_USE` | 工具调用 | `command`、`output`、`exit_code`、`status` |
 | `TURN_COMPLETE` | 回合完成 | `usage`（token 统计） |
+| `RESULT` | 完整结果（非流式输出） | 完整结果数据 |
 
 **注**：`execute()` 不使用 `RESULT` 事件类型，而是直接返回 `AgentResult` 数据对象。
 
@@ -171,10 +172,13 @@ bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续
 | `agent_name` | str | agent 名称 |
 | `platform` | AgentPlatform | 平台类型 |
 | `role_type` | RoleType | 角色类型 |
-| `usage` | dict? | token 使用统计 |
+| `usage` | Usage? | token 使用统计 |
 | `cwd` | str? | Agent 工作目录（绝对路径） |
 | `modified_files` | FileMetadata[]? | 修改的文件列表元数据 |
 | `git_diff_range` | str? | Git diff 范围（格式：start..end） |
+| `permission_request` | dict? | 权限请求数据 |
+| `web_preview` | dict? | 网页预览数据 `{"url": "...", "title": "..."}` |
+| `files` | list[dict]? | 上传文件列表 |
 
 #### FileMetadata 类型
 
@@ -189,6 +193,16 @@ bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续
 | `snapshot_id` | str | 快照 ID |
 | `diff_available` | bool | 是否有可用的 diff |
 | `diff_error` | str? | diff 获取错误信息 |
+
+#### Usage 类型
+
+Token 使用统计结构：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `input_tokens` | int | 输入 token 数（默认 0） |
+| `cache_read_input_tokens` | int | 缓存读取的输入 token 数（默认 0） |
+| `max_context_window` | int | 模型最大上下文窗口（仅 Claude 提供，默认 0） |
 
 ### 协议接口
 

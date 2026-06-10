@@ -7,7 +7,7 @@
   --success-light: rgba(34, 197, 94, 0.1);
 }
 
-html[data-theme="dark"] {
+html[data-theme='dark'] {
   --accent-hover: rgb(90, 170, 255);
   --accent-light: rgba(74, 158, 255, 0.15);
   --accent-shadow: rgba(74, 158, 255, 0.4);

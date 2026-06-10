@@ -27,3 +27,15 @@
  - path: generated/004/
  - 触发规则：手动审查
  - 内容摘要：在file upload的过程中，首先给出了完整的spec，但是ai后续给出的plan只plan了一半。多次发现spec和plan无法对齐。中间缺少审查
+
+## CI 检查 010
+ - updated_at : 2026-06-10
+ - path: generated/010/
+ - 触发规则：ci-check 技能触发的提交前检查
+ - 内容摘要：代码审查 + 文档一致性检查（ARCHITECTURE.md / specs / CONTEXT.md）
+
+## CI 检查 006
+ - updated_at : 2026-06-10
+ - path: generated/006/
+ - 触发规则：ci-check 技能触发的提交前检查
+ - 内容摘要：代码审查 + 文档一致性检查（ARCHITECTURE.md / specs / CONTEXT.md）

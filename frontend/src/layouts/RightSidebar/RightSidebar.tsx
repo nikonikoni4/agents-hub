@@ -140,7 +140,10 @@ export function RightSidebar({
   const { taskList, loading: tasksLoading } = useTasks(groupChatId);
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<SidebarTab>('chat');
-  const [dockerConfirm, setDockerConfirm] = useState<{ memberName: string; enableDocker: boolean } | null>(null);
+  const [dockerConfirm, setDockerConfirm] = useState<{
+    memberName: string;
+    enableDocker: boolean;
+  } | null>(null);
 
   // content 变化时自动切换到对应 tab
   useEffect(() => {
@@ -156,18 +159,21 @@ export function RightSidebar({
     }
   }, [activeSingleChatId]);
 
-  const handleToggleDocker = useCallback((memberName: string, enableDocker: boolean) => {
-    // 开启沙箱时显示确认对话框
-    if (enableDocker) {
-      setDockerConfirm({ memberName, enableDocker });
-    } else {
-      // 关闭沙箱直接执行
-      toggleDockerMode(memberName).catch((error) => {
-        const message = error instanceof Error ? error.message : '切换 Docker 模式失败';
-        toast.error(message);
-      });
-    }
-  }, [toggleDockerMode, toast]);
+  const handleToggleDocker = useCallback(
+    (memberName: string, enableDocker: boolean) => {
+      // 开启沙箱时显示确认对话框
+      if (enableDocker) {
+        setDockerConfirm({ memberName, enableDocker });
+      } else {
+        // 关闭沙箱直接执行
+        toggleDockerMode(memberName).catch((error) => {
+          const message = error instanceof Error ? error.message : '切换 Docker 模式失败';
+          toast.error(message);
+        });
+      }
+    },
+    [toggleDockerMode, toast]
+  );
 
   const handleConfirmDocker = useCallback(async () => {
     if (!dockerConfirm) return;
@@ -370,7 +376,9 @@ export function RightSidebar({
             </div>
             <div className={styles.modalBody}>
               <p>开启沙箱会改变当前仓库或子仓库的索引，建议在子仓库中运行，避免干扰主仓库。</p>
-              <p>是否继续为 <strong>{dockerConfirm.memberName}</strong> 开启沙箱？</p>
+              <p>
+                是否继续为 <strong>{dockerConfirm.memberName}</strong> 开启沙箱？
+              </p>
             </div>
             <div className={styles.modalFooter}>
               <button className={styles.modalCancelBtn} onClick={handleCancelDocker}>

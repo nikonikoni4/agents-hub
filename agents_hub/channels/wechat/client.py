@@ -44,29 +44,21 @@ class WechatClient:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
-    async def api_get(
-        self, endpoint: str, params: dict | None = None, auth: bool = True
-    ) -> dict:
+    async def api_get(self, endpoint: str, params: dict | None = None, auth: bool = True) -> dict:
         if not self._client:
             raise RuntimeError("Client not initialized")
         url = f"{self.base_url}/{endpoint}"
-        resp = await self._client.get(
-            url, params=params, headers=self._make_headers(auth=auth)
-        )
+        resp = await self._client.get(url, params=params, headers=self._make_headers(auth=auth))
         resp.raise_for_status()
         return resp.json()
 
-    async def api_post(
-        self, endpoint: str, body: dict | None = None, auth: bool = True
-    ) -> dict:
+    async def api_post(self, endpoint: str, body: dict | None = None, auth: bool = True) -> dict:
         if not self._client:
             raise RuntimeError("Client not initialized")
         url = f"{self.base_url}/{endpoint}"
         payload = body or {}
         if "base_info" not in payload:
             payload["base_info"] = BASE_INFO
-        resp = await self._client.post(
-            url, json=payload, headers=self._make_headers(auth=auth)
-        )
+        resp = await self._client.post(url, json=payload, headers=self._make_headers(auth=auth))
         resp.raise_for_status()
         return resp.json()

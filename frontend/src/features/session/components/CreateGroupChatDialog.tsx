@@ -265,7 +265,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                       className={styles.input}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder={selectedAgent ? `与 ${selectedAgent} 的对话` : '输入对话名称（可选）'}
+                      placeholder={
+                        selectedAgent ? `与 ${selectedAgent} 的对话` : '输入对话名称（可选）'
+                      }
                     />
                   </div>
                 </div>
@@ -372,7 +374,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                       className={styles.input}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder={selectedAgent ? `与 ${selectedAgent} 的对话` : '输入对话名称（可选）'}
+                      placeholder={
+                        selectedAgent ? `与 ${selectedAgent} 的对话` : '输入对话名称（可选）'
+                      }
                     />
                   </div>
                 </div>

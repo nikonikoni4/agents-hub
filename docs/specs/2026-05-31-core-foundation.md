@@ -89,6 +89,8 @@ Agent 间传递的消息结构，核心字段：
 | send_to | str | 接收者名称 |
 | session_type | SessionType | MAIN 或 BTW |
 | message_type | MessageType | TASK 或 NOTIFICATION |
+| timestamp | datetime | 消息时间戳（默认自动生成） |
+| files | list[dict]? | 上传文件列表，每个 dict 对应 UploadedFileInfo 序列化 |
 
 **关键约束**：`content` 在 Agent 之间投递时始终是原始内容，渲染只发生在边界处（见渲染契约）。
 
@@ -131,6 +133,13 @@ Agent 间传递的消息结构，核心字段：
 | 验证错误 | InvalidMessageError | INVALID_MESSAGE |
 | 系统错误 | FileSystemError | FILE_SYSTEM_ERROR |
 | 系统错误 | CompactionError | COMPACTION_FAILED |
+| 系统错误 | DockerConfigError | DOCKER_CONFIG_ERROR |
+| 系统错误 | DockerNotAvailableError | DOCKER_NOT_AVAILABLE |
+| 系统错误 | DockerStartError | DOCKER_START_ERROR |
+| 业务错误 | ResourceNotFoundError | RESOURCE_NOT_FOUND |
+| 业务错误 | MessageNotFoundError | MESSAGE_NOT_FOUND |
+| 系统错误 | StateError | STATE_ERROR |
+| 系统错误 | RecoverableError | RECOVERABLE_ERROR |
 
 ### 常量与持久化格式
 

@@ -30,9 +30,7 @@ class WechatMessage:
         return result
 
     @staticmethod
-    def build_text_message(
-        to_user_id: str, text: str, context_token: str = ""
-    ) -> dict:
+    def build_text_message(to_user_id: str, text: str, context_token: str = "") -> dict:
         """构造发送文本消息的请求体"""
         client_id = f"agents-hub-{uuid.uuid4().hex[:CLIENT_ID_LENGTH]}"
         msg = {

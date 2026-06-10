@@ -5,7 +5,6 @@ Foundation layer - 基础层（零依赖）
 """
 
 from agents_hub.exceptions import StateError
-from agents_hub.roles import Role, RoleConfig
 
 from .constants import LOCAL_DATA_PATH, MAX_TOKEN
 from .exceptions import (
@@ -31,8 +30,6 @@ __all__ = [
     "MessageType",
     "CallStatus",
     "GroupChatType",
-    "Role",
-    "RoleConfig",
     # message
     "AgentMessage",
     # exceptions

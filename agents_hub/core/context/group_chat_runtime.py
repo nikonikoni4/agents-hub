@@ -142,10 +142,7 @@ class GroupChatRuntime:
             candidates = session.messages
 
         # 取末尾 limit 条（最新的），limit<=0 表示返回全部
-        if limit > 0:
-            start = max(0, len(candidates) - limit)
-        else:
-            start = 0
+        start = max(0, len(candidates) - limit) if limit > 0 else 0
         messages = candidates[start:]
 
         # 映射 agent_name -> speaker，并包含所有可选字段
@@ -480,8 +477,11 @@ class GroupChatRuntime:
 
     async def _notify_change(self) -> None:
         """通知外部状态变更（通过 on_change 回调）"""
-        logger.info("[Runtime] _notify_change 被调用: group_chat_id=%s, has_callback=%s",
-                   self.group_chat_id, self._on_change is not None)
+        logger.info(
+            "[Runtime] _notify_change 被调用: group_chat_id=%s, has_callback=%s",
+            self.group_chat_id,
+            self._on_change is not None,
+        )
         if self._on_change:
             try:
                 await self._on_change(self.group_chat_id)

@@ -21,12 +21,11 @@ from agents_hub.core.foundation import (
     AgentMessage,
     CallStatus,
     MessageType,
-    Role,
-    RoleConfig,
     SessionType,
     render_for_llm,
 )
 from agents_hub.core.foundation.exceptions import DockerConfigError
+from agents_hub.roles import Role, RoleConfig
 from agents_hub.utils.logger import get_logger
 
 
@@ -47,32 +46,28 @@ def _parse_output_fields(text: str) -> dict:
             "web_preview_title": str | None,
         }
     """
-    result = {
-        "cleaned_text": text,
-        "modified_files": None,
-        "git_diff_range": None,
-        "web_preview_url": None,
-        "web_preview_title": None,
-    }
+    cleaned_text = text
+    modified_files = None
+    git_diff_range = None
+    web_preview_url = None
+    web_preview_title = None
 
     # Modified files: **Modified files:** 后跟 "- path" 行
-    m = re.search(
-        r"\*\*Modified files:\*\*\s*\n((?:\s*-\s+.+\n?)+)", text, re.IGNORECASE
-    )
+    m = re.search(r"\*\*Modified files:\*\*\s*\n((?:\s*-\s+.+\n?)+)", text, re.IGNORECASE)
     if m:
         files = re.findall(r"-\s+(.+)", m.group(1))
         files = [f.strip() for f in files if f.strip()]
         if files:
-            result["modified_files"] = files
-        result["cleaned_text"] = result["cleaned_text"].replace(m.group(0), "").strip()
+            modified_files = files
+        cleaned_text = cleaned_text.replace(m.group(0), "").strip()
 
     # Git diff: **Git diff:** `range`
     m = re.search(r"\*\*Git diff:\*\*\s*`([^`]+)`", text, re.IGNORECASE)
     if m:
         val = m.group(1).strip()
         if val:
-            result["git_diff_range"] = val
-        result["cleaned_text"] = result["cleaned_text"].replace(m.group(0), "").strip()
+            git_diff_range = val
+        cleaned_text = cleaned_text.replace(m.group(0), "").strip()
 
     # Web preview: **Web preview:** [title](url)
     m = re.search(r"\*\*Web preview:\*\*\s*\[([^\]]*)\]\(([^)]+)\)", text, re.IGNORECASE)
@@ -80,11 +75,17 @@ def _parse_output_fields(text: str) -> dict:
         title = m.group(1).strip()
         url = m.group(2).strip()
         if url:
-            result["web_preview_url"] = url
-            result["web_preview_title"] = title
-        result["cleaned_text"] = result["cleaned_text"].replace(m.group(0), "").strip()
+            web_preview_url = url
+            web_preview_title = title
+        cleaned_text = cleaned_text.replace(m.group(0), "").strip()
 
-    return result
+    return {
+        "cleaned_text": cleaned_text,
+        "modified_files": modified_files,
+        "git_diff_range": git_diff_range,
+        "web_preview_url": web_preview_url,
+        "web_preview_title": web_preview_title,
+    }
 
 
 class Agent:

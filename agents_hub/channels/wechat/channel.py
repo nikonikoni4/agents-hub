@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 from pathlib import Path
 
@@ -76,10 +77,8 @@ class WechatChannel:
         self._running = False
         if self._poll_task:
             self._poll_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._poll_task
-            except asyncio.CancelledError:
-                pass
         if self.client:
             await self.client.__aexit__(None, None, None)
         logger.info("微信 channel 已停止")
@@ -88,6 +87,7 @@ class WechatChannel:
         """长轮询消息循环"""
         logger.info("轮询循环已启动")
         get_updates_buf = ""
+        assert self.client is not None, "client must be initialized before polling"
 
         while self._running:
             try:
@@ -133,9 +133,7 @@ class WechatChannel:
         except Exception as e:
             logger.error(f"处理消息失败: {e}", exc_info=True)
 
-    async def _send_reply(
-        self, to_user_id: str, text: str, context_token: str = ""
-    ) -> None:
+    async def _send_reply(self, to_user_id: str, text: str, context_token: str = "") -> None:
         """发送文本回复"""
         if not self.client:
             return

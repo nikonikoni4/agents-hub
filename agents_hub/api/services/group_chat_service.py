@@ -516,8 +516,7 @@ class GroupChatService:
             replies = [
                 m.get("content", "")
                 for m in new_msgs
-                if not config.is_user_name(m.get("speaker", ""))
-                and m.get("content")
+                if not config.is_user_name(m.get("speaker", "")) and m.get("content")
             ]
             if replies:
                 return "\n".join(replies)

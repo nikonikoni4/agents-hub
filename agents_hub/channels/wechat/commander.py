@@ -1,7 +1,6 @@
 import json
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from agents_hub.api.schemas.single_chat import (
     CreateSingleChatRequest,
@@ -9,7 +8,6 @@ from agents_hub.api.schemas.single_chat import (
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
 from agents_hub.api.services.single_chat_service import single_chat_manager
-from agents_hub.config.config import config
 from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
 from agents_hub.roles import RoleManager
 
@@ -32,7 +30,9 @@ HELP_TEXT = """可用命令：
 class UserSession:
     """单个微信用户的会话状态"""
 
-    mode: str = "idle"  # "idle" | "agent_chat" | "group_chat" | "wait_create_group" | "wait_create_role"
+    mode: str = (
+        "idle"  # "idle" | "agent_chat" | "group_chat" | "wait_create_group" | "wait_create_role"
+    )
     target: str = ""  # agent name 或 group_chat_id
     single_chat_id: str = ""  # 单聊会话 ID（agent_chat 模式）
     assistant_chat_id: str = ""  # 与助手的单聊 ID（create 模式）
@@ -182,7 +182,8 @@ class Commander:
             else:
                 # 按名称匹配
                 name_matches = [g for g in groups if g["group_chat_name"] == name_or_idx]
-                if not names := [g["group_chat_name"] for g in groups]:
+                names = [g["group_chat_name"] for g in groups]
+                if not names:
                     return f"未找到群聊 '{name_or_idx}'"
                 if not name_matches:
                     return f"未找到群聊 '{name_or_idx}'。可用: {', '.join(names)}"

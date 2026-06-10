@@ -100,12 +100,16 @@ async def _start_wechat_channel():
     # 检查 token 是否已保存（避免阻塞等待 QR 扫码）
     state_file = config.data_path / "channels" / "wechat" / "account.json"
     if not state_file.exists():
-        logger.info("微信 channel: 无已保存 token，跳过启动。使用 scripts/run_wechat.py 进行 QR 登录")
+        logger.info(
+            "微信 channel: 无已保存 token，跳过启动。使用 scripts/run_wechat.py 进行 QR 登录"
+        )
         return None
     try:
         state = json.loads(state_file.read_text(encoding="utf-8"))
         if not state.get("token"):
-            logger.info("微信 channel: token 为空，跳过启动。使用 scripts/run_wechat.py 进行 QR 登录")
+            logger.info(
+                "微信 channel: token 为空，跳过启动。使用 scripts/run_wechat.py 进行 QR 登录"
+            )
             return None
     except (json.JSONDecodeError, OSError):
         logger.info("微信 channel: 状态文件读取失败，跳过启动")

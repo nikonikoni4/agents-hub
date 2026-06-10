@@ -6,7 +6,7 @@ Manager Agent
 
 from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import GroupChatContext
-from agents_hub.core.foundation import Role
+from agents_hub.roles import Role
 
 from .base_agent import Agent
 
