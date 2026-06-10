@@ -30,7 +30,7 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | `<AGENT_RUNTIME>` 新增 `<pinned_messages>` 区块，Pin 消息通过 runtime 注入而非 prompt 拼接 |
-| 1.2 | AgentContext 按角色差异化交付（Worker 不接收 raw messages）；工具提示词重构为 ROLE_INSTRUCTIONS 类变量；收窄 speak_in_group_chat 语义；新增阻塞判定规则 |
+| 1.2 | AgentContext 按角色差异化交付（Worker 不接收 raw messages）；工具提示词重构为 ROLE_INSTRUCTIONS 类变量；收窄 report_progress 语义；新增阻塞判定规则 |
 
 ## Overview
 
@@ -113,14 +113,14 @@ Agent 收到的完整 prompt 由以下部分组成：
 
 | 角色 | 工具范围 |
 |------|---------|
-| Manager | 全部 6 个工具：call_agent、assign_tasks_to_team、archive_task_list、check_agent_call、speak_in_group_chat、complete_task |
-| Worker | 2 个工具：speak_in_group_chat、complete_task |
+| Manager | 全部 6 个工具：call_agent、assign_tasks_to_team、archive_task_list、check_agent_call、report_progress、complete_task |
+| Worker | 2 个工具：report_progress、complete_task |
 
 **工具语义**：
 
 | 工具 | 用途 |
 |------|------|
-| speak_in_group_chat | 任务汇报，让 user 和 manager 知道当前进展 |
+| report_progress | 任务汇报，让 user 和 manager 知道当前进展 |
 | complete_task | 闭环 AgentCall，汇报成果（成功/失败/阻塞） |
 
 **complete_task 的角色差异说明**：
@@ -209,7 +209,7 @@ Worker 不接收 raw messages，因为 Worker 的工作模式是「接任务 →
 **有 Worker 停止时**：
 ```
 [Heartbeat] 以下成员已因连续执行失败自动停止: {成员列表}。
-当前没有自动重启机制，请通过 speak_in_group_chat 向 user 说明情况。
+当前没有自动重启机制，请通过 report_progress 向 user 说明情况。
 ```
 
 **消息属性**：消息类型为 `NOTIFICATION`，不触发 Task 未闭环提醒。

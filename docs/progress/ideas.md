@@ -117,7 +117,7 @@
 
 ### 💭 2026-06-10 Agent 闭环机制改进：从工具调用到输出标签识别
 - **来源**：用户直接输入
-- **背景**：当前 Agent 闭环依赖显式工具调用（complete_task），但 Agent 调用工具不稳定导致闭环失败。改名（speak_in_group_chat → report_progress, finish_agent_call → complete_task）后效果改善，但系统不确定性仍较大。
+- **背景**：当前 Agent 闭环依赖显式工具调用（complete_task），但 Agent 调用工具不稳定导致闭环失败。改名（report_progress → report_progress, finish_agent_call → complete_task）后效果改善，但系统不确定性仍较大。
 - **内容**：设计降级方案，从显式工具调用闭环 → 输出标签识别
   - 让 Agent 最终输出一个 XML 包裹的标签（如 `<task_complete>`），在里面进行最终结果的输出或总结
   - 系统通过识别 Agent 输出中有没有这个标签来判断闭环，而不是依赖工具调用

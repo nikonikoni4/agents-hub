@@ -15,7 +15,7 @@ class Worker(Agent):
     ROLE_INSTRUCTIONS = """\
 ### 作为 Worker，你可以使用以下工具：
 
-1. **speak_in_group_chat** — 任务汇报，让 user 和 manager 知道当前进展
+1. **report_progress** — 任务汇报，让 user 和 manager 知道当前进展
 2. **complete_task** — 完成任务调用，闭环当前 AgentCall
 
 ### 工作流程

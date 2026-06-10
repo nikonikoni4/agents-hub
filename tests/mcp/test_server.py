@@ -6,7 +6,7 @@ MCP Server 和 6 个工具测试
 - assign_tasks_to_team(): 覆盖式更新任务列表
 - archive_task_list(): 归档当前 ACTIVE 列表
 - check_agent_call(): 查询 AgentCall 状态
-- speak_in_group_chat(): 在群聊中公开发言
+- report_progress(): 在群聊中公开发言
 - complete_task(): 结束需要回复的 AgentCall
 
 每个工具测试：
@@ -462,19 +462,19 @@ class TestCheckAgentCall:
 
 
 # ============================================================================
-# speak_in_group_chat() 测试
+# report_progress() 测试
 # ============================================================================
 
 
 class TestSpeakInGroupChat:
-    """测试 speak_in_group_chat 工具"""
+    """测试 report_progress 工具"""
 
     @pytest.mark.asyncio
-    async def test_speak_in_group_chat_broadcasts_refresh(
+    async def test_report_progress_broadcasts_refresh(
         self, mock_group_chat_manager, mock_group_chat
     ):
         """契约：公开发言写入群聊后广播 refresh 信号"""
-        from agents_hub.mcp.server import speak_in_group_chat
+        from agents_hub.mcp.server import report_progress
 
         token = "worker_token"
         worker_name = "worker1"
@@ -488,7 +488,7 @@ class TestSpeakInGroupChat:
             new=AsyncMock(),
             create=True,
         ) as mock_broadcast:
-            result = await speak_in_group_chat(
+            result = await report_progress(
                 agent_token=token,
                 content="我完成了一部分",
             )

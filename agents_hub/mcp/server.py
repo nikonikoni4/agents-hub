@@ -509,7 +509,7 @@ async def report_progress(agent_token: str, content: str, send_to: str | None = 
         )
         # TODO : [DESIGN] 当前在agent_Context中使用了_get_filtered_messages，会忽略掉所有@agent或agent发起的信息，
         # 所以如果这里的群聊信息如果是使用了speak_in_the_group@某个agent，这个agent实际上是不会收到这个消息的
-        # 需要某个机制去区分complete_task 和 speak_in_group_chat的区别
+        # 需要某个机制去区分complete_task 和 report_progress的区别
         # 这里暂时不做处理
         await group_chat.group_chat_context.add_message(
             _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)

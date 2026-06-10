@@ -582,7 +582,7 @@ def call_agent(agent_token: str, send_to: str, ...):
 
 **错误信息演化：**
 - **测试阶段**（当前）：引导 LLM 通过"直接回复"（出口 A 自动写入群聊）
-- **ADR 0006 实施后**：错误信息改为"如果要让 user 看到信息，使用 speak_in_group_chat 工具"
+- **ADR 0006 实施后**：错误信息改为"如果要让 user 看到信息，使用 report_progress 工具"
 
 **设计原因：**
 - user 不是 Agent，没有 message_queue
@@ -898,7 +898,7 @@ async def startup_mcp():
    - 测试阶段接受体验问题，未来改用 `execute_stream()` 或多轮通信
 
 3. **群聊发言重构（ADR 0006）**：
-   - 出口 A/B 的隐式自动写入改为显式 `speak_in_group_chat` 工具
+   - 出口 A/B 的隐式自动写入改为显式 `report_progress` 工具
    - 等 MCP 主流程跑通后立项实施
 
 ## 设计决策依据

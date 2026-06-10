@@ -87,9 +87,9 @@ while _run:
 
 **显式公开与闭环**：
 - Agent 的普通 LLM text 输出默认不进入群聊历史
-- 公开群聊发言必须通过 `speak_in_group_chat`
+- 公开群聊发言必须通过 `report_progress`
 - 需要回复的 TASK 调用必须通过 `complete_task` 闭环
-- `speak_in_group_chat` 不创建、不关闭 AgentCall
+- `report_progress` 不创建、不关闭 AgentCall
 - `complete_task` 会更新 AgentCall；原调用方是 Agent 时投递 NOTIFICATION 唤醒下一轮处理，原调用方是 user 时写入群聊历史并触发前端刷新
 
 **Runtime 注入**：每次处理消息前，通过 `markdown_injector` 将身份信息（token、团队成员、任务看板）动态注入到 work_root 下的 CLAUDE.md/AGENTS.md 的 `<AGENT_RUNTIME_START/>` 和 `<AGENT_RUNTIME_END/>` 标记之间。详见 `2026-05-31-mcp-tools-design.md` §5。
@@ -192,7 +192,7 @@ MCP Server 提供 6 个工具，Agent 通过 token 身份调用：
 | `assign_tasks_to_team` | Leader | 覆盖式更新任务列表 |
 | `archive_task_list` | Leader | 归档当前 ACTIVE 任务列表 |
 | `check_agent_call` | 任意 agent | 查询自己发起的调用状态 |
-| `speak_in_group_chat` | 任意 agent | 在群聊中公开发言，不改变 AgentCall 生命周期 |
+| `report_progress` | 任意 agent | 在群聊中公开发言，不改变 AgentCall 生命周期 |
 | `complete_task` | 调用接收者 | 结束需要回复的 TASK 调用，并写入最终群聊回复 |
 
 **身份验证流程**：

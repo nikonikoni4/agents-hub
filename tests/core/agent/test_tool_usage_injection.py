@@ -116,12 +116,12 @@ class TestToolUsageContentGeneration:
         assert "**assign_tasks_to_team**" in content
         assert "**archive_task_list**" in content
         assert "**check_agent_call**" in content
-        assert "**speak_in_group_chat**" in content
+        assert "**report_progress**" in content
         assert "**complete_task**" in content
 
     def test_worker_generates_only_two_tools(self, worker_agent):
         """
-        契约：Worker 应该只生成 speak_in_group_chat 和 complete_task 的说明
+        契约：Worker 应该只生成 report_progress 和 complete_task 的说明
 
         验证方式：
         1. 调用 _generate_tool_usage_content
@@ -138,7 +138,7 @@ class TestToolUsageContentGeneration:
         assert "作为 Worker，你可以使用以下工具：" in content
 
         # 验证只包含两个工具
-        assert "**speak_in_group_chat**" in content
+        assert "**report_progress**" in content
         assert "**complete_task**" in content
 
         # 验证不包含 Manager 专属工具
@@ -158,9 +158,9 @@ class TestToolUsageContentGeneration:
         content = manager_agent._generate_tool_usage_content()
 
         assert "群聊消息显示规则" in content
-        assert "speak_in_group_chat" in content
+        assert "report_progress" in content
         assert "complete_task" in content
-        assert "不要同时调用 speak_in_group_chat 和 complete_task" in content
+        assert "不要同时调用 report_progress 和 complete_task" in content
         assert "任务结束时使用 complete_task" in content
 
     def test_tool_usage_content_is_consistent(self, manager_agent):
@@ -236,7 +236,7 @@ class TestToolUsageInjection:
         assert "<TOOL_USAGE>" in content
         assert "</TOOL_USAGE>" in content
         assert "作为 Worker，你可以使用以下工具：" in content
-        assert "**speak_in_group_chat**" in content
+        assert "**report_progress**" in content
         assert "Some content here." in content  # 其他内容保持不变
 
     def test_inject_tool_usage_idempotent(self, manager_agent, tmp_path):

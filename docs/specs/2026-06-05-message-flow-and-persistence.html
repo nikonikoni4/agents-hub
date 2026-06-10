@@ -239,7 +239,7 @@ flowchart TB
     AgentB([Agent B])
     Ctx([GroupChatContext<br/>add_message])
     FC([complete_task])
-    SPK([speak_in_group_chat])
+    SPK([report_progress])
 
     %% ① user → agent
     User -->|"发送消息"| API
@@ -262,7 +262,7 @@ flowchart TB
     MR -->|"通知回到"| AgentA
 
     %% ③ 公开发言
-    AgentA -->|"speak_in_group_chat"| SPK
+    AgentA -->|"report_progress"| SPK
     SPK -->|"直接保存"| Ctx
     SPK -.-x|"不经过"| MR
 
@@ -291,7 +291,7 @@ flowchart TB
           </div>
           <div class="info-block orange">
             <div class="info-block-title">③ 群聊公开发言</div>
-            <p><code>speak_in_group_chat</code> 直接调用 <code>add_message()</code>，不经过 MessageRouter</p>
+            <p><code>report_progress</code> 直接调用 <code>add_message()</code>，不经过 MessageRouter</p>
           </div>
           <div class="info-block green">
             <div class="info-block-title">统一规则</div>

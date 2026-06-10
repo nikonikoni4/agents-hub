@@ -1,7 +1,7 @@
 """测试公开群聊写入路径的 token 剥离
 
 Agent.run() 的普通执行文本默认私下保留，不再自动写入群聊。
-token 剥离应发生在显式公开工具 speak_in_group_chat / complete_task 中。
+token 剥离应发生在显式公开工具 report_progress / complete_task 中。
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -14,9 +14,9 @@ from agents_hub.core.foundation.token import generate_token
 
 
 @pytest.mark.asyncio
-async def test_speak_in_group_chat_redacts_token():
-    """契约：speak_in_group_chat 写群聊前剥离 token"""
-    from agents_hub.mcp.server import speak_in_group_chat
+async def test_report_progress_redacts_token():
+    """契约：report_progress 写群聊前剥离 token"""
+    from agents_hub.mcp.server import report_progress
 
     token = generate_token()
     group_chat = MagicMock()
@@ -26,7 +26,7 @@ async def test_speak_in_group_chat_redacts_token():
         manager.resolve_token.return_value = ("worker", "group_1")
         manager.load_group_chat = AsyncMock(return_value=group_chat)
 
-        result = await speak_in_group_chat(
+        result = await report_progress(
             agent_token="agent_token",
             content=f"公开内容包含 {token}",
             send_to="Leader",
@@ -81,9 +81,9 @@ async def test_complete_task_redacts_token_before_result_and_group_chat():
 
 
 @pytest.mark.asyncio
-async def test_speak_in_group_chat_uses_agent_metadata():
+async def test_report_progress_uses_agent_metadata():
     """契约：群聊消息沿用发言 Agent 的平台和角色元数据"""
-    from agents_hub.mcp.server import speak_in_group_chat
+    from agents_hub.mcp.server import report_progress
 
     group_chat = MagicMock()
     group_chat.group_chat_context.add_message = AsyncMock()
@@ -98,7 +98,7 @@ async def test_speak_in_group_chat_uses_agent_metadata():
         manager.resolve_token.return_value = ("worker", "group_1")
         manager.load_group_chat = AsyncMock(return_value=group_chat)
 
-        result = await speak_in_group_chat(
+        result = await report_progress(
             agent_token="agent_token",
             content="公开内容",
         )

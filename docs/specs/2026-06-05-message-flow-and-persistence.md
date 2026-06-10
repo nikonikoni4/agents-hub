@@ -44,7 +44,7 @@ contract_refs:
 
 - user → agent 消息流程
 - agent → agent 消息流程（TASK / NOTIFICATION）
-- 群聊公开发言流程（speak_in_group_chat）
+- 群聊公开发言流程（report_progress）
 - 消息保存到群聊历史的触发时机
 - MessageRouter 的职责边界
 
@@ -99,10 +99,10 @@ agent_a 调用 call_agent
 1. agent_a 调用 agent_b 的 TASK 消息
 2. agent_b 完成后发送给 agent_a 的 NOTIFICATION
 
-#### 3. 群聊公开发言（speak_in_group_chat）
+#### 3. 群聊公开发言（report_progress）
 
 ```
-agent 调用 speak_in_group_chat
+agent 调用 report_progress
        → 直接调用 GroupChatContext.add_message()
        → 保存到群聊历史
        → 不经过 MessageRouter
@@ -158,7 +158,7 @@ async def send_message_to_agent(self, message: AgentMessage):
 | user → agent TASK 完成 | 回复内容 | ✅ 保存 | `complete_task` 中判断 `is_user_name()` |
 | agent → agent TASK | 发送消息 | ✅ 保存 | `GroupChat.send_message_to_agent()` |
 | agent → agent NOTIFICATION | 完成通知 | ✅ 保存 | `GroupChat.send_message_to_agent()` |
-| speak_in_group_chat | 公开发言 | ✅ 保存 | `speak_in_group_chat` 直接调用 `add_message()` |
+| report_progress | 公开发言 | ✅ 保存 | `report_progress` 直接调用 `add_message()` |
 | Agent 初始化打招呼 | 初始化消息 | ✅ 保存 | `GroupChat._initialize_new_members()` |
 
 **判断原则**：
@@ -290,7 +290,7 @@ async def _send_agent_call_completion_notification(
         # agent 调用：发送私有通知
         await _send_agent_call_completion_notification(...)
 
-async def speak_in_group_chat(
+async def report_progress(
     agent_token: str,
     content: str,
     send_to: str | None = None,
@@ -313,7 +313,7 @@ class GroupChatContext:
         
         调用方：
         1. complete_task（user 调用的 TASK 完成）
-        2. speak_in_group_chat（公开发言）
+        2. report_progress（公开发言）
         3. GroupChat._initialize_new_members()（初始化消息）
         
         不调用方：
@@ -345,7 +345,7 @@ N/A（后端消息流转机制，无前端交互）
    - ✅ user → agent TASK 完成后，agent 回复保存到群聊历史
    - ✅ agent → agent TASK 消息保存到群聊历史
    - ✅ agent → agent NOTIFICATION 保存到群聊历史
-   - ✅ speak_in_group_chat 的消息保存到群聊历史
+   - ✅ report_progress 的消息保存到群聊历史
    - ✅ Agent 初始化打招呼消息保存到群聊历史
 
 4. **消息流转完整**
@@ -381,7 +381,7 @@ agent_a.call_agent(agent_b, task)
        → 前端调用 getMessages 可以看到 TASK 和 NOTIFICATION
 
 # 场景 3：agent 公开发言
-agent.speak_in_group_chat("大家好")
+agent.report_progress("大家好")
      → 直接调用 add_message()
      → 不经过 MessageRouter
      → 保存到群聊历史

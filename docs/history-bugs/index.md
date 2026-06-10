@@ -115,5 +115,5 @@
 ## MCP 工具命名导致 Agent 无法正确调用
  - updated_at : 2026-06-10
  - path: docs/history-bugs/2026-06-10-mcp-tool-naming-confusion.md
- - 触发规则：Agent 处理任务时无法正确调用 speak_in_group_chat 和 finish_agent_call 工具
+ - 触发规则：Agent 处理任务时无法正确调用 report_progress 和 finish_agent_call 工具
  - 内容摘要：MCP 工具使用从平台角度编写的名称，Agent 不理解其含义导致调用失败。改名为 report_progress 和 complete_task 后效果改善。后续改进方向：从显式工具调用闭环 → 输出标签识别的降级方案

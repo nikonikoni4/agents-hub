@@ -63,7 +63,7 @@ if call.send_from == config.default_user_name:
 ### 显式公开和任务闭环分开
 
 **禁止**：
-- ❌ 用 `speak_in_group_chat` 关闭 AgentCall
+- ❌ 用 `report_progress` 关闭 AgentCall
 - ❌ 用 `complete_task` 代替普通公开发言
 - ❌ 把 Agent-to-Agent 的完成通知写入群聊历史
 

@@ -19,7 +19,7 @@ class Manager(Agent):
 2. **assign_tasks_to_team** — 覆盖式更新任务列表
 3. **archive_task_list** — 归档当前 ACTIVE 列表
 4. **check_agent_call** — 查询 AgentCall 状态
-5. **speak_in_group_chat** — 任务汇报，让 user 和 manager 知道当前进展
+5. **report_progress** — 任务汇报，让 user 和 manager 知道当前进展
 6. **complete_task** — 完成任务调用，闭环当前 AgentCall
 
 ### 工作流程
@@ -44,7 +44,7 @@ class Manager(Agent):
 
 ### 注意事项
 
-- 不要在任务结束时使用 speak_in_group_chat，应使用 complete_task。
+- 不要在任务结束时使用 report_progress，应使用 complete_task。
 - 如果你在上一次输出时忘记调用 complete_task，需要立即补一个。
 - 忘记闭环会导致系统判定你连续出错而自动停止。
 """
