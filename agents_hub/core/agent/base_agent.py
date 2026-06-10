@@ -197,7 +197,7 @@ class Agent:
 
         Args:
             msg: 原始 AgentMessage（content 不可变）
-            prompt: 已通过 render_for_llm 渲染好的 LLM 输入字符串
+            prompt: 已通过 render_for_llm 渲染好的 LLM 输入字符串（保留参数兼容性，但 MAIN 会话使用 build_user_prompt）
         """
         self.logger.debug(
             "_process_message 入口: call_id=%s, from=%s, type=%s, session=%s, content_len=%d",
@@ -215,13 +215,8 @@ class Agent:
         agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
         use_docker = getattr(agent_member_info, "use_docker", False) if agent_member_info else False
 
-        # 3. 构建 system_prompt（通过 CLI 参数注入，避免文件竞态条件）
-        system_prompt = self._build_system_prompt(self.task_manager)
-        self.logger.info(
-            "Agent %s system_prompt: %s",
-            self.name,
-            system_prompt[:500] if system_prompt else "",
-        )
+        # 3. system prompt 不再动态生成（保留通道）
+        system_prompt = None
 
         self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
         self.logger.debug(
@@ -237,11 +232,10 @@ class Agent:
                     msg.call_id,
                     use_docker,
                 )
-                # 获取历史上下文
-                history = await self.agent_context.get_context()
-
-                # 组装完整提示词：历史 + 当前消息（Pin 消息已通过 runtime 注入 md 文件）
-                full_prompt = f"{history}\n{prompt}" if history else prompt
+                # 构建完整 user prompt（runtime + context + incoming_message）
+                full_prompt = await self.agent_context.build_user_prompt(
+                    msg, self.agent_call_manager, self.task_manager
+                )
 
                 result = await self.execute(
                     full_prompt,
@@ -281,251 +275,32 @@ class Agent:
                 platform=self.role_config.platform.value,
             ) from e
 
-    def _generate_runtime_content(self, task_manager=None) -> str:
-        """生成 XML 格式的 runtime 内容。
+    def _build_system_prompt(self, task_manager=None) -> str | None:
+        """构建 system_prompt。
+
+        OpenCode 平台：写入文件，返回文件名（CLI 通过 --agent 注入文件名）。
+        其他平台：runtime 信息已移到 user message，返回 None。
 
         Args:
             task_manager: TaskManager 实例（可选，仅 Manager 需要）
 
         Returns:
-            XML 格式的 runtime 内容字符串
-        """
-        from agents_hub.config import config
-        from agents_hub.config.types import RoleType
-
-        # 获取团队成员列表（排除自己）
-        team_members = [
-            name for name in self.group_chat_context.agent_member_info if name != self.name
-        ]
-        team_members_str = ", ".join(team_members)
-
-        # 构建基础内容（不含外层 <AGENT_RUNTIME> 标签，由 replace_marked_section 包裹）
-        content_parts = [
-            "<identity>",
-            f"你的名字：{self.name}",
-            f"群聊ID：{self.group_chat_context.group_chat_id}",
-            f"身份令牌：{self.agent_token}",
-            "</identity>",
-            "",
-            "<team>",
-            f"团队成员：{team_members_str}",
-            f"前端用户身份名：{config.default_user_name}",
-            "带有 user 标记的前端用户不是可调用 Agent；不要对它使用 call_agent。",
-            "</team>",
-        ]
-
-        # 如果是 Manager，添加 team_workboard
-        if self.role_type == RoleType.LEADER and task_manager is not None:
-            task_list = task_manager.get_active_task_list(self.group_chat_context.group_chat_id)
-            if task_list and task_list.tasks:
-                content_parts.extend(
-                    [
-                        "",
-                        "<team_workboard>",
-                        "当前任务列表：",
-                    ]
-                )
-                for task in task_list.tasks:
-                    status_str = task.status.value.upper()
-                    content_parts.append(
-                        f"- [{status_str}] {task.task_id}: {task.content} (owner: {task.owner})"
-                    )
-                content_parts.append("</team_workboard>")
-
-        runtime_calls = self.agent_call_manager.get_runtime_calls_for_agent(self.name)
-        if runtime_calls:
-            content_parts.extend(
-                [
-                    "",
-                    "<active_agent_calls>",
-                    "当前需要你处理的 AgentCall：",
-                ]
-            )
-            from itertools import groupby
-
-            sorted_calls = sorted(runtime_calls, key=lambda c: c.message_type.value)
-            for msg_type, group in groupby(sorted_calls, key=lambda c: c.message_type):
-                content_parts.append(self._format_runtime_call_instruction(msg_type))
-                for call in group:
-                    content_parts.append(
-                        f"- call_id={call.call_id}; from={call.send_from}; "
-                        f"type={call.message_type.value}; status={call.status.value}; "
-                        f"request={call.content}"
-                    )
-            content_parts.append("</active_agent_calls>")
-
-        # 添加 pinned messages
-        pinned_section = self._get_pinned_messages_content()
-        if pinned_section:
-            content_parts.extend(["", pinned_section])
-
-        return "\n".join(content_parts)
-
-    def _get_pinned_messages_content(self) -> str:
-        """读取 Pin 消息并生成 XML 片段（用于注入到 runtime）。
-
-        Returns:
-            pinned_messages XML 字符串，无 pin 时返回空字符串
-        """
-        import json
-
-        session_path = Path(self.group_chat_context.repository.group_chat_session_path)
-        pins_path = session_path / "pins.json"
-
-        if not pins_path.exists():
-            return ""
-
-        try:
-            with open(pins_path, encoding="utf-8") as f:
-                content = f.read()
-                pins = json.loads(content) if content.strip() else []
-
-            if not pins:
-                return ""
-
-            pins_sorted = sorted(pins, key=lambda p: p.get("pinned_at", ""))
-
-            lines = [
-                "<pinned_messages>",
-                "以下是用户置顶的重要消息，请在处理任务时遵守这些规则和要求：",
-                "",
-            ]
-            for pin in pins_sorted:
-                speaker = pin.get("speaker", "unknown")
-                pin_content = pin.get("content", "")
-                lines.append(f"[{speaker}]: {pin_content}")
-                lines.append("")
-            lines.append("</pinned_messages>")
-
-            return "\n".join(lines)
-        except Exception as e:
-            self.logger.warning("读取 Pin 消息失败: %s", str(e))
-            return ""
-
-    def _generate_tool_usage_content(self) -> str:
-        """生成工具使用说明内容。
-
-        编排逻辑：从子类 ROLE_INSTRUCTIONS 和基类 SHARED_RULES 组装。
-
-        Returns:
-            XML 格式的工具使用说明字符串
-        """
-        parts = [
-            "<tool_usage>",
-            self.ROLE_INSTRUCTIONS,
-            self.SHARED_RULES,
-            "</tool_usage>",
-        ]
-        return "\n".join(parts)
-
-    def _format_runtime_call_instruction(self, message_type: MessageType) -> str:
-        """生成 runtime 中针对不同 AgentCall 类型的操作提示。"""
-        if message_type == MessageType.TASK:
-            return "- 需要回复：请在完成时调用 finish_agent_call。"
-        return "- 无需使用 finish_agent_call；"
-
-    def _inject_runtime_to_files(self, task_manager=None):
-        """注入 runtime 内容到 CLAUDE.md 和 AGENTS.md。
-
-        Args:
-            task_manager: TaskManager 实例（可选，仅 Manager 需要）
-        """
-        from pathlib import Path
-
-        from agents_hub.core.utils.markdown_injector import replace_marked_section
-
-        # 生成 runtime 内容
-        runtime_content = self._generate_runtime_content(task_manager)
-
-        # 获取 work_root
-        if not self.role_config.work_root:
-            return
-        work_root = Path(self.role_config.work_root)
-
-        # 注入到 CLAUDE.md
-        claude_md = work_root / "CLAUDE.md"
-        if claude_md.exists():
-            replace_marked_section(claude_md, "AGENT_RUNTIME", runtime_content)
-
-        # 注入到 AGENTS.md
-        agents_md = work_root / "AGENTS.md"
-        if agents_md.exists():
-            replace_marked_section(agents_md, "AGENT_RUNTIME", runtime_content)
-
-    def _inject_tool_usage_to_files(self):
-        """注入工具使用说明到 CLAUDE.md 和 AGENTS.md。
-
-        根据角色类型生成不同的工具使用说明，注入到 TOOL_USAGE 标记中。
-        """
-        from pathlib import Path
-
-        from agents_hub.core.utils.markdown_injector import replace_marked_section
-
-        # 生成工具使用说明内容
-        tool_usage_content = self._generate_tool_usage_content()
-
-        # 获取 work_root
-        if not self.role_config.work_root:
-            return
-        work_root = Path(self.role_config.work_root)
-
-        # 注入到 CLAUDE.md
-        claude_md = work_root / "CLAUDE.md"
-        if claude_md.exists():
-            replace_marked_section(claude_md, "TOOL_USAGE", tool_usage_content)
-
-        # 注入到 AGENTS.md
-        agents_md = work_root / "AGENTS.md"
-        if agents_md.exists():
-            replace_marked_section(agents_md, "TOOL_USAGE", tool_usage_content)
-
-    def _build_system_prompt(self, task_manager=None) -> str:
-        """构建完整的 system_prompt，用于 CLI 参数注入。
-
-        根据平台类型选择不同的构建方式：
-        - Claude/Codex: 直接拼接 runtime 和 tool_usage 内容
-        - OpenCode: 写入文件，返回文件名作为 system_prompt
-
-        Args:
-            task_manager: TaskManager 实例（可选，仅 Manager 需要）
-
-        Returns:
-            拼接后的 system_prompt 字符串（Claude/Codex）或文件名（OpenCode）
+            OpenCode 返回文件名（不含 .md），其他平台返回 None
         """
         from agents_hub.config.types import AgentPlatform
 
-        # OpenCode 平台：写入文件，返回文件名
         if self.role_config.platform == AgentPlatform.OPENCODE:
             return self._build_opencode_system_prompt(task_manager)
+        return None
 
-        # Claude/Codex 平台：直接拼接内容
-        runtime_content = self._generate_runtime_content(task_manager)
-        tool_usage_content = self._generate_tool_usage_content()
-        return f"{runtime_content}\n\n{tool_usage_content}"
-
-    def _build_opencode_system_prompt(self, task_manager=None) -> str:
+    def _build_opencode_system_prompt(self, system_prompt) -> str:
         """为 OpenCode 构建系统提示词，写入文件并返回文件名。
 
-        文件名格式：{agent_name}_{group_chat_id}.md
-        这样可以避免跨群聊使用（因为 auth_token 也会放进去）。
-
-        Args:
-            task_manager: TaskManager 实例（可选，仅 Manager 需要）
-
-        Returns:
-            agent 文件名（不含 .md 后缀），用于 opencode --agent 参数
+        文件名格式：{agent_name}_{group_chat_id}
         """
-        from pathlib import Path
-
-        # 生成内容
-        runtime_content = self._generate_runtime_content(task_manager)
-        tool_usage_content = self._generate_tool_usage_content()
-
-        # 构建文件名：{agent_name}_{group_chat_id}
         group_chat_id = self.group_chat_context.group_chat_id
         agent_filename = f"{self.name}_{group_chat_id}"
 
-        # 获取 work_root
         if not self.role_config.work_root:
             return agent_filename
 
@@ -533,24 +308,10 @@ class Agent:
         agents_dir = work_root / "agents"
         agents_dir.mkdir(exist_ok=True)
 
-        # 写入 agent 文件
         agent_file = agents_dir / f"{agent_filename}.md"
+        agent_file.write_text(system_prompt, encoding="utf-8")
 
-        # 组装完整内容
-        full_content = f"""# {self.name} - {group_chat_id}
-
-{runtime_content}
-
-{tool_usage_content}
-"""
-        agent_file.write_text(full_content, encoding="utf-8")
-
-        self.logger.info(
-            "OpenCode system_prompt 写入文件: %s, 内容长度: %d",
-            agent_file,
-            len(full_content),
-        )
-
+        self.logger.info("OpenCode system_prompt 写入文件: %s", agent_file)
         return agent_filename
 
     def _enqueue_finish_agent_call_reminder(self, msg: AgentMessage):

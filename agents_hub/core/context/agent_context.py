@@ -5,10 +5,14 @@ Agent 上下文
 实现增量加载：只加载未加载的压缩历史和未压缩消息。
 """
 
+import json
 import re
+from pathlib import Path
 
 from agents_hub.config.types import RoleType
 from agents_hub.core.foundation import StateError, Tag, wrap_xml
+from agents_hub.core.foundation.message import AgentMessage
+from agents_hub.core.foundation.renderer import render_for_llm
 
 from .group_chat_context import GroupChatContext
 
@@ -165,3 +169,136 @@ class AgentContext:
             last_loaded_compact_index,
             last_loaded_message_index,
         )
+
+    async def build_user_prompt(
+        self,
+        msg: AgentMessage,
+        agent_call_manager=None,
+        task_manager=None,
+    ) -> str:
+        """构建完整的 user message，包含 runtime + context + incoming_message
+
+        Args:
+            msg: 原始 AgentMessage
+            agent_call_manager: AgentCallManager 实例（可选）
+            task_manager: TaskManager 实例（可选，仅 LEADER 需要）
+
+        Returns:
+            完整的 user message 字符串
+        """
+        parts: list[str] = []
+
+        # 1. 构建 runtime 信息
+        runtime = self._build_runtime(msg, agent_call_manager, task_manager)
+        parts.append(runtime)
+
+        # 2. 获取历史上下文
+        history = await self.get_context()
+        if history:
+            parts.append(history)
+
+        # 3. 渲染 incoming_message（含 call_id）
+        incoming_message = render_for_llm(msg)
+        parts.append(incoming_message)
+
+        return "\n\n".join(parts)
+
+    def _build_runtime(
+        self,
+        msg: AgentMessage,
+        agent_call_manager=None,
+        task_manager=None,
+    ) -> str:
+        """构建 runtime XML
+
+        Args:
+            msg: 原始 AgentMessage
+            agent_call_manager: AgentCallManager 实例（可选）
+            task_manager: TaskManager 实例（可选，仅 LEADER 需要）
+
+        Returns:
+            runtime XML 字符串
+        """
+        parts: list[str] = []
+
+        # 会话类型：群聊/单聊
+        session_type = "群聊" if msg.session_type.value == "main" else "单聊"
+        parts.append(f"    <type>{session_type}</type>")
+
+        # agent_token
+        agent_member_info = self.group_chat_context.agent_member_info.get(self.agent_name)
+        agent_token = agent_member_info.token if agent_member_info else ""
+        parts.append(f"    <agent_token>{agent_token}</agent_token>")
+
+        # group_chat_id
+        group_chat_id = self.group_chat_context.group_chat_id
+        parts.append(f"    <group_chat_id>{group_chat_id}</group_chat_id>")
+
+        # team_members（排除自己，带 description）
+        team_members = []
+        for name, info in self.group_chat_context.agent_member_info.items():
+            if name != self.agent_name:
+                desc = info.description if hasattr(info, "description") and info.description else ""
+                team_members.append(f"{name}（{desc}）" if desc else name)
+        parts.append(f"    <team_members>{', '.join(team_members)}</team_members>")
+
+        # agent_call（当前消息的 call_id、from、content_head、need_response）
+        content_head = msg.content[:20] if msg.content else ""
+        need_response = "true" if msg.message_type.value == "task" else "false"
+        parts.append(
+            f'    <agent_call call_id="{msg.call_id}" from="{msg.send_from}" '
+            f'content_head="{content_head}" need_response="{need_response}" />'
+        )
+
+        # team_workboard（仅 LEADER）
+        if self.role_type == RoleType.LEADER and task_manager:
+            task_list = task_manager.get_active_task_list(self.group_chat_context.group_chat_id)
+            if task_list and task_list.tasks:
+                workboard_lines = ["    <team_workboard>", "        当前任务列表："]
+                for task in task_list.tasks:
+                    status_str = task.status.value.upper()
+                    workboard_lines.append(
+                        f"        - [{status_str}] {task.task_id}: {task.content} (owner: {task.owner})"
+                    )
+                workboard_lines.append("    </team_workboard>")
+                parts.append("\n".join(workboard_lines))
+
+        # user_pin_message
+        pin_content = self._get_pinned_messages()
+        if pin_content:
+            parts.append(pin_content)
+
+        return "<runtime>\n" + "\n".join(parts) + "\n</runtime>"
+
+    def _get_pinned_messages(self) -> str:
+        """读取 pin 消息并格式化
+
+        Returns:
+            pin 消息 XML 字符串，无 pin 时返回空字符串
+        """
+        session_path = Path(self.group_chat_context.repository.group_chat_session_path)
+        pins_path = session_path / "pins.json"
+
+        if not pins_path.exists():
+            return ""
+
+        try:
+            with open(pins_path, encoding="utf-8") as f:
+                content = f.read()
+                pins = json.loads(content) if content.strip() else []
+
+            if not pins:
+                return ""
+
+            pins_sorted = sorted(pins, key=lambda p: p.get("pinned_at", ""))
+
+            lines = ["    <user_pin_message>"]
+            for i, pin in enumerate(pins_sorted, start=1):
+                speaker = pin.get("speaker", "unknown")
+                pin_content = pin.get("content", "")
+                lines.append(f"        {i}. [{speaker}]: {pin_content}")
+            lines.append("    </user_pin_message>")
+
+            return "\n".join(lines)
+        except Exception:
+            return ""

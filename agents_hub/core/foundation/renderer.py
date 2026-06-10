@@ -46,8 +46,10 @@ def render_for_llm(msg: AgentMessage) -> str:
     """AgentMessage → 喂给 LLM 的 prompt 字符串（含 <incoming_message> 包裹）"""
     body = (
         f"[Agents Hub 平台消息]\n"
+        f"call_id: {msg.call_id}\n"
         f"来自：{msg.send_from}\n"
         f"发送给：{msg.send_to}（你）\n"
+        f"类型：{msg.message_type.value}\n"
         f"内容：{msg.content}"
     )
     if msg.files:
