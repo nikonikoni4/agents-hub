@@ -213,7 +213,9 @@ class TestScenario3WorkerResponse:
         # 验证 AgentCall 状态已更新为 COMPLETED
         call = group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
-        assert call.status == CallStatus.COMPLETED, f"AgentCall 状态应该是 COMPLETED，实际: {call.status}"
+        assert call.status == CallStatus.COMPLETED, (
+            f"AgentCall 状态应该是 COMPLETED，实际: {call.status}"
+        )
         assert call.has_agent_response is True, "AgentCall 应该已显式回复闭环"
         assert call.result == "任务 C 已完成", "完成内容应该记录在 AgentCall result 中"
 
@@ -271,7 +273,9 @@ class TestScenario4CheckAgentCall:
 
         # 验证返回错误
         assert "error" in result, "应该返回错误"
-        assert result["error"]["code"] == "AGENT_CALL_NOT_FOUND", "错误码应该是 AGENT_CALL_NOT_FOUND"
+        assert result["error"]["code"] == "AGENT_CALL_NOT_FOUND", (
+            "错误码应该是 AGENT_CALL_NOT_FOUND"
+        )
 
 
 # ============================================================================
@@ -346,7 +350,12 @@ class TestScenario5AssignTasks:
         await asyncio.sleep(0.1)
 
         tasks = [
-            {"task_id": "task_4", "owner": "小王", "content": "任务 4（已更新）", "status": "running"},
+            {
+                "task_id": "task_4",
+                "owner": "小王",
+                "content": "任务 4（已更新）",
+                "status": "running",
+            },
         ]
 
         result2 = await assign_tasks_to_team(agent_token=manager_token, tasks=tasks)

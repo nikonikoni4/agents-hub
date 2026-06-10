@@ -269,8 +269,12 @@ class TestToolUsageInjection:
         content = claude_md.read_text(encoding="utf-8")
 
         # 验证只有一个 TOOL_USAGE 块
-        assert content.count("<TOOL_USAGE>") == 1, f"发现多个 <TOOL_USAGE> 标签: {content.count('<TOOL_USAGE>')}"
-        assert content.count("</TOOL_USAGE>") == 1, f"发现多个 </TOOL_USAGE> 标签: {content.count('</TOOL_USAGE>')}"
+        assert content.count("<TOOL_USAGE>") == 1, (
+            f"发现多个 <TOOL_USAGE> 标签: {content.count('<TOOL_USAGE>')}"
+        )
+        assert content.count("</TOOL_USAGE>") == 1, (
+            f"发现多个 </TOOL_USAGE> 标签: {content.count('</TOOL_USAGE>')}"
+        )
 
         # 验证没有重复的内容
         assert content.count("作为 Manager，你可以使用以下工具：") == 1
@@ -317,7 +321,9 @@ Some other content.
         assert "作为 Manager，你可以使用以下工具：" in content
         assert "Some other content." in content  # 其他内容保持不变
 
-    def test_inject_runtime_and_tool_usage_idempotent(self, manager_agent, mock_group_chat_context, tmp_path):
+    def test_inject_runtime_and_tool_usage_idempotent(
+        self, manager_agent, mock_group_chat_context, tmp_path
+    ):
         """
         契约：同时注入 runtime 和 tool_usage 应该幂等
 
@@ -338,7 +344,11 @@ Some other content.
         claude_md.write_text("# Project Instructions\n", encoding="utf-8")
 
         # Mock agent_token property
-        with patch.object(type(manager_agent), 'agent_token', new_callable=lambda: property(lambda self: "tok_manager_abc123")):
+        with patch.object(
+            type(manager_agent),
+            "agent_token",
+            new_callable=lambda: property(lambda self: "tok_manager_abc123"),
+        ):
             # 多次调用注入方法
             for _ in range(3):
                 manager_agent._inject_runtime_to_files()
@@ -348,10 +358,18 @@ Some other content.
         content = claude_md.read_text(encoding="utf-8")
 
         # 验证每个标记块只有一个
-        assert content.count("<AGENT_RUNTIME>") == 1, f"发现多个 <AGENT_RUNTIME> 标签: {content.count('<AGENT_RUNTIME>')}"
-        assert content.count("</AGENT_RUNTIME>") == 1, f"发现多个 </AGENT_RUNTIME> 标签: {content.count('</AGENT_RUNTIME>')}"
-        assert content.count("<TOOL_USAGE>") == 1, f"发现多个 <TOOL_USAGE> 标签: {content.count('<TOOL_USAGE>')}"
-        assert content.count("</TOOL_USAGE>") == 1, f"发现多个 </TOOL_USAGE> 标签: {content.count('</TOOL_USAGE>')}"
+        assert content.count("<AGENT_RUNTIME>") == 1, (
+            f"发现多个 <AGENT_RUNTIME> 标签: {content.count('<AGENT_RUNTIME>')}"
+        )
+        assert content.count("</AGENT_RUNTIME>") == 1, (
+            f"发现多个 </AGENT_RUNTIME> 标签: {content.count('</AGENT_RUNTIME>')}"
+        )
+        assert content.count("<TOOL_USAGE>") == 1, (
+            f"发现多个 <TOOL_USAGE> 标签: {content.count('<TOOL_USAGE>')}"
+        )
+        assert content.count("</TOOL_USAGE>") == 1, (
+            f"发现多个 </TOOL_USAGE> 标签: {content.count('</TOOL_USAGE>')}"
+        )
 
         # 验证内容正确
         assert "你的名字：Manager" in content
@@ -484,8 +502,12 @@ class TestMarkdownInjectorIdempotent:
         content = test_file.read_text(encoding="utf-8")
 
         # 验证只有一个标记块
-        assert content.count("<TEST_MARKER>") == 1, f"发现多个 <TEST_MARKER> 标签: {content.count('<TEST_MARKER>')}"
-        assert content.count("</TEST_MARKER>") == 1, f"发现多个 </TEST_MARKER> 标签: {content.count('</TEST_MARKER>')}"
+        assert content.count("<TEST_MARKER>") == 1, (
+            f"发现多个 <TEST_MARKER> 标签: {content.count('<TEST_MARKER>')}"
+        )
+        assert content.count("</TEST_MARKER>") == 1, (
+            f"发现多个 </TEST_MARKER> 标签: {content.count('</TEST_MARKER>')}"
+        )
 
         # 验证内容是最后一次写入的
         assert "content_4" in content
@@ -595,10 +617,18 @@ Content 2
         content = test_file.read_text(encoding="utf-8")
 
         # 验证每个标记块只有一个
-        assert content.count("<MARKER_A>") == 1, f"发现多个 <MARKER_A> 标签: {content.count('<MARKER_A>')}"
-        assert content.count("</MARKER_A>") == 1, f"发现多个 </MARKER_A> 标签: {content.count('</MARKER_A>')}"
-        assert content.count("<MARKER_B>") == 1, f"发现多个 <MARKER_B> 标签: {content.count('<MARKER_B>')}"
-        assert content.count("</MARKER_B>") == 1, f"发现多个 </MARKER_B> 标签: {content.count('</MARKER_B>')}"
+        assert content.count("<MARKER_A>") == 1, (
+            f"发现多个 <MARKER_A> 标签: {content.count('<MARKER_A>')}"
+        )
+        assert content.count("</MARKER_A>") == 1, (
+            f"发现多个 </MARKER_A> 标签: {content.count('</MARKER_A>')}"
+        )
+        assert content.count("<MARKER_B>") == 1, (
+            f"发现多个 <MARKER_B> 标签: {content.count('<MARKER_B>')}"
+        )
+        assert content.count("</MARKER_B>") == 1, (
+            f"发现多个 </MARKER_B> 标签: {content.count('</MARKER_B>')}"
+        )
 
         # 验证内容是最后一次写入的
         assert "Content A_2" in content

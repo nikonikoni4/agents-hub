@@ -6,7 +6,6 @@ MCP 错误响应工具测试
 - 9 个错误码常量
 """
 
-
 from agents_hub.mcp.errors import (
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
@@ -88,10 +87,7 @@ def test_basic_error_response() -> None:
 
     如果失败，说明：基本格式错误
     """
-    response = make_error_response(
-        code=INVALID_TOKEN,
-        message="身份令牌无效或已过期"
-    )
+    response = make_error_response(code=INVALID_TOKEN, message="身份令牌无效或已过期")
     assert "error" in response
     assert response["error"]["code"] == "INVALID_TOKEN"
     assert response["error"]["message"] == "身份令牌无效或已过期"
@@ -109,11 +105,7 @@ def test_error_response_with_details() -> None:
     如果失败，说明：details 处理逻辑错误
     """
     details = {"token": "abc123", "reason": "expired"}
-    response = make_error_response(
-        code=PERMISSION_DENIED,
-        message="权限不足",
-        details=details
-    )
+    response = make_error_response(code=PERMISSION_DENIED, message="权限不足", details=details)
     assert "error" in response
     assert response["error"]["code"] == "PERMISSION_DENIED"
     assert response["error"]["message"] == "权限不足"
@@ -130,11 +122,7 @@ def test_error_response_with_none_details() -> None:
 
     如果失败，说明：None 处理逻辑错误
     """
-    response = make_error_response(
-        code=INTERNAL_ERROR,
-        message="内部错误",
-        details=None
-    )
+    response = make_error_response(code=INTERNAL_ERROR, message="内部错误", details=None)
     assert "error" in response
     assert response["error"]["code"] == "INTERNAL_ERROR"
     assert "details" not in response["error"]
@@ -150,11 +138,7 @@ def test_error_response_with_empty_details() -> None:
 
     如果失败，说明：空字典处理逻辑错误
     """
-    response = make_error_response(
-        code=AGENT_NOT_FOUND,
-        message="Agent 不存在",
-        details={}
-    )
+    response = make_error_response(code=AGENT_NOT_FOUND, message="Agent 不存在", details={})
     assert "error" in response
     assert response["error"]["code"] == "AGENT_NOT_FOUND"
     assert response["error"]["details"] == {}
@@ -174,16 +158,9 @@ def test_error_response_complex_details() -> None:
     details = {
         "agent_id": "agent_123",
         "available_agents": ["agent_1", "agent_2"],
-        "metadata": {
-            "timestamp": "2026-05-31T10:00:00Z",
-            "request_id": "req_456"
-        }
+        "metadata": {"timestamp": "2026-05-31T10:00:00Z", "request_id": "req_456"},
     }
-    response = make_error_response(
-        code=AGENT_NOT_FOUND,
-        message="Agent 不存在",
-        details=details
-    )
+    response = make_error_response(code=AGENT_NOT_FOUND, message="Agent 不存在", details=details)
     assert response["error"]["details"] == details
     assert response["error"]["details"]["metadata"]["timestamp"] == "2026-05-31T10:00:00Z"
 

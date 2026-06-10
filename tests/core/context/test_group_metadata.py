@@ -76,9 +76,7 @@ class TestGroupMetadata:
             await repository.save_group_metadata(metadata)
 
             # 验证文件路径格式
-            expected_path = os.path.join(
-                repository.group_chat_session_path, "group_metadata.json"
-            )
+            expected_path = os.path.join(repository.group_chat_session_path, "group_metadata.json")
             assert repository.metadata_file == expected_path
             assert os.path.exists(expected_path)
 

@@ -133,6 +133,7 @@ def update_claude_md_identity(role_name: str, description: str):
         if start_marker in content and end_marker in content:
             # 替换现有内容
             import re
+
             pattern = f"{re.escape(start_marker)}.*?{re.escape(end_marker)}"
             content = re.sub(pattern, identity_content, content, flags=re.DOTALL)
         else:
@@ -279,9 +280,24 @@ async def test_scenario_3_assign_tasks(group_chat: GroupChat, tokens: dict):
 
     # 分配任务
     tasks = [
-        {"task_id": "task_001", "owner": "小李", "content": "设计用户认证架构", "status": "pending"},
-        {"task_id": "task_002", "owner": "小赵", "content": "编写认证模块 PRD", "status": "pending"},
-        {"task_id": "task_003", "owner": "小钱", "content": "编写认证模块测试用例", "status": "pending"},
+        {
+            "task_id": "task_001",
+            "owner": "小李",
+            "content": "设计用户认证架构",
+            "status": "pending",
+        },
+        {
+            "task_id": "task_002",
+            "owner": "小赵",
+            "content": "编写认证模块 PRD",
+            "status": "pending",
+        },
+        {
+            "task_id": "task_003",
+            "owner": "小钱",
+            "content": "编写认证模块测试用例",
+            "status": "pending",
+        },
     ]
 
     print("\n1. 分配任务列表：")
@@ -298,9 +314,24 @@ async def test_scenario_3_assign_tasks(group_chat: GroupChat, tokens: dict):
     # 更新任务状态
     print("\n2. 更新任务状态：")
     tasks_update = [
-        {"task_id": "task_001", "owner": "小李", "content": "设计用户认证架构", "status": "running"},
-        {"task_id": "task_002", "owner": "小赵", "content": "编写认证模块 PRD", "status": "completed"},
-        {"task_id": "task_003", "owner": "小钱", "content": "编写认证模块测试用例", "status": "pending"},
+        {
+            "task_id": "task_001",
+            "owner": "小李",
+            "content": "设计用户认证架构",
+            "status": "running",
+        },
+        {
+            "task_id": "task_002",
+            "owner": "小赵",
+            "content": "编写认证模块 PRD",
+            "status": "completed",
+        },
+        {
+            "task_id": "task_003",
+            "owner": "小钱",
+            "content": "编写认证模块测试用例",
+            "status": "pending",
+        },
     ]
 
     result = assign_tasks_to_team(agent_token=manager_token, tasks=tasks_update)
@@ -318,7 +349,9 @@ async def test_scenario_3_assign_tasks(group_chat: GroupChat, tokens: dict):
     worker_token = tokens["小李"]
     result = assign_tasks_to_team(
         agent_token=worker_token,
-        tasks=[{"task_id": "task_004", "owner": "小钱", "content": "测试任务", "status": "pending"}],
+        tasks=[
+            {"task_id": "task_004", "owner": "小钱", "content": "测试任务", "status": "pending"}
+        ],
     )
 
     if "error" in result and result["error"]["code"] == "PERMISSION_DENIED":
@@ -420,9 +453,7 @@ async def main():
         from agents_hub.mcp.server import mcp
 
         # 使用 asyncio.create_task 在后台运行
-        mcp_task = asyncio.create_task(
-            mcp.run_async(transport="http", host="localhost", port=8001)
-        )
+        mcp_task = asyncio.create_task(mcp.run_async(transport="http", host="localhost", port=8001))
 
         # 保持运行
         try:
@@ -435,6 +466,7 @@ async def main():
     except Exception as e:
         print(f"\n错误: {e}")
         import traceback
+
         traceback.print_exc()
     finally:
         # 清理

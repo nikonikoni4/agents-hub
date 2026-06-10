@@ -203,4 +203,3 @@ class TestGroupChatMetadataIntegration:
         assert info["group_chat_id"] == "gc_runtime_metadata"
         assert info["group_chat_name"] == "Runtime Metadata"
         assert info["project_path"] == str(tmp_path)
-

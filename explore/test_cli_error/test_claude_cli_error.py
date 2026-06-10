@@ -172,11 +172,7 @@ from pathlib import Path
 CLAUDE_HOME = Path(__file__).parent / "claude_home"
 
 
-async def run_claude_cli(
-    prompt: str,
-    config_dir: Path,
-    description: str
-) -> dict:
+async def run_claude_cli(prompt: str, config_dir: Path, description: str) -> dict:
     """
     使用 asyncio.create_subprocess_exec 调用 Claude CLI
 
@@ -187,9 +183,10 @@ async def run_claude_cli(
         "claude",
         "--print",
         "--verbose",
-        "--output-format", "stream-json",
+        "--output-format",
+        "stream-json",
         "--include-partial-messages",
-        prompt
+        prompt,
     ]
 
     # 构建环境变量 - CLAUDE_CONFIG_DIR 指向包含 settings.json 的目录
@@ -201,21 +198,18 @@ async def run_claude_cli(
         "stdout": [],
         "stderr": [],
         "returncode": None,
-        "exception": None
+        "exception": None,
     }
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"测试: {description}")
     print(f"命令: {' '.join(cmd)}")
     print(f"配置目录: {config_dir}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=env
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env
         )
 
         # 读取 stdout
@@ -262,7 +256,7 @@ async def test_permission_error():
     result = await run_claude_cli(
         prompt=prompt,
         config_dir=CLAUDE_HOME,  # 指向包含 settings.json 的目录
-        description="权限错误测试 - 尝试执行被 deny 的 git log 命令"
+        description="权限错误测试 - 尝试执行被 deny 的 git log 命令",
     )
     return result
 
@@ -288,9 +282,7 @@ async def test_api_error():
 
         prompt = "你好，请回复一句话"
         result = await run_claude_cli(
-            prompt=prompt,
-            config_dir=CLAUDE_HOME,
-            description="API 错误测试 - 使用错误的 API key"
+            prompt=prompt, config_dir=CLAUDE_HOME, description="API 错误测试 - 使用错误的 API key"
         )
     finally:
         # 恢复原始 settings.json

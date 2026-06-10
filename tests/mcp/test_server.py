@@ -364,7 +364,9 @@ class TestArchiveTaskList:
         assert result["error"]["code"] == INVALID_TOKEN
 
     @pytest.mark.asyncio
-    async def test_archive_task_list_permission_denied(self, mock_group_chat_manager, mock_group_chat):
+    async def test_archive_task_list_permission_denied(
+        self, mock_group_chat_manager, mock_group_chat
+    ):
         """
         契约：非 Leader 调用返回 PERMISSION_DENIED 错误
         """
@@ -606,9 +608,10 @@ class TestFinishAgentCall:
         assert "[REDACTED]" in safe_content
 
         mock_group_chat.agent_call_manager.create_call.assert_called_once()
-        assert mock_group_chat.agent_call_manager.create_call.call_args.kwargs[
-            "content"
-        ] == safe_content
+        assert (
+            mock_group_chat.agent_call_manager.create_call.call_args.kwargs["content"]
+            == safe_content
+        )
         sent_message = mock_group_chat.send_message_to_agent.call_args.args[0]
         assert sent_message.send_from == worker_name
         assert sent_message.send_to == "worker2"

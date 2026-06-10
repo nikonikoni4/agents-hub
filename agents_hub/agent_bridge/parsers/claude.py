@@ -39,6 +39,7 @@ class ClaudeParser:
 
         event_type = event.get("type")
         session_id = event.get("session_id", "")
+        logger.debug("[ClaudeParser] event_type=%s, session_id=%s", event_type, session_id)
 
         # 流式文本事件
         if event_type == "stream_event":
@@ -186,9 +187,24 @@ class ClaudeParser:
         }
         """
         usage = event.get("usage", {})
+        # 从 modelUsage 提取 contextWindow（key 是动态模型名）
+        model_usage = event.get("modelUsage", {})
+        max_context_window = 0
+        for model_data in model_usage.values():
+            cw = model_data.get("contextWindow", 0)
+            if cw > 0:
+                max_context_window = cw
+                break
+        logger.info(
+            "[ClaudeParser] result event usage: input_tokens=%s, cache_read=%s, output_tokens=%s, max_context_window=%s",
+            usage.get("input_tokens", 0),
+            usage.get("cache_read_input_tokens", 0),
+            usage.get("output_tokens", 0),
+            max_context_window,
+        )
         return StreamEvent(
             type=AgentEventType.TURN_COMPLETE,
-            content={"usage": usage},
+            content={"usage": usage, "max_context_window": max_context_window},
             session_id=session_id,
             timestamp=datetime.now().isoformat(),
             agent_name="",

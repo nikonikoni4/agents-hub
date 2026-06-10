@@ -33,9 +33,7 @@ def test_parse_skill_md_missing_fields():
     # 创建缺少字段的 SKILL.md
     missing_path = Path("tests/skills/fixtures/missing-fields")
     missing_path.mkdir(parents=True, exist_ok=True)
-    (missing_path / "SKILL.md").write_text(
-        "---\nname: test\n---\nContent", encoding="utf-8"
-    )
+    (missing_path / "SKILL.md").write_text("---\nname: test\n---\nContent", encoding="utf-8")
 
     with pytest.raises(InvalidSkillError, match="Missing name or description"):
         manager._parse_skill_md(missing_path)
@@ -58,6 +56,7 @@ def test_list_skills_empty():
     manager = SkillManager()
     # 临时修改 skills_root 为空目录
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmpdir:
         manager.skills_root = Path(tmpdir)
         skills = manager.list_skills()

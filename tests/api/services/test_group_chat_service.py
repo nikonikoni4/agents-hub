@@ -41,10 +41,11 @@ async def test_create_group_chat_success(service, mock_group_chat_manager):
         "is_active": True,
     }
 
-    with patch("agents_hub.api.services.group_chat_service.RoleManager") as MockRM, \
-         patch("agents_hub.api.services.group_chat_service.GroupChat") as MockGroupChat, \
-         patch("agents_hub.api.services.group_chat_service.uuid4", return_value="gc_test_123"):
-
+    with (
+        patch("agents_hub.api.services.group_chat_service.RoleManager") as MockRM,
+        patch("agents_hub.api.services.group_chat_service.GroupChat") as MockGroupChat,
+        patch("agents_hub.api.services.group_chat_service.uuid4", return_value="gc_test_123"),
+    ):
         MockRM.return_value.list_role_names.return_value = ["Leader", "Worker1"]
         MockGroupChat.return_value = mock_group_chat
 
@@ -81,10 +82,11 @@ async def test_create_group_chat_start_fails_raises_state_error(service, mock_gr
     mock_group_chat = Mock()
     mock_group_chat.start = AsyncMock(side_effect=Exception("启动失败"))
 
-    with patch("agents_hub.api.services.group_chat_service.RoleManager") as MockRM, \
-         patch("agents_hub.api.services.group_chat_service.GroupChat", return_value=mock_group_chat), \
-         patch("agents_hub.api.services.group_chat_service.uuid4", return_value="gc_test"):
-
+    with (
+        patch("agents_hub.api.services.group_chat_service.RoleManager") as MockRM,
+        patch("agents_hub.api.services.group_chat_service.GroupChat", return_value=mock_group_chat),
+        patch("agents_hub.api.services.group_chat_service.uuid4", return_value="gc_test"),
+    ):
         MockRM.return_value.list_role_names.return_value = ["Leader"]
 
         with pytest.raises(StateError) as exc_info:
@@ -93,6 +95,7 @@ async def test_create_group_chat_start_fails_raises_state_error(service, mock_gr
 
 
 # Task 4: load_group_chat 测试
+
 
 async def test_load_group_chat_already_in_memory(service, mock_group_chat_manager):
     """测试加载已在内存中的群聊（幂等性）"""
@@ -151,6 +154,7 @@ async def test_load_group_chat_not_found_raises_error(service, mock_group_chat_m
     """测试加载不存在的群聊抛出异常"""
     # Arrange
     from agents_hub.core.foundation import GroupChatNotFoundError
+
     mock_group_chat_manager.load_group_chat = AsyncMock(
         side_effect=GroupChatNotFoundError("群聊不存在")
     )
@@ -162,6 +166,7 @@ async def test_load_group_chat_not_found_raises_error(service, mock_group_chat_m
 
 
 # Task 5: delete_group_chat 测试
+
 
 async def test_delete_group_chat_keep_data(service, mock_group_chat_manager):
     """测试删除群聊但保留数据"""
@@ -187,9 +192,11 @@ async def test_delete_group_chat_with_data(service, mock_group_chat_manager):
     mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
     mock_group_chat_manager.unregister = AsyncMock()
 
-    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
-         patch("agents_hub.api.services.group_chat_service.Path") as MockPath, \
-         patch("shutil.rmtree") as mock_rmtree:
+    with (
+        patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths,
+        patch("agents_hub.api.services.group_chat_service.Path") as MockPath,
+        patch("shutil.rmtree") as mock_rmtree,
+    ):
         # Mock Path 对象
         mock_dir = Mock()
         mock_dir.exists.return_value = True
@@ -233,9 +240,11 @@ async def test_delete_group_chat_from_disk_when_not_in_memory(service, mock_grou
         },
     ]
 
-    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
-         patch("agents_hub.api.services.group_chat_service.Path") as MockPath, \
-         patch("shutil.rmtree") as mock_rmtree:
+    with (
+        patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths,
+        patch("agents_hub.api.services.group_chat_service.Path") as MockPath,
+        patch("shutil.rmtree") as mock_rmtree,
+    ):
         # Mock Path 对象
         mock_dir = Mock()
         mock_dir.exists.return_value = True
@@ -278,9 +287,11 @@ async def test_delete_group_chat_file_deletion_fails(service, mock_group_chat_ma
     mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
     mock_group_chat_manager.unregister = AsyncMock()
 
-    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths, \
-         patch("agents_hub.api.services.group_chat_service.Path") as MockPath, \
-         patch("shutil.rmtree", side_effect=PermissionError("权限不足")):
+    with (
+        patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths,
+        patch("agents_hub.api.services.group_chat_service.Path") as MockPath,
+        patch("shutil.rmtree", side_effect=PermissionError("权限不足")),
+    ):
         # Mock Path 对象
         mock_dir = Mock()
         mock_dir.exists.return_value = True
@@ -295,6 +306,7 @@ async def test_delete_group_chat_file_deletion_fails(service, mock_group_chat_ma
 
 
 # Task 6: list_group_chats 测试
+
 
 async def test_list_group_chats_returns_all(service, mock_group_chat_manager):
     """测试列出所有群聊"""
@@ -374,6 +386,7 @@ async def test_list_group_chats_empty(service, mock_group_chat_manager):
 
 # Task 7: get_group_chat_info 测试
 
+
 async def test_get_group_chat_info_from_memory(service, mock_group_chat_manager):
     """测试从内存获取群聊信息"""
     # Arrange
@@ -429,6 +442,7 @@ async def test_get_group_chat_info_not_found(service, mock_group_chat_manager):
     """测试获取不存在的群聊信息"""
     # Arrange
     from agents_hub.core.foundation import GroupChatNotFoundError
+
     mock_group_chat_manager.load_group_chat = AsyncMock(
         side_effect=GroupChatNotFoundError("不存在")
     )
@@ -439,6 +453,7 @@ async def test_get_group_chat_info_not_found(service, mock_group_chat_manager):
 
 
 # Task 8: get_group_chat_members 测试
+
 
 async def test_get_group_chat_members_success(service, mock_group_chat_manager):
     """测试成功获取群聊成员"""
@@ -520,6 +535,7 @@ async def test_get_group_chat_members_missing_fields_use_defaults(service, mock_
 
 # Task 9: get_messages 测试
 
+
 async def test_get_messages_success(service, mock_group_chat_manager):
     """测试成功获取消息历史"""
     # Arrange
@@ -555,6 +571,7 @@ async def test_get_messages_success(service, mock_group_chat_manager):
 async def test_get_messages_not_found(service, mock_group_chat_manager):
     """测试获取不存在群聊的消息"""
     from agents_hub.core.foundation import GroupChatNotFoundError
+
     mock_group_chat_manager.load_group_chat = AsyncMock(
         side_effect=GroupChatNotFoundError("群聊不存在")
     )
@@ -564,6 +581,7 @@ async def test_get_messages_not_found(service, mock_group_chat_manager):
 
 
 # Task 10: _resolve_send_to 测试
+
 
 def test_resolve_send_to_with_at_mention():
     """测试 @提及 解析"""
@@ -594,6 +612,7 @@ def test_resolve_send_to_first_member_match_wins():
 
 # Task 11: send_message 测试
 
+
 async def test_send_message_success(service, mock_group_chat_manager):
     """测试成功发送消息"""
     # Arrange
@@ -623,6 +642,7 @@ async def test_send_message_success(service, mock_group_chat_manager):
 async def test_send_message_group_not_found(service, mock_group_chat_manager):
     """测试向不存在的群聊发送消息"""
     from agents_hub.core.foundation import GroupChatNotFoundError
+
     mock_group_chat_manager.activate_group_chat = AsyncMock(
         side_effect=GroupChatNotFoundError("群聊不存在")
     )

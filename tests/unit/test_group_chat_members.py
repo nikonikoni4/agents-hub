@@ -61,15 +61,38 @@ class TestAddGroupChatMembers:
         service, mock_manager = mock_service
 
         member_dicts = [
-            {"name": "manager", "main_session": "s1", "btw_session": [], "cwd": "/tmp", "use_docker": False},
-            {"name": "worker1", "main_session": "s2", "btw_session": [], "cwd": "/tmp", "use_docker": False},
-            {"name": "worker2", "main_session": None, "btw_session": [], "cwd": "/tmp", "use_docker": False},
+            {
+                "name": "manager",
+                "main_session": "s1",
+                "btw_session": [],
+                "cwd": "/tmp",
+                "use_docker": False,
+            },
+            {
+                "name": "worker1",
+                "main_session": "s2",
+                "btw_session": [],
+                "cwd": "/tmp",
+                "use_docker": False,
+            },
+            {
+                "name": "worker2",
+                "main_session": None,
+                "btw_session": [],
+                "cwd": "/tmp",
+                "use_docker": False,
+            },
         ]
         mock_group_chat = self._create_mock_group_chat(["manager", "worker1"], member_dicts)
         mock_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
-        with patch("agents_hub.api.services.group_chat_service.RoleManager", return_value=MockRoleManager()):
-            with patch("agents_hub.api.services.group_chat_service.broadcast_group_chat_refresh", new_callable=AsyncMock):
+        with patch(
+            "agents_hub.api.services.group_chat_service.RoleManager", return_value=MockRoleManager()
+        ):
+            with patch(
+                "agents_hub.api.services.group_chat_service.broadcast_group_chat_refresh",
+                new_callable=AsyncMock,
+            ):
                 result = await service.add_group_chat_members("test-chat", ["worker2"])
 
         assert len(result) == 3
@@ -88,14 +111,31 @@ class TestAddGroupChatMembers:
         service, mock_manager = mock_service
 
         member_dicts = [
-            {"name": "manager", "main_session": "s1", "btw_session": [], "cwd": "/tmp", "use_docker": False},
-            {"name": "worker1", "main_session": "s2", "btw_session": [], "cwd": "/tmp", "use_docker": False},
+            {
+                "name": "manager",
+                "main_session": "s1",
+                "btw_session": [],
+                "cwd": "/tmp",
+                "use_docker": False,
+            },
+            {
+                "name": "worker1",
+                "main_session": "s2",
+                "btw_session": [],
+                "cwd": "/tmp",
+                "use_docker": False,
+            },
         ]
         mock_group_chat = self._create_mock_group_chat(["manager", "worker1"], member_dicts)
         mock_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
-        with patch("agents_hub.api.services.group_chat_service.RoleManager", return_value=MockRoleManager()):
-            with patch("agents_hub.api.services.group_chat_service.broadcast_group_chat_refresh", new_callable=AsyncMock):
+        with patch(
+            "agents_hub.api.services.group_chat_service.RoleManager", return_value=MockRoleManager()
+        ):
+            with patch(
+                "agents_hub.api.services.group_chat_service.broadcast_group_chat_refresh",
+                new_callable=AsyncMock,
+            ):
                 await service.add_group_chat_members("test-chat", ["worker1"])
 
         # 验证 add_member 被调用
@@ -117,7 +157,8 @@ class TestAddGroupChatMembers:
         mock_group_chat.team_members_name = ["manager"]
         mock_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
-        with patch("agents_hub.api.services.group_chat_service.RoleManager", return_value=MockRoleManager()):
+        with patch(
+            "agents_hub.api.services.group_chat_service.RoleManager", return_value=MockRoleManager()
+        ):
             with pytest.raises(ValueError):
                 await service.add_group_chat_members("test-chat", ["invalid_role"])
-

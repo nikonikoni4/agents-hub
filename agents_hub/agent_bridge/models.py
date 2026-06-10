@@ -39,6 +39,7 @@ class Usage:
 
     input_tokens: int = 0
     cache_read_input_tokens: int = 0
+    max_context_window: int = 0  # 模型最大上下文窗口（仅 Claude 提供）
 
 
 # TODO 当前AgentResult模型已经承载了过多了语义，需要重构

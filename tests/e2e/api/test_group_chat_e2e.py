@@ -67,6 +67,7 @@ CREATE_REQUEST = {
 
 # ── 测试类 ────────────────────────────────────────────────────────────────
 
+
 class TestGroupChatE2E:
     """按顺序测试 GroupChat 模块的核心流程
 
@@ -86,11 +87,15 @@ class TestGroupChatE2E:
 
         # 写入 group_metadata.json
         metadata_file = TEST_CHAT_DIR / "group_metadata.json"
-        metadata_file.write_text(json.dumps(METADATA, ensure_ascii=False, indent=2), encoding="utf-8")
+        metadata_file.write_text(
+            json.dumps(METADATA, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
         # 写入 agent_member.json
         member_file = TEST_CHAT_DIR / "agent_member.json"
-        member_file.write_text(json.dumps(AGENT_MEMBERS, ensure_ascii=False, indent=2), encoding="utf-8")
+        member_file.write_text(
+            json.dumps(AGENT_MEMBERS, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
         # 验证文件已创建
         assert metadata_file.exists(), "group_metadata.json 未创建"
@@ -128,9 +133,7 @@ class TestGroupChatE2E:
 
         # 验证手动创建的群聊在列表中
         ids = [gc["group_chat_id"] for gc in data]
-        assert GROUP_CHAT_ID in ids, (
-            f"列表中未找到测试群聊 {GROUP_CHAT_ID}，实际: {ids}"
-        )
+        assert GROUP_CHAT_ID in ids, f"列表中未找到测试群聊 {GROUP_CHAT_ID}，实际: {ids}"
 
     def test_03_list_group_chats_with_active_filter(self, api):
         """GET /group-chats?is_active_only=true -> 200

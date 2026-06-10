@@ -329,4 +329,6 @@ class TestPinInjectionIdempotency:
                 "多次注入后文件内容应一致（不会累积重复）"
             )
             assert "注入幂等性测试" in content_after_first, "Pin 内容应被注入"
-            assert content_after_first.count("<pinned_messages>") == 1, "pinned_messages 标签应只出现一次"
+            assert content_after_first.count("<pinned_messages>") == 1, (
+                "pinned_messages 标签应只出现一次"
+            )

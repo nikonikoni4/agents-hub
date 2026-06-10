@@ -71,8 +71,8 @@ def mock_codex_home():
     mock_home = Path(tempfile.mkdtemp())
     mock_codex = mock_home / ".codex"
     mock_codex.mkdir()
-    (mock_codex / "auth.json").write_text('{}', encoding="utf-8")
-    (mock_codex / "config.toml").write_text('', encoding="utf-8")
+    (mock_codex / "auth.json").write_text("{}", encoding="utf-8")
+    (mock_codex / "config.toml").write_text("", encoding="utf-8")
     (mock_codex / "rules").mkdir()
     yield mock_home
     shutil.rmtree(mock_home, ignore_errors=True)
@@ -94,7 +94,10 @@ class TestMcpConfigGeneration:
         """
         with (
             patch("agents_hub.roles.role_manager.Path.home", return_value=mock_claude_home),
-            patch("agents_hub.roles.role_manager.subprocess.run", side_effect=_mock_subprocess_creates_mcp_json),
+            patch(
+                "agents_hub.roles.role_manager.subprocess.run",
+                side_effect=_mock_subprocess_creates_mcp_json,
+            ),
         ):
             role_manager.create_role("test_claude", AgentPlatform.CLAUDE)
 
@@ -114,7 +117,10 @@ class TestMcpConfigGeneration:
         """
         with (
             patch("agents_hub.roles.role_manager.Path.home", return_value=mock_codex_home),
-            patch("agents_hub.roles.role_manager.subprocess.run", side_effect=_mock_subprocess_creates_mcp_json),
+            patch(
+                "agents_hub.roles.role_manager.subprocess.run",
+                side_effect=_mock_subprocess_creates_mcp_json,
+            ),
         ):
             role_manager.create_role("test_codex", AgentPlatform.CODEX)
 
@@ -134,7 +140,10 @@ class TestMcpConfigGeneration:
         """
         with (
             patch("agents_hub.roles.role_manager.Path.home", return_value=mock_claude_home),
-            patch("agents_hub.roles.role_manager.subprocess.run", side_effect=_mock_subprocess_creates_mcp_json),
+            patch(
+                "agents_hub.roles.role_manager.subprocess.run",
+                side_effect=_mock_subprocess_creates_mcp_json,
+            ),
         ):
             role_manager.create_role("test_role", AgentPlatform.CLAUDE)
 
@@ -225,7 +234,9 @@ class TestMcpConfigGeneration:
         content = json.loads(mcp_json_path.read_text(encoding="utf-8"))
         assert content == existing_content, ".mcp.json 文件被覆盖"
 
-    def test_does_not_overwrite_existing_claude_md(self, role_manager, agents_dir, mock_claude_home):
+    def test_does_not_overwrite_existing_claude_md(
+        self, role_manager, agents_dir, mock_claude_home
+    ):
         """
         契约：文件已存在时不覆盖 CLAUDE.md
 

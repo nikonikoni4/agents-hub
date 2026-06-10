@@ -151,9 +151,7 @@ class TestClaudeExecutor:
     def test_build_env(self):
         """测试构建环境变量"""
         config = RoleConfig(
-            name="test",
-            platform=AgentPlatform.CLAUDE,
-            work_root="/path/to/claude-config"
+            name="test", platform=AgentPlatform.CLAUDE, work_root="/path/to/claude-config"
         )
         env = self.executor._build_env(config)
 

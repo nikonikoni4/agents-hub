@@ -86,7 +86,9 @@ def make_result(text: str = "internal execution text") -> AgentResult:
 
 
 @pytest.mark.asyncio
-async def test_run_does_not_write_process_result_to_group_chat(agent, agent_call_manager, monkeypatch):
+async def test_run_does_not_write_process_result_to_group_chat(
+    agent, agent_call_manager, monkeypatch
+):
     """契约：_process_message 的普通结果不再通过出口 A 自动写入群聊"""
 
     async def mock_execute(prompt, role_config, session_id, cwd=None, **kwargs):

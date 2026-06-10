@@ -1,4 +1,5 @@
 from agents_hub.api.app import app
+
 for i, r in enumerate(app.routes):
     if hasattr(r, "path"):
         m = getattr(r, "methods", "WS")

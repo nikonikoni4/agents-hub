@@ -302,12 +302,16 @@ class TestBuildCompactHistoryXml:
         ctx.agent_name = "agent_a"
         ctx.role_type = RoleType.TEAM_MEMBER
 
-        result = await ctx._build_compact_history_xml(compact_history=[], last_loaded_compact_index=0)
+        result = await ctx._build_compact_history_xml(
+            compact_history=[], last_loaded_compact_index=0
+        )
         assert result == ""
 
         # index 已到末尾
         history = [{"content": {"summary": "s1"}}]
-        result = await ctx._build_compact_history_xml(compact_history=history, last_loaded_compact_index=1)
+        result = await ctx._build_compact_history_xml(
+            compact_history=history, last_loaded_compact_index=1
+        )
         assert result == ""
 
     @pytest.mark.asyncio
@@ -590,9 +594,7 @@ class TestGetContext:
         compact_history = [
             {"content": {"summary": "团队进展摘要", "agent_a": "你的专属摘要"}},
         ]
-        ctx = self._make_context_for_get(
-            "agent_a", RoleType.TEAM_MEMBER, messages, compact_history
-        )
+        ctx = self._make_context_for_get("agent_a", RoleType.TEAM_MEMBER, messages, compact_history)
 
         result = await ctx.get_context()
 

@@ -642,24 +642,22 @@ class Agent:
             try:
                 result = await self._process_message(msg, prompt)
 
-                # 更新 context_window（input_tokens + cache_read_input_tokens）
+                # 更新 context_window
                 if result.usage:
-                    total_tokens = result.usage.input_tokens + result.usage.cache_read_input_tokens
-                    if total_tokens > 0:
-                        context_window = total_tokens // 1000
+                    input_tokens = result.usage.input_tokens
+                    if input_tokens > 0:
+                        context_window = input_tokens // 1000
                         self.logger.info(
-                            "Agent %s context_window 更新: input_tokens=%d, cache_read=%d, total=%d, context_window=%dK",
+                            "Agent %s context_window 更新: input=%d, context_window=%dK",
                             self.name,
-                            result.usage.input_tokens,
-                            result.usage.cache_read_input_tokens,
-                            total_tokens,
+                            input_tokens,
                             context_window,
                         )
                         try:
                             await self.group_chat_context.runtime.update_agent_context_window(
                                 self.name, context_window
                             )
-                        except Exception as e:
+                        except Exception as e:  # TODO 这里不能使用Exception
                             self.logger.warning("更新 context_window 失败: %s", str(e))
                     else:
                         self.logger.warning(

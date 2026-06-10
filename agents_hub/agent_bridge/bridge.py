@@ -112,6 +112,14 @@ class AgentBridge:
                             parsed_event.agent_name = config.name
                             parsed_event.platform = config.platform
                             parsed_event.role_type = config.role_type
+                            if parsed_event.type == AgentEventType.TURN_COMPLETE:
+                                usage = parsed_event.content.get("usage", {})
+                                logger.info(
+                                    "[AgentBridge] TURN_COMPLETE yield: input=%s, cache_read=%s, agent=%s",
+                                    usage.get("input_tokens", 0),
+                                    usage.get("cache_read_input_tokens", 0),
+                                    config.name,
+                                )
                             yield parsed_event
                     except ParseError:
                         # 解析错误：记录日志，跳过该行，继续处理
@@ -213,6 +221,9 @@ class AgentBridge:
                                     cache_read_input_tokens=usage_data.get(
                                         "cache_read_input_tokens", 0
                                     ),
+                                    max_context_window=parsed_event.content.get(
+                                        "max_context_window", 0
+                                    ),
                                 )
                             if not result_session_id and parsed_event.session_id:
                                 result_session_id = parsed_event.session_id
@@ -231,6 +242,7 @@ class AgentBridge:
                     usage = Usage(
                         input_tokens=usage_data.get("input_tokens", 0),
                         cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
+                        max_context_window=event.content.get("max_context_window", 0),
                     )
                 if not result_session_id and event.session_id:
                     result_session_id = event.session_id

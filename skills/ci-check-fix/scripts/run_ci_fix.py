@@ -41,10 +41,7 @@ FIX_STAGES = [
 
 def get_latest_run_dir() -> Path:
     """获取最新的编号目录。"""
-    existing = [
-        d for d in GENERATED_DIR.iterdir()
-        if d.is_dir() and d.name.isdigit()
-    ]
+    existing = [d for d in GENERATED_DIR.iterdir() if d.is_dir() and d.name.isdigit()]
     if not existing:
         raise FileNotFoundError("没有找到任何检查编号目录，请先运行 ci-check")
     return max(existing, key=lambda d: int(d.name))
@@ -134,33 +131,41 @@ def run_fix_static(run_dir: Path, report_path: Path) -> list[dict]:
                 timeout=300,
             )
             if result.returncode == 0:
-                fixes.append({
-                    "description": "后端静态检查",
-                    "severity": "Critical",
-                    "status": "🟢 已修复",
-                    "note": "通过 make format 自动修复格式问题",
-                })
+                fixes.append(
+                    {
+                        "description": "后端静态检查",
+                        "severity": "Critical",
+                        "status": "🟢 已修复",
+                        "note": "通过 make format 自动修复格式问题",
+                    }
+                )
             else:
-                fixes.append({
+                fixes.append(
+                    {
+                        "description": "后端静态检查",
+                        "severity": "Critical",
+                        "status": "🔴 无法修复",
+                        "note": f"自动修复后仍失败: {result.stderr[:200]}",
+                    }
+                )
+        else:
+            fixes.append(
+                {
                     "description": "后端静态检查",
                     "severity": "Critical",
-                    "status": "🔴 无法修复",
-                    "note": f"自动修复后仍失败: {result.stderr[:200]}",
-                })
-        else:
-            fixes.append({
+                    "status": "⚪ 无需修复",
+                    "note": "检查已通过",
+                }
+            )
+    except Exception as e:
+        fixes.append(
+            {
                 "description": "后端静态检查",
                 "severity": "Critical",
-                "status": "⚪ 无需修复",
-                "note": "检查已通过",
-            })
-    except Exception as e:
-        fixes.append({
-            "description": "后端静态检查",
-            "severity": "Critical",
-            "status": "🔴 无法修复",
-            "note": str(e)[:200],
-        })
+                "status": "🔴 无法修复",
+                "note": str(e)[:200],
+            }
+        )
 
     # 检查前端
     print("\n--- 前端 make check ---")
@@ -188,38 +193,48 @@ def run_fix_static(run_dir: Path, report_path: Path) -> list[dict]:
                 timeout=300,
             )
             if result.returncode == 0:
-                fixes.append({
-                    "description": "前端静态检查",
-                    "severity": "Critical",
-                    "status": "🟢 已修复",
-                    "note": "通过 make format 自动修复格式问题",
-                })
+                fixes.append(
+                    {
+                        "description": "前端静态检查",
+                        "severity": "Critical",
+                        "status": "🟢 已修复",
+                        "note": "通过 make format 自动修复格式问题",
+                    }
+                )
             else:
-                fixes.append({
+                fixes.append(
+                    {
+                        "description": "前端静态检查",
+                        "severity": "Critical",
+                        "status": "🔴 无法修复",
+                        "note": f"自动修复后仍失败: {result.stderr[:200]}",
+                    }
+                )
+        else:
+            fixes.append(
+                {
                     "description": "前端静态检查",
                     "severity": "Critical",
-                    "status": "🔴 无法修复",
-                    "note": f"自动修复后仍失败: {result.stderr[:200]}",
-                })
-        else:
-            fixes.append({
+                    "status": "⚪ 无需修复",
+                    "note": "检查已通过",
+                }
+            )
+    except Exception as e:
+        fixes.append(
+            {
                 "description": "前端静态检查",
                 "severity": "Critical",
-                "status": "⚪ 无需修复",
-                "note": "检查已通过",
-            })
-    except Exception as e:
-        fixes.append({
-            "description": "前端静态检查",
-            "severity": "Critical",
-            "status": "🔴 无法修复",
-            "note": str(e)[:200],
-        })
+                "status": "🔴 无法修复",
+                "note": str(e)[:200],
+            }
+        )
 
     return fixes
 
 
-def run_fix_agent_stage(stage_name: str, section_label: str, run_dir: Path, report_path: Path) -> list[dict]:
+def run_fix_agent_stage(
+    stage_name: str, section_label: str, run_dir: Path, report_path: Path
+) -> list[dict]:
     """运行单个 Agent 修复阶段。"""
     print(f"\n--- {section_label} 修复 ---")
 
@@ -227,18 +242,22 @@ def run_fix_agent_stage(stage_name: str, section_label: str, run_dir: Path, repo
     sections = parse_report_sections(report_path)
     section_content = None
     for key, value in sections.items():
-        if section_label in key or stage_name.replace("-", "") in key.replace(" ", "").replace("-", ""):
+        if section_label in key or stage_name.replace("-", "") in key.replace(" ", "").replace(
+            "-", ""
+        ):
             section_content = value
             break
 
     if not section_content:
         print(f"未找到 {section_label} 章节，跳过")
-        return [{
-            "description": section_label,
-            "severity": "Warning",
-            "status": "⏭️ 跳过",
-            "note": "报告中未找到对应章节",
-        }]
+        return [
+            {
+                "description": section_label,
+                "severity": "Warning",
+                "status": "⏭️ 跳过",
+                "note": "报告中未找到对应章节",
+            }
+        ]
 
     # 构建修复 prompt
     prompt = f"""你是一个代码修复专家。请根据以下 CI 检查报告中的 {section_label} 部分，修复发现的问题。
@@ -279,37 +298,45 @@ def run_fix_agent_stage(stage_name: str, section_label: str, run_dir: Path, repo
         if result.returncode == 0:
             output_path.write_text(result.stdout, encoding="utf-8")
             print(f"✅ {section_label} 修复完成 → {output_path.relative_to(PROJECT_ROOT)}")
-            return [{
-                "description": section_label,
-                "severity": "Warning",
-                "status": "🟢 已修复",
-                "note": f"详见 {output_path.name}",
-            }]
+            return [
+                {
+                    "description": section_label,
+                    "severity": "Warning",
+                    "status": "🟢 已修复",
+                    "note": f"详见 {output_path.name}",
+                }
+            ]
         else:
             print(f"❌ {section_label} 修复失败")
-            return [{
-                "description": section_label,
-                "severity": "Warning",
-                "status": "🔴 无法修复",
-                "note": f"Agent 执行失败 (exit code {result.returncode})",
-            }]
+            return [
+                {
+                    "description": section_label,
+                    "severity": "Warning",
+                    "status": "🔴 无法修复",
+                    "note": f"Agent 执行失败 (exit code {result.returncode})",
+                }
+            ]
 
     except subprocess.TimeoutExpired:
         print(f"❌ {section_label} 修复超时")
-        return [{
-            "description": section_label,
-            "severity": "Warning",
-            "status": "🔴 无法修复",
-            "note": "执行超时 (900s)",
-        }]
+        return [
+            {
+                "description": section_label,
+                "severity": "Warning",
+                "status": "🔴 无法修复",
+                "note": "执行超时 (900s)",
+            }
+        ]
     except FileNotFoundError:
         print("❌ 未找到 claude CLI")
-        return [{
-            "description": section_label,
-            "severity": "Warning",
-            "status": "🔴 无法修复",
-            "note": "未找到 claude CLI",
-        }]
+        return [
+            {
+                "description": section_label,
+                "severity": "Warning",
+                "status": "🔴 无法修复",
+                "note": "未找到 claude CLI",
+            }
+        ]
 
 
 def update_report_with_fix_status(report_path: Path, all_fixes: dict[str, list[dict]]):
@@ -428,9 +455,7 @@ def main():
     print("=" * 60)
 
     has_failures = any(
-        f["status"] in ("🔴 无法修复", "🟡 待修复")
-        for fixes in all_fixes.values()
-        for f in fixes
+        f["status"] in ("🔴 无法修复", "🟡 待修复") for fixes in all_fixes.values() for f in fixes
     )
 
     if has_failures:

@@ -35,10 +35,7 @@ FIX_STATUS_MAP = {
 
 def get_latest_run_dir() -> Path:
     """获取最新的编号目录。"""
-    existing = [
-        d for d in GENERATED_DIR.iterdir()
-        if d.is_dir() and d.name.isdigit()
-    ]
+    existing = [d for d in GENERATED_DIR.iterdir() if d.is_dir() and d.name.isdigit()]
     if not existing:
         raise FileNotFoundError("没有找到任何检查编号目录，请先运行 run_parallel_checks.py")
     return max(existing, key=lambda d: int(d.name))
@@ -238,7 +235,9 @@ def update_index(run_dir: Path, report_date: str):
                 "🔴 未修复": "❌",
                 "⚪ 无需修复": "✅",
             }
-            fixed_count = sum(1 for s in fix_statuses.values() if "全部修复" in s or "无需修复" in s)
+            fixed_count = sum(
+                1 for s in fix_statuses.values() if "全部修复" in s or "无需修复" in s
+            )
             total_count = len(fix_statuses)
             if fixed_count == total_count:
                 fix_status = f"\n - 修复状态：✅ 全部已修复 ({fixed_count}/{total_count})"

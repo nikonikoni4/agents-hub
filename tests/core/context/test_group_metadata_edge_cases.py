@@ -45,9 +45,7 @@ class TestGroupMetadataConcurrency:
             ]
 
             # 并发保存
-            await asyncio.gather(
-                *[repository.save_group_metadata(m) for m in metadatas]
-            )
+            await asyncio.gather(*[repository.save_group_metadata(m) for m in metadatas])
 
             # 加载并验证文件没有损坏
             loaded = await repository.load_group_metadata()

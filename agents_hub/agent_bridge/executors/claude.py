@@ -66,6 +66,7 @@ class ClaudeExecutor:
                 line, buffer = buffer.split("\n", 1)
                 decoded = line.strip()
                 if decoded:
+                    logger.debug("[ClaudeExecutor] raw line: %s", decoded[:200])
                     yield decoded
         if buffer.strip():
             yield buffer.strip()

@@ -54,9 +54,7 @@ async def _multi_turn_test(bridge: AgentBridge, config: RoleConfig):
 
     # 验证上下文记忆：第二轮应回答 "nico"
     assert "nico" in second_text.lower(), (
-        f"上下文记忆失败：第二轮未记住名字\n"
-        f"  第一轮: 你好，我是nico\n"
-        f"  第二轮回复: {second_text}"
+        f"上下文记忆失败：第二轮未记住名字\n  第一轮: 你好，我是nico\n  第二轮回复: {second_text}"
     )
 
 

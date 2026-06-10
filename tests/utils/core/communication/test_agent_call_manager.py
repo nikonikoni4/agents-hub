@@ -30,7 +30,9 @@ def tmp_project(tmp_path):
 @pytest.fixture
 def manager(tmp_project):
     """创建 AgentCallManager 实例，使用临时路径"""
-    with patch("agents_hub.core.communication.agent_call_manager.get_specialized_logger") as mock_logger:
+    with patch(
+        "agents_hub.core.communication.agent_call_manager.get_specialized_logger"
+    ) as mock_logger:
         mock_logger.return_value = MagicMock(spec=logging.Logger)
         mgr = AgentCallManager(
             group_chat_id="gc_test",
@@ -135,6 +137,7 @@ class TestAgentCallManagerUpdateStatus:
 
         # 等待一小段时间确保时间戳会不同
         import time
+
         time.sleep(0.01)
 
         # 再次更新为 RUNNING（相同状态）

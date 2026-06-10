@@ -2,6 +2,7 @@
 
 验证添加成员的完整流程，特别是崩溃恢复场景。
 """
+
 import asyncio
 
 import pytest

@@ -1,6 +1,8 @@
 """直接调用 Codex CLI 测试，不通过 AgentBridge"""
+
 import subprocess
 import json
+
 
 def test_direct_codex_call():
     """直接调用 codex exec 命令"""
@@ -13,6 +15,7 @@ def test_direct_codex_call():
 
     # 获取 codex 完整路径
     from pathlib import Path
+
     codex_path = Path.home() / "AppData/Roaming/npm/codex.cmd"
 
     # 直接调用，不设置 CODEX_HOME
@@ -22,8 +25,8 @@ def test_direct_codex_call():
         text=True,
         cwd="D:/desktop/软件开发/agents-hub",
         shell=True,
-        encoding='utf-8',
-        errors='ignore'
+        encoding="utf-8",
+        errors="ignore",
     )
 
     print(f"返回码: {result.returncode}")
@@ -31,14 +34,17 @@ def test_direct_codex_call():
     print(f"stderr: {result.stderr}")
 
     # 解析 JSONL 输出
-    lines = result.stdout.strip().split('\n')
+    lines = result.stdout.strip().split("\n")
     for line in lines:
         if line.strip():
             try:
                 event = json.loads(line)
-                if event.get('type') == 'item.completed' and event.get('item', {}).get('type') == 'agent_message':
+                if (
+                    event.get("type") == "item.completed"
+                    and event.get("item", {}).get("type") == "agent_message"
+                ):
                     print("\n提取的 agent_message:")
-                    print(event['item']['text'])
+                    print(event["item"]["text"])
             except json.JSONDecodeError:
                 pass
 
@@ -48,8 +54,11 @@ def test_direct_codex_call():
 
     # 设置 CODEX_HOME 到包含配置的目录
     import os
+
     env = os.environ.copy()
-    env["CODEX_HOME"] = "D:/desktop/软件开发/agents-hub/tests/explore/多agent架构/local_data/codex_home"
+    env["CODEX_HOME"] = (
+        "D:/desktop/软件开发/agents-hub/tests/explore/多agent架构/local_data/codex_home"
+    )
 
     result2 = subprocess.run(
         [str(codex_path), "exec", "--json", prompt],
@@ -58,8 +67,8 @@ def test_direct_codex_call():
         cwd="D:/desktop/软件开发/agents-hub",
         env=env,
         shell=True,
-        encoding='utf-8',
-        errors='ignore'
+        encoding="utf-8",
+        errors="ignore",
     )
 
     print(f"返回码: {result2.returncode}")
@@ -67,16 +76,20 @@ def test_direct_codex_call():
     print(f"stderr: {result2.stderr}")
 
     # 解析 JSONL 输出
-    lines2 = result2.stdout.strip().split('\n')
+    lines2 = result2.stdout.strip().split("\n")
     for line in lines2:
         if line.strip():
             try:
                 event = json.loads(line)
-                if event.get('type') == 'item.completed' and event.get('item', {}).get('type') == 'agent_message':
+                if (
+                    event.get("type") == "item.completed"
+                    and event.get("item", {}).get("type") == "agent_message"
+                ):
                     print("\n提取的 agent_message:")
-                    print(event['item']['text'])
+                    print(event["item"]["text"])
             except json.JSONDecodeError:
                 pass
+
 
 if __name__ == "__main__":
     test_direct_codex_call()

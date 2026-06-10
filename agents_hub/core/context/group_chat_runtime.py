@@ -393,7 +393,14 @@ class GroupChatRuntime:
             AgentMemberInfo: 更新后的会话信息
         """
         agent_member_info = self.get_or_create_agent_member_info(agent_name)
+        old_value = agent_member_info.context_window
         agent_member_info.context_window = context_window
+        logger.info(
+            "[Runtime] update_context_window: agent=%s, old=%d, new=%d",
+            agent_name,
+            old_value,
+            context_window,
+        )
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )

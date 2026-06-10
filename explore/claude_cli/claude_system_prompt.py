@@ -28,12 +28,13 @@ def test_system_prompt():
             "claude",
             "--print",
             "--bare",
-            "--append-system-prompt", "You are a Python expert. When asked about your specialty, always mention Python programming.",
-            "What is your specialty? Answer in one sentence."
+            "--append-system-prompt",
+            "You are a Python expert. When asked about your specialty, always mention Python programming.",
+            "What is your specialty? Answer in one sentence.",
         ],
         capture_output=True,
         text=True,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     print(f"Output: {result1.stdout}")
     if result1.stderr:
@@ -46,12 +47,13 @@ def test_system_prompt():
             "claude",
             "--print",
             "--bare",
-            "--append-system-prompt", "You are a JavaScript expert. When asked about your specialty, always mention JavaScript programming.",
-            "What is your specialty? Answer in one sentence."
+            "--append-system-prompt",
+            "You are a JavaScript expert. When asked about your specialty, always mention JavaScript programming.",
+            "What is your specialty? Answer in one sentence.",
         ],
         capture_output=True,
         text=True,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     print(f"Output: {result2.stdout}")
     if result2.stderr:
@@ -70,13 +72,15 @@ def test_settings_override():
         [
             "claude",
             "--print",
-            "--settings", str(SETTINGS1_PATH),
-            "--append-system-prompt", "You are an assistant. When user asks you to run git log, you MUST try to execute it. If you cannot execute it, reply 'CANNOT_EXECUTE_GIT_LOG'.",
-            "Run 'git log --oneline -5' command. If you cannot execute it, just say CANNOT_EXECUTE_GIT_LOG."
+            "--settings",
+            str(SETTINGS1_PATH),
+            "--append-system-prompt",
+            "You are an assistant. When user asks you to run git log, you MUST try to execute it. If you cannot execute it, reply 'CANNOT_EXECUTE_GIT_LOG'.",
+            "Run 'git log --oneline -5' command. If you cannot execute it, just say CANNOT_EXECUTE_GIT_LOG.",
         ],
         capture_output=True,
         text=True,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     print(f"Output: {result1.stdout}")
     if result1.stderr:
@@ -88,13 +92,15 @@ def test_settings_override():
         [
             "claude",
             "--print",
-            "--settings", str(SETTINGS2_PATH),
-            "--append-system-prompt", "You are an assistant. When user asks you to run git log, you MUST try to execute it. If you cannot execute it, reply 'CANNOT_EXECUTE_GIT_LOG'.",
-            "Run 'git log --oneline -5' command. If you cannot execute it, just say CANNOT_EXECUTE_GIT_LOG."
+            "--settings",
+            str(SETTINGS2_PATH),
+            "--append-system-prompt",
+            "You are an assistant. When user asks you to run git log, you MUST try to execute it. If you cannot execute it, reply 'CANNOT_EXECUTE_GIT_LOG'.",
+            "Run 'git log --oneline -5' command. If you cannot execute it, just say CANNOT_EXECUTE_GIT_LOG.",
         ],
         capture_output=True,
         text=True,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     print(f"Output: {result2.stdout}")
     if result2.stderr:
