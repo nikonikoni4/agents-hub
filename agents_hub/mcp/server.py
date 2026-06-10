@@ -534,11 +534,11 @@ async def complete_task(
     agent_token: str,
     call_id: str,
     content: str,
+    modified_files: list[str] | None,
+    git_diff_range: str | None,
+    web_preview_url: str | None,
+    web_preview_title: str | None,
     success: bool = True,
-    modified_files: list[str] | None = None,
-    git_diff_range: str | None = None,
-    web_preview_url: str | None = None,
-    web_preview_title: str | None = None,
 ) -> dict:
     """
     最终任务总结：当你结束这一轮对话之前，必须调用该工具进行任务汇报。
@@ -612,18 +612,20 @@ async def complete_task(
         # 3. 将token信息从返回的信息中剥离
         safe_content = redact_token(content)
 
-        # 4. 创建文件快照（如果有修改文件）
+        # 4. 参数校验：空值时跳过对应处理
         file_metadata_list = None
         agent_cwd: str | None = None
+        has_modified_files = modified_files is not None and len(modified_files) > 0
+        has_web_preview = web_preview_url is not None and web_preview_url.strip() != ""
 
         # 获取 Agent 工作目录（modified_files 和 web_preview_url 都需要）
-        if modified_files or web_preview_url:
+        if has_modified_files or has_web_preview:
             agent = _find_agent(group_chat, agent_name)
             agent_cwd = (
                 agent.cwd if agent and hasattr(agent, "cwd") else group_chat.runtime.project_path
             )
 
-        if modified_files:
+        if has_modified_files:
             # 构造快照目录
             snapshot_dir = group_chat_paths.file_snapshots_dir(
                 group_chat_id, group_chat.runtime.project_path
@@ -631,6 +633,9 @@ async def complete_task(
 
             # 为每个文件创建快照
             file_metadata_list = []
+            assert modified_files is not None, (
+                "has_modified_files 为 True 时 modified_files 必须非空"
+            )
             assert agent_cwd is not None, "modified_files 存在时 agent_cwd 必须已初始化"
             for index, file_path in enumerate(modified_files):
                 try:
@@ -659,7 +664,10 @@ async def complete_task(
         )
         # 6. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
         web_preview = None
-        if web_preview_url:
+        if has_web_preview:
+            assert web_preview_url is not None, (
+                "has_web_preview 为 True 时 web_preview_url 必须非空"
+            )
             assert agent_cwd is not None, "web_preview_url 存在时 agent_cwd 必须已初始化"
             # 只对相对路径转换为 file:/// 绝对路径，HTTP/HTTPS URL 保持不变
             if not web_preview_url.startswith(("file:///", "http://", "https://")):
