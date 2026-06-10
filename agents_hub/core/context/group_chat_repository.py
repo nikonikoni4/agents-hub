@@ -182,9 +182,11 @@ class GroupChatRepository:
                         "last_loaded_message_index", 0
                     ),
                 ),
-                token=session_data.get("token", ""),  # 加载 token 字段
-                cwd=session_data.get("cwd", ""),  # 加载 cwd 字段
-                use_docker=session_data.get("use_docker", False),  # 加载 use_docker 字段
+                token=session_data.get("token", ""),
+                cwd=session_data.get("cwd", ""),
+                use_docker=session_data.get("use_docker", False),
+                status=session_data.get("status", "idle"),
+                context_window=session_data.get("context_window", 0),
             )
         return result
 
@@ -209,9 +211,11 @@ class GroupChatRepository:
                         "last_loaded_compact_index": agent_member_info.context_state.last_loaded_compact_index,
                         "last_loaded_message_index": agent_member_info.context_state.last_loaded_message_index,
                     },
-                    "token": agent_member_info.token,  # 保存 token 字段
-                    "cwd": agent_member_info.cwd,  # 保存 cwd 字段
-                    "use_docker": agent_member_info.use_docker,  # 保存 use_docker 字段
+                    "token": agent_member_info.token,
+                    "cwd": agent_member_info.cwd,
+                    "use_docker": agent_member_info.use_docker,
+                    "status": agent_member_info.status,
+                    "context_window": agent_member_info.context_window,
                 }
 
             # 写入文件
