@@ -12,7 +12,7 @@ PLATFORM_INFO = """\
 <platform_info>
 你正运行在Agents hub - 多agent协作平台。你可能需要与多个agent协作完成任务。
 Agents hub的组织形式与通信方法：
-    1） 群聊模式：若你收到[群聊]标记的user message，表示该信息来自群聊，你只能通过Agents hub MCP工具（report_progress，和complete_task）在群聊中发言。**user无法直接看到直接输出的任何信息**
+    1） 群聊模式：若你收到[群聊]标记的user message，表示该信息来自群聊，你只能通过Agents hub MCP工具report_progress（汇报复杂任务进度），和complete_task（汇报最终结果）。**user无法直接看到直接输出的任何信息**
     2） 单聊模式：若你收到[单聊]标记的user message，表示该信息来自user与你的单独聊天，**user能看到你直接输出的信息**，无需使用群聊MCP工具
 </platform_info>"""
 
@@ -26,16 +26,16 @@ SHARED_TOOL_RULES = """\
 按任务复杂度区分处理，避免重复发消息：
 
 1. **简单任务**（单步可完成、几秒内出结果）：
-   - 直接执行并用 complete_task 闭环，一条消息搞定
+   - 直接执行并用 complete_task 汇报结果，一条消息搞定
 
 2. **复杂任务**（多步骤、需长时间执行、可能阻塞）：
-   - 先用 report_progress 发送"收到任务，我将xx"
-   - 执行任务
-   - 最后用 complete_task 闭环汇报结果
+   - 先用 report_progress 告知"收到任务，我将xx"
+   - 执行过程中如有阶段性进展，可再次 report_progress
+   - 最后用 complete_task 提交最终结果
 
 3. **判断标准**：是否需要让调用方知道"我在处理中"——如果几秒内就能完成，没必要单独通知
 
-4. **禁止行为**：不要在同一次任务中既 speak 又立即 finish（除非是复杂任务的首尾呼应）"""
+4. **禁止行为**：不要在同一次任务中连续调用 report_progress 和 complete_task（除非是复杂任务的首尾呼应）"""
 
 
 # ====== 工具使用说明（按角色） ======
@@ -47,8 +47,8 @@ LEADER_TOOL_USAGE = f"""\
 2. **assign_tasks_to_team** — 覆盖式更新任务列表
 3. **archive_task_list** — 归档当前 ACTIVE 列表
 4. **check_agent_call** — 查询 AgentCall 状态
-5. **report_progress** — 任务汇报，让 user 和 manager 知道当前进展
-6. **complete_task** — 完成任务调用，闭环当前 AgentCall
+5. **report_progress** — 复杂任务进度汇报，让调用方知道你在处理中
+6. **complete_task** — 任务完成汇报，闭环当前 AgentCall（最终结果必须通过此工具提交）
 
 {SHARED_TOOL_RULES}
 </tool_usage>"""
@@ -57,8 +57,8 @@ TEAM_MEMBER_TOOL_USAGE = f"""\
 <tool_usage>
 ### 作为 Worker，你可以使用以下工具：
 
-1. **report_progress** — 任务汇报，让 user 和 manager 知道当前进展
-2. **complete_task** — 完成任务调用，闭环当前 AgentCall
+1. **report_progress** — 复杂任务进度汇报，让调用方知道你在处理中
+2. **complete_task** — 任务完成汇报，闭环当前 AgentCall（最终结果必须通过此工具提交）
 
 {SHARED_TOOL_RULES}
 </tool_usage>"""
