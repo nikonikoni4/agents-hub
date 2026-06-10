@@ -379,6 +379,7 @@ class GroupChatRuntime:
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )
+        await self._notify_change()
         return agent_member_info
 
     async def update_agent_context_window(
