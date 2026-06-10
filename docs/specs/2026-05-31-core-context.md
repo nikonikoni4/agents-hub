@@ -73,6 +73,8 @@ GroupChatSession 管理群聊的消息历史，核心数据：
 | last_compacted_loc | 上一次压缩的位置（消息列表索引） |
 | created_at / updated_at | 时间戳 |
 
+**注意**：`messages` 中的每条消息使用 `ChatMessage` 模型（agent_name、content、timestamp、platform），这是**持久化/展示格式**，与 foundation 层定义的 `AgentMessage`（call_id、content、send_from、send_to、session_type、message_type）是**不同的数据结构**。`AgentMessage` 是 Agent 间传递的通信格式，`ChatMessage` 是群聊历史的存储格式。`add_message()` 方法接收 Agent 执行结果并转换为 `ChatMessage` 格式存储。
+
 **消息追加**：Agent 执行完成后，通过 add_message() 将结果追加到 messages 列表。
 
 **未压缩消息**：`messages[last_compacted_loc:]` 即为尚未被压缩的消息。
@@ -181,7 +183,7 @@ metadata_file = group_chat_paths.metadata_file(group_chat_id, project_path)
 ### 跨层依赖
 
 - context 依赖 foundation 的 `MAX_TOKEN`、`StateError`、`Tag`、`wrap_xml`
-- context 依赖 agent_bridge 的 `bare_claude_call`（压缩时调用 LLM）
+- context 的压缩功能需要调用 LLM（`bare_claude_call`），此依赖通过**可注入接口**（CompactionLLM protocol）解耦，由 orchestration 层在初始化 GroupChatContext 时注入具体实现，避免 context 直接依赖 agent_bridge
 - agent 层通过 `AgentContext.get_context()` 获取增量上下文
 - agent 层通过 `GroupChatContext.add_message()` 写入消息
 - orchestration 层的 GroupChat 创建并持有 GroupChatContext 实例；GroupChatContext 持有 GroupChatRuntime（通过构造函数注入），Runtime 持有 GroupChatRepository 并通过 context.repository 属性（向后兼容）暴露给部分编排逻辑使用

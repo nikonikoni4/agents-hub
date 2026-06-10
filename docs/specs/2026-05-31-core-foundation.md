@@ -54,6 +54,8 @@ foundation 是 core 的**最底层**，零外部依赖。它定义了整个 core
 - 具体的持久化实现（属于 context 层）
 - 消息路由逻辑（属于 communication 层）
 - Agent 执行逻辑（属于 agent 层）
+- AgentCall 数据模型和生命周期管理（属于 communication 层，定义在 `communication/agent_call.py`）
+- GroupChatRuntime / GroupChatRepository 等 context 层内部持有关系（属于 context 层）
 
 ## Core Behavior
 
@@ -100,15 +102,15 @@ Agent 间传递的消息结构，核心字段：
 | LLM 出口 | render_for_llm | AgentMessage → LLM prompt | 用 `<incoming_message>` 标签包裹 |
 | UI 出口 | render_for_chat | Agent 输出 → 群聊记录 | 生成 `@xxx content` 格式 |
 
-**XML 标签常量**（Tag 类）：预定义的 prompt 结构标签，用于 LLM 上下文的结构化输入：
+**XML 标签常量**（Tag 类）：预定义的 prompt 结构标签，用于 LLM 上下文的结构化输入。常量名使用 UPPER_SNAKE_CASE，值为小写下划线：
 
-| 标签 | 用途 |
-|------|------|
-| group_chat_history | 历史群聊摘要块 |
-| recent_messages | 群聊最新消息块 |
-| incoming_message | 当前传入的消息 |
-| overall_summary | 摘要中的整体内容 |
-| summary_for_you | 摘要中针对当前 Agent 的内容 |
+| 常量名 | 值 | 用途 |
+|--------|-----|------|
+| GROUP_HISTORY | group_chat_history | 历史群聊摘要块 |
+| RECENT_MESSAGES | recent_messages | 群聊最新消息块 |
+| INCOMING_MESSAGE | incoming_message | 当前传入的消息 |
+| SUMMARY_OVERALL | overall_summary | 摘要中的整体内容 |
+| SUMMARY_FOR_YOU | summary_for_you | 摘要中针对当前 Agent 的内容 |
 
 ### 异常体系
 

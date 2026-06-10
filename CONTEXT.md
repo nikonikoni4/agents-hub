@@ -183,12 +183,13 @@
 
 ### AgentMemberInfo（会话信息）
 - Agent 的会话信息
-- 属性：main_session、btw_session、context_state、token、cwd
+- 属性：main_session、btw_session、context_state、token、cwd、use_docker
 - main_session：主会话 ID
 - btw_session：单聊会话 ID 列表
 - context_state：上下文加载状态
 - token：Agent 的身份验证令牌
 - cwd：CLI 命令启动的工作目录路径
+- use_docker：是否启用 Docker 沙箱执行
 
 ### AgentContextState（上下文状态）
 - Agent 的上下文加载状态

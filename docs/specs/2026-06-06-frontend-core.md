@@ -187,7 +187,7 @@ Core 层禁止反向依赖 features 或 shared 中的业务模块。
 | `createRole(data)` | 创建角色 |
 | `getRoleInfo(name)` | 获取单个角色信息 |
 | `listRoles()` | 列出所有角色 |
-| `updateRole(name, data)` | 更新角色信息 |
+| `updateRole(name, data)` | 更新角色信息（`data` 为 `RoleUpdatePayload`，仅含 avatar/abilities/description 三个可选字段，`name` 为路径参数不在 body 中） |
 | `deleteRole(name)` | 删除角色 |
 | `getRoleSkills(name)` | 列出角色关联的 Skills |
 | `addSkillToRole(name, skillId)` | 为角色添加 Skill |

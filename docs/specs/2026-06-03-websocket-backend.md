@@ -62,7 +62,7 @@ WebSocket 后端模块为 Agent 与前端之间提供实时消息推送能力。
 
 ### 连接生命周期
 
-1. 前端发起 WebSocket 连接到 `/ws/group_chat/{group_chat_id}`
+1. 前端发起 WebSocket 连接到 `/ws/group-chat/{group_chat_id}`
 2. 后端接受连接，将其加入对应房间
 3. 连接保持活跃，等待前端消息（如心跳）
 4. 连接断开时（主动关闭或网络异常），从房间移除
@@ -90,7 +90,7 @@ Agent/MCP/API 入口产生群聊变更
   → 调用 realtime 广播 refresh signal
   → realtime 广播到房间内所有连接
   → 前端收到刷新信号
-  → 前端调用 GET /api/v1/group_chats/{group_chat_id}/messages 拉取最新消息
+  → 前端调用 GET /api/v1/group-chats/{group_chat_id}/messages 拉取最新消息
 ```
 
 ## Technical Contract
@@ -99,7 +99,7 @@ Agent/MCP/API 入口产生群聊变更
 
 | 项目 | 说明 |
 |------|------|
-| 路径 | `/ws/group_chat/{group_chat_id}` |
+| 路径 | `/ws/group-chat/{group_chat_id}` |
 | 协议 | WebSocket (ws://) |
 | 路径参数 | `group_chat_id` - 群聊 ID |
 | 连接成功 | 返回 101 状态码，升级为 WebSocket 协议 |
@@ -109,7 +109,7 @@ Agent/MCP/API 入口产生群聊变更
 | 项目 | 说明 |
 |------|------|
 | 方法 | POST |
-| 路径 | `/api/v1/ws/broadcast/{group_chat_id}` |
+| 路径 | `/api/v1/group-chats/{group_chat_id}/broadcast` |
 | 路径参数 | `group_chat_id` - 群聊 ID |
 | 请求体 | `RefreshSignal` schema |
 | 响应体 | `BroadcastResponse` schema |

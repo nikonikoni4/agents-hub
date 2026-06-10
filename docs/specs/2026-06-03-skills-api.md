@@ -175,8 +175,7 @@ Response 200:
 Response 404:
 {
   "error_code": "SKILL_NOT_FOUND",
-  "message": "Skill 'xxx' not found",
-  "type": "SkillNotFoundError"
+  "message": "Skill 'xxx' not found"
 }
 ```
 
@@ -193,8 +192,7 @@ Response 200:
 Response 404:
 {
   "error_code": "SKILL_NOT_FOUND",
-  "message": "Skill 'xxx' not found",
-  "type": "SkillNotFoundError"
+  "message": "Skill 'xxx' not found"
 }
 ```
 
@@ -211,8 +209,7 @@ Request Body:
 Response 500:
 {
   "error_code": "INTERNAL_ERROR",
-  "message": "网络获取功能暂未实现",
-  "type": "InternalError"
+  "message": "网络获取功能暂未实现"
 }
 ```
 

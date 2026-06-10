@@ -260,6 +260,7 @@ route → service → manager
 | 方法 | 路径 | 说明 | 成功状态码 |
 |------|------|------|-----------|
 | GET | `/roles/avatars` | 列出可用头像文件名 | 200 |
+| GET | `/roles/avatars/{filename}` | 获取头像文件（静态文件服务），前端通过 `buildAvatarUrl(filename)` 构建此 URL | 200 |
 
 **角色 Skill 管理**
 

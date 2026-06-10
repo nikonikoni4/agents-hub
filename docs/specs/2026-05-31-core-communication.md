@@ -192,6 +192,15 @@ Agent.run() 循环：
   6. TASK 调用等待显式回复闭环后进入 COMPLETED / FAILED
 ```
 
+### TASK 调用终态的跨层协作
+
+当 TASK 调用通过 `complete_task` 进入终态（COMPLETED / FAILED）时，需要通知 orchestration 层执行后续动作：
+
+- **原调用方是 Agent**：通过 MessageRouter 投递 NOTIFICATION 唤醒调用方的下一轮处理
+- **原调用方是 user**：写入群聊历史并触发前端 WebSocket refresh
+
+此协作由 orchestration 层的 `complete_task` MCP 工具实现，communication 层只负责状态变更，不直接处理后续动作。
+
 ## Out of Spec
 
 - MessageRouter 不负责消息持久化（持久化由 context 层的 GroupChatContext 负责）
