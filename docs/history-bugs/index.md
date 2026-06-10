@@ -123,3 +123,9 @@
  - path: docs/history-bugs/2026-06-10-mcp-tool-naming-confusion.md
  - 触发规则：Agent 处理任务时无法正确调用 report_progress 和 finish_agent_call 工具
  - 内容摘要：MCP 工具使用从平台角度编写的名称，Agent 不理解其含义导致调用失败。改名为 report_progress 和 complete_task 后效果改善。后续改进方向：从显式工具调用闭环 → 输出标签识别的降级方案
+
+## 隐藏右侧栏网页预览的地球图标
+ - updated_at : 2026-06-10
+ - path: docs/history-bugs/2026-06-10-hide-globe-icon-in-web-preview.md
+ - 触发规则：右侧栏"网页" tab 中显示地球图标，用户要求隐藏
+ - 内容摘要：RightSidebar.tsx 中 webPreviewHeader 包含 GlobeIcon 组件，注释掉该组件即可隐藏图标。GlobeIcon 组件定义保留，WebPreviewCard 中的独立定义不受影响。低风险修改，易于回滚
