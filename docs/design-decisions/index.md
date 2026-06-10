@@ -77,6 +77,13 @@
 - 触发规则：当设计或修改 MCP 传输模式、Agent 平台选型时阅读
 - 内容摘要：MCP 传输从 HTTP 切到 stdio 后发现跨进程内存隔离问题（token 丢失、消息断裂），决定回归 HTTP；同时放弃 Codex 改用 OpenCode
 
+## prompt-architecture-refactor
+- updated_at: 2026-06-10
+- path: `docs/design-decisions/0013-prompt-architecture-refactor.md`
+- 状态：decided
+- 触发规则：当设计或修改 Agent 提示词结构、runtime 信息传递方式、call_id 可见性、CLAUDE/AGENTS.md 写入时机时阅读
+- 内容摘要：将 runtime 信息从 system prompt 移到 user message，解决 Agent 找不到 call_id 和身份信息缺失的问题。system prompt 不再动态生成，CLAUDE/AGENTS.md 在 role 创建时写入
+
 ## user-design-summary
 - updated_at: 2026-06-04
 - path: `docs/design-decisions/user-design-summary.md`
