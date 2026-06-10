@@ -31,7 +31,7 @@ export interface UploadedFileInfo {
  * Agent 平台类型
  * 对应后端枚举
  */
-export type AgentPlatform = 'claude' | 'codex';
+export type AgentPlatform = 'claude' | 'codex' | 'opencode';
 
 /**
  * 角色类型
