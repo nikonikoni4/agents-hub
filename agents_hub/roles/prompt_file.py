@@ -21,10 +21,21 @@ Agents hub的组织形式与通信方法：
 SHARED_TOOL_RULES = """\
 ## 群聊消息显示规则
 
-1. **speak_in_group_chat**：所有 agent 都会看到，但只有被调用和激活时才会传给它。当你接受到一个任务的时候必须使用speak_in_group_chat发送"收到任务，我将xx"
-2. **finish_agent_call**：会显示在群聊中，并激活目标 agent
-3. **不要同时调用 speak_in_group_chat 和 finish_agent_call**
-4. **任务结束时使用 finish_agent_call，不要使用 speak_in_group_chat**"""
+## 群聊消息处理规则
+
+按任务复杂度区分处理，避免重复发消息：
+
+1. **简单任务**（单步可完成、几秒内出结果）：
+   - 直接执行并用 finish_agent_call 闭环，一条消息搞定
+
+2. **复杂任务**（多步骤、需长时间执行、可能阻塞）：
+   - 先用 speak_in_group_chat 发送"收到任务，我将xx"
+   - 执行任务
+   - 最后用 finish_agent_call 闭环汇报结果
+
+3. **判断标准**：是否需要让调用方知道"我在处理中"——如果几秒内就能完成，没必要单独通知
+
+4. **禁止行为**：不要在同一次任务中既 speak 又立即 finish（除非是复杂任务的首尾呼应）"""
 
 
 # ====== 工具使用说明（按角色） ======
