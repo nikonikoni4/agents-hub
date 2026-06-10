@@ -871,7 +871,7 @@ async def create_group_chat(
 async def create_agent(
     agent_token: str,
     name: str,
-    platform: Literal["claude", "codex"],
+    platform: Literal["claude", "codex", "opencode"],
     description: str | None = None,
 ) -> dict:
     """
