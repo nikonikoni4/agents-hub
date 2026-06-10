@@ -140,37 +140,12 @@ class ClaudeParser:
 
     def _handle_message_delta(self, inner_event: dict, session_id: str) -> StreamEvent | None:
         """
-        处理 message_delta：提取 usage 信息并生成 TURN_COMPLETE 事件
+        处理 message_delta：忽略 usage，TURN_COMPLETE 由 result 事件提供
 
-        Claude API message_delta.usage 字段格式：
-        {
-            "input_tokens": int,                    # 输入 token 数
-            "output_tokens": int,                   # 输出 token 数
-            "cache_creation_input_tokens": int,     # 缓存创建的输入 token
-            "cache_read_input_tokens": int          # 缓存读取的输入 token
-        }
-
-        原始事件结构：
-        {
-            "type": "stream_event",
-            "event": {
-                "type": "message_delta",
-                "delta": {"stop_reason": "end_turn"},
-                "usage": { ... }
-            },
-            "session_id": "..."
-        }
+        message_delta 的 usage 可能与 result 事件不同（缓存 token 计算方式差异），
+        为避免重复触发和数值不一致，usage 统一从 result 事件提取。
         """
-        usage = inner_event.get("usage", {})
-        return StreamEvent(
-            type=AgentEventType.TURN_COMPLETE,
-            content={"usage": usage},
-            session_id=session_id,
-            timestamp=datetime.now().isoformat(),
-            agent_name="",
-            platform=AgentPlatform.CLAUDE,
-            role_type=RoleType.TEAM_MEMBER,
-        )
+        return None
 
     def _parse_system_event(self, event: dict, session_id: str) -> StreamEvent | None:
         """解析系统事件"""
