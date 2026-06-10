@@ -48,6 +48,10 @@ class ClaudeParser:
         if event_type == "system":
             return self._parse_system_event(event, session_id)
 
+        # 结果事件（包含真实 usage 数据）
+        if event_type == "result":
+            return self._parse_result_event(event, session_id)
+
         return None
 
     def _parse_stream_event(self, event: dict, session_id: str) -> StreamEvent | None:
@@ -188,3 +192,31 @@ class ClaudeParser:
             )
 
         return None
+
+    def _parse_result_event(self, event: dict, session_id: str) -> StreamEvent | None:
+        """
+        处理 result 事件：提取 usage 信息并生成 TURN_COMPLETE 事件
+
+        CLI --output-format stream-json 输出的 result 事件格式：
+        {
+            "type": "result",
+            "subtype": "success",
+            "usage": {
+                "input_tokens": int,
+                "output_tokens": int,
+                "cache_read_input_tokens": int,
+                ...
+            },
+            "session_id": "..."
+        }
+        """
+        usage = event.get("usage", {})
+        return StreamEvent(
+            type=AgentEventType.TURN_COMPLETE,
+            content={"usage": usage},
+            session_id=session_id,
+            timestamp=datetime.now().isoformat(),
+            agent_name="",
+            platform=AgentPlatform.CLAUDE,
+            role_type=RoleType.TEAM_MEMBER,
+        )

@@ -642,26 +642,34 @@ class Agent:
             try:
                 result = await self._process_message(msg, prompt)
 
-                # 更新 context_window
-                if result.usage and result.usage.input_tokens:
-                    context_window = result.usage.input_tokens // 1000
-                    self.logger.info(
-                        "Agent %s context_window 更新: input_tokens=%d, context_window=%dK",
-                        self.name,
-                        result.usage.input_tokens,
-                        context_window,
-                    )
-                    try:
-                        await self.group_chat_context.runtime.update_agent_context_window(
-                            self.name, context_window
+                # 更新 context_window（input_tokens + cache_read_input_tokens）
+                if result.usage:
+                    total_tokens = result.usage.input_tokens + result.usage.cache_read_input_tokens
+                    if total_tokens > 0:
+                        context_window = total_tokens // 1000
+                        self.logger.info(
+                            "Agent %s context_window 更新: input_tokens=%d, cache_read=%d, total=%d, context_window=%dK",
+                            self.name,
+                            result.usage.input_tokens,
+                            result.usage.cache_read_input_tokens,
+                            total_tokens,
+                            context_window,
                         )
-                    except Exception as e:
-                        self.logger.warning("更新 context_window 失败: %s", str(e))
+                        try:
+                            await self.group_chat_context.runtime.update_agent_context_window(
+                                self.name, context_window
+                            )
+                        except Exception as e:
+                            self.logger.warning("更新 context_window 失败: %s", str(e))
+                    else:
+                        self.logger.warning(
+                            "Agent %s context_window 未更新: input_tokens=0, cache_read=0",
+                            self.name,
+                        )
                 else:
                     self.logger.warning(
-                        "Agent %s context_window 未更新: usage=%s, input_tokens=%s",
+                        "Agent %s context_window 未更新: usage=None",
                         self.name,
-                        result.usage,
                         result.usage.input_tokens if result.usage else None,
                     )
 

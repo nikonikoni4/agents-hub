@@ -207,10 +207,12 @@ class AgentBridge:
                             if parsed_event.type == AgentEventType.TEXT_DELTA:
                                 full_text.append(parsed_event.content["text"])
                             elif parsed_event.type == AgentEventType.TURN_COMPLETE:
+                                usage_data = parsed_event.content.get("usage", {})
                                 usage = Usage(
-                                    input_tokens=parsed_event.content.get("usage", {}).get(
-                                        "input_tokens", 0
-                                    )
+                                    input_tokens=usage_data.get("input_tokens", 0),
+                                    cache_read_input_tokens=usage_data.get(
+                                        "cache_read_input_tokens", 0
+                                    ),
                                 )
                             if not result_session_id and parsed_event.session_id:
                                 result_session_id = parsed_event.session_id
@@ -225,8 +227,10 @@ class AgentBridge:
                 if event.type == AgentEventType.TEXT_DELTA:
                     full_text.append(event.content["text"])
                 elif event.type == AgentEventType.TURN_COMPLETE:
+                    usage_data = event.content.get("usage", {})
                     usage = Usage(
-                        input_tokens=event.content.get("usage", {}).get("input_tokens", 0)
+                        input_tokens=usage_data.get("input_tokens", 0),
+                        cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
                     )
                 if not result_session_id and event.session_id:
                     result_session_id = event.session_id

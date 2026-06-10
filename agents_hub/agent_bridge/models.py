@@ -38,6 +38,7 @@ class Usage:
     """Token 使用统计"""
 
     input_tokens: int = 0
+    cache_read_input_tokens: int = 0
 
 
 # TODO 当前AgentResult模型已经承载了过多了语义，需要重构
