@@ -10,6 +10,7 @@ Agent 基类
 """
 
 import asyncio
+import re
 from pathlib import Path
 
 from agents_hub.agent_bridge import AgentResult, agent_platform_client
@@ -27,6 +28,63 @@ from agents_hub.core.foundation import (
 )
 from agents_hub.core.foundation.exceptions import DockerConfigError
 from agents_hub.utils.logger import get_logger
+
+
+def _parse_output_fields(text: str) -> dict:
+    """从 Agent 回复文本中解析 markdown 格式的结构化字段。
+
+    支持的格式：
+    - **Modified files:** 后跟 "- path" 列表
+    - **Git diff:** `range`
+    - **Web preview:** [title](url)
+
+    Returns:
+        dict: {
+            "cleaned_text": str,
+            "modified_files": list[str] | None,
+            "git_diff_range": str | None,
+            "web_preview_url": str | None,
+            "web_preview_title": str | None,
+        }
+    """
+    result = {
+        "cleaned_text": text,
+        "modified_files": None,
+        "git_diff_range": None,
+        "web_preview_url": None,
+        "web_preview_title": None,
+    }
+
+    # Modified files: **Modified files:** 后跟 "- path" 行
+    m = re.search(
+        r"\*\*Modified files:\*\*\s*\n((?:\s*-\s+.+\n?)+)", text, re.IGNORECASE
+    )
+    if m:
+        files = re.findall(r"-\s+(.+)", m.group(1))
+        files = [f.strip() for f in files if f.strip()]
+        if files:
+            result["modified_files"] = files
+        result["cleaned_text"] = result["cleaned_text"].replace(m.group(0), "").strip()
+
+    # Git diff: **Git diff:** `range`
+    m = re.search(r"\*\*Git diff:\*\*\s*`([^`]+)`", text, re.IGNORECASE)
+    if m:
+        val = m.group(1).strip()
+        if val:
+            result["git_diff_range"] = val
+        result["cleaned_text"] = result["cleaned_text"].replace(m.group(0), "").strip()
+
+    # Web preview: **Web preview:** [title](url)
+    m = re.search(r"\*\*Web preview:\*\*\s*\[([^\]]*)\]\(([^)]+)\)", text, re.IGNORECASE)
+    if m:
+        title = m.group(1).strip()
+        url = m.group(2).strip()
+        if url:
+            result["web_preview_url"] = url
+            result["web_preview_title"] = title
+        result["cleaned_text"] = result["cleaned_text"].replace(m.group(0), "").strip()
+
+    return result
 
 
 class Agent:
@@ -208,8 +266,8 @@ class Agent:
             len(msg.content) if msg.content else 0,
         )
 
-        # 1. Docker 配置校验
-        self._validate_docker_config()
+        # 1. Docker 配置校验（已注释：允许相同路径开启 Docker）
+        # self._validate_docker_config()
 
         # 2. 读取 use_docker 配置
         agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
@@ -453,17 +511,46 @@ call_id: {msg.call_id}
             finally:
                 self._is_processing = False
                 await self._sync_status("idle")
-            # 5. TASK 必须由 complete_task 显式闭环；普通执行文本默认私下保留。
-            if self._needs_complete_task_reminder(msg):
-                self._enqueue_complete_task_reminder(msg)
-                self._consecutive_no_finish_count += 1
-                if self._consecutive_no_finish_count >= self.max_consecutive_no_finish:
-                    self.logger.warning(
-                        "Agent %s 连续 %d 次未闭环 TASK，自动停止",
+            # 5. 未闭环时把 Agent 回复写入群聊消息（避免 MCP 断连导致群聊无消息）
+            call = self.agent_call_manager.get_call(msg.call_id)
+            already_closed = call is not None and call.has_agent_response
+            if result and result.text and not already_closed:
+                try:
+                    # 从文本中解析 XML 标签字段
+                    parsed = _parse_output_fields(result.text)
+                    result.text = parsed["cleaned_text"]
+                    if parsed["modified_files"]:
+                        result.modified_files = parsed["modified_files"]
+                    if parsed["git_diff_range"]:
+                        result.git_diff_range = parsed["git_diff_range"]
+                    if parsed["web_preview_url"]:
+                        result.web_preview = {
+                            "url": parsed["web_preview_url"],
+                            "title": parsed["web_preview_title"] or "",
+                        }
+                    await self.group_chat_context.add_message(result)
+                    await self.group_chat_context.update_agent_member_info(result)
+                    await self.group_chat_context.runtime._notify_change()
+                    self.logger.info(
+                        "Agent %s 回复已写入群聊: call_id=%s, text_len=%d",
                         self.name,
-                        self._consecutive_no_finish_count,
+                        msg.call_id,
+                        len(result.text),
                     )
-                    self._run = False
-            else:
-                # 成功闭环或非 TASK 消息，重置计数
-                self._consecutive_no_finish_count = 0
+                except Exception as e:
+                    self.logger.warning("写入群聊消息失败: %s", str(e))
+
+            # 6. TASK 闭环提醒（暂时注释，测试阶段）
+            # if self._needs_complete_task_reminder(msg):
+            #     self._enqueue_complete_task_reminder(msg)
+            #     self._consecutive_no_finish_count += 1
+            #     if self._consecutive_no_finish_count >= self.max_consecutive_no_finish:
+            #         self.logger.warning(
+            #             "Agent %s 连续 %d 次未闭环 TASK，自动停止",
+            #             self.name,
+            #             self._consecutive_no_finish_count,
+            #         )
+            #         self._run = False
+            # else:
+            #     # 成功闭环或非 TASK 消息，重置计数
+            #     self._consecutive_no_finish_count = 0
