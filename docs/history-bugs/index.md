@@ -100,6 +100,12 @@
  - 触发规则：点击单聊时控制台报 "GroupChat 'xxx' 不存在"，单聊消息显示在主界面而非右侧栏
  - 内容摘要：ChatArea 组件内多个 hook（usePinnedMessages, useMembers, useTasks 等）未根据 activeSessionType 区分，单聊 ID 被传给群聊 API。已缓解部分问题（usePinnedMessages 条件调用），但残留其他 hook 未隔离和 displayLocation 状态竞争问题。待后续彻底修复
 
+## context_window 持久化丢失 + CLI 解析器遗漏 + 缓存 token 未计入
+ - updated_at : 2026-06-10
+ - path: docs/history-bugs/2026-06-10-context-window-persistence-and-parsing.md
+ - 触发规则：Agent 处理消息后前端 context_window 显示为 0 或不显示
+ - 内容摘要：三个独立 bug 叠加：(1) save_agent_member 漏掉 status/context_window 字段，重启后丢失；(2) ClaudeParser 不处理 result 事件，usage 数据被忽略；(3) context_window 只算 input_tokens 漏掉 cache_read_input_tokens，第二次调用 72//1000=0。关键发现：Claude CLI 会话历史走缓存（cache_read），不走 input_tokens
+
 ## Manager 工具调用无限循环
  - updated_at : 2026-06-09
  - path: docs/history-bugs/2026-06-09-manager-tool-call-infinite-loop.md
