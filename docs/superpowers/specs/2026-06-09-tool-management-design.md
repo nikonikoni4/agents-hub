@@ -57,7 +57,7 @@ ALL_TOOLS: list[ToolGroup] = [...]
   - mcp__agents-hub__check_agent_call
   - mcp__agents-hub__create_agent
   - mcp__agents-hub__create_group_chat
-  - mcp__agents-hub__finish_agent_call
+  - mcp__agents-hub__complete_task
   - mcp__agents-hub__health_check
   - mcp__agents-hub__speak_in_group_chat
   - mcp__mimo-image__understand_image
@@ -68,7 +68,7 @@ ALL_TOOLS: list[ToolGroup] = [...]
 | 搜索 | 🔍 | Grep, WebSearch, WebFetch |
 | 任务管理 | 📋 | TaskCreate, TaskUpdate, TaskOutput, TaskStop |
 | 系统 | ⚙️ | CronCreate, CronDelete, CronList, ScheduleWakeup, EnterPlanMode, ExitPlanMode, EnterWorktree, ExitWorktree, AskUserQuestion, ListMcpResourcesTool, ReadMcpResourceTool |
-| MCP (agents-hub) | 🔌 | call_agent, health_check, create_group_chat, speak_in_group_chat, finish_agent_call, check_agent_call, assign_tasks_to_team, archive_task_list, create_agent, request_permission |
+| MCP (agents-hub) | 🔌 | call_agent, health_check, create_group_chat, speak_in_group_chat, complete_task, check_agent_call, assign_tasks_to_team, archive_task_list, create_agent, request_permission |
 
 ### role.json 存储
 

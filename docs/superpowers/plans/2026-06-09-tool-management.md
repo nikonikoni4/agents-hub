@@ -142,7 +142,7 @@ ALL_TOOLS: list[ToolGroup] = [
             ToolInfo("health_check", "健康检查端点"),
             ToolInfo("create_group_chat", "创建新群聊"),
             ToolInfo("speak_in_group_chat", "向群聊发送进展信息"),
-            ToolInfo("finish_agent_call", "结束 AgentCall"),
+            ToolInfo("complete_task", "结束 AgentCall"),
             ToolInfo("check_agent_call", "查询 AgentCall 状态"),
             ToolInfo("assign_tasks_to_team", "覆盖式更新任务列表"),
             ToolInfo("archive_task_list", "归档当前 ACTIVE 列表"),

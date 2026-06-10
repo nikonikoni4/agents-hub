@@ -6,7 +6,7 @@ Agent 基类
 渲染分工（参见 foundation/renderer.py）：
 - 入站 LLM prompt：render_for_llm（msg.content 始终为原始内容，不被改写）
 - 对外公开发言：通过 MCP 工具显式写入群聊
-- 任务闭环回复：通过 finish_agent_call 显式完成调用
+- 任务闭环回复：通过 complete_task 显式完成调用
 """
 
 import asyncio
@@ -36,9 +36,9 @@ class Agent:
 ## 群聊消息显示规则
 
 1. **speak_in_group_chat**：所有 agent 都会看到，但只有被调用和激活时才会传给它。当你接受到一个任务的时候必须使用speak_in_group_chat发送"收到任务，我将xx"
-2. **finish_agent_call**：会显示在群聊中，并激活目标 agent
-3. **不要同时调用 speak_in_group_chat 和 finish_agent_call**
-4. **任务结束时使用 finish_agent_call，不要使用 speak_in_group_chat**
+2. **complete_task**：会显示在群聊中，并激活目标 agent
+3. **不要同时调用 speak_in_group_chat 和 complete_task**
+4. **任务结束时使用 complete_task，不要使用 speak_in_group_chat**
 """
 
     def __init__(
@@ -314,21 +314,32 @@ class Agent:
         self.logger.info("OpenCode system_prompt 写入文件: %s", agent_file)
         return agent_filename
 
-    def _enqueue_finish_agent_call_reminder(self, msg: AgentMessage):
-        """提醒 Agent 使用 finish_agent_call 显式闭环当前任务调用。"""
+    def _enqueue_complete_task_reminder(self, msg: AgentMessage):
+        """提醒 Agent 使用 complete_task 显式闭环当前任务调用。"""
         from agents_hub.config.types import RoleType
 
-        base_content = (
-            f"系统提醒：你刚刚处理了来自 [{msg.send_from}] 的 TASK 调用（call_id={msg.call_id}），"
-            f"原始请求：{msg.content[:100]}{'...' if len(msg.content) > 100 else ''}。"
-            "该调用尚未闭环，请调用 finish_agent_call，传入对应的 call_id，"
-            "并用 content 说明任务完成、失败或无法继续的结果。"
-        )
+        base_content = f"""\
+<task_reminder>
+你刚处理了来自 [{msg.send_from}] 的任务调用。
+
+<call_info>
+call_id: {msg.call_id}
+原始请求: {msg.content[:20]}{"..." if len(msg.content) > 20 else ""}
+</call_info>
+
+<action>
+请调用 complete_task 闭环此任务：
+- call_id: {msg.call_id}
+- content: 说明任务结果（完成/失败/无法继续）
+</action>
+</task_reminder>"""
+
         if self.role_type == RoleType.LEADER:
-            base_content += (
-                " 你可以在安排完任务后立即闭环，无需等待 Worker 执行结果。"
-                "如果忘记调用，请立即补一个。连续未闭环会被系统自动停止。"
-            )
+            base_content += """\
+
+<leader_note>
+作为 Manager，你可以在安排完任务后立即闭环，无需等待 Worker 执行结果。
+</leader_note>"""
         reminder = AgentMessage(
             call_id=msg.call_id,
             send_from="__SYSTEM__",
@@ -339,8 +350,8 @@ class Agent:
         )
         self.message_queue.put_nowait(reminder)
 
-    def _needs_finish_agent_call_reminder(self, msg: AgentMessage) -> bool:
-        """判断当前消息处理后是否仍需要显式 finish_agent_call。"""
+    def _needs_complete_task_reminder(self, msg: AgentMessage) -> bool:
+        """判断当前消息处理后是否仍需要显式 complete_task。"""
         if msg.message_type != MessageType.TASK:
             return False
         call = self.agent_call_manager.get_call(msg.call_id)
@@ -423,9 +434,9 @@ class Agent:
             finally:
                 self._is_processing = False
                 await self._sync_status("idle")
-            # 5. TASK 必须由 finish_agent_call 显式闭环；普通执行文本默认私下保留。
-            if self._needs_finish_agent_call_reminder(msg):
-                self._enqueue_finish_agent_call_reminder(msg)
+            # 5. TASK 必须由 complete_task 显式闭环；普通执行文本默认私下保留。
+            if self._needs_complete_task_reminder(msg):
+                self._enqueue_complete_task_reminder(msg)
                 self._consecutive_no_finish_count += 1
                 if self._consecutive_no_finish_count >= self.max_consecutive_no_finish:
                     self.logger.warning(

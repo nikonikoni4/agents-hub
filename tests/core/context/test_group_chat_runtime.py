@@ -91,10 +91,22 @@ async def test_get_message_dicts_with_before_cursor():
     await runtime.load()
 
     # 添加更多消息用于测试游标分页
-    runtime.state.group_chat_session.messages.extend([
-        {"agent_name": "Worker1", "content": "msg2", "timestamp": "2026-06-04T10:01:00", "platform": "claude"},
-        {"agent_name": "Worker1", "content": "msg3", "timestamp": "2026-06-04T10:02:00", "platform": "claude"},
-    ])
+    runtime.state.group_chat_session.messages.extend(
+        [
+            {
+                "agent_name": "Worker1",
+                "content": "msg2",
+                "timestamp": "2026-06-04T10:01:00",
+                "platform": "claude",
+            },
+            {
+                "agent_name": "Worker1",
+                "content": "msg3",
+                "timestamp": "2026-06-04T10:02:00",
+                "platform": "claude",
+            },
+        ]
+    )
 
     # 无游标：返回最新 1 条
     latest = runtime.get_message_dicts(limit=1)

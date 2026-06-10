@@ -240,13 +240,13 @@ class TestAgentRuntimeContentGeneration:
         assert "type=task" in content
         assert "status=running" in content
         assert "request=实现登录页面" in content
-        assert "需要回复：请在完成时调用 finish_agent_call" in content
+        assert "需要回复：请在完成时调用 complete_task" in content
         assert "call_id=call_notice_1" in content
         assert "from=user" in content
         assert "type=notification" in content
         assert "status=pending" in content
         assert "request=FYI: API 文档已更新" in content
-        assert "无需使用 finish_agent_call" in content
+        assert "无需使用 complete_task" in content
         assert "</active_agent_calls>" in content
 
     def test_runtime_call_instructions_grouped_by_type(
@@ -283,8 +283,8 @@ class TestAgentRuntimeContentGeneration:
         content = worker_agent._generate_runtime_content(mock_task_manager)
 
         # 每种类型的提示只出现一次
-        assert content.count("需要回复：请在完成时调用 finish_agent_call") == 1
-        assert content.count("无需使用 finish_agent_call") == 1
+        assert content.count("需要回复：请在完成时调用 complete_task") == 1
+        assert content.count("无需使用 complete_task") == 1
         # 两个 TASK call 都应出现
         assert "call_id=call_task_1" in content
         assert "call_id=call_task_2" in content

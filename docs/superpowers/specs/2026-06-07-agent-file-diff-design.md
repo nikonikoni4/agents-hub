@@ -112,7 +112,7 @@ local_data/teams/<project_path>/<group_chat_id>/
 - `snapshot_id` = `{call_id}_{file_index}`
 - 例如：`call_abc_0` 表示 call_id 为 `call_abc` 的第 0 个文件
 - `call_id` 由 `AgentCallManager` 在 `call_agent` 时生成，全局唯一
-- Agent 调用 `finish_agent_call` 时传入相同的 `call_id`
+- Agent 调用 `complete_task` 时传入相同的 `call_id`
 - 避免时间戳冲突（多个 Agent 同时完成任务）
 
 **文件内容**：
@@ -145,7 +145,7 @@ class AgentResult:
 ```
 ┌─────────────────┐
 │ Agent 调用 MCP  │
-│ finish_agent_call│
+│ complete_task│
 │ (传入文件列表)   │
 └────────┬────────┘
          │
@@ -197,7 +197,7 @@ class AgentResult:
 **步骤 1：Agent 调用 MCP tool**
 
 ```python
-finish_agent_call(
+complete_task(
     agent_token="agent_token_xxx",
     call_id="call_abc",
     content="任务完成，已修改 3 个文件",
@@ -346,10 +346,10 @@ async function openDiff(snapshotId: string, filePath: string) {
 
 **文件**：`agents_hub/mcp/server.py`
 
-**修改**：扩展 `finish_agent_call` 函数签名
+**修改**：扩展 `complete_task` 函数签名
 
 ```python
-async def finish_agent_call(
+async def complete_task(
     agent_token: str,
     call_id: str,
     content: str,
@@ -867,7 +867,7 @@ export async function getFileSnapshotDiff(
 
 - [ ] 扩展 `AgentResult` 模型
 - [ ] 实现 `file_snapshot.py` 工具模块
-- [ ] 扩展 `finish_agent_call` MCP tool
+- [ ] 扩展 `complete_task` MCP tool
 - [ ] 修改 `GroupChatContext.add_message()` 处理新字段
 - [ ] 新增 API 端点：`/files/{snapshot_id}/content` 和 `/diff`
 - [ ] 单元测试：文件快照创建、读取
@@ -974,7 +974,7 @@ export async function getFileSnapshotDiff(
 ### 11.2 数据流图
 
 ```
-Agent → finish_agent_call(modified_files) 
+Agent → complete_task(modified_files) 
   → MCP Server (运行 git diff, 解析, 保存快照)
   → GroupChatContext.add_message(AgentResult)
   → .jsonl 文件 (持久化)

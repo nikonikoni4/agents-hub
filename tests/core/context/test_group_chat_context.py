@@ -238,8 +238,12 @@ class TestGroupChatContextTokenPersistence:
 
             # 验证所有字段都被正确加载
             assert context2.agent_member_info[agent_name].token == "tok_test"
-            assert context2.agent_member_info[agent_name].context_state.last_loaded_compact_index == 5
-            assert context2.agent_member_info[agent_name].context_state.last_loaded_message_index == 10
+            assert (
+                context2.agent_member_info[agent_name].context_state.last_loaded_compact_index == 5
+            )
+            assert (
+                context2.agent_member_info[agent_name].context_state.last_loaded_message_index == 10
+            )
 
             context.close()
             context2.close()

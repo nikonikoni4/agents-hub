@@ -1,7 +1,7 @@
 """测试公开群聊写入路径的 token 剥离
 
 Agent.run() 的普通执行文本默认私下保留，不再自动写入群聊。
-token 剥离应发生在显式公开工具 speak_in_group_chat / finish_agent_call 中。
+token 剥离应发生在显式公开工具 speak_in_group_chat / complete_task 中。
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -41,9 +41,9 @@ async def test_speak_in_group_chat_redacts_token():
 
 
 @pytest.mark.asyncio
-async def test_finish_agent_call_redacts_token_before_result_and_group_chat():
-    """契约：finish_agent_call 写 call result 和群聊前都剥离 token"""
-    from agents_hub.mcp.server import finish_agent_call
+async def test_complete_task_redacts_token_before_result_and_group_chat():
+    """契约：complete_task 写 call result 和群聊前都剥离 token"""
+    from agents_hub.mcp.server import complete_task
 
     token = generate_token()
     group_chat = MagicMock()
@@ -60,7 +60,7 @@ async def test_finish_agent_call_redacts_token_before_result_and_group_chat():
         manager.resolve_token.return_value = ("worker", "group_1")
         manager.load_group_chat = AsyncMock(return_value=group_chat)
 
-        result = await finish_agent_call(
+        result = await complete_task(
             agent_token="agent_token",
             call_id="call_1",
             content=f"任务完成，token={token}",

@@ -17,15 +17,17 @@ class TestClaudeParser:
 
     def test_parse_text_delta(self):
         """测试解析文本增量事件"""
-        raw_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_delta",
-                "index": 0,
-                "delta": {"type": "text_delta", "text": "你好"}
-            },
-            "session_id": "test-session-123"
-        })
+        raw_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "content_block_delta",
+                    "index": 0,
+                    "delta": {"type": "text_delta", "text": "你好"},
+                },
+                "session_id": "test-session-123",
+            }
+        )
         result = self.parser.parse_event(raw_line)
 
         assert result is not None
@@ -35,13 +37,15 @@ class TestClaudeParser:
 
     def test_parse_init(self):
         """测试解析初始化事件"""
-        raw_line = json.dumps({
-            "type": "system",
-            "subtype": "init",
-            "session_id": "test-session-123",
-            "model": "claude-opus-4-7",
-            "tools": ["Bash", "Read", "Write"]
-        })
+        raw_line = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "test-session-123",
+                "model": "claude-opus-4-7",
+                "tools": ["Bash", "Read", "Write"],
+            }
+        )
         result = self.parser.parse_event(raw_line)
 
         assert result is not None
@@ -51,10 +55,7 @@ class TestClaudeParser:
 
     def test_parse_unknown_event_returns_none(self):
         """测试解析未知事件返回 None"""
-        raw_line = json.dumps({
-            "type": "unknown_type",
-            "session_id": "test-session-123"
-        })
+        raw_line = json.dumps({"type": "unknown_type", "session_id": "test-session-123"})
         result = self.parser.parse_event(raw_line)
 
         assert result is None
@@ -76,14 +77,34 @@ class TestClaudeParser:
         assert ClaudeParser.ENABLE_TOOL_USE_PARSING is False
 
         for line in [
-            {"type": "stream_event", "event": {"type": "content_block_start", "index": 0,
-              "content_block": {"type": "tool_use", "id": "toolu_01", "name": "Bash", "input": {}}},
-             "session_id": "s1"},
-            {"type": "stream_event", "event": {"type": "content_block_delta", "index": 0,
-              "delta": {"type": "input_json_delta", "partial_json": "{\"command\":\"ls\"}"}},
-             "session_id": "s1"},
-            {"type": "stream_event", "event": {"type": "content_block_stop", "index": 0},
-             "session_id": "s1"},
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "content_block_start",
+                    "index": 0,
+                    "content_block": {
+                        "type": "tool_use",
+                        "id": "toolu_01",
+                        "name": "Bash",
+                        "input": {},
+                    },
+                },
+                "session_id": "s1",
+            },
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "content_block_delta",
+                    "index": 0,
+                    "delta": {"type": "input_json_delta", "partial_json": '{"command":"ls"}'},
+                },
+                "session_id": "s1",
+            },
+            {
+                "type": "stream_event",
+                "event": {"type": "content_block_stop", "index": 0},
+                "session_id": "s1",
+            },
         ]:
             assert self.parser.parse_event(json.dumps(line)) is None
 
@@ -106,57 +127,62 @@ class TestClaudeParserToolUse:
         4. 验证 stop 时 emit 的 TOOL_USE 事件包含正确的 tool_id、tool_name、input
         """
         # start：不 emit 事件
-        start_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_start",
-                "index": 1,
-                "content_block": {
-                    "type": "tool_use",
-                    "id": "toolu_01ABC123",
-                    "name": "Bash",
-                    "input": {}
-                }
-            },
-            "session_id": "sess-456"
-        })
+        start_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "content_block_start",
+                    "index": 1,
+                    "content_block": {
+                        "type": "tool_use",
+                        "id": "toolu_01ABC123",
+                        "name": "Bash",
+                        "input": {},
+                    },
+                },
+                "session_id": "sess-456",
+            }
+        )
         result = self.parser.parse_event(start_line)
         assert result is None
 
         # delta：累积输入，不 emit 事件
-        delta1 = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_delta",
-                "index": 1,
-                "delta": {"type": "input_json_delta", "partial_json": "{\"command\":"}
-            },
-            "session_id": "sess-456"
-        })
+        delta1 = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "content_block_delta",
+                    "index": 1,
+                    "delta": {"type": "input_json_delta", "partial_json": '{"command":'},
+                },
+                "session_id": "sess-456",
+            }
+        )
         result = self.parser.parse_event(delta1)
         assert result is None
 
-        delta2 = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_delta",
-                "index": 1,
-                "delta": {"type": "input_json_delta", "partial_json": "\"ls -la\"}"}
-            },
-            "session_id": "sess-456"
-        })
+        delta2 = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "content_block_delta",
+                    "index": 1,
+                    "delta": {"type": "input_json_delta", "partial_json": '"ls -la"}'},
+                },
+                "session_id": "sess-456",
+            }
+        )
         result = self.parser.parse_event(delta2)
         assert result is None
 
         # stop：emit TOOL_USE 事件
-        stop_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_stop",
-                "index": 1
-            },
-            "session_id": "sess-456"
-        })
+        stop_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {"type": "content_block_stop", "index": 1},
+                "session_id": "sess-456",
+            }
+        )
         result = self.parser.parse_event(stop_line)
 
         assert result is not None
@@ -175,30 +201,31 @@ class TestClaudeParserToolUse:
         2. 直接发送 content_block_stop
         3. 验证 input 为空 dict
         """
-        start_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_start",
-                "index": 0,
-                "content_block": {
-                    "type": "tool_use",
-                    "id": "toolu_02DEF456",
-                    "name": "Read",
-                    "input": {}
-                }
-            },
-            "session_id": "sess-789"
-        })
+        start_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "content_block_start",
+                    "index": 0,
+                    "content_block": {
+                        "type": "tool_use",
+                        "id": "toolu_02DEF456",
+                        "name": "Read",
+                        "input": {},
+                    },
+                },
+                "session_id": "sess-789",
+            }
+        )
         self.parser.parse_event(start_line)
 
-        stop_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_stop",
-                "index": 0
-            },
-            "session_id": "sess-789"
-        })
+        stop_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {"type": "content_block_stop", "index": 0},
+                "session_id": "sess-789",
+            }
+        )
         result = self.parser.parse_event(stop_line)
 
         assert result is not None
@@ -216,14 +243,13 @@ class TestClaudeParserToolUse:
         2. 发送 content_block_stop
         3. 验证返回 None
         """
-        stop_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_stop",
-                "index": 0
-            },
-            "session_id": "sess-000"
-        })
+        stop_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {"type": "content_block_stop", "index": 0},
+                "session_id": "sess-000",
+            }
+        )
         result = self.parser.parse_event(stop_line)
         assert result is None
 
@@ -235,18 +261,17 @@ class TestClaudeParserToolUse:
         1. 发送 content_block_start（text 类型）
         2. 验证返回 None
         """
-        start_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "content_block_start",
-                "index": 0,
-                "content_block": {
-                    "type": "text",
-                    "text": ""
-                }
-            },
-            "session_id": "sess-111"
-        })
+        start_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "content_block_start",
+                    "index": 0,
+                    "content_block": {"type": "text", "text": ""},
+                },
+                "session_id": "sess-111",
+            }
+        )
         result = self.parser.parse_event(start_line)
         assert result is None
 
@@ -266,23 +291,22 @@ class TestClaudeParserMessageDelta:
         2. 验证返回 TURN_COMPLETE 事件
         3. 验证 usage 字段正确传递
         """
-        raw_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "message_delta",
-                "delta": {
-                    "stop_reason": "end_turn",
-                    "stop_sequence": None
+        raw_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {
+                    "type": "message_delta",
+                    "delta": {"stop_reason": "end_turn", "stop_sequence": None},
+                    "usage": {
+                        "input_tokens": 100,
+                        "output_tokens": 50,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 0,
+                    },
                 },
-                "usage": {
-                    "input_tokens": 100,
-                    "output_tokens": 50,
-                    "cache_creation_input_tokens": 0,
-                    "cache_read_input_tokens": 0
-                }
-            },
-            "session_id": "test-session-789"
-        })
+                "session_id": "test-session-789",
+            }
+        )
         result = self.parser.parse_event(raw_line)
 
         assert result is not None
@@ -300,16 +324,13 @@ class TestClaudeParserMessageDelta:
         2. 验证返回 TURN_COMPLETE 事件
         3. 验证 usage 为空 dict
         """
-        raw_line = json.dumps({
-            "type": "stream_event",
-            "event": {
-                "type": "message_delta",
-                "delta": {
-                    "stop_reason": "end_turn"
-                }
-            },
-            "session_id": "test-session-abc"
-        })
+        raw_line = json.dumps(
+            {
+                "type": "stream_event",
+                "event": {"type": "message_delta", "delta": {"stop_reason": "end_turn"}},
+                "session_id": "test-session-abc",
+            }
+        )
         result = self.parser.parse_event(raw_line)
 
         assert result is not None

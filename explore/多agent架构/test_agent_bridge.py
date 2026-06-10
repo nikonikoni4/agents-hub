@@ -1,12 +1,15 @@
 """测试通过 AgentBridge 调用，模拟实际场景"""
+
 import asyncio
 import sys
-sys.path.insert(0, 'D:/desktop/软件开发/agents-hub')
+
+sys.path.insert(0, "D:/desktop/软件开发/agents-hub")
 
 from agents_hub.roles import RoleManager
 from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.roles.models import RoleType
 from tests.explore.多agent架构.team import Agent
+
 
 async def test_agent_bridge_call():
     """通过 AgentBridge 调用，使用 llm_call_codex"""
@@ -33,6 +36,7 @@ async def test_agent_bridge_call():
     print("\n返回结果:")
     print(result.text)
     print("\n" + "=" * 70)
+
 
 if __name__ == "__main__":
     asyncio.run(test_agent_bridge_call())

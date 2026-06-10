@@ -15,9 +15,7 @@ class TestCodexExecutor:
     def test_build_command_basic(self):
         """测试构建基本命令"""
         config = RoleConfig(
-            name="test",
-            platform=AgentPlatform.CODEX,
-            work_root="/path/to/codex-home"
+            name="test", platform=AgentPlatform.CODEX, work_root="/path/to/codex-home"
         )
         cmd = self.executor._build_command("审查代码", config, None)
 
@@ -29,9 +27,7 @@ class TestCodexExecutor:
     def test_build_command_with_session_id(self):
         """测试构建恢复会话的命令（使用 resume 子命令）"""
         config = RoleConfig(
-            name="test",
-            platform=AgentPlatform.CODEX,
-            work_root="/path/to/codex-home"
+            name="test", platform=AgentPlatform.CODEX, work_root="/path/to/codex-home"
         )
         cmd = self.executor._build_command("测试", config, "session-123")
 
@@ -42,9 +38,7 @@ class TestCodexExecutor:
     def test_build_env(self):
         """测试构建环境变量"""
         config = RoleConfig(
-            name="test",
-            platform=AgentPlatform.CODEX,
-            work_root="/path/to/codex-home"
+            name="test", platform=AgentPlatform.CODEX, work_root="/path/to/codex-home"
         )
         env = self.executor._build_env(config)
 

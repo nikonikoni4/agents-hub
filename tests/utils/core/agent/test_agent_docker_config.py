@@ -141,11 +141,15 @@ class TestProcessMessageDockerValidation:
         )
 
         # Mock _validate_docker_config 来验证它被调用
-        with patch.object(agent, '_validate_docker_config', side_effect=DockerConfigError(
-            agent_name="test_agent",
-            group_chat_id="gc_test_123",
-            reason="test",
-        )) as mock_validate:
+        with patch.object(
+            agent,
+            "_validate_docker_config",
+            side_effect=DockerConfigError(
+                agent_name="test_agent",
+                group_chat_id="gc_test_123",
+                reason="test",
+            ),
+        ) as mock_validate:
             from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
 
             msg = AgentMessage(

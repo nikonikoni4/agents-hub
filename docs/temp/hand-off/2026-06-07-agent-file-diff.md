@@ -142,7 +142,7 @@
 ### 优先级 P0：核心功能实现
 - [ ] Task 1: 扩展 AgentResult 模型
 - [ ] Task 2: 实现文件快照工具模块
-- [ ] Task 3: 扩展 finish_agent_call MCP tool
+- [ ] Task 3: 扩展 complete_task MCP tool
 - [ ] Task 4: 修改 GroupChatContext.add_message
 - [ ] Task 5: 新增 API 端点获取文件快照
 - [ ] Task 6: 前端类型定义扩展
@@ -185,7 +185,7 @@
 | `docs/superpowers/plans/2026-06-07-agent-file-diff.md` | ✅ 已创建 | 详细实现计划（10 个任务） |
 | `agents_hub/agent_bridge/models.py` | 📝 待修改 | AgentResult 扩展 |
 | `agents_hub/core/foundation/file_snapshot.py` | 📝 待创建 | 文件快照工具 |
-| `agents_hub/mcp/server.py` | 📝 待修改 | finish_agent_call 扩展 |
+| `agents_hub/mcp/server.py` | 📝 待修改 | complete_task 扩展 |
 | `agents_hub/core/context/group_chat_context.py` | 📝 待修改 | add_message 处理新字段 |
 | `agents_hub/api/routes/group_chat.py` | 📝 待修改 | 新增快照 API 端点 |
 | `frontend/src/shared/types/api-schemas.ts` | 📝 待修改 | 类型定义扩展 |

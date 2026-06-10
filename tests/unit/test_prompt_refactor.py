@@ -403,7 +403,9 @@ class TestCreateRoleWritesSystemFile:
 
     @patch("agents_hub.roles.role_manager.RoleManager._init_claude_config")
     @patch("agents_hub.roles.role_manager.RoleManager._init_agents_hub_mcp")
-    def test_create_role_writes_claude_md(self, mock_mcp, mock_claude, role_manager, temp_agents_dir):
+    def test_create_role_writes_claude_md(
+        self, mock_mcp, mock_claude, role_manager, temp_agents_dir
+    ):
         """
         契约：Claude 平台写入 CLAUDE.md
 
@@ -431,7 +433,9 @@ class TestCreateRoleWritesSystemFile:
 
     @patch("agents_hub.roles.role_manager.RoleManager._init_codex_config")
     @patch("agents_hub.roles.role_manager.RoleManager._init_agents_hub_mcp")
-    def test_create_role_writes_agents_md(self, mock_mcp, mock_codex, role_manager, temp_agents_dir):
+    def test_create_role_writes_agents_md(
+        self, mock_mcp, mock_codex, role_manager, temp_agents_dir
+    ):
         """
         契约：Codex 平台写入 AGENTS.md
 
@@ -459,7 +463,9 @@ class TestCreateRoleWritesSystemFile:
 
     @patch("agents_hub.roles.role_manager.RoleManager._init_claude_config")
     @patch("agents_hub.roles.role_manager.RoleManager._init_agents_hub_mcp")
-    def test_create_role_leader_uses_manager_template(self, mock_mcp, mock_claude, role_manager, temp_agents_dir):
+    def test_create_role_leader_uses_manager_template(
+        self, mock_mcp, mock_claude, role_manager, temp_agents_dir
+    ):
         """
         契约：LEADER 角色使用 Manager 模板
 
@@ -486,7 +492,9 @@ class TestCreateRoleWritesSystemFile:
 
     @patch("agents_hub.roles.role_manager.RoleManager._init_claude_config")
     @patch("agents_hub.roles.role_manager.RoleManager._init_agents_hub_mcp")
-    def test_create_role_team_member_uses_worker_template(self, mock_mcp, mock_claude, role_manager, temp_agents_dir):
+    def test_create_role_team_member_uses_worker_template(
+        self, mock_mcp, mock_claude, role_manager, temp_agents_dir
+    ):
         """
         契约：TEAM_MEMBER 角色使用 Worker 模板
 
@@ -505,7 +513,7 @@ class TestCreateRoleWritesSystemFile:
 
         # Worker 特有的指令
         assert "阻塞判定" in content
-        assert "finish_agent_call回报要求" in content
+        assert "complete_task回报要求" in content
 
         # Worker 不应该有 Manager 特有的工具
         assert "call_agent" not in content
@@ -513,7 +521,9 @@ class TestCreateRoleWritesSystemFile:
 
     @patch("agents_hub.roles.role_manager.RoleManager._init_claude_config")
     @patch("agents_hub.roles.role_manager.RoleManager._init_agents_hub_mcp")
-    def test_create_role_system_uses_assistant_template(self, mock_mcp, mock_claude, role_manager, temp_agents_dir):
+    def test_create_role_system_uses_assistant_template(
+        self, mock_mcp, mock_claude, role_manager, temp_agents_dir
+    ):
         """
         契约：SYSTEM 角色使用 ASSISTANT_SYSTEM_PROMPT 模板
 
@@ -554,10 +564,13 @@ class TestCreateRoleWritesSystemFile:
         """
         from agents_hub.roles.exceptions import RoleAlreadyExistsError
 
-        with patch("agents_hub.roles.role_manager.RoleManager._init_claude_config"), \
-             patch("agents_hub.roles.role_manager.RoleManager._init_agents_hub_mcp"), \
-             patch("agents_hub.roles.role_manager.RoleManager._is_role_incomplete", return_value=False):
-
+        with (
+            patch("agents_hub.roles.role_manager.RoleManager._init_claude_config"),
+            patch("agents_hub.roles.role_manager.RoleManager._init_agents_hub_mcp"),
+            patch(
+                "agents_hub.roles.role_manager.RoleManager._is_role_incomplete", return_value=False
+            ),
+        ):
             role_manager.create_role(
                 name="test_role",
                 platform=AgentPlatform.CLAUDE,

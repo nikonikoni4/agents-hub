@@ -79,10 +79,7 @@ def test_settings_applied():
 
     for role_name, role_dir in [("nico", ROLE_NICO), ("xiaoli", ROLE_XIAOLI)]:
         print(f"\n[Role: {role_name}]")
-        stdout, stderr = run_claude(
-            str(role_dir),
-            "请用一句话回答：你现在使用的模型是什么？"
-        )
+        stdout, stderr = run_claude(str(role_dir), "请用一句话回答：你现在使用的模型是什么？")
         print(f"  Response: {stdout}")
         if stderr:
             print(f"  Stderr: {stderr}")

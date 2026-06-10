@@ -294,11 +294,13 @@ def codex_build_conversation(messages: list[dict]) -> list[dict]:
                 if bt in ("input_text", "output_text"):
                     texts.append(block.get("text", ""))
             if texts:
-                conversation.append({
-                    "role": role,
-                    "content": "\n".join(texts),
-                    "timestamp": timestamp,
-                })
+                conversation.append(
+                    {
+                        "role": role,
+                        "content": "\n".join(texts),
+                        "timestamp": timestamp,
+                    }
+                )
 
         elif msg_type == "event_msg":
             payload = msg.get("payload", {})
@@ -307,33 +309,39 @@ def codex_build_conversation(messages: list[dict]) -> list[dict]:
             if et == "token_count":
                 info = payload.get("info", {})
                 usage = info.get("total_token_usage", {})
-                conversation.append({
-                    "role": "system",
-                    "content": "[token_usage]",
-                    "timestamp": timestamp,
-                    "token_usage": {
-                        "input_tokens": usage.get("input_tokens", 0),
-                        "cached_input_tokens": usage.get("cached_input_tokens", 0),
-                        "output_tokens": usage.get("output_tokens", 0),
-                        "reasoning_output_tokens": usage.get("reasoning_output_tokens", 0),
-                        "total_tokens": usage.get("total_tokens", 0),
-                    },
-                    "context_window": info.get("model_context_window", 0),
-                })
+                conversation.append(
+                    {
+                        "role": "system",
+                        "content": "[token_usage]",
+                        "timestamp": timestamp,
+                        "token_usage": {
+                            "input_tokens": usage.get("input_tokens", 0),
+                            "cached_input_tokens": usage.get("cached_input_tokens", 0),
+                            "output_tokens": usage.get("output_tokens", 0),
+                            "reasoning_output_tokens": usage.get("reasoning_output_tokens", 0),
+                            "total_tokens": usage.get("total_tokens", 0),
+                        },
+                        "context_window": info.get("model_context_window", 0),
+                    }
+                )
             elif et == "task_started":
-                conversation.append({
-                    "role": "system",
-                    "content": f"[task_started] turn_id={payload.get('turn_id', '')}",
-                    "timestamp": timestamp,
-                })
+                conversation.append(
+                    {
+                        "role": "system",
+                        "content": f"[task_started] turn_id={payload.get('turn_id', '')}",
+                        "timestamp": timestamp,
+                    }
+                )
             elif et == "task_complete":
                 dur = payload.get("duration_ms", 0)
                 ttft = payload.get("time_to_first_token_ms", 0)
-                conversation.append({
-                    "role": "system",
-                    "content": f"[task_complete] duration={dur}ms, time_to_first_token={ttft}ms",
-                    "timestamp": timestamp,
-                })
+                conversation.append(
+                    {
+                        "role": "system",
+                        "content": f"[task_complete] duration={dur}ms, time_to_first_token={ttft}ms",
+                        "timestamp": timestamp,
+                    }
+                )
 
     conversation.sort(key=lambda x: x["timestamp"])
     return conversation
@@ -459,7 +467,11 @@ def analyze_session(
                     count = msg.get("messageCount", 0)
                     out(f"  [system] turn_duration: {dur}ms, {count} messages")
                 else:
-                    out(f"  [system:{subtype}] {content[:200]}" if content else f"  [system:{subtype}]")
+                    out(
+                        f"  [system:{subtype}] {content[:200]}"
+                        if content
+                        else f"  [system:{subtype}]"
+                    )
                 out()
 
     # ─── Codex ───

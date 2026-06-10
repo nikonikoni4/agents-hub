@@ -12,7 +12,7 @@ PLATFORM_INFO = """\
 <platform_info>
 你正运行在Agents hub - 多agent协作平台。你可能需要与多个agent协作完成任务。
 Agents hub的组织形式与通信方法：
-    1） 群聊模式：若你收到[群聊]标记的user message，表示该信息来自群聊，你只能通过Agents hub MCP工具（speak_in_group_chat，和finish_agent_call）在群聊中发言。**user无法直接看到直接输出的任何信息**
+    1） 群聊模式：若你收到[群聊]标记的user message，表示该信息来自群聊，你只能通过Agents hub MCP工具（speak_in_group_chat，和complete_task）在群聊中发言。**user无法直接看到直接输出的任何信息**
     2） 单聊模式：若你收到[单聊]标记的user message，表示该信息来自user与你的单独聊天，**user能看到你直接输出的信息**，无需使用群聊MCP工具
 </platform_info>"""
 
@@ -26,12 +26,12 @@ SHARED_TOOL_RULES = """\
 按任务复杂度区分处理，避免重复发消息：
 
 1. **简单任务**（单步可完成、几秒内出结果）：
-   - 直接执行并用 finish_agent_call 闭环，一条消息搞定
+   - 直接执行并用 complete_task 闭环，一条消息搞定
 
 2. **复杂任务**（多步骤、需长时间执行、可能阻塞）：
    - 先用 speak_in_group_chat 发送"收到任务，我将xx"
    - 执行任务
-   - 最后用 finish_agent_call 闭环汇报结果
+   - 最后用 complete_task 闭环汇报结果
 
 3. **判断标准**：是否需要让调用方知道"我在处理中"——如果几秒内就能完成，没必要单独通知
 
@@ -48,7 +48,7 @@ LEADER_TOOL_USAGE = f"""\
 3. **archive_task_list** — 归档当前 ACTIVE 列表
 4. **check_agent_call** — 查询 AgentCall 状态
 5. **speak_in_group_chat** — 任务汇报，让 user 和 manager 知道当前进展
-6. **finish_agent_call** — 完成任务调用，闭环当前 AgentCall
+6. **complete_task** — 完成任务调用，闭环当前 AgentCall
 
 {SHARED_TOOL_RULES}
 </tool_usage>"""
@@ -58,7 +58,7 @@ TEAM_MEMBER_TOOL_USAGE = f"""\
 ### 作为 Worker，你可以使用以下工具：
 
 1. **speak_in_group_chat** — 任务汇报，让 user 和 manager 知道当前进展
-2. **finish_agent_call** — 完成任务调用，闭环当前 AgentCall
+2. **complete_task** — 完成任务调用，闭环当前 AgentCall
 
 {SHARED_TOOL_RULES}
 </tool_usage>"""
@@ -81,7 +81,7 @@ LEADER_ROLE_INSTRUCTION = """\
 1. 收到任务后，分析并拆解为可执行的子任务
 2. 通过 call_agent 将子任务派给对应的团队成员
 3. 通过 assign_tasks_to_team 更新任务列表，让团队可见
-4. 安排完任务后，立即调用 finish_agent_call 闭环，无需等待结果
+4. 安排完任务后，立即调用 complete_task 闭环，无需等待结果
 5. Worker 完成后会通过新的 AgentCall 重新激活你，届时汇总结果
 6. 如果 Worker 报告阻塞，根据情况处理：
    - 自己能判断的，直接决策并重新派活
@@ -98,8 +98,8 @@ LEADER_ROLE_INSTRUCTION = """\
 
 ### 注意事项
 
-- 不要在任务结束时使用 speak_in_group_chat，应使用 finish_agent_call。
-- 如果你在上一次输出时忘记调用 finish_agent_call，需要立即补一个。
+- 不要在任务结束时使用 speak_in_group_chat，应使用 complete_task。
+- 如果你在上一次输出时忘记调用 complete_task，需要立即补一个。
 - 忘记闭环会导致系统判定你连续出错而自动停止。
 </role_instruction>"""
 
@@ -108,11 +108,11 @@ TEAM_MEMBER_ROLE_INSTRUCTION = """\
 ### 工作流程
 
 1. 收到 AgentCall 后，开始执行实际工作（修改代码、调试、测试等）
-2. 完成后，调用 finish_agent_call 闭环，带上成果汇报
+2. 完成后，调用 complete_task 闭环，带上成果汇报
 
 ### 阻塞判定
 
-遇到以下情况，用 finish_agent_call 标记失败（success=false）并说明原因：
+遇到以下情况，用 complete_task 标记失败（success=false）并说明原因：
 - **跨模块依赖**：发现问题涉及其他模块且改动范围超出当前任务边界（小 bug 直接修，多文件/多模块才算阻塞）
 - **对外接口不明**：需要暴露的接口、关键数据模型与其他模块未对齐，继续执行会导致不兼容
 - **需求冲突**：任务要求与现有代码逻辑矛盾，修改会影响其他模块
@@ -122,13 +122,13 @@ TEAM_MEMBER_ROLE_INSTRUCTION = """\
 
 ### 注意事项
 
-- 所有成果、问题、发现、风险都通过 finish_agent_call 汇报。
-- 如果你在上一次输出时忘记调用 finish_agent_call，需要立即补一个。
+- 所有成果、问题、发现、风险都通过 complete_task 汇报。
+- 如果你在上一次输出时忘记调用 complete_task，需要立即补一个。
 - 忘记闭环会导致系统判定你连续出错而自动停止。
 
-### finish_agent_call回报要求
+### complete_task回报要求
 
-finish_agent_call 的 content 是你交给调用方的成果汇报，要做到：
+complete_task 的 content 是你交给调用方的成果汇报，要做到：
 - 说结果：做成了什么，或者没做成为什么
 - 列事实：修改了哪些文件、关键改动是什么
 - 标风险：有什么注意事项、边界条件、遗留问题

@@ -61,8 +61,12 @@ class TestDockerIsolation:
     async def _run_in_container(self, container_name: str, command: str) -> tuple[int, str]:
         """在容器内执行命令，返回 (returncode, stdout)"""
         process = await asyncio.create_subprocess_exec(
-            "docker", "exec", container_name,
-            "sh", "-c", command,
+            "docker",
+            "exec",
+            container_name,
+            "sh",
+            "-c",
+            command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -75,7 +79,10 @@ class TestDockerIsolation:
         """创建测试容器，只挂载 worktree 目录"""
         # 先清理可能存在的同名容器
         cleanup = await asyncio.create_subprocess_exec(
-            "docker", "rm", "-f", container_name,
+            "docker",
+            "rm",
+            "-f",
+            container_name,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -83,12 +90,18 @@ class TestDockerIsolation:
 
         # 创建容器：只挂载 worktree，不挂载 main repo
         process = await asyncio.create_subprocess_exec(
-            "docker", "run", "-d",
-            "--name", container_name,
-            "-v", f"{worktree_path}:/workspace:rw",
-            "--network", "host",
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            container_name,
+            "-v",
+            f"{worktree_path}:/workspace:rw",
+            "--network",
+            "host",
             IMAGE_NAME,
-            "sleep", "infinity",
+            "sleep",
+            "infinity",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -102,7 +115,10 @@ class TestDockerIsolation:
     async def _destroy_container(self, container_name: str):
         """销毁测试容器"""
         process = await asyncio.create_subprocess_exec(
-            "docker", "rm", "-f", container_name,
+            "docker",
+            "rm",
+            "-f",
+            container_name,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -153,14 +169,10 @@ class TestDockerIsolation:
 
             container_name = "test-isolation-no-main-repo"
             try:
-                await self._create_container(
-                    container_name, str(worktree), str(main_repo)
-                )
+                await self._create_container(container_name, str(worktree), str(main_repo))
 
                 # 确认 worktree 文件可读
-                rc, _ = await self._run_in_container(
-                    container_name, "cat /workspace/README.md"
-                )
+                rc, _ = await self._run_in_container(container_name, "cat /workspace/README.md")
                 assert rc == 0
 
                 # 尝试读取主仓库文件（通过绝对路径 - 应该失败）
@@ -185,8 +197,7 @@ class TestDockerIsolation:
 
                 # 尝试通过相对路径向上跳
                 rc, _ = await self._run_in_container(
-                    container_name,
-                    "cat /workspace/../../../etc/passwd 2>/dev/null"
+                    container_name, "cat /workspace/../../../etc/passwd 2>/dev/null"
                 )
                 # 在 Docker 中，路径会被截断到 /，但 passwd 在 /etc/passwd
                 # 关键验证：不能读取 /workspace 以外的挂载内容
@@ -202,8 +213,7 @@ class TestDockerIsolation:
                 await self._create_container(container_name, str(worktree), "")
 
                 rc, _ = await self._run_in_container(
-                    container_name,
-                    "cat /workspace/../SECRET.md 2>/dev/null"
+                    container_name, "cat /workspace/../SECRET.md 2>/dev/null"
                 )
                 assert rc != 0, "Relative path escape should fail"
             finally:
@@ -243,8 +253,7 @@ class TestDockerIsolation:
 
                 # 通过相对路径也不行
                 rc, _ = await self._run_in_container(
-                    container_name,
-                    "cat /workspace/../MAIN_SECRET.md 2>/dev/null"
+                    container_name, "cat /workspace/../MAIN_SECRET.md 2>/dev/null"
                 )
                 assert rc != 0, "Relative path escape to sibling should fail"
             finally:

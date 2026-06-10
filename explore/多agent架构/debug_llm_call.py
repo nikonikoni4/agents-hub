@@ -1,4 +1,5 @@
 """调试 llm_call 的问题 - 异步测试版本"""
+
 import asyncio
 from team import llm_call_codex
 
@@ -36,6 +37,7 @@ async def main():
     await test_with_newlines()
     await test_without_newlines()
     await test_stripped_newlines()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -26,10 +26,10 @@ from agents_hub.mcp.server import (
     assign_tasks_to_team,
     call_agent,
     check_agent_call,
+    complete_task,
     create_agent,
     create_group_chat,
-    finish_agent_call,
-    speak_in_group_chat,
+    report_progress,
 )
 
 __all__ = [
@@ -53,8 +53,8 @@ __all__ = [
     "assign_tasks_to_team",
     "archive_task_list",
     "check_agent_call",
-    "finish_agent_call",
-    "speak_in_group_chat",
+    "complete_task",
+    "report_progress",
     "create_group_chat",
     "create_agent",
 ]

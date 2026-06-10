@@ -238,7 +238,7 @@ flowchart TB
     AgentA([Agent A])
     AgentB([Agent B])
     Ctx([GroupChatContext<br/>add_message])
-    FC([finish_agent_call])
+    FC([complete_task])
     SPK([speak_in_group_chat])
 
     %% ① user → agent
@@ -283,7 +283,7 @@ flowchart TB
         <div class="legend-grid">
           <div class="info-block blue">
             <div class="info-block-title">① user → agent</div>
-            <p>前端 → API → <code>GroupChat.send_message_to_agent()</code> 投递+保存 user 消息 → Agent 处理 → <code>finish_agent_call</code> 保存回复</p>
+            <p>前端 → API → <code>GroupChat.send_message_to_agent()</code> 投递+保存 user 消息 → Agent 处理 → <code>complete_task</code> 保存回复</p>
           </div>
           <div class="info-block purple">
             <div class="info-block-title">② agent → agent</div>

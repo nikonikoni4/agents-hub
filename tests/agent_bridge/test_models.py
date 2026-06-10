@@ -25,10 +25,10 @@ def test_agent_result_with_file_fields():
                 "deletions": 5,
                 "snapshot_id": "call_123_0",
                 "diff_available": True,
-                "diff_error": None
+                "diff_error": None,
             }
         ],
-        git_diff_range="abc123..def456"
+        git_diff_range="abc123..def456",
     )
 
     assert result.cwd == "/path/to/project"
@@ -45,7 +45,7 @@ def test_agent_result_without_file_fields():
         timestamp="2026-06-07T10:00:00",
         agent_name="TestAgent",
         platform=AgentPlatform.CLAUDE,
-        role_type=RoleType.TEAM_MEMBER
+        role_type=RoleType.TEAM_MEMBER,
     )
 
     assert result.cwd is None

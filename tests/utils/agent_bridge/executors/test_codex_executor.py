@@ -1,4 +1,5 @@
 """CodexExecutor 单元测试"""
+
 import os
 from unittest.mock import MagicMock
 import pytest
@@ -21,9 +22,7 @@ class TestCodexExecutor:
     def test_build_command_basic(self):
         """测试构建基本命令"""
         config = RoleConfig(
-            name="test",
-            platform=AgentPlatform.CODEX,
-            work_root="/path/to/codex-home"
+            name="test", platform=AgentPlatform.CODEX, work_root="/path/to/codex-home"
         )
         cmd = self.executor._build_command("审查代码", config, None)
 
@@ -35,9 +34,7 @@ class TestCodexExecutor:
     def test_build_command_with_session_id(self):
         """测试构建恢复会话的命令（使用 resume 子命令）"""
         config = RoleConfig(
-            name="test",
-            platform=AgentPlatform.CODEX,
-            work_root="/path/to/codex-home"
+            name="test", platform=AgentPlatform.CODEX, work_root="/path/to/codex-home"
         )
         cmd = self.executor._build_command("测试", config, "session-123")
 
@@ -48,9 +45,7 @@ class TestCodexExecutor:
     def test_build_env(self):
         """测试构建环境变量"""
         config = RoleConfig(
-            name="test",
-            platform=AgentPlatform.CODEX,
-            work_root="/path/to/codex-home"
+            name="test", platform=AgentPlatform.CODEX, work_root="/path/to/codex-home"
         )
         env = self.executor._build_env(config)
 
@@ -110,9 +105,7 @@ class TestCodexExecutorSystemPrompt:
     def test_build_command_system_prompt_with_single_quote(self):
         """契约：system_prompt 中的单引号被正确转义，不破坏命令结构"""
         system_prompt = "Don't do X. It's a test."
-        cmd = self.executor._build_command(
-            "测试", self.config, None, system_prompt=system_prompt
-        )
+        cmd = self.executor._build_command("测试", self.config, None, system_prompt=system_prompt)
 
         c_idx = cmd.index("-c")
         instructions_arg = cmd[c_idx + 1]
@@ -137,9 +130,7 @@ class TestCodexExecutorSystemPrompt:
     def test_build_command_fork_from_with_single_quote_in_system_prompt(self):
         """契约：fork 路径下 system_prompt 包含单引号时正确处理"""
         cmd = self.executor._build_command(
-            "测试", self.config, None,
-            fork_from="source-session",
-            system_prompt="Don't do X."
+            "测试", self.config, None, fork_from="source-session", system_prompt="Don't do X."
         )
 
         assert "-c" in cmd, "fork 路径下 system_prompt 应被注入"

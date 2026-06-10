@@ -4,7 +4,7 @@
 
 **Goal:** Move WebSocket connection management into an independent realtime module and let MCP tools broadcast refresh signals after group chat writes.
 
-**Architecture:** `agents_hub/realtime` owns room connections, refresh event creation, and broadcast helpers. API WebSocket endpoint and HTTP broadcast route depend on realtime; MCP depends on realtime after successful `speak_in_group_chat` and `finish_agent_call`. Core remains independent of realtime.
+**Architecture:** `agents_hub/realtime` owns room connections, refresh event creation, and broadcast helpers. API WebSocket endpoint and HTTP broadcast route depend on realtime; MCP depends on realtime after successful `speak_in_group_chat` and `complete_task`. Core remains independent of realtime.
 
 **Tech Stack:** Python, FastAPI WebSocket, Pydantic schemas, pytest, pytest-asyncio.
 
@@ -55,7 +55,7 @@
 **Files:**
 - Modify: `tests/mcp/test_server.py`
 
-- [ ] Add failing tests that patch MCP server's refresh broadcaster and verify `speak_in_group_chat` and `finish_agent_call` call it after successful group chat writes.
+- [ ] Add failing tests that patch MCP server's refresh broadcaster and verify `speak_in_group_chat` and `complete_task` call it after successful group chat writes.
 - [ ] Run the two new tests.
 - [ ] Expected: FAIL because MCP does not broadcast refresh yet.
 
@@ -66,7 +66,7 @@
 
 - [ ] Import realtime refresh broadcaster.
 - [ ] After successful `speak_in_group_chat` group chat write, broadcast refresh.
-- [ ] After successful `finish_agent_call` group chat write, broadcast refresh.
+- [ ] After successful `complete_task` group chat write, broadcast refresh.
 - [ ] Run MCP tests for speak/finish behavior.
 - [ ] Expected: PASS.
 

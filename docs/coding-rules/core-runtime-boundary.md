@@ -64,7 +64,7 @@ if call.send_from == config.default_user_name:
 
 **禁止**：
 - ❌ 用 `speak_in_group_chat` 关闭 AgentCall
-- ❌ 用 `finish_agent_call` 代替普通公开发言
+- ❌ 用 `complete_task` 代替普通公开发言
 - ❌ 把 Agent-to-Agent 的完成通知写入群聊历史
 
 **示例**：

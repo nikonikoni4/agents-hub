@@ -2,7 +2,7 @@
 version: 1.4
 created_at: 2026-05-31
 updated_at: 2026-06-04
-last_updated: 对齐 finish_agent_call 的 Agent 完成通知和 user 群聊回执分支，以及现有 GroupChat 组件持有关系
+last_updated: 对齐 complete_task 的 Agent 完成通知和 user 群聊回执分支，以及现有 GroupChat 组件持有关系
 abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制、显式群聊发言、显式 AgentCall 闭环、user 回执和 MCP 工具入口
 id: spec-core-agent-orchestration
 title: Core Agent & Orchestration 层规格
@@ -34,7 +34,7 @@ contract_refs:
 | 1.1 | 新增 token 生命周期、token 索引、runtime 注入、task_manager、MCP 工具入口更新 |
 | 1.2 | Team 语义明确（team_members 包含 manager+worker）、初始化分离机制、user 伪 Agent 注册、config.default_manager_name / default_user_name 替代硬编码 |
 | 1.3 | 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问 |
-| 1.4 | 对齐 Agent.run 显式公开发言、显式 AgentCall 闭环，以及 finish_agent_call 的 Agent 完成通知和 user 群聊回执 |
+| 1.4 | 对齐 Agent.run 显式公开发言、显式 AgentCall 闭环，以及 complete_task 的 Agent 完成通知和 user 群聊回执 |
 
 ## Overview
 
@@ -74,7 +74,7 @@ while _run:
     if msg 是停止信号: break
     prompt = render_for_llm(msg)         ← 渲染为 LLM prompt
     await _process_message(msg, prompt)  ← 执行，普通 text 默认私下保留
-    如果 TASK 仍未通过 finish_agent_call 闭环:
+    如果 TASK 仍未通过 complete_task 闭环:
         向当前 Agent 私有队列追加系统提醒
 ```
 
@@ -88,9 +88,9 @@ while _run:
 **显式公开与闭环**：
 - Agent 的普通 LLM text 输出默认不进入群聊历史
 - 公开群聊发言必须通过 `speak_in_group_chat`
-- 需要回复的 TASK 调用必须通过 `finish_agent_call` 闭环
+- 需要回复的 TASK 调用必须通过 `complete_task` 闭环
 - `speak_in_group_chat` 不创建、不关闭 AgentCall
-- `finish_agent_call` 会更新 AgentCall；原调用方是 Agent 时投递 NOTIFICATION 唤醒下一轮处理，原调用方是 user 时写入群聊历史并触发前端刷新
+- `complete_task` 会更新 AgentCall；原调用方是 Agent 时投递 NOTIFICATION 唤醒下一轮处理，原调用方是 user 时写入群聊历史并触发前端刷新
 
 **Runtime 注入**：每次处理消息前，通过 `markdown_injector` 将身份信息（token、团队成员、任务看板）动态注入到 work_root 下的 CLAUDE.md/AGENTS.md 的 `<AGENT_RUNTIME_START/>` 和 `<AGENT_RUNTIME_END/>` 标记之间。详见 `2026-05-31-mcp-tools-design.md` §5。
 
@@ -193,7 +193,7 @@ MCP Server 提供 6 个工具，Agent 通过 token 身份调用：
 | `archive_task_list` | Leader | 归档当前 ACTIVE 任务列表 |
 | `check_agent_call` | 任意 agent | 查询自己发起的调用状态 |
 | `speak_in_group_chat` | 任意 agent | 在群聊中公开发言，不改变 AgentCall 生命周期 |
-| `finish_agent_call` | 调用接收者 | 结束需要回复的 TASK 调用，并写入最终群聊回复 |
+| `complete_task` | 调用接收者 | 结束需要回复的 TASK 调用，并写入最终群聊回复 |
 
 **身份验证流程**：
 1. 解析 `agent_token` → `(agent_name, group_chat_id)`
@@ -218,7 +218,7 @@ orchestration → agent → communication → foundation
 
 ### MCP Tool 契约
 
-`call_agent` 返回 call_id，调用方可通过此 ID 查询调用状态。`finish_agent_call` 只能用于需要回复的 TASK 调用；如果用于 notification 调用、非接收者调用或重复闭环，返回 MCP 错误响应。
+`call_agent` 返回 call_id，调用方可通过此 ID 查询调用状态。`complete_task` 只能用于需要回复的 TASK 调用；如果用于 notification 调用、非接收者调用或重复闭环，返回 MCP 错误响应。
 
 ### 与 agent_bridge 的协作
 

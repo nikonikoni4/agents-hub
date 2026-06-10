@@ -40,8 +40,12 @@ _MEANINGFUL_TYPES = {"user", "assistant"}
 
 # Entry types to silently skip
 _NOISE_TYPES = {
-    "attachment", "system", "queue-operation",
-    "mode", "custom-title", "last-prompt",
+    "attachment",
+    "system",
+    "queue-operation",
+    "mode",
+    "custom-title",
+    "last-prompt",
 }
 
 # Patterns for --clean mode: strip injected boilerplate from user text
@@ -101,12 +105,14 @@ def _extract_content(message: dict, clean: bool = False) -> list[dict]:
                     items.append({"type": "text", "text": text})
 
         elif item_type == "tool_use":
-            items.append({
-                "type": "tool_use",
-                "id": item.get("id", ""),
-                "name": item.get("name", ""),
-                "input": item.get("input", {}),
-            })
+            items.append(
+                {
+                    "type": "tool_use",
+                    "id": item.get("id", ""),
+                    "name": item.get("name", ""),
+                    "input": item.get("input", {}),
+                }
+            )
 
         elif item_type == "tool_result":
             content = item.get("content", "")
@@ -117,11 +123,13 @@ def _extract_content(message: dict, clean: bool = False) -> list[dict]:
                     if isinstance(block, dict) and block.get("type") == "text":
                         text_parts.append(block.get("text", ""))
                 content = "\n".join(text_parts)
-            items.append({
-                "type": "tool_result",
-                "tool_use_id": item.get("tool_use_id", ""),
-                "content": content,
-            })
+            items.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": item.get("tool_use_id", ""),
+                    "content": content,
+                }
+            )
 
     return items
 
@@ -206,7 +214,8 @@ def main():
     parser.add_argument("input", help="Path to the session .jsonl file")
     parser.add_argument("-o", "--output", help="Output path (default: stdout)")
     parser.add_argument(
-        "--clean", action="store_true",
+        "--clean",
+        action="store_true",
         help="Strip injected boilerplate (skill instructions, command tags, system-reminders)",
     )
     args = parser.parse_args()

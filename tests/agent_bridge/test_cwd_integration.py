@@ -88,11 +88,13 @@ class TestClaudeCwd:
         name_a = extract_dir_name(dir_a)
         name_b = extract_dir_name(dir_b)
 
-        assert name_a in result_a.text, \
-               f"Claude 在 dir_a 执行时输出的路径不匹配: expected contains '{name_a}', got='{result_a.text}'"
+        assert name_a in result_a.text, (
+            f"Claude 在 dir_a 执行时输出的路径不匹配: expected contains '{name_a}', got='{result_a.text}'"
+        )
 
-        assert name_b in result_b.text, \
-               f"Claude 在 dir_b 执行时输出的路径不匹配: expected contains '{name_b}', got='{result_b.text}'"
+        assert name_b in result_b.text, (
+            f"Claude 在 dir_b 执行时输出的路径不匹配: expected contains '{name_b}', got='{result_b.text}'"
+        )
 
 
 @pytest.mark.integration
@@ -130,11 +132,13 @@ class TestCodexCwd:
         name_a = extract_dir_name(dir_a)
         name_b = extract_dir_name(dir_b)
 
-        assert name_a in result_a.text, \
-               f"Codex 在 dir_a 执行时输出的路径不匹配: expected contains '{name_a}', got='{result_a.text}'"
+        assert name_a in result_a.text, (
+            f"Codex 在 dir_a 执行时输出的路径不匹配: expected contains '{name_a}', got='{result_a.text}'"
+        )
 
-        assert name_b in result_b.text, \
-               f"Codex 在 dir_b 执行时输出的路径不匹配: expected contains '{name_b}', got='{result_b.text}'"
+        assert name_b in result_b.text, (
+            f"Codex 在 dir_b 执行时输出的路径不匹配: expected contains '{name_b}', got='{result_b.text}'"
+        )
 
 
 @pytest.mark.integration
@@ -162,5 +166,6 @@ class TestCwdNotSpecified:
         print(f"Claude output: {result.text}")
 
         # 验证输出包含当前目录名
-        assert current_name in result.text, \
-               f"Claude 默认 cwd 输出不匹配: expected contains '{current_name}', got='{result.text}'"
+        assert current_name in result.text, (
+            f"Claude 默认 cwd 输出不匹配: expected contains '{current_name}', got='{result.text}'"
+        )

@@ -69,13 +69,13 @@ contract_refs:
      → add_message() (保存发送方消息)
      → agent.message_queue
      → agent.run() 处理
-     → finish_agent_call 完成任务
+     → complete_task 完成任务
      → 保存 agent 回复到群聊历史
 ```
 
 **保存时机**：
 1. 发送时保存 user 消息（`GroupChat.send_message_to_agent()` 调用 `add_message()`）
-2. 完成时保存 agent 回复（`finish_agent_call` 判断 `is_user_name()` 后保存）
+2. 完成时保存 agent 回复（`complete_task` 判断 `is_user_name()` 后保存）
 
 #### 2. agent → agent 消息（MCP tool 调用）
 
@@ -87,7 +87,7 @@ agent_a 调用 call_agent
        → add_message() (保存发送方消息)
        → agent_b.message_queue
        → agent_b.run() 处理
-       → finish_agent_call 完成任务
+       → complete_task 完成任务
        → 发送 NOTIFICATION 给 agent_a
        → GroupChat.send_message_to_agent()
        → MessageRouter.send_message() (投递)
@@ -147,7 +147,7 @@ async def send_message_to_agent(self, message: AgentMessage):
 
 **使用场景**：
 - MCP tool `call_agent`：agent 调用 agent
-- MCP tool `finish_agent_call`：发送 NOTIFICATION 给原调用方
+- MCP tool `complete_task`：发送 NOTIFICATION 给原调用方
 - API `send_message_to_agent`：user 发送消息给 agent
 
 ### 群聊历史保存规则
@@ -155,7 +155,7 @@ async def send_message_to_agent(self, message: AgentMessage):
 | 消息来源 | 消息类型 | 是否保存到群聊历史 | 保存位置 |
 |---------|---------|----------------|---------|
 | user → agent TASK | 发送消息 | ✅ 保存 | `GroupChat.send_message_to_agent()` |
-| user → agent TASK 完成 | 回复内容 | ✅ 保存 | `finish_agent_call` 中判断 `is_user_name()` |
+| user → agent TASK 完成 | 回复内容 | ✅ 保存 | `complete_task` 中判断 `is_user_name()` |
 | agent → agent TASK | 发送消息 | ✅ 保存 | `GroupChat.send_message_to_agent()` |
 | agent → agent NOTIFICATION | 完成通知 | ✅ 保存 | `GroupChat.send_message_to_agent()` |
 | speak_in_group_chat | 公开发言 | ✅ 保存 | `speak_in_group_chat` 直接调用 `add_message()` |
@@ -219,7 +219,7 @@ class GroupChat:
         
         使用方：
         - MCP tool call_agent
-        - MCP tool finish_agent_call (发送 NOTIFICATION)
+        - MCP tool complete_task (发送 NOTIFICATION)
         - API send_message_to_agent
         """
 ```
@@ -243,7 +243,7 @@ async def call_agent(
     message = AgentMessage(...)
     await group_chat.send_message_to_agent(message)
 
-async def finish_agent_call(
+async def complete_task(
     agent_token: str,
     call_id: str,
     content: str,
@@ -312,7 +312,7 @@ class GroupChatContext:
         保存消息到群聊历史
         
         调用方：
-        1. finish_agent_call（user 调用的 TASK 完成）
+        1. complete_task（user 调用的 TASK 完成）
         2. speak_in_group_chat（公开发言）
         3. GroupChat._initialize_new_members()（初始化消息）
         
@@ -362,7 +362,7 @@ user_message → send_message_to_agent API
             → MessageRouter.send_message() (投递)
             → add_message() (保存 user 消息)
             → agent 处理
-            → finish_agent_call
+            → complete_task
             → add_message() (保存 agent 回复)
             → 前端调用 getMessages 可以看到 user 消息和 agent 回复
 
@@ -372,7 +372,7 @@ agent_a.call_agent(agent_b, task)
        → MessageRouter.send_message(TASK) (投递)
        → add_message() (保存 TASK 消息)
        → agent_b 处理
-       → finish_agent_call
+       → complete_task
        → _send_agent_call_completion_notification
        → GroupChat.send_message_to_agent()
        → MessageRouter.send_message(NOTIFICATION) (投递)
