@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新建对话 - 设计原型 v2.0</title>
+    <style>
+        /* 设计系统变量 */
+        :root {
+            /* 浅色主题 */
+            --bg-sidebar: rgb(246, 246, 246);
+            --bg-shadow: rgb(234, 234, 234);
+            --bg-main: rgb(255, 255, 255);
+            --bg-bubble: rgb(246, 246, 246);
+            --bg-right-base: rgb(255, 255, 255);
+            --bg-right-module: rgb(246, 246, 246);
+            --bg-right-shadow: rgb(233, 234, 234);
+            --bg-input: rgb(255, 255, 255);
+            --text-primary: rgb(30, 30, 30);
+            --text-secondary: rgb(100, 100, 100);
+            --text-tertiary: rgb(150, 150, 150);
+            --border-color: rgb(220, 220, 220);
+            --accent-color: rgb(74, 158, 255);
+            --accent-hover: rgb(58, 140, 230);
+            --accent-light: rgba(74, 158, 255, 0.1);
+            --accent-shadow: rgba(74, 158, 255, 0.3);
+        }
+
+        html[data-theme="dark"] {
+            /* 深色主题 */
+            --bg-sidebar: rgb(20, 20, 20);
+            --bg-shadow: rgb(38, 38, 38);
+            --bg-main: rgb(24, 24, 24);
+            --bg-bubble: rgb(20, 20, 20);
+            --bg-right-base: rgb(24, 24, 24);
+            --bg-right-module: rgb(20, 20, 20);
+            --bg-right-shadow: rgb(36, 36, 36);
+            --bg-input: rgb(45, 45, 45);
+            --text-primary: rgb(230, 230, 230);
+            --text-secondary: rgb(180, 180, 180);
+            --text-tertiary: rgb(120, 120, 120);
+            --border-color: rgb(60, 60, 60);
+            --accent-color: rgb(74, 158, 255);
+            --accent-hover: rgb(90, 170, 255);
+            --accent-light: rgba(74, 158, 255, 0.15);
+            --accent-shadow: rgba(74, 158, 255, 0.4);
+        }
+
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg-sidebar);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* 遮罩层 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        /* 弹窗容器 */
+        .dialog {
+            background: var(--bg-main);
+            border-radius: 16px;
+            width: 580px;
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: dialog-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes dialog-in {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* 标题栏 */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent-color);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .header-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .closeBtn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .closeBtn:hover {
+            background: var(--bg-shadow);
+            color: var(--text-primary);
+        }
+
+        /* 内容区域 */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Tab切换 - 全新设计 */
+        .mode-selector {
+            display: flex;
+            background: var(--bg-bubble);
+            border-radius: 12px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .mode-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-shadow);
+        }
+
+        .mode-btn.active {
+            background: var(--bg-main);
+            color: var(--text-primary);
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .mode-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* 表单字段 - 重新设计 */
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .field-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .field-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            line-height: 1.4;
+        }
+
+        .field-badge.required {
+            background: var(--accent-light);
+            color: var(--accent-color);
+        }
+
+        .field-badge.optional {
+            background: var(--bg-shadow);
+            color: var(--text-tertiary);
+        }
+
+        .field-hint {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* 输入框 - 增强版 */
+        .input {
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--bg-input);
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-shadow);
+        }
+
+        .input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        /* 路径输入行 */
+        .path-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .path-input {
+            flex: 1;
+        }
+
+        .browse-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-bubble);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .browse-btn:hover {
+            background: var(--bg-shadow);
+            border-color: var(--accent-color);
+        }
+
+        .browse-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* 角色选择器 - 全新设计 */
+        .role-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+        }
+
+        .role-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-main);
+        }
+
+        .role-card:hover {
+            border-color: var(--accent-color);
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+
+        .role-card.selected {
+            border-color: var(--accent-color);
+            background: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 12px var(--accent-shadow);
+        }
+
+        .role-card.selected .role-avatar {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .role-card.selected .role-name {
+            color: white;
+        }
+
+        .role-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-bubble);
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .role-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .role-card.selected .role-name {
+            color: white;
+        }
+
+        /* 团队选择器 */
+        .team-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .team-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-main);
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .team-chip:hover {
+            border-color: var(--accent-color);
+            background: var(--accent-light);
+        }
+
+        .team-chip.selected {
+            border-color: var(--accent-color);
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .team-chip .team-icon {
+            width: 20px;
+            height: 20px;
+            background: var(--bg-shadow);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .team-chip.selected .team-icon {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .team-chip .team-count {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        /* 操作栏 */
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding: 20px 24px;
+            background: var(--bg-sidebar);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .cancel-btn,
+        .submit-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cancel-btn {
+            background: var(--bg-bubble);
+            color: var(--text-primary);
+        }
+
+        .cancel-btn:hover {
+            background: var(--bg-shadow);
+        }
+
+        .submit-btn {
+            background: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 12px var(--accent-shadow);
+            min-width: 120px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px var(--accent-shadow);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* 主题切换按钮 */
+        .theme-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px var(--accent-shadow);
+            transition: all 0.2s;
+            z-index: 1001;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-toggle svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* 空状态 */
+        .empty-hint {
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 16px;
+            text-align: center;
+            background: var(--bg-bubble);
+            border-radius: 8px;
+        }
+
+        /* 验证状态 */
+        .validation-hint {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+
+        .validation-hint.error {
+            color: #ef4444;
+        }
+
+        /* 响应式 */
+        @media (max-width: 640px) {
+            .dialog {
+                width: 100%;
+                max-height: 90vh;
+                border-radius: 12px;
+            }
+
+            .role-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .cancel-btn,
+            .submit-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay" onclick="this.style.display='none'">
+        <div class="dialog" onclick="event.stopPropagation()">
+            <!-- 标题栏 -->
+            <div class="header">
+                <div class="header-left">
+                    <div class="header-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 5v14m7-7H5"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2>新建对话</h2>
+                        <div class="header-subtitle">选择对话模式并配置团队成员</div>
+                    </div>
+                </div>
+                <button class="closeBtn" onclick="this.closest('.overlay').style.display='none'">×</button>
+            </div>
+
+            <!-- 内容区域 -->
+            <div class="content">
+                <!-- Tab切换 -->
+                <div class="mode-selector">
+                    <button class="mode-btn active" onclick="switchMode('single')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        单聊
+                    </button>
+                    <button class="mode-btn" onclick="switchMode('group')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        群聊
+                    </button>
+                </div>
+
+                <!-- 单聊模式 -->
+                <div id="single-mode" class="form-section">
+                    <div class="form-section-title">选择 Agent</div>
+                    <div class="field">
+                        <div class="field-header">
+                            <label class="field-label">
+                                Agent
+                                <span class="field-badge required">必选</span>
+                            </label>
+                            <span class="field-hint">选择一个 AI 助手开始对话</span>
+                        </div>
+                        <div class="role-grid">
+                            <div class="role-card" onclick="selectRole(this, 'single')">
+                                <div class="role-avatar">M</div>
+                                <div class="role-name">Manager</div>
+                            </div>
+                            <div class="role-card" onclick="selectRole(this, 'single')">
+                                <div class="role-avatar">U</div>
+                                <div class="role-name">UI设计师</div>
+                            </div>
+                            <div class="role-card" onclick="selectRole(this, 'single')">
+                                <div class="role-avatar">前</div>
+                                <div class="role-name">前端执行者</div>
+                            </div>
+                            <div class="role-card" onclick="selectRole(this, 'single')">
+                                <div class="role-avatar">截</div>
+                                <div class="role-name">截图分析师</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="field-header">
+                            <label class="field-label">
+                                对话名称
+                                <span class="field-badge optional">可选</span>
+                            </label>
+                        </div>
+                        <input type="text" class="input" placeholder="输入对话名称（可选）">
+                    </div>
+                </div>
+
+                <!-- 群聊模式 -->
+                <div id="group-mode" class="form-section" style="display: none;">
+                    <div class="form-section-title">基本信息</div>
+                    <div class="field">
+                        <div class="field-header">
+                            <label class="field-label">
+                                群组名称
+                                <span class="field-badge required">必选</span>
+                            </label>
+                        </div>
+                        <input type="text" class="input" placeholder="输入群组名称">
+                    </div>
+
+                    <div class="form-section-title">快速选择团队</div>
+                    <div class="field">
+                        <div class="team-selector">
+                            <div class="team-chip" onclick="selectTeam(this)">
+                                <span class="team-icon">👥</span>
+                                <span>前端团队</span>
+                                <span class="team-count">4人</span>
+                            </div>
+                            <div class="team-chip" onclick="selectTeam(this)">
+                                <span class="team-icon">👥</span>
+                                <span>设计团队</span>
+                                <span class="team-count">3人</span>
+                            </div>
+                            <div class="team-chip" onclick="selectTeam(this)">
+                                <span class="team-icon">👥</span>
+                                <span>全栈团队</span>
+                                <span class="team-count">6人</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">配置成员</div>
+                    <div class="field">
+                        <div class="field-header">
+                            <label class="field-label">
+                                Leader
+                                <span class="field-badge required">必选</span>
+                            </label>
+                            <span class="field-hint">选择团队负责人</span>
+                        </div>
+                        <div class="role-grid">
+                            <div class="role-card" onclick="selectRole(this, 'leader')">
+                                <div class="role-avatar">M</div>
+                                <div class="role-name">Manager</div>
+                            </div>
+                            <div class="role-card" onclick="selectRole(this, 'leader')">
+                                <div class="role-avatar">U</div>
+                                <div class="role-name">UI设计师</div>
+                            </div>
+                            <div class="role-card" onclick="selectRole(this, 'leader')">
+                                <div class="role-avatar">前</div>
+                                <div class="role-name">前端执行者</div>
+                            </div>
+                            <div class="role-card" onclick="selectRole(this, 'leader')">
+                                <div class="role-avatar">截</div>
+                                <div class="role-name">截图分析师</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <div class="field-header">
+                            <label class="field-label">
+                                Workers
+                                <span class="field-badge optional">可选</span>
+                            </label>
+                            <span class="field-hint">选择团队成员（可多选）</span>
+                        </div>
+                        <div class="role-grid">
+                            <div class="role-card" onclick="toggleWorker(this)">
+                                <div class="role-avatar">M</div>
+                                <div class="role-name">Manager</div>
+                            </div>
+                            <div class="role-card" onclick="toggleWorker(this)">
+                                <div class="role-avatar">U</div>
+                                <div class="role-name">UI设计师</div>
+                            </div>
+                            <div class="role-card" onclick="toggleWorker(this)">
+                                <div class="role-avatar">前</div>
+                                <div class="role-name">前端执行者</div>
+                            </div>
+                            <div class="role-card" onclick="toggleWorker(this)">
+                                <div class="role-avatar">截</div>
+                                <div class="role-name">截图分析师</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">项目配置</div>
+                    <div class="field">
+                        <div class="field-header">
+                            <label class="field-label">
+                                项目路径
+                                <span class="field-badge required">必选</span>
+                            </label>
+                        </div>
+                        <div class="path-row">
+                            <input type="text" class="input path-input" placeholder="/home/user/projects/your-project">
+                            <button class="browse-btn">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                浏览
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作栏 -->
+            <div class="actions">
+                <button class="cancel-btn" onclick="this.closest('.overlay').style.display='none'">取消</button>
+                <button class="submit-btn" id="submit-btn" disabled>创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主题切换按钮 -->
+    <button class="theme-toggle" onclick="toggleTheme()">
+        <svg id="theme-icon" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+    </button>
+
+    <script>
+        // 主题切换
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+
+            const icon = document.getElementById('theme-icon');
+            if (newTheme === 'dark') {
+                icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+            } else {
+                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+            }
+        }
+
+        // 模式切换
+        function switchMode(mode) {
+            // 更新按钮状态
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // 切换表单显示
+            document.getElementById('single-mode').style.display = mode === 'single' ? 'flex' : 'none';
+            document.getElementById('group-mode').style.display = mode === 'group' ? 'flex' : 'none';
+
+            // 更新提交按钮状态
+            updateSubmitButton();
+        }
+
+        // 选择角色（单选）
+        function selectRole(card, type) {
+            // 移除同组其他选中状态
+            const grid = card.closest('.role-grid');
+            grid.querySelectorAll('.role-card').forEach(c => {
+                c.classList.remove('selected');
+            });
+
+            // 选中当前卡片
+            card.classList.add('selected');
+
+            // 更新提交按钮状态
+            updateSubmitButton();
+        }
+
+        // 切换 Worker 选中状态（多选）
+        function toggleWorker(card) {
+            card.classList.toggle('selected');
+
+            // 更新提交按钮状态
+            updateSubmitButton();
+        }
+
+        // 选择团队
+        function selectTeam(chip) {
+            // 移除其他团队选中状态
+            document.querySelectorAll('.team-chip').forEach(c => {
+                c.classList.remove('selected');
+            });
+
+            // 选中当前团队
+            chip.classList.add('selected');
+        }
+
+        // 更新提交按钮状态
+        function updateSubmitButton() {
+            const submitBtn = document.getElementById('submit-btn');
+            const singleMode = document.getElementById('single-mode');
+            const groupMode = document.getElementById('group-mode');
+
+            if (singleMode.style.display !== 'none') {
+                // 单聊模式：需要选择一个 Agent
+                const hasSelectedAgent = singleMode.querySelector('.role-card.selected') !== null;
+                submitBtn.disabled = !hasSelectedAgent;
+            } else {
+                // 群聊模式：需要群组名称、Leader、项目路径
+                const groupName = groupMode.querySelector('input[type="text"]').value.trim();
+                const hasLeader = groupMode.querySelector('.field:nth-child(3) .role-card.selected') !== null;
+                const projectPath = groupMode.querySelector('.path-input').value.trim();
+
+                submitBtn.disabled = !(groupName && hasLeader && projectPath);
+            }
+        }
+
+        // 初始化：监听输入框变化
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', updateSubmitButton);
+        });
+    </script>
+</body>
+</html>

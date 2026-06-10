@@ -1,30 +1,61 @@
+/* 头像选择器 - 5列网格布局 */
 .container {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
 }
 
 .avatarItem {
-  width: 64px;
-  height: 64px;
-  padding: 0;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  background: var(--bg-bubble);
+  aspect-ratio: 1;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-main);
+  position: relative;
   overflow: hidden;
+  padding: 0;
 }
 
 .avatarItem:hover {
-  border-color: var(--border-color);
+  border-color: var(--accent-color);
   transform: scale(1.05);
 }
 
 .avatarItem.selected {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+  box-shadow: 0 0 0 3px var(--accent-shadow);
+}
+
+/* 选中态勾选图标 */
+.avatarItem.selected::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarItem.selected::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg);
+  z-index: 1;
 }
 
 .loading {

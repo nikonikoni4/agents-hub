@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { AvatarSelector } from './AvatarSelector';
+import { AvatarImage } from '@/shared/components';
 import { useUpdateRole } from '../hooks/useUpdateRole';
 import { useRoleSkills } from '../hooks/useRoleSkills';
 import { SkillSelectorModal, ToolSelectorModal } from '@/shared/components';
@@ -16,6 +17,14 @@ import { getToolCatalog } from '@/core/api';
 import type { RoleWithSkills } from '@/shared/adapters/roleAdapter';
 import type { ToolGroupResponse } from '@/shared/types/api-schemas';
 import styles from './CreateRoleDialog.module.css';
+
+// SVG图标组件
+const UserEditIcon = () => (
+  <svg viewBox="0 0 24 24">
+    <circle cx="12" cy="7" r="4" />
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+  </svg>
+);
 
 export interface EditRoleDialogProps {
   isOpen: boolean;
@@ -97,37 +106,78 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
   return (
     <div className={styles.overlay} onClick={handleClose}>
       <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
+        {/* 标题栏 - 增加图标和副标题 */}
         <div className={styles.header}>
-          <h2>编辑角色</h2>
+          <div className={styles.headerLeft}>
+            <div className={styles.headerIcon}>
+              <UserEditIcon />
+            </div>
+            <div className={styles.headerText}>
+              <h2>编辑角色</h2>
+              <div className={styles.headerSubtitle}>自定义角色的名称、头像和描述</div>
+            </div>
+          </div>
           <button type="button" className={styles.closeBtn} onClick={handleClose}>
             ×
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
+          {/* 角色名称 */}
           <div className={styles.field}>
-            <label>角色名称</label>
+            <div className={styles.fieldHeader}>
+              <label className={styles.fieldLabel}>
+                角色名称
+                <span className={`${styles.badge} ${styles.badgeRequired}`}>必填</span>
+              </label>
+            </div>
             <div className={styles.typeBadge}>{role.name}</div>
           </div>
 
+          {/* 头像选择 */}
           <div className={styles.field}>
-            <label>头像</label>
+            <div className={styles.fieldHeader}>
+              <label className={styles.fieldLabel}>
+                选择头像
+                <span className={`${styles.badge} ${styles.badgeRequired}`}>必填</span>
+              </label>
+            </div>
             <AvatarSelector selectedAvatar={avatar} onSelect={setAvatar} />
           </div>
 
+          {/* 角色描述 */}
           <div className={styles.field}>
-            <label htmlFor="edit-description">角色描述</label>
+            <div className={styles.fieldHeader}>
+              <label className={styles.fieldLabel} htmlFor="edit-description">
+                角色描述
+                <span className={`${styles.badge} ${styles.badgeOptional}`}>可选</span>
+              </label>
+            </div>
             <textarea
               id="edit-description"
+              className={styles.textarea}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="输入角色描述（可选）"
+              placeholder="描述角色的功能和职责..."
               rows={3}
             />
+            <span className={styles.fieldHint}>描述将显示在角色卡片上，帮助用户了解角色功能</span>
           </div>
 
+          {/* 实时预览 */}
+          <div className={styles.previewSection}>
+            <div className={styles.previewAvatar}>
+              <AvatarImage avatar={avatar} fallback={role.name} />
+            </div>
+            <div className={styles.previewInfo}>
+              <div className={styles.previewName}>{role.name}</div>
+              <div className={styles.previewDesc}>{description || '暂无描述'}</div>
+            </div>
+          </div>
+
+          {/* 技能列表 */}
           <div className={styles.field}>
-            <label>技能列表</label>
+            <label className={styles.fieldLabel}>技能列表</label>
             <div className={styles.skillsContainer}>
               {roleSkills.length > 0 ? (
                 <div className={styles.skillsList}>
@@ -159,29 +209,31 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
           </div>
 
           {/* 工具管理 */}
-          <div className={styles.skillsContainer}>
-            <label className={styles.skillLabel}>工具</label>
-            <div className={styles.skillsList}>
-              {enabledTools.length > 0 ? (
-                enabledTools.slice(0, 8).map((name) => (
-                  <span key={name} className={styles.skillItem}>
-                    {name}
-                  </span>
-                ))
-              ) : (
-                <span className={styles.noSkills}>全部禁用</span>
-              )}
-              {enabledTools.length > 8 && (
-                <span className={styles.skillItem}>+{enabledTools.length - 8}</span>
-              )}
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>工具</label>
+            <div className={styles.skillsContainer}>
+              <div className={styles.skillsList}>
+                {enabledTools.length > 0 ? (
+                  enabledTools.slice(0, 8).map((name) => (
+                    <span key={name} className={styles.skillItem}>
+                      {name}
+                    </span>
+                  ))
+                ) : (
+                  <span className={styles.noSkills}>全部禁用</span>
+                )}
+                {enabledTools.length > 8 && (
+                  <span className={styles.skillItem}>+{enabledTools.length - 8}</span>
+                )}
+              </div>
+              <button
+                type="button"
+                className={styles.addSkillBtn}
+                onClick={() => setShowToolSelector(true)}
+              >
+                + 管理工具
+              </button>
             </div>
-            <button
-              type="button"
-              className={styles.addSkillBtn}
-              onClick={() => setShowToolSelector(true)}
-            >
-              + 管理工具
-            </button>
           </div>
 
           <div className={styles.actions}>
@@ -189,7 +241,7 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
               取消
             </button>
             <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? '保存中...' : '保存'}
+              {loading ? '保存中...' : '保存修改'}
             </button>
           </div>
         </form>

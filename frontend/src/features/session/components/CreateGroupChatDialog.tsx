@@ -11,6 +11,29 @@ import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore
 import type { DraftChat } from '@/features/single-chat/store/singleChatStore';
 import styles from './CreateGroupChatDialog.module.css';
 
+// SVG图标组件
+const PlusIcon = () => (
+  <svg viewBox="0 0 24 24">
+    <path d="M12 5v14m7-7H5" />
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg viewBox="0 0 24 24">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg viewBox="0 0 24 24">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
 export interface CreateGroupChatDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -133,21 +156,31 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
   return (
     <div className={styles.overlay} onClick={handleClose}>
       <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
+        {/* 标题栏 - 增加图标和副标题 */}
         <div className={styles.header}>
-          <h2>新建对话</h2>
+          <div className={styles.headerLeft}>
+            <div className={styles.headerIcon}>
+              <PlusIcon />
+            </div>
+            <div className={styles.headerText}>
+              <h2>新建对话</h2>
+              <div className={styles.headerSubtitle}>选择对话模式并配置团队成员</div>
+            </div>
+          </div>
           <button type="button" className={styles.closeBtn} onClick={handleClose}>
             ×
           </button>
         </div>
 
         <div className={styles.content}>
-          {/* 模式切换 */}
+          {/* Tab切换 - 增加图标 */}
           <div className={styles.modeSelector}>
             <button
               type="button"
               className={`${styles.modeBtn} ${chatMode === 'single' ? styles.modeBtnActive : ''}`}
               onClick={() => setChatMode('single')}
             >
+              <UserIcon />
               单聊
             </button>
             <button
@@ -155,6 +188,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
               className={`${styles.modeBtn} ${chatMode === 'group' ? styles.modeBtnActive : ''}`}
               onClick={() => setChatMode('group')}
             >
+              <UsersIcon />
               群聊
             </button>
           </div>
@@ -188,110 +222,134 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
 
               {singleMode === 'new' ? (
                 /* 全新模式：从所有角色中选择 */
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>选择 Agent</label>
-                  {singleLoading ? (
-                    <span className={styles.emptyHint}>加载角色中...</span>
-                  ) : allRoles.length === 0 ? (
-                    <span className={styles.emptyHint}>暂无可用角色</span>
-                  ) : (
-                    <div className={styles.roleList}>
-                      {allRoles.map((role) => (
-                        <label
-                          key={role.name}
-                          className={`${styles.roleChip} ${selectedAgent === role.name ? styles.selected : ''}`}
-                        >
-                          <input
-                            type="radio"
-                            name="single-agent"
-                            checked={selectedAgent === role.name}
-                            onChange={() => setSelectedAgent(role.name)}
-                          />
-                          <span className={styles.roleAvatar}>
-                            <AvatarImage avatar={role.avatar} fallback={role.name} />
-                          </span>
-                          {role.name}
-                        </label>
-                      ))}
+                <div className={styles.formSection}>
+                  <div className={styles.formSectionTitle}>选择 Agent</div>
+                  <div className={styles.field}>
+                    <div className={styles.fieldHeader}>
+                      <label className={styles.fieldLabel}>
+                        Agent
+                        <span className={`${styles.badge} ${styles.badgeRequired}`}>必选</span>
+                      </label>
+                      <span className={styles.fieldHint}>选择一个 AI 助手开始对话</span>
                     </div>
-                  )}
+                    {singleLoading ? (
+                      <span className={styles.emptyHint}>加载角色中...</span>
+                    ) : allRoles.length === 0 ? (
+                      <span className={styles.emptyHint}>暂无可用角色</span>
+                    ) : (
+                      <div className={styles.roleGrid}>
+                        {allRoles.map((role) => (
+                          <div
+                            key={role.name}
+                            className={`${styles.roleCard} ${selectedAgent === role.name ? styles.roleCardSelected : ''}`}
+                            onClick={() => setSelectedAgent(role.name)}
+                          >
+                            <span className={styles.roleAvatarLarge}>
+                              <AvatarImage avatar={role.avatar} fallback={role.name} />
+                            </span>
+                            <span className={styles.roleName}>{role.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.field}>
+                    <div className={styles.fieldHeader}>
+                      <label className={styles.fieldLabel}>
+                        对话名称
+                        <span className={`${styles.badge} ${styles.badgeOptional}`}>可选</span>
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={selectedAgent ? `与 ${selectedAgent} 的对话` : '输入对话名称（可选）'}
+                    />
+                  </div>
                 </div>
               ) : (
                 /* 群组模式：选群聊 → 选成员 → fork/continue */
-                <>
+                <div className={styles.formSection}>
+                  <div className={styles.formSectionTitle}>选择群聊</div>
                   <div className={styles.field}>
-                    <label className={styles.fieldLabel}>选择群聊</label>
+                    <div className={styles.fieldHeader}>
+                      <label className={styles.fieldLabel}>
+                        群聊
+                        <span className={`${styles.badge} ${styles.badgeRequired}`}>必选</span>
+                      </label>
+                    </div>
                     {singleLoading ? (
                       <span className={styles.emptyHint}>加载群聊中...</span>
                     ) : groupChats.length === 0 ? (
                       <span className={styles.emptyHint}>暂无可用群聊</span>
                     ) : (
-                      <div className={styles.roleList}>
+                      <div className={styles.teamSelector}>
                         {groupChats.map((chat) => (
-                          <label
+                          <div
                             key={chat.group_chat_id}
-                            className={`${styles.roleChip} ${selectedGroupChat === chat.group_chat_id ? styles.selected : ''}`}
+                            className={`${styles.teamChip} ${selectedGroupChat === chat.group_chat_id ? styles.teamChipSelected : ''}`}
+                            onClick={() => {
+                              setSelectedGroupChat(chat.group_chat_id);
+                              setSelectedAgent(null);
+                            }}
                           >
-                            <input
-                              type="radio"
-                              name="group-chat"
-                              checked={selectedGroupChat === chat.group_chat_id}
-                              onChange={() => {
-                                setSelectedGroupChat(chat.group_chat_id);
-                                setSelectedAgent(null);
-                              }}
-                            />
+                            <span className={styles.teamIcon}>👥</span>
                             {chat.group_chat_name}
-                          </label>
+                          </div>
                         ))}
                       </div>
                     )}
                   </div>
 
                   {selectedGroupChat && (
-                    <div className={styles.field}>
-                      <label className={styles.fieldLabel}>选择 Agent</label>
-                      {membersLoading ? (
-                        <span className={styles.emptyHint}>加载成员中...</span>
-                      ) : groupMembers.length === 0 ? (
-                        <span className={styles.emptyHint}>该群聊暂无成员</span>
-                      ) : (
-                        <div className={styles.roleList}>
-                          {groupMembers.map((member) => (
-                            <label
-                              key={member.name}
-                              className={`${styles.roleChip} ${selectedAgent === member.name ? styles.selected : ''}`}
-                            >
-                              <input
-                                type="radio"
-                                name="single-agent"
-                                checked={selectedAgent === member.name}
-                                onChange={() => setSelectedAgent(member.name)}
-                              />
-                              <span className={styles.roleAvatar}>
-                                <AvatarImage
-                                  avatar={member.role?.avatar ?? null}
-                                  fallback={member.name}
-                                />
-                              </span>
-                              {member.name}
-                            </label>
-                          ))}
+                    <>
+                      <div className={styles.formSectionTitle}>选择 Agent</div>
+                      <div className={styles.field}>
+                        <div className={styles.fieldHeader}>
+                          <label className={styles.fieldLabel}>
+                            Agent
+                            <span className={`${styles.badge} ${styles.badgeRequired}`}>必选</span>
+                          </label>
                         </div>
-                      )}
-                    </div>
+                        {membersLoading ? (
+                          <span className={styles.emptyHint}>加载成员中...</span>
+                        ) : groupMembers.length === 0 ? (
+                          <span className={styles.emptyHint}>该群聊暂无成员</span>
+                        ) : (
+                          <div className={styles.roleGrid}>
+                            {groupMembers.map((member) => (
+                              <div
+                                key={member.name}
+                                className={`${styles.roleCard} ${selectedAgent === member.name ? styles.roleCardSelected : ''}`}
+                                onClick={() => setSelectedAgent(member.name)}
+                              >
+                                <span className={styles.roleAvatarLarge}>
+                                  <AvatarImage
+                                    avatar={member.role?.avatar ?? null}
+                                    fallback={member.name}
+                                  />
+                                </span>
+                                <span className={styles.roleName}>{member.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
 
                   {selectedGroupChat && selectedAgent && (
                     <div className={styles.field}>
                       <label className={styles.fieldLabel}>模式</label>
                       <div className={styles.roleList}>
-                        <label className={`${styles.roleChip} ${styles.selected}`}>
+                        <label className={`${styles.roleChip} ${styles.roleChipSelected}`}>
                           <input type="radio" name="fork-mode" checked readOnly />
                           Fork
                         </label>
                         <label
-                          className={`${styles.roleChip} ${styles.disabled}`}
+                          className={`${styles.roleChip} ${styles.roleChipDisabled}`}
                           title="Continue 模式暂未开放"
                         >
                           <input type="radio" name="fork-mode" disabled />
@@ -300,137 +358,164 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                       </div>
                     </div>
                   )}
-                </>
-              )}
 
-              {/* 单聊名称（可选） */}
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>对话名称（可选）</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={selectedAgent ? `与 ${selectedAgent} 的对话` : '输入对话名称'}
-                />
-              </div>
+                  <div className={styles.formSectionTitle}>对话配置</div>
+                  <div className={styles.field}>
+                    <div className={styles.fieldHeader}>
+                      <label className={styles.fieldLabel}>
+                        对话名称
+                        <span className={`${styles.badge} ${styles.badgeOptional}`}>可选</span>
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={selectedAgent ? `与 ${selectedAgent} 的对话` : '输入对话名称（可选）'}
+                    />
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
-              {/* 群组名称 */}
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>群组名称</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="输入群组名称"
-                />
+              {/* 基本信息 */}
+              <div className={styles.formSection}>
+                <div className={styles.formSectionTitle}>基本信息</div>
+                <div className={styles.field}>
+                  <div className={styles.fieldHeader}>
+                    <label className={styles.fieldLabel}>
+                      群组名称
+                      <span className={`${styles.badge} ${styles.badgeRequired}`}>必选</span>
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="输入群组名称"
+                  />
+                </div>
               </div>
 
-              {/* 团队预选 */}
+              {/* 快速选择团队 */}
               {teams.length > 0 && (
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>快速选择团队（可选）</label>
-                  <div className={styles.roleList}>
-                    {teams.map((team) => (
-                      <button
-                        key={team.name}
-                        type="button"
-                        className={`${styles.roleChip} ${selectedTeam === team.name ? styles.selected : ''}`}
-                        onClick={() => handleSelectTeam(team.name)}
-                      >
-                        <span>👥</span>
-                        {team.name}
-                        <span className={styles.teamMemberCount}>{team.members.length}人</span>
-                      </button>
-                    ))}
+                <div className={styles.formSection}>
+                  <div className={styles.formSectionTitle}>快速选择团队</div>
+                  <div className={styles.field}>
+                    <div className={styles.teamSelector}>
+                      {teams.map((team) => (
+                        <div
+                          key={team.name}
+                          className={`${styles.teamChip} ${selectedTeam === team.name ? styles.teamChipSelected : ''}`}
+                          onClick={() => handleSelectTeam(team.name)}
+                        >
+                          <span className={styles.teamIcon}>👥</span>
+                          {team.name}
+                          <span className={styles.teamMemberCount}>{team.members.length}人</span>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedTeam && (
+                      <span className={styles.emptyHint}>
+                        已选择「{selectedTeam}」的成员，可在下方调整
+                      </span>
+                    )}
                   </div>
-                  {selectedTeam && (
-                    <span className={styles.emptyHint}>
-                      已选择「{selectedTeam}」的成员，可在下方调整
-                    </span>
-                  )}
                 </div>
               )}
 
-              {/* Leader 选择 */}
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>Leader（必选）</label>
-                {loading ? (
-                  <span className={styles.emptyHint}>加载角色中...</span>
-                ) : leaders.length === 0 ? (
-                  <span className={styles.emptyHint}>暂无可用的 Leader 角色</span>
-                ) : (
-                  <div className={styles.roleList}>
-                    {leaders.map((role) => (
-                      <label
-                        key={role.name}
-                        className={`${styles.roleChip} ${selectedLeader === role.name ? styles.selected : ''}`}
-                      >
-                        <input
-                          type="radio"
-                          name="leader"
-                          checked={selectedLeader === role.name}
-                          onChange={() => setSelectedLeader(role.name)}
-                        />
-                        <span className={styles.roleAvatar}>
-                          <AvatarImage avatar={role.avatar} fallback={role.name} />
-                        </span>
-                        {role.name}
-                      </label>
-                    ))}
+              {/* 配置成员 */}
+              <div className={styles.formSection}>
+                <div className={styles.formSectionTitle}>配置成员</div>
+                <div className={styles.field}>
+                  <div className={styles.fieldHeader}>
+                    <label className={styles.fieldLabel}>
+                      Leader
+                      <span className={`${styles.badge} ${styles.badgeRequired}`}>必选</span>
+                    </label>
+                    <span className={styles.fieldHint}>选择团队负责人</span>
                   </div>
-                )}
-              </div>
-
-              {/* Worker 选择 */}
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>Workers（可选）</label>
-                {loading ? (
-                  <span className={styles.emptyHint}>加载角色中...</span>
-                ) : workers.length === 0 ? (
-                  <span className={styles.emptyHint}>暂无可用的 Worker 角色</span>
-                ) : (
-                  <div className={styles.roleList}>
-                    {workers.map((role) => (
-                      <label
-                        key={role.name}
-                        className={`${styles.roleChip} ${selectedWorkers.includes(role.name) ? styles.selected : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedWorkers.includes(role.name)}
-                          onChange={() => toggleWorker(role.name)}
-                        />
-                        <span className={styles.roleAvatar}>
-                          <AvatarImage avatar={role.avatar} fallback={role.name} />
-                        </span>
-                        {role.name}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 项目路径 */}
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>项目路径</label>
-                <div className={styles.pathRow}>
-                  <input
-                    type="text"
-                    className={`${styles.input} ${styles.pathInput}`}
-                    value={projectPath}
-                    onChange={(e) => setProjectPath(e.target.value)}
-                    placeholder="/home/user/projects/your-project"
-                  />
-                  {import.meta.env.PROD && (
-                    <button type="button" className={styles.browseBtn} onClick={handleBrowse}>
-                      <FolderIcon />
-                      浏览
-                    </button>
+                  {loading ? (
+                    <span className={styles.emptyHint}>加载角色中...</span>
+                  ) : leaders.length === 0 ? (
+                    <span className={styles.emptyHint}>暂无可用的 Leader 角色</span>
+                  ) : (
+                    <div className={styles.roleGrid}>
+                      {leaders.map((role) => (
+                        <div
+                          key={role.name}
+                          className={`${styles.roleCard} ${selectedLeader === role.name ? styles.roleCardSelected : ''}`}
+                          onClick={() => setSelectedLeader(role.name)}
+                        >
+                          <span className={styles.roleAvatarLarge}>
+                            <AvatarImage avatar={role.avatar} fallback={role.name} />
+                          </span>
+                          <span className={styles.roleName}>{role.name}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
+                </div>
+
+                <div className={styles.field}>
+                  <div className={styles.fieldHeader}>
+                    <label className={styles.fieldLabel}>
+                      Workers
+                      <span className={`${styles.badge} ${styles.badgeOptional}`}>可选</span>
+                    </label>
+                    <span className={styles.fieldHint}>选择团队成员（可多选）</span>
+                  </div>
+                  {loading ? (
+                    <span className={styles.emptyHint}>加载角色中...</span>
+                  ) : workers.length === 0 ? (
+                    <span className={styles.emptyHint}>暂无可用的 Worker 角色</span>
+                  ) : (
+                    <div className={styles.roleGrid}>
+                      {workers.map((role) => (
+                        <div
+                          key={role.name}
+                          className={`${styles.roleCard} ${selectedWorkers.includes(role.name) ? styles.roleCardSelected : ''}`}
+                          onClick={() => toggleWorker(role.name)}
+                        >
+                          <span className={styles.roleAvatarLarge}>
+                            <AvatarImage avatar={role.avatar} fallback={role.name} />
+                          </span>
+                          <span className={styles.roleName}>{role.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 项目配置 */}
+              <div className={styles.formSection}>
+                <div className={styles.formSectionTitle}>项目配置</div>
+                <div className={styles.field}>
+                  <div className={styles.fieldHeader}>
+                    <label className={styles.fieldLabel}>
+                      项目路径
+                      <span className={`${styles.badge} ${styles.badgeRequired}`}>必选</span>
+                    </label>
+                  </div>
+                  <div className={styles.pathRow}>
+                    <input
+                      type="text"
+                      className={`${styles.input} ${styles.pathInput}`}
+                      value={projectPath}
+                      onChange={(e) => setProjectPath(e.target.value)}
+                      placeholder="/home/user/projects/your-project"
+                    />
+                    {import.meta.env.PROD && (
+                      <button type="button" className={styles.browseBtn} onClick={handleBrowse}>
+                        <FolderIcon />
+                        浏览
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
