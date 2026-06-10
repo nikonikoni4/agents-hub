@@ -45,7 +45,7 @@ class SkillManager:
             )
 
         return SkillInfo(
-            name=frontmatter["name"],
+            name=skill_path.name,
             description=frontmatter["description"],
             path=str(skill_path),
         )
