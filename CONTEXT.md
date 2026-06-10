@@ -205,7 +205,7 @@
 
 ### SessionType（会话类型）
 - MAIN：主会话（群聊）
-- BTW：单聊会话（by the way）
+- BTW：单聊会话（by the way） ->已经弃用，但未清除，由single chat service替代
 
 ### MessageType（消息类型）
 - TASK：需要回复的任务
