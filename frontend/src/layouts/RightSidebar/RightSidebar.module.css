@@ -795,3 +795,94 @@
   display: none !important;
   content: none !important;
 }
+
+/* Docker 确认对话框 */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: var(--bg-primary, #fff);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modalBody {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.modalBody p {
+  margin: 0 0 12px 0;
+}
+
+.modalBody p:last-child {
+  margin-bottom: 0;
+}
+
+.modalBody strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 20px 16px;
+}
+
+.modalCancelBtn,
+.modalConfirmBtn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.modalCancelBtn {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.modalCancelBtn:hover {
+  background: var(--bg-hover);
+}
+
+.modalConfirmBtn {
+  background: var(--accent-color, #4a9eff);
+  color: #fff;
+  border: none;
+}
+
+.modalConfirmBtn:hover {
+  opacity: 0.9;
+}

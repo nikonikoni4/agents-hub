@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMembers, MemberWithRole } from '@/features/chat/hooks';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
@@ -78,7 +78,7 @@ function MemberItem({
   onToggleDocker,
 }: {
   member: MemberWithRole;
-  onToggleDocker: (memberName: string) => void;
+  onToggleDocker: (memberName: string, enableDocker: boolean) => void;
 }) {
   return (
     <div className={styles.memberItem}>
@@ -107,7 +107,7 @@ function MemberItem({
       </div>
       <button
         className={styles.dockerToggle}
-        onClick={() => onToggleDocker(member.name)}
+        onClick={() => onToggleDocker(member.name, !member.use_docker)}
         title={
           member.use_docker ? 'Docker 模式（点击切换到本地）' : '本地模式（点击切换到 Docker）'
         }
@@ -140,6 +140,7 @@ export function RightSidebar({
   const { taskList, loading: tasksLoading } = useTasks(groupChatId);
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<SidebarTab>('chat');
+  const [dockerConfirm, setDockerConfirm] = useState<{ memberName: string; enableDocker: boolean } | null>(null);
 
   // content 变化时自动切换到对应 tab
   useEffect(() => {
@@ -155,14 +156,35 @@ export function RightSidebar({
     }
   }, [activeSingleChatId]);
 
-  const handleToggleDocker = async (memberName: string) => {
+  const handleToggleDocker = useCallback((memberName: string, enableDocker: boolean) => {
+    // 开启沙箱时显示确认对话框
+    if (enableDocker) {
+      setDockerConfirm({ memberName, enableDocker });
+    } else {
+      // 关闭沙箱直接执行
+      toggleDockerMode(memberName).catch((error) => {
+        const message = error instanceof Error ? error.message : '切换 Docker 模式失败';
+        toast.error(message);
+      });
+    }
+  }, [toggleDockerMode, toast]);
+
+  const handleConfirmDocker = useCallback(async () => {
+    if (!dockerConfirm) return;
+
     try {
-      await toggleDockerMode(memberName);
+      await toggleDockerMode(dockerConfirm.memberName);
     } catch (error) {
       const message = error instanceof Error ? error.message : '切换 Docker 模式失败';
       toast.error(message);
+    } finally {
+      setDockerConfirm(null);
     }
-  };
+  }, [dockerConfirm, toggleDockerMode, toast]);
+
+  const handleCancelDocker = useCallback(() => {
+    setDockerConfirm(null);
+  }, []);
 
   return (
     <div
@@ -335,6 +357,30 @@ export function RightSidebar({
               <div className={styles.emptyText}>点击消息中的预览卡片查看网页</div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Docker 确认对话框 */}
+      {dockerConfirm && (
+        <div className={styles.modalOverlay} onClick={handleCancelDocker}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <span>🐳</span>
+              <span>开启 Docker 沙箱</span>
+            </div>
+            <div className={styles.modalBody}>
+              <p>开启沙箱会改变当前仓库或子仓库的索引，建议在子仓库中运行，避免干扰主仓库。</p>
+              <p>是否继续为 <strong>{dockerConfirm.memberName}</strong> 开启沙箱？</p>
+            </div>
+            <div className={styles.modalFooter}>
+              <button className={styles.modalCancelBtn} onClick={handleCancelDocker}>
+                取消
+              </button>
+              <button className={styles.modalConfirmBtn} onClick={handleConfirmDocker}>
+                确认开启
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
