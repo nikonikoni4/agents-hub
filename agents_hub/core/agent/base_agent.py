@@ -415,14 +415,33 @@ call_id: {msg.call_id}
                 result = await self._process_message(msg, prompt)
 
                 # 更新 context_window
-                if result.usage and result.usage.input_tokens:
-                    context_window = result.usage.input_tokens // 1000
-                    try:
-                        await self.group_chat_context.runtime.update_agent_context_window(
-                            self.name, context_window
+                if result.usage:
+                    input_tokens = result.usage.input_tokens
+                    if input_tokens > 0:
+                        context_window = input_tokens // 1000
+                        self.logger.info(
+                            "Agent %s context_window 更新: input=%d, context_window=%dK",
+                            self.name,
+                            input_tokens,
+                            context_window,
                         )
-                    except Exception as e:
-                        self.logger.warning("更新 context_window 失败: %s", str(e))
+                        try:
+                            await self.group_chat_context.runtime.update_agent_context_window(
+                                self.name, context_window
+                            )
+                        except Exception as e:  # TODO 这里不能使用Exception
+                            self.logger.warning("更新 context_window 失败: %s", str(e))
+                    else:
+                        self.logger.warning(
+                            "Agent %s context_window 未更新: input_tokens=0, cache_read=0",
+                            self.name,
+                        )
+                else:
+                    self.logger.warning(
+                        "Agent %s context_window 未更新: usage=None",
+                        self.name,
+                        result.usage.input_tokens if result.usage else None,
+                    )
 
                 self.logger.info(
                     "Agent %s 完成消息处理: call_id=%s, send_from=%s, result_text=%s",

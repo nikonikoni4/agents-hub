@@ -39,6 +39,7 @@ class ClaudeParser:
 
         event_type = event.get("type")
         session_id = event.get("session_id", "")
+        logger.debug("[ClaudeParser] event_type=%s, session_id=%s", event_type, session_id)
 
         # 流式文本事件
         if event_type == "stream_event":
@@ -47,6 +48,10 @@ class ClaudeParser:
         # 系统事件
         if event_type == "system":
             return self._parse_system_event(event, session_id)
+
+        # 结果事件（包含真实 usage 数据）
+        if event_type == "result":
+            return self._parse_result_event(event, session_id)
 
         return None
 
@@ -136,37 +141,12 @@ class ClaudeParser:
 
     def _handle_message_delta(self, inner_event: dict, session_id: str) -> StreamEvent | None:
         """
-        处理 message_delta：提取 usage 信息并生成 TURN_COMPLETE 事件
+        处理 message_delta：忽略 usage，TURN_COMPLETE 由 result 事件提供
 
-        Claude API message_delta.usage 字段格式：
-        {
-            "input_tokens": int,                    # 输入 token 数
-            "output_tokens": int,                   # 输出 token 数
-            "cache_creation_input_tokens": int,     # 缓存创建的输入 token
-            "cache_read_input_tokens": int          # 缓存读取的输入 token
-        }
-
-        原始事件结构：
-        {
-            "type": "stream_event",
-            "event": {
-                "type": "message_delta",
-                "delta": {"stop_reason": "end_turn"},
-                "usage": { ... }
-            },
-            "session_id": "..."
-        }
+        message_delta 的 usage 可能与 result 事件不同（缓存 token 计算方式差异），
+        为避免重复触发和数值不一致，usage 统一从 result 事件提取。
         """
-        usage = inner_event.get("usage", {})
-        return StreamEvent(
-            type=AgentEventType.TURN_COMPLETE,
-            content={"usage": usage},
-            session_id=session_id,
-            timestamp=datetime.now().isoformat(),
-            agent_name="",
-            platform=AgentPlatform.CLAUDE,
-            role_type=RoleType.TEAM_MEMBER,
-        )
+        return None
 
     def _parse_system_event(self, event: dict, session_id: str) -> StreamEvent | None:
         """解析系统事件"""
@@ -188,3 +168,46 @@ class ClaudeParser:
             )
 
         return None
+
+    def _parse_result_event(self, event: dict, session_id: str) -> StreamEvent | None:
+        """
+        处理 result 事件：提取 usage 信息并生成 TURN_COMPLETE 事件
+
+        CLI --output-format stream-json 输出的 result 事件格式：
+        {
+            "type": "result",
+            "subtype": "success",
+            "usage": {
+                "input_tokens": int,
+                "output_tokens": int,
+                "cache_read_input_tokens": int,
+                ...
+            },
+            "session_id": "..."
+        }
+        """
+        usage = event.get("usage", {})
+        # 从 modelUsage 提取 contextWindow（key 是动态模型名）
+        model_usage = event.get("modelUsage", {})
+        max_context_window = 0
+        for model_data in model_usage.values():
+            cw = model_data.get("contextWindow", 0)
+            if cw > 0:
+                max_context_window = cw
+                break
+        logger.info(
+            "[ClaudeParser] result event usage: input_tokens=%s, cache_read=%s, output_tokens=%s, max_context_window=%s",
+            usage.get("input_tokens", 0),
+            usage.get("cache_read_input_tokens", 0),
+            usage.get("output_tokens", 0),
+            max_context_window,
+        )
+        return StreamEvent(
+            type=AgentEventType.TURN_COMPLETE,
+            content={"usage": usage, "max_context_window": max_context_window},
+            session_id=session_id,
+            timestamp=datetime.now().isoformat(),
+            agent_name="",
+            platform=AgentPlatform.CLAUDE,
+            role_type=RoleType.TEAM_MEMBER,
+        )

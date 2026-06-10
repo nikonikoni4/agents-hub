@@ -42,6 +42,7 @@ class GroupChatMember(BaseModel):
     cwd: str | None
     use_docker: bool = False
     status: str = "idle"  # Agent 状态：idle/busy
+    context_window: int | None = None
 
 
 class UseDockerUpdate(BaseModel):

@@ -70,6 +70,8 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
             "btw_session": ["b1"],
             "cwd": "/tmp/project/w1",
             "use_docker": True,
+            "status": "idle",
+            "context_window": 0,
         }
     ]
 
