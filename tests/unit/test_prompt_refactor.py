@@ -18,7 +18,6 @@ from agents_hub.core.foundation.message import AgentMessage
 from agents_hub.core.foundation.models import MessageType, SessionType
 from agents_hub.core.foundation.renderer import render_for_llm
 
-
 # ==================== render_for_llm 测试 ====================
 
 
@@ -413,7 +412,7 @@ class TestCreateRoleWritesSystemFile:
         2. 验证 CLAUDE.md 存在
         3. 验证内容包含 platform_info、tool_usage、identity、role_instruction
         """
-        role = role_manager.create_role(
+        role_manager.create_role(
             name="test_manager",
             platform=AgentPlatform.CLAUDE,
             type=RoleType.LEADER,
@@ -441,7 +440,7 @@ class TestCreateRoleWritesSystemFile:
         2. 验证 AGENTS.md 存在
         3. 验证内容包含 platform_info、tool_usage、identity、role_instruction
         """
-        role = role_manager.create_role(
+        role_manager.create_role(
             name="test_worker",
             platform=AgentPlatform.CODEX,
             type=RoleType.TEAM_MEMBER,
@@ -468,7 +467,7 @@ class TestCreateRoleWritesSystemFile:
         1. 创建 LEADER 角色
         2. 验证 CLAUDE.md 包含 Manager 特有的工具和指令
         """
-        role = role_manager.create_role(
+        role_manager.create_role(
             name="leader",
             platform=AgentPlatform.CLAUDE,
             type=RoleType.LEADER,
@@ -495,7 +494,7 @@ class TestCreateRoleWritesSystemFile:
         1. 创建 TEAM_MEMBER 角色
         2. 验证 CLAUDE.md 包含 Worker 特有的指令
         """
-        role = role_manager.create_role(
+        role_manager.create_role(
             name="worker",
             platform=AgentPlatform.CLAUDE,
             type=RoleType.TEAM_MEMBER,
@@ -511,6 +510,38 @@ class TestCreateRoleWritesSystemFile:
         # Worker 不应该有 Manager 特有的工具
         assert "call_agent" not in content
         assert "assign_tasks_to_team" not in content
+
+    @patch("agents_hub.roles.role_manager.RoleManager._init_claude_config")
+    @patch("agents_hub.roles.role_manager.RoleManager._init_agents_hub_mcp")
+    def test_create_role_system_uses_assistant_template(self, mock_mcp, mock_claude, role_manager, temp_agents_dir):
+        """
+        契约：SYSTEM 角色使用 ASSISTANT_SYSTEM_PROMPT 模板
+
+        验证方式：
+        1. 创建 SYSTEM 角色
+        2. 验证 CLAUDE.md 包含系统助手特有的内容
+        3. 验证不包含普通角色的模板内容
+        """
+        role_manager.create_role(
+            name="assistant",
+            platform=AgentPlatform.CLAUDE,
+            type=RoleType.SYSTEM,
+            description="系统助手",
+        )
+
+        claude_md = temp_agents_dir / "assistant" / "work_root" / "CLAUDE.md"
+        content = claude_md.read_text(encoding="utf-8")
+
+        # 系统助手特有的内容
+        assert "Agents Hub 系统助手" in content
+        assert "判断是否需要多 Agent" in content
+        assert "导航卡片输出格式" in content
+
+        # 不应该包含普通角色的模板内容
+        assert "<platform_info>" not in content
+        assert "<tool_usage>" not in content
+        assert "<identity>" not in content
+        assert "<role_instruction>" not in content
 
     def test_create_role_already_exists_raises(self, role_manager):
         """
