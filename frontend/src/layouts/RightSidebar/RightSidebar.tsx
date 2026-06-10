@@ -73,16 +73,6 @@ function MaximizeIcon() {
   );
 }
 
-function GlobeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  );
-}
-
 function MemberItem({
   member,
   onToggleDocker,
@@ -319,7 +309,7 @@ export function RightSidebar({
       {activeTab === 'web' && (
         <div className={styles.webPreviewPanel}>
           <div className={styles.webPreviewHeader}>
-            <GlobeIcon />
+            {/* <GlobeIcon /> */}
             <span>网页预览</span>
             {content && content.type === 'web' && (
               <a
@@ -341,7 +331,9 @@ export function RightSidebar({
               title={content.title || '网页预览'}
             />
           ) : (
-            <div className={styles.emptyText}>点击消息中的预览卡片查看网页</div>
+            <div className={styles.webPreviewEmpty}>
+              <div className={styles.emptyText}>点击消息中的预览卡片查看网页</div>
+            </div>
           )}
         </div>
       )}

@@ -744,6 +744,12 @@
   color: var(--text-secondary);
 }
 
+.webPreviewHeader svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 .webPreviewOpenBtn {
   font-size: 11px;
   font-weight: 500;
@@ -765,4 +771,27 @@
   border: none;
   background: #fff;
   min-height: 0;
+}
+
+.webPreviewEmpty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.webPreviewEmpty .emptyText {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.webPreviewEmpty::before,
+.webPreviewEmpty::after,
+.webPreviewEmpty .emptyText::before,
+.webPreviewEmpty .emptyText::after {
+  display: none !important;
+  content: none !important;
 }
