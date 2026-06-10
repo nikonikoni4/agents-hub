@@ -30,7 +30,7 @@ class SystemConfig:
         "default_manager_name": "manager",  # 默认 manager 角色名
         "default_user_name": "user",  # 默认用户身份名
         "docker_image": "ai-tools:latest",  # Docker 沙箱镜像
-        "use_docker": False,  # 是否默认使用 Docker 沙箱执行
+        "use_docker": True,  # 是否默认使用 Docker 沙箱执行
     }
 
     def __new__(cls):

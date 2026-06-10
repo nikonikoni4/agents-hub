@@ -4,6 +4,7 @@
 提供群聊的统一访问接口，管理 State 和 Repository。
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
@@ -46,6 +47,7 @@ class GroupChatRuntime:
             project_path=project_path,
         )
         self._on_change = on_change
+        self._message_event = asyncio.Event()
 
     # ==================== Load ====================
 
@@ -139,8 +141,11 @@ class GroupChatRuntime:
         else:
             candidates = session.messages
 
-        # 取末尾 limit 条（最新的）
-        start = max(0, len(candidates) - limit)
+        # 取末尾 limit 条（最新的），limit<=0 表示返回全部
+        if limit > 0:
+            start = max(0, len(candidates) - limit)
+        else:
+            start = 0
         messages = candidates[start:]
 
         # 映射 agent_name -> speaker，并包含所有可选字段
@@ -209,6 +214,23 @@ class GroupChatRuntime:
             str: 项目路径
         """
         return self.project_path
+
+    async def wait_for_new_message(self, timeout: float = 120.0) -> bool:
+        """
+        等待新消息到达（通过 add_message 触发）
+
+        Args:
+            timeout: 超时时间（秒）
+
+        Returns:
+            bool: True 表示有新消息，False 表示超时
+        """
+        self._message_event.clear()
+        try:
+            await asyncio.wait_for(self._message_event.wait(), timeout=timeout)
+            return True
+        except asyncio.TimeoutError:
+            return False
 
     # ==================== Command Methods ====================
 
@@ -312,6 +334,7 @@ class GroupChatRuntime:
         if session.messages is not current_session.messages:
             logger.warning("群聊 message 引用不一致: session=%s", id(session))
         await self._persist(lambda: self.repository.save_group_chat_session(session))
+        self._message_event.set()
 
     async def update_message_field(self, message_id: int, field_path: str, value: Any) -> bool:
         """
