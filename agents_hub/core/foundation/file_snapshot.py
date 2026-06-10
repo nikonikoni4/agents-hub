@@ -110,8 +110,8 @@ def _run_git_diff(file_path: str, cwd: str, git_diff_range: str | None) -> tuple
     """
     # 验证 git_diff_range 格式（防止命令注入）
     if git_diff_range:
-        # 只接受 commit..commit 格式（SHA-1 或 SHA-256）
-        pattern = r"^[0-9a-f]{7,64}\.\.[0-9a-f]{7,64}$"
+        # 接受 commit..commit（SHA）或 git ref..ref（如 HEAD~5..HEAD、branch..branch）
+        pattern = r"^[a-zA-Z0-9\-_/.~^:]+\.\.[a-zA-Z0-9\-_/.~^:]+$"
         if not re.match(pattern, git_diff_range):
             return "", f"Invalid git_diff_range format: {git_diff_range}"
         cmd = ["git", "diff", git_diff_range, "--", file_path]

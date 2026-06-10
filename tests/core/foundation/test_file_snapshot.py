@@ -259,3 +259,68 @@ def test_snapshot_id_format():
     # 这个测试确保格式遵循规范
     snapshot_id = f"{call_id}_{index}"
     assert snapshot_id == expected
+
+
+def test_create_snapshot_with_head_ref_range(tmp_path):
+    """测试使用 HEAD~N..HEAD 格式的 git_diff_range"""
+    snapshot_dir = tmp_path / "snapshots"
+    snapshot_dir.mkdir()
+
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+
+    # 初始化 git 仓库
+    subprocess.run(["git", "init"], cwd=cwd, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
+
+    # 创建初始文件并提交
+    test_file = cwd / "test.py"
+    test_file.write_text("line1\n")
+    subprocess.run(["git", "add", "test.py"], cwd=cwd, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "commit 0"],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
+
+    # 再提交2次（共3次），每次都修改文件
+    for i in range(1, 3):
+        test_file.write_text(f"line1\nline{i+1}\n")
+        subprocess.run(["git", "add", "test.py"], cwd=cwd, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", f"commit {i}"],
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+        )
+
+    # 使用 HEAD~2..HEAD 格式创建快照（2次提交范围）
+    metadata = create_file_snapshot(
+        snapshot_dir=snapshot_dir,
+        call_id="test_call",
+        file_path="test.py",
+        index=0,
+        cwd=str(cwd),
+        git_diff_range="HEAD~2..HEAD",
+    )
+
+    # 验证 diff 可用且有内容
+    assert metadata["diff_available"] is True
+    assert metadata["diff_error"] is None
+    assert metadata["additions"] > 0
+
+    # 验证 diff 文件有内容
+    diff_content = get_snapshot_diff(snapshot_dir, "test_call_0")
+    assert len(diff_content) > 0
