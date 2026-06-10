@@ -80,6 +80,7 @@ export function CreateRoleDialog({ isOpen, onClose, onSuccess }: CreateRoleDialo
             >
               <option value="claude">Claude</option>
               <option value="codex">Codex</option>
+              <option value="opencode">OpenCode</option>
             </select>
           </div>
 
