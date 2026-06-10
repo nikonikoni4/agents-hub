@@ -12,8 +12,11 @@ from datetime import datetime
 import aiofiles
 
 from agents_hub.core.foundation import FileSystemError, group_chat_paths
+from agents_hub.utils.logger import get_logger
 
 from .group_chat_session import AgentContextState, AgentMemberInfo, GroupChatSession
+
+logger = get_logger(__name__)
 
 
 class GroupChatRepository:
@@ -188,6 +191,14 @@ class GroupChatRepository:
                 status=session_data.get("status", "idle"),
                 context_window=session_data.get("context_window", 0),
             )
+
+        logger.debug(
+            "load_agent_member_infos: %s",
+            {
+                k: {"status": v.status, "context_window": v.context_window}
+                for k, v in result.items()
+            },
+        )
         return result
 
     async def save_agent_member(self, state: dict[str, AgentMemberInfo]):
@@ -219,6 +230,13 @@ class GroupChatRepository:
                 }
 
             # 写入文件
+            logger.debug(
+                "save_agent_member: %s",
+                {
+                    k: {"status": v["status"], "context_window": v["context_window"]}
+                    for k, v in data.items()
+                },
+            )
             try:
                 async with aiofiles.open(self.agent_member_file, "w", encoding="utf-8") as f:
                     await f.write(json.dumps(data, ensure_ascii=False, indent=2))

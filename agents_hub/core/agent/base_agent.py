@@ -645,12 +645,25 @@ class Agent:
                 # 更新 context_window
                 if result.usage and result.usage.input_tokens:
                     context_window = result.usage.input_tokens // 1000
+                    self.logger.info(
+                        "Agent %s context_window 更新: input_tokens=%d, context_window=%dK",
+                        self.name,
+                        result.usage.input_tokens,
+                        context_window,
+                    )
                     try:
                         await self.group_chat_context.runtime.update_agent_context_window(
                             self.name, context_window
                         )
                     except Exception as e:
                         self.logger.warning("更新 context_window 失败: %s", str(e))
+                else:
+                    self.logger.warning(
+                        "Agent %s context_window 未更新: usage=%s, input_tokens=%s",
+                        self.name,
+                        result.usage,
+                        result.usage.input_tokens if result.usage else None,
+                    )
 
                 self.logger.info(
                     "Agent %s 完成消息处理: call_id=%s, send_from=%s, result_text=%s",
