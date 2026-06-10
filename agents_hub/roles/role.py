@@ -181,7 +181,7 @@ class Role:
                 frontmatter = yaml.safe_load(parts[1])
                 if not isinstance(frontmatter, dict):
                     continue
-                name = frontmatter.get("name", skill_dir.name)
+                name = skill_dir.name
                 description = frontmatter.get("description", "")
                 skills.append(SkillInfo(id=skill_dir.name, name=name, description=description))
             except Exception:

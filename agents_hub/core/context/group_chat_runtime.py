@@ -480,9 +480,12 @@ class GroupChatRuntime:
 
     async def _notify_change(self) -> None:
         """通知外部状态变更（通过 on_change 回调）"""
+        logger.info("[Runtime] _notify_change 被调用: group_chat_id=%s, has_callback=%s",
+                   self.group_chat_id, self._on_change is not None)
         if self._on_change:
             try:
                 await self._on_change(self.group_chat_id)
+                logger.info("[Runtime] on_change 回调执行成功")
             except Exception:
                 logger.warning("on_change 回调失败", exc_info=True)
 

@@ -13,6 +13,7 @@ import asyncio
 import json
 import shutil
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -471,6 +472,57 @@ class GroupChatService:
         logger.debug("投递消息到 MessageRouter: call_id=%s, to=%s", call.call_id, send_to)
         await group_chat.send_message_to_agent(message)
         logger.info("消息已发送: group=%s, to=%s, call_id=%s", group_chat_id, send_to, call.call_id)
+
+    async def send_message_and_wait(
+        self,
+        group_chat_id: str,
+        content: str,
+        members: list[str],
+        files: list[UploadedFileInfo] | None = None,
+        timeout: float = 120.0,
+    ) -> str:
+        """向群聊发送消息并等待 agent 回复
+
+        Args:
+            group_chat_id: 群聊 ID
+            content: 消息内容
+            members: 群聊中所有 agent 名称列表
+            files: 可选的文件列表
+            timeout: 等待回复超时时间（秒）
+
+        Returns:
+            str: agent 回复文本，超时返回提示信息
+        """
+        # 1. 记录发送前的消息数量
+        group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        before_count = len(group_chat.runtime.get_message_dicts(limit=0))
+
+        # 2. 发送消息（内部会 add_message 用户消息，触发 _message_event）
+        await self.send_message(group_chat_id, content, members, files)
+
+        # 3. 循环等待 agent 回复（跳过用户自身消息触发的 event）
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            got_new = await group_chat.runtime.wait_for_new_message(timeout=remaining)
+            if not got_new:
+                break
+
+            # 检查是否有非用户的新消息
+            messages = group_chat.runtime.get_message_dicts(limit=0)
+            new_msgs = messages[before_count:]
+            replies = [
+                m.get("content", "")
+                for m in new_msgs
+                if not config.is_user_name(m.get("speaker", ""))
+                and m.get("content")
+            ]
+            if replies:
+                return "\n".join(replies)
+
+        return "[已发送到群聊，等待回复超时]"
 
     @staticmethod
     def _resolve_send_to(content: str, members: list[str]) -> str:

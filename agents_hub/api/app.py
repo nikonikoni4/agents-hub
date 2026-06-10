@@ -77,8 +77,54 @@ async def lifespan(app: FastAPI):
             port=config.mcp_port,
         )
     )
+
+    # 后台启动微信 channel（仅当 token 已存在时），不阻塞 lifespan
+    wechat_task = asyncio.create_task(_start_wechat_channel())
+
     yield
+
+    wechat_channel = wechat_task.result() if wechat_task.done() else None
+    if wechat_channel:
+        await wechat_channel.stop()
+    elif not wechat_task.done():
+        wechat_task.cancel()
     mcp_task.cancel()
+
+
+async def _start_wechat_channel():
+    """启动微信 channel，返回 channel 实例或 None"""
+    import json
+
+    from agents_hub.channels.wechat import WechatChannel, WechatConfig
+
+    # 检查 token 是否已保存（避免阻塞等待 QR 扫码）
+    state_file = config.data_path / "channels" / "wechat" / "account.json"
+    if not state_file.exists():
+        logger.info("微信 channel: 无已保存 token，跳过启动。使用 scripts/run_wechat.py 进行 QR 登录")
+        return None
+    try:
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        if not state.get("token"):
+            logger.info("微信 channel: token 为空，跳过启动。使用 scripts/run_wechat.py 进行 QR 登录")
+            return None
+    except (json.JSONDecodeError, OSError):
+        logger.info("微信 channel: 状态文件读取失败，跳过启动")
+        return None
+
+    wechat_config = WechatConfig(allow_from=["*"])
+    channel = WechatChannel(wechat_config, data_path=config.data_path)
+
+    try:
+        await channel.start()
+        if channel._running:
+            logger.info("微信 channel 已启动")
+            return channel
+        else:
+            logger.warning("微信 channel 启动失败")
+            return None
+    except Exception as e:
+        logger.warning(f"微信 channel 启动异常: {e}")
+        return None
 
 
 app = FastAPI(title="Agents Hub API", version="0.1.0", lifespan=lifespan)
