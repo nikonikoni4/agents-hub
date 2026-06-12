@@ -180,6 +180,23 @@
   padding: 24px;
 }
 
+/* 系统消息：居中显示 */
+.messageSystem {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.systemBubble {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  background: var(--bg-shadow);
+  padding: 4px 12px;
+  border-radius: 12px;
+  max-width: 80%;
+  text-align: center;
+}
+
 .chatInputContainer {
   padding: 12px 28px 20px;
 }

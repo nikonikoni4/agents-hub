@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { getMembers, listRoles, updateMemberDockerMode, compressAgentContext } from '@/core/api';
+import { useCompressStatusStore } from '@/features/chat/store/compressStatusStore';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import type { GroupChatMemberApiItem, RoleApiResponse, RefreshSignal } from '@/shared/types';
 
@@ -117,6 +118,7 @@ export function useMembers() {
 
       // 标记开始压缩
       setCompressingAgents((prev) => new Set(prev).add(agentName));
+      useCompressStatusStore.getState().startCompress(agentName);
 
       try {
         await compressAgentContext(activeSessionId, agentName);
@@ -132,6 +134,7 @@ export function useMembers() {
           next.delete(agentName);
           return next;
         });
+        useCompressStatusStore.getState().finishCompress(agentName);
       }
     },
     [activeSessionId, fetchMembers]

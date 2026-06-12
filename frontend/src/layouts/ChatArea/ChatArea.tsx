@@ -12,6 +12,7 @@ import {
 import { FileChangesCard } from '@/shared/components/FileChangesCard';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { useMembers } from '@/features/chat/hooks/useMembers';
+import { useCompressStatusStore } from '@/features/chat/store/compressStatusStore';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { ManageMembersDialog } from '@/features/chat/components/ManageMembersDialog';
@@ -104,6 +105,7 @@ const MessageBubble = React.memo(
     activeWebUrl?: string | null;
   }) => {
     const isUser = msg.speaker === 'user';
+    const isSystem = msg.speaker === 'system' || msg.speaker === '__SYSTEM__';
     const [showImagePreview, setShowImagePreview] = React.useState(false);
     const [previewImageUrl, setPreviewImageUrl] = React.useState('');
 
@@ -124,6 +126,15 @@ const MessageBubble = React.memo(
       },
       [groupChatId]
     );
+
+    // 系统消息：居中显示
+    if (isSystem) {
+      return (
+        <div className={styles.messageSystem}>
+          <div className={styles.systemBubble}>{msg.content}</div>
+        </div>
+      );
+    }
 
     // 权限请求消息：渲染 PermissionRequest 卡片
     if (msg.permission_request) {
@@ -273,8 +284,25 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     return null;
   }, [activeSessionId, projectGroups]);
 
-  // 合并 API 消息和本地发送的消息（使用 useMemo 优化）
-  const allMessages = useMemo(() => [...messages, ...localMessages], [messages, localMessages]);
+  // 正在压缩的 agent → 临时系统消息
+  const pendingAgents = useCompressStatusStore((state) => state.pendingAgents);
+  const pendingCompressMessages = useMemo(
+    () =>
+      Array.from(pendingAgents).map((agentName, i) => ({
+        id: -(i + 1),
+        speaker: 'system',
+        content: `正在压缩 ${agentName} 的上下文...`,
+        timestamp: new Date().toISOString(),
+        platform: 'system',
+      })),
+    [pendingAgents]
+  );
+
+  // 合并 API 消息、压缩中临时消息和本地发送的消息（使用 useMemo 优化）
+  const allMessages = useMemo(
+    () => [...messages, ...pendingCompressMessages, ...localMessages],
+    [messages, pendingCompressMessages, localMessages]
+  );
 
   // 服务端消息刷新后，清空乐观消息（服务端已包含最新数据）
   useEffect(() => {
@@ -485,7 +513,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         ) : (
           allMessages.map((msg) => (
             <MessageBubble
-              key={msg.id}
+              key={`${msg.id}-${msg.speaker}`}
               msg={msg}
               avatar={roleAvatarMap.get(msg.speaker)}
               pinned={isPinned(msg.id)}
