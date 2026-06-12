@@ -326,6 +326,8 @@ class Agent:
         from agents_hub.core.foundation.exceptions import AgentBusyError
         from agents_hub.core.foundation.prompt import COMPACT_CONTEXT_PROMPT
 
+        self.logger.info("Agent %s 开始压缩上下文", self.name)
+
         # 1. 忙碌校验
         agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
         if agent_member_info and agent_member_info.status == "busy":

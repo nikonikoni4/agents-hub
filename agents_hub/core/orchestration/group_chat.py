@@ -389,6 +389,7 @@ class GroupChat:
         all_agents.extend(self.workers.values())
 
         for agent in all_agents:
+            logger.info("压缩 Agent: %s", agent.name)
             try:
                 result = await agent.compress_context()
                 results.append(
