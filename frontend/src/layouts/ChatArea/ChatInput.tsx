@@ -16,14 +16,17 @@ export interface ChatInputProps {
   onSend: (text: string, files?: UploadedFileInfo[]) => void;
   quotedMessage?: MessageApiItem | null;
   onClearQuote?: () => void;
+  onSlashCommand?: (command: string, agentName?: string) => void;
 }
 
 export const ChatInput = React.memo(
-  ({ activeSessionId, members, onSend, quotedMessage, onClearQuote }: ChatInputProps) => {
+  ({ activeSessionId, members, onSend, quotedMessage, onClearQuote, onSlashCommand }: ChatInputProps) => {
     const [inputValue, setInputValue] = useState('');
     const [showMention, setShowMention] = useState(false);
     const [mentionQuery, setMentionQuery] = useState('');
     const [mentionIndex, setMentionIndex] = useState(0);
+    const [showSlash, setShowSlash] = useState(false);
+    const [_slashIndex, setSlashIndex] = useState(0);
     const [showImagePreview, setShowImagePreview] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -40,6 +43,17 @@ export const ChatInput = React.memo(
           ? members.filter((m) => m.name.toLowerCase().includes(mentionQuery.toLowerCase()))
           : members,
       [members, mentionQuery]
+    );
+
+    // Slash command 注册表
+    const slashCommands = useMemo(
+      () => [
+        {
+          name: '压缩上下文',
+          description: '压缩 Agent 的 CLI session 上下文',
+        },
+      ],
+      []
     );
 
     // 自动调整 textarea 高度
@@ -73,31 +87,43 @@ export const ChatInput = React.memo(
       [inputValue]
     );
 
-    const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const value = e.target.value;
-      setInputValue(value);
+    const handleChange = useCallback(
+      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        setInputValue(value);
 
-      // 检测 @ 触发
-      const cursorPos = e.target.selectionStart;
-      const textBeforeCursor = value.slice(0, cursorPos);
-      const atIndex = textBeforeCursor.lastIndexOf('@');
+        const cursorPos = e.target.selectionStart;
+        const textBeforeCursor = value.slice(0, cursorPos);
 
-      if (atIndex !== -1) {
-        const charBeforeAt = atIndex > 0 ? textBeforeCursor[atIndex - 1] : ' ';
-        // @ 前面必须是空格或行首
-        if (charBeforeAt === ' ' || charBeforeAt === '\n' || atIndex === 0) {
-          const query = textBeforeCursor.slice(atIndex + 1);
-          // 查询中不能有空格（否则说明已经离开了 @ 上下文）
-          if (!query.includes(' ') && !query.includes('\n')) {
-            setMentionQuery(query);
-            setMentionIndex(0);
-            setShowMention(true);
-            return;
+        // 检测 slash command（行首或 @name 之后的 /）
+        const slashMatch = textBeforeCursor.match(/(^|@\w+\s)\/$/);
+        if (slashMatch) {
+          setShowSlash(true);
+          setSlashIndex(0);
+          setShowMention(false);
+          return;
+        }
+
+        // 检测 @ 触发（保留原有逻辑）
+        const atIndex = textBeforeCursor.lastIndexOf('@');
+        if (atIndex !== -1) {
+          const charBeforeAt = atIndex > 0 ? textBeforeCursor[atIndex - 1] : ' ';
+          if (charBeforeAt === ' ' || charBeforeAt === '\n' || atIndex === 0) {
+            const query = textBeforeCursor.slice(atIndex + 1);
+            if (!query.includes(' ') && !query.includes('\n')) {
+              setMentionQuery(query);
+              setMentionIndex(0);
+              setShowMention(true);
+              setShowSlash(false);
+              return;
+            }
           }
         }
-      }
-      setShowMention(false);
-    }, []);
+        setShowMention(false);
+        setShowSlash(false);
+      },
+      []
+    );
 
     const handleSendClick = useCallback(() => {
       const text = inputValue.trim();
@@ -111,6 +137,41 @@ export const ChatInput = React.memo(
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
+        // slash command 选择导航
+        if (showSlash && slashCommands.length > 0) {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSlashIndex((prev) => (prev + 1) % slashCommands.length);
+            return;
+          }
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSlashIndex(
+              (prev) => (prev - 1 + slashCommands.length) % slashCommands.length
+            );
+            return;
+          }
+          if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            // 检测是否有 @name 前缀
+            const atMatch = inputValue.match(/@(\w+)\s+\//);
+            const agentName = atMatch ? atMatch[1] : undefined;
+            // 清空输入框
+            setInputValue('');
+            setShowSlash(false);
+            // 触发压缩（通过 props 回调）
+            if (onSlashCommand) {
+              onSlashCommand('compress', agentName);
+            }
+            return;
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            setShowSlash(false);
+            return;
+          }
+        }
+
         // @成员选择导航
         if (showMention && filteredMembers.length > 0) {
           if (e.key === 'ArrowDown') {
@@ -142,7 +203,17 @@ export const ChatInput = React.memo(
           handleSendClick();
         }
       },
-      [handleSendClick, showMention, filteredMembers, mentionIndex, handleMentionSelect]
+      [
+        handleSendClick,
+        showSlash,
+        slashCommands,
+        inputValue,
+        onSlashCommand,
+        showMention,
+        filteredMembers,
+        mentionIndex,
+        handleMentionSelect,
+      ]
     );
 
     // 点击外部关闭 mention 下拉框
