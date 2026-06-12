@@ -18,6 +18,7 @@ __all__ = [
     "InvalidMessageError",
     "FileSystemError",
     "CompactionError",
+    "AgentBusyError",
     "DockerConfigError",
     "DockerNotAvailableError",
     "DockerStartError",
@@ -153,6 +154,18 @@ class CompactionError(AgentsHubError):
             message=f"消息压缩失败: {reason}",
             error_code="COMPACTION_FAILED",
             details={"reason": reason},
+        )
+
+
+class AgentBusyError(AgentsHubError):
+    """Agent 正在执行任务，无法压缩上下文"""
+
+    def __init__(self, agent_name: str):
+        self.agent_name = agent_name
+        super().__init__(
+            message=f"Agent {agent_name} 正在执行任务，无法压缩上下文",
+            error_code="AGENT_BUSY",
+            details={"agent_name": agent_name},
         )
 
 
