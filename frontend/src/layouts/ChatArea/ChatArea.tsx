@@ -450,7 +450,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         } else {
           // 全量压缩直接调用 API
           if (activeSessionId) {
-            compressAllAgents(activeSessionId).catch((err) => {
+            compressAllAgents(activeSessionId, true).catch((err) => { // TODO: mock=true，测试完改回
               toast.error(err instanceof Error ? err.message : '压缩失败');
             });
           }

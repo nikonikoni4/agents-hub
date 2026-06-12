@@ -792,16 +792,19 @@ export async function uploadFile(chatId: string, file: File): Promise<UploadedFi
  */
 export async function compressAgentContext(
   chatId: string,
-  agentName: string
+  agentName: string,
+  mock = false
 ): Promise<CompressApiResponse> {
+  const qs = mock ? '?mock=true' : '';
   return apiClient.post<CompressApiResponse>(
-    `/group-chats/${chatId}/members/${agentName}/compress`
+    `/group-chats/${chatId}/members/${agentName}/compress${qs}`
   );
 }
 
 /**
  * 全量压缩所有 Agent 的上下文
  */
-export async function compressAllAgents(chatId: string): Promise<CompressAllApiResponse> {
-  return apiClient.post<CompressAllApiResponse>(`/group-chats/${chatId}/compress-all`);
+export async function compressAllAgents(chatId: string, mock = false): Promise<CompressAllApiResponse> {
+  const qs = mock ? '?mock=true' : '';
+  return apiClient.post<CompressAllApiResponse>(`/group-chats/${chatId}/compress-all${qs}`);
 }

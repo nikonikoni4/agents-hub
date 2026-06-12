@@ -121,7 +121,7 @@ export function useMembers() {
       useCompressStatusStore.getState().startCompress(agentName);
 
       try {
-        await compressAgentContext(activeSessionId, agentName);
+        await compressAgentContext(activeSessionId, agentName, true); // TODO: mock=true，测试完改回
         // 压缩成功后刷新成员列表（后端会广播 refresh，但主动刷新更可靠）
         await fetchMembers();
       } catch (error) {

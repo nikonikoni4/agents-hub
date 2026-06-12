@@ -307,9 +307,21 @@ async def upload_file(
 async def compress_agent_context(
     group_chat_id: str,
     agent_name: str,
+    mock: bool = False,
     service: GroupChatService = Depends(get_group_chat_service),
 ):
     """压缩指定 Agent 的 CLI session 上下文"""
+    if mock:
+        import asyncio
+
+        await asyncio.sleep(1.5)
+        return {
+            "message": f"Agent {agent_name} 上下文已压缩 (mock)",
+            "old_session_id": "mock-old-session",
+            "new_session_id": "mock-new-session",
+            "context_usage_before": 999,
+            "context_usage_after": 0,
+        }
     return await service.compress_agent_context(group_chat_id, agent_name)
 
 
@@ -322,7 +334,30 @@ async def compress_agent_context(
 )
 async def compress_all_agents(
     group_chat_id: str,
+    mock: bool = False,
     service: GroupChatService = Depends(get_group_chat_service),
 ):
     """全量压缩所有 Agent 的上下文"""
+    if mock:
+        import asyncio
+
+        await asyncio.sleep(2)
+        return {
+            "message": "已压缩 3 个 Agent 的上下文 (mock)",
+            "results": [
+                {
+                    "agent_name": "manager",
+                    "status": "compressed",
+                    "old_session_id": "mock-1",
+                    "new_session_id": "mock-new-1",
+                },
+                {
+                    "agent_name": "前端执行者",
+                    "status": "compressed",
+                    "old_session_id": "mock-2",
+                    "new_session_id": "mock-new-2",
+                },
+                {"agent_name": "webtest-专家", "status": "skipped", "reason": "busy"},
+            ],
+        }
     return await service.compress_all_agents(group_chat_id)
