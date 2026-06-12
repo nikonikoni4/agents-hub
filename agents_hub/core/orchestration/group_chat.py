@@ -70,6 +70,7 @@ class GroupChat:
             project_path,
             on_change=broadcast_group_chat_refresh,
         )
+        # TODO : 直接这里runtime和其他模块耦合性太高了，比如保存数据走，context->runtime->repo,
         self.group_chat_context = GroupChatContext(self.runtime)
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
@@ -367,22 +368,6 @@ class GroupChat:
             agent_info[name] = worker_role.get_role_config().description or "团队成员"
 
         await self.group_chat_context.compact_messages(agent_info)
-
-    def list_agent_state(self) -> dict[str, bool]:
-        """获取所有 agent 的处理状态
-
-        Returns:
-            字典，key 为 agent 名称，value 为是否正在处理消息
-        """
-        result = {}
-
-        if self.manager:
-            result[self.manager.name] = self.manager.is_processing
-
-        for name, worker in self.workers.items():
-            result[name] = worker.is_processing
-
-        return result
 
     async def send_message_to_agent(self, message: AgentMessage):
         """

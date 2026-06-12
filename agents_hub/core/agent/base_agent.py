@@ -61,7 +61,6 @@ class Agent:
         self.agent_call_manager = agent_call_manager
         self.task_manager = task_manager
         self._run = True
-        self._is_processing: bool = False  # 是否正在处理消息
         self._consecutive_no_finish_count: int = 0  # 连续未闭环计数
         self.max_consecutive_no_finish: int = 30  # 阈值
         self.logger = get_logger(f"agent.{self.name}")
@@ -75,10 +74,6 @@ class Agent:
     def agent_cwd(self) -> str:
         info = self.group_chat_context.agent_member_info.get(self.name)
         return info.cwd if info else ""
-
-    @property
-    def is_processing(self) -> bool:
-        return self._is_processing
 
     @property
     def context_usage(self) -> int:
@@ -265,6 +260,13 @@ class Agent:
                 msg.call_id,
                 len(result.text) if result.text else 0,
             )
+            self.logger.info(
+                "Agent %s 完成消息处理: call_id=%s, send_from=%s, result_text=%s",
+                self.name,
+                msg.call_id,
+                msg.send_from,
+                result.text[:200] if result.text else "",
+            )
             return result
         except Exception as e:
             self.logger.debug(
@@ -281,6 +283,24 @@ class Agent:
                 session_id=self.main_session_id if msg.session_type == SessionType.MAIN else "",
                 platform=self.role_config.platform.value,
             ) from e
+
+    async def _update_context_usage(self, result: AgentResult) -> None:
+        """根据 LLM 返回的 usage 更新 context_usage。"""
+        if not result.usage:
+            return
+        input_tokens = result.usage.input_tokens
+        # claude 输出的 input_token 会小于之前的输出，猜测原因是使用 subagent
+        if input_tokens > 0 and input_tokens > self.context_usage * 1000:
+            context_usage = input_tokens // 1000
+            self.logger.info(
+                "Agent %s context_usage 更新: input=%d, context_usage=%dK",
+                self.name,
+                input_tokens,
+                context_usage,
+            )
+            await self.group_chat_context.runtime.update_agent_context_usage(
+                self.name, context_usage
+            )
 
     def _build_system_prompt(self, task_manager=None) -> str | None:
         """构建 system_prompt。
@@ -454,7 +474,6 @@ call_id: {msg.call_id}
 
             # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
-            self._is_processing = True
             status = "chatting" if msg.session_type == SessionType.BTW else "busy"
             await self._sync_status(status)
             self.logger.info(
@@ -467,32 +486,8 @@ call_id: {msg.call_id}
             )
             try:
                 result = await self._process_message(msg, prompt)
-
-                # 更新 context_usage
-                if result.usage:
-                    input_tokens = result.usage.input_tokens
-                    if input_tokens > 0 and input_tokens > self.context_usage * 1000:
-                        # claude 输出的inpu_token会小于之前的输出，猜测原因是使用subagent
-                        context_usage = input_tokens // 1000
-                        self.logger.info(
-                            "Agent %s context_usage 更新: input=%d, context_usage=%dK",
-                            self.name,
-                            input_tokens,
-                            context_usage,
-                        )
-                        await self.group_chat_context.runtime.update_agent_context_usage(
-                            self.name, context_usage
-                        )
-
-                self.logger.info(
-                    "Agent %s 完成消息处理: call_id=%s, send_from=%s, result_text=%s",
-                    self.name,
-                    msg.call_id,
-                    msg.send_from,
-                    result.text[:200] if result.text else "",
-                )
+                await self._update_context_usage(result)
             finally:
-                self._is_processing = False
                 await self._sync_status("idle")
             # 5. 兜底闭环（避免 MCP 断连导致群聊无消息）
             await self._fallback_close_task(msg, result)
