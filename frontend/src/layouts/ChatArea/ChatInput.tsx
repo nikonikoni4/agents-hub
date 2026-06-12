@@ -20,13 +20,20 @@ export interface ChatInputProps {
 }
 
 export const ChatInput = React.memo(
-  ({ activeSessionId, members, onSend, quotedMessage, onClearQuote, onSlashCommand }: ChatInputProps) => {
+  ({
+    activeSessionId,
+    members,
+    onSend,
+    quotedMessage,
+    onClearQuote,
+    onSlashCommand,
+  }: ChatInputProps) => {
     const [inputValue, setInputValue] = useState('');
     const [showMention, setShowMention] = useState(false);
     const [mentionQuery, setMentionQuery] = useState('');
     const [mentionIndex, setMentionIndex] = useState(0);
     const [showSlash, setShowSlash] = useState(false);
-    const [_slashIndex, setSlashIndex] = useState(0);
+    const [slashIndex, setSlashIndex] = useState(0);
     const [showImagePreview, setShowImagePreview] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -87,43 +94,40 @@ export const ChatInput = React.memo(
       [inputValue]
     );
 
-    const handleChange = useCallback(
-      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const value = e.target.value;
-        setInputValue(value);
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const value = e.target.value;
+      setInputValue(value);
 
-        const cursorPos = e.target.selectionStart;
-        const textBeforeCursor = value.slice(0, cursorPos);
+      const cursorPos = e.target.selectionStart;
+      const textBeforeCursor = value.slice(0, cursorPos);
 
-        // 检测 slash command（行首或 @name 之后的 /）
-        const slashMatch = textBeforeCursor.match(/(^|@\w+\s)\/$/);
-        if (slashMatch) {
-          setShowSlash(true);
-          setSlashIndex(0);
-          setShowMention(false);
-          return;
-        }
+      // 检测 slash command（行首或 @name 之后的 /）
+      const slashMatch = textBeforeCursor.match(/(^|@\w+\s)\/$/);
+      if (slashMatch) {
+        setShowSlash(true);
+        setSlashIndex(0);
+        setShowMention(false);
+        return;
+      }
 
-        // 检测 @ 触发（保留原有逻辑）
-        const atIndex = textBeforeCursor.lastIndexOf('@');
-        if (atIndex !== -1) {
-          const charBeforeAt = atIndex > 0 ? textBeforeCursor[atIndex - 1] : ' ';
-          if (charBeforeAt === ' ' || charBeforeAt === '\n' || atIndex === 0) {
-            const query = textBeforeCursor.slice(atIndex + 1);
-            if (!query.includes(' ') && !query.includes('\n')) {
-              setMentionQuery(query);
-              setMentionIndex(0);
-              setShowMention(true);
-              setShowSlash(false);
-              return;
-            }
+      // 检测 @ 触发（保留原有逻辑）
+      const atIndex = textBeforeCursor.lastIndexOf('@');
+      if (atIndex !== -1) {
+        const charBeforeAt = atIndex > 0 ? textBeforeCursor[atIndex - 1] : ' ';
+        if (charBeforeAt === ' ' || charBeforeAt === '\n' || atIndex === 0) {
+          const query = textBeforeCursor.slice(atIndex + 1);
+          if (!query.includes(' ') && !query.includes('\n')) {
+            setMentionQuery(query);
+            setMentionIndex(0);
+            setShowMention(true);
+            setShowSlash(false);
+            return;
           }
         }
-        setShowMention(false);
-        setShowSlash(false);
-      },
-      []
-    );
+      }
+      setShowMention(false);
+      setShowSlash(false);
+    }, []);
 
     const handleSendClick = useCallback(() => {
       const text = inputValue.trim();
@@ -146,9 +150,7 @@ export const ChatInput = React.memo(
           }
           if (e.key === 'ArrowUp') {
             e.preventDefault();
-            setSlashIndex(
-              (prev) => (prev - 1 + slashCommands.length) % slashCommands.length
-            );
+            setSlashIndex((prev) => (prev - 1 + slashCommands.length) % slashCommands.length);
             return;
           }
           if (e.key === 'Enter' || e.key === 'Tab') {
@@ -289,6 +291,41 @@ export const ChatInput = React.memo(
                   onMouseEnter={() => setMentionIndex(i)}
                 >
                   <span>{member.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Slash command 下拉框 */}
+          {showSlash && slashCommands.length > 0 && (
+            <div className={styles.mentionDropdown} onClick={(e) => e.stopPropagation()}>
+              {slashCommands.map((cmd, i) => (
+                <div
+                  key={cmd.name}
+                  className={styles.mentionItem}
+                  style={i === slashIndex ? { background: 'var(--bg-hover)' } : undefined}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const atMatch = inputValue.match(/@(\w+)\s+\//);
+                    const agentName = atMatch ? atMatch[1] : undefined;
+                    setInputValue('');
+                    setShowSlash(false);
+                    if (onSlashCommand) {
+                      onSlashCommand('compress', agentName);
+                    }
+                  }}
+                  onMouseEnter={() => setSlashIndex(i)}
+                >
+                  <span>/{cmd.name}</span>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: 'var(--text-secondary)',
+                      marginLeft: '8px',
+                    }}
+                  >
+                    {cmd.description}
+                  </span>
                 </div>
               ))}
             </div>

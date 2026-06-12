@@ -22,7 +22,9 @@ import {
   getFileSnapshotContent,
   getFileSnapshotDiff,
   updatePermissionStatus,
+  compressAllAgents,
 } from '@/core/api/groupChatApi';
+import { useToast } from '@/shared/components';
 import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { extractProjectName } from '@/shared/adapters/sessionAdapter';
@@ -236,7 +238,8 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     isRestoringScroll,
     loadMoreWithRestore,
   } = useChatMessages();
-  const { members } = useMembers();
+  const { members, compressAgent } = useMembers();
+  const toast = useToast();
   const projectGroups = useSessionStore((s) => s.projectGroups);
   const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);
 
@@ -407,6 +410,28 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     [rightSidebarContent]
   );
 
+  // Slash command 处理
+  const handleSlashCommand = useCallback(
+    (command: string, agentName?: string) => {
+      if (command === 'compress') {
+        if (agentName) {
+          // 复用 useMembers 的 compressAgent（有 compressing 状态保护）
+          compressAgent(agentName).catch((err) => {
+            toast.error(err instanceof Error ? err.message : '压缩失败');
+          });
+        } else {
+          // 全量压缩直接调用 API
+          if (activeSessionId) {
+            compressAllAgents(activeSessionId).catch((err) => {
+              toast.error(err instanceof Error ? err.message : '压缩失败');
+            });
+          }
+        }
+      }
+    },
+    [activeSessionId, compressAgent, toast]
+  );
+
   // 未选择群聊时的空态
   if (!activeSessionId) {
     return (
@@ -486,6 +511,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         onSend={handleSend}
         quotedMessage={quotedMessage}
         onClearQuote={() => setQuotedMessage(null)}
+        onSlashCommand={handleSlashCommand}
       />
     </div>
   );
