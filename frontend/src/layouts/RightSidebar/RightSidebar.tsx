@@ -85,6 +85,8 @@ function MemberItem({
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  console.log('[MemberItem]', member.name, 'compressing:', member.compressing, 'status:', member.status);
+
   // 点击外部关闭菜单
   useEffect(() => {
     if (!showMenu) return;
@@ -244,11 +246,14 @@ export function RightSidebar({
   }, []);
 
   const handleCompress = useCallback(
-    (memberName: string) => {
-      compressAgent(memberName).catch((error) => {
+    async (memberName: string) => {
+      try {
+        await compressAgent(memberName);
+        toast.success(`${memberName} 的上下文已压缩完成`);
+      } catch (error) {
         const message = error instanceof Error ? error.message : '压缩上下文失败';
         toast.error(message);
-      });
+      }
     },
     [compressAgent, toast]
   );

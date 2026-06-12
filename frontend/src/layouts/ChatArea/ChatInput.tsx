@@ -156,8 +156,10 @@ export const ChatInput = React.memo(
           if (e.key === 'Enter' || e.key === 'Tab') {
             e.preventDefault();
             // 检测是否有 @name 前缀
-            const atMatch = inputValue.match(/@(\w+)\s+\//);
+            console.log('[ChatInput] inputValue:', inputValue);
+            const atMatch = inputValue.match(/@(\w+)\s*\//);
             const agentName = atMatch ? atMatch[1] : undefined;
+            console.log('[ChatInput] atMatch:', atMatch, 'agentName:', agentName);
             // 清空输入框
             setInputValue('');
             setShowSlash(false);

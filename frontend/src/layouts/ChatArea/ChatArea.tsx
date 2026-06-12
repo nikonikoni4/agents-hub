@@ -286,17 +286,34 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
 
   // 正在压缩的 agent → 临时系统消息
   const pendingAgents = useCompressStatusStore((state) => state.pendingAgents);
-  const pendingCompressMessages = useMemo(
-    () =>
-      Array.from(pendingAgents).map((agentName, i) => ({
+  const isCompressingAll = useCompressStatusStore((state) => state.isCompressingAll);
+  const pendingCompressMessages = useMemo(() => {
+    const messages: MessageApiItem[] = [];
+
+    // 全量压缩消息
+    if (isCompressingAll) {
+      messages.push({
+        id: -999,
+        speaker: 'system',
+        content: '正在压缩所有 Agent 的上下文...',
+        timestamp: new Date().toISOString(),
+        platform: 'system',
+      });
+    }
+
+    // 单个 agent 压缩消息
+    Array.from(pendingAgents).forEach((agentName, i) => {
+      messages.push({
         id: -(i + 1),
         speaker: 'system',
         content: `正在压缩 ${agentName} 的上下文...`,
         timestamp: new Date().toISOString(),
         platform: 'system',
-      })),
-    [pendingAgents]
-  );
+      });
+    });
+
+    return messages;
+  }, [pendingAgents, isCompressingAll]);
 
   // 合并 API 消息、压缩中临时消息和本地发送的消息（使用 useMemo 优化）
   const allMessages = useMemo(
@@ -305,9 +322,11 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   );
 
   // 服务端消息刷新后，清空乐观消息（服务端已包含最新数据）
+  // 但保留压缩状态消息（pendingCompressMessages 独立管理）
   useEffect(() => {
     if (messages.length > 0 && localMessages.length > 0) {
-      setLocalMessages([]);
+      // 只清空非系统消息的乐观更新
+      setLocalMessages((prev) => prev.filter((msg) => msg.speaker === 'system'));
     }
   }, [messages]);
 
@@ -440,24 +459,60 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
 
   // Slash command 处理
   const handleSlashCommand = useCallback(
-    (command: string, agentName?: string) => {
+    async (command: string, agentName?: string) => {
+      console.log('[ChatArea] handleSlashCommand:', command, 'agentName:', agentName);
       if (command === 'compress') {
         if (agentName) {
-          // 复用 useMembers 的 compressAgent（有 compressing 状态保护）
-          compressAgent(agentName).catch((err) => {
+          // 单个 agent 压缩：复用 useMembers 的 compressAgent（有状态追踪）
+          try {
+            await compressAgent(agentName);
+            // 压缩成功后显示系统消息
+            const successMsg: MessageApiItem = {
+              id: Date.now(),
+              speaker: 'system',
+              content: `✅ ${agentName} 的上下文已压缩完成`,
+              timestamp: new Date().toISOString(),
+              platform: 'system',
+            };
+            setLocalMessages((prev) => [...prev, successMsg]);
+          } catch (err) {
             toast.error(err instanceof Error ? err.message : '压缩失败');
-          });
+          }
         } else {
-          // 全量压缩直接调用 API
-          if (activeSessionId) {
-            compressAllAgents(activeSessionId, true).catch((err) => { // TODO: mock=true，测试完改回
-              toast.error(err instanceof Error ? err.message : '压缩失败');
+          // 全量压缩：标记所有成员为压缩中
+          if (!activeSessionId) return;
+
+          const store = useCompressStatusStore.getState();
+          // 标记所有在线成员为压缩中
+          members.forEach(member => {
+            if (member.isOnline) {
+              store.startCompress(member.name);
+            }
+          });
+
+          try {
+            const result = await compressAllAgents(activeSessionId);
+            // 压缩成功后显示系统消息
+            const successMsg: MessageApiItem = {
+              id: Date.now(),
+              speaker: 'system',
+              content: `✅ ${result.message || '所有 Agent 的上下文已压缩完成'}`,
+              timestamp: new Date().toISOString(),
+              platform: 'system',
+            };
+            setLocalMessages((prev) => [...prev, successMsg]);
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : '压缩失败');
+          } finally {
+            // 清除所有成员的压缩状态
+            members.forEach(member => {
+              store.finishCompress(member.name);
             });
           }
         }
       }
     },
-    [activeSessionId, compressAgent, toast]
+    [activeSessionId, compressAgent, toast, members]
   );
 
   // 未选择群聊时的空态

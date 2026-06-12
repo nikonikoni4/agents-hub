@@ -34,7 +34,8 @@ export function useMembers() {
 
   const [members, setMembers] = useState<MemberWithRole[]>([]);
   const [loading, setLoading] = useState(false);
-  const [compressingAgents, setCompressingAgents] = useState<Set<string>>(new Set());
+  // 从全局 store 读取压缩状态，不再用本地 useState
+  const pendingAgents = useCompressStatusStore((s) => s.pendingAgents);
 
   const fetchMembers = useCallback(async () => {
     if (!activeSessionId) {
@@ -116,24 +117,21 @@ export function useMembers() {
     async (agentName: string) => {
       if (!activeSessionId) return;
 
+      console.log('[useMembers] compressAgent START:', agentName);
       // 标记开始压缩
-      setCompressingAgents((prev) => new Set(prev).add(agentName));
       useCompressStatusStore.getState().startCompress(agentName);
 
       try {
-        await compressAgentContext(activeSessionId, agentName, true); // TODO: mock=true，测试完改回
+        await compressAgentContext(activeSessionId, agentName);
+        console.log('[useMembers] compressAgent API SUCCESS:', agentName);
         // 压缩成功后刷新成员列表（后端会广播 refresh，但主动刷新更可靠）
         await fetchMembers();
       } catch (error) {
-        console.error('Failed to compress agent context:', error);
+        console.error('[useMembers] compressAgent ERROR:', agentName, error);
         throw error;
       } finally {
         // 标记压缩结束
-        setCompressingAgents((prev) => {
-          const next = new Set(prev);
-          next.delete(agentName);
-          return next;
-        });
+        console.log('[useMembers] compressAgent FINISH:', agentName);
         useCompressStatusStore.getState().finishCompress(agentName);
       }
     },
@@ -141,10 +139,15 @@ export function useMembers() {
   );
 
   // 合并 compressing 状态到 members
-  const membersWithCompressing = useMemo(
-    () => members.map((m) => ({ ...m, compressing: compressingAgents.has(m.name) })),
-    [members, compressingAgents]
-  );
+  const membersWithCompressing = useMemo(() => {
+    const result = members.map((m) => ({
+      ...m,
+      compressing: pendingAgents.has(m.name)
+    }));
+    console.log('[useMembers] membersWithCompressing:', result.map(m => ({ name: m.name, compressing: m.compressing })));
+    console.log('[useMembers] pendingAgents:', Array.from(pendingAgents));
+    return result;
+  }, [members, pendingAgents]);
 
   return {
     members: membersWithCompressing,
