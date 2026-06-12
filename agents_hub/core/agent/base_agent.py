@@ -13,6 +13,7 @@ import asyncio
 from pathlib import Path
 
 from agents_hub.agent_bridge import AgentResult, agent_platform_client
+from agents_hub.config import config
 from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import AgentContext, GroupChatContext
 from agents_hub.core.foundation import (
@@ -21,9 +22,11 @@ from agents_hub.core.foundation import (
     CallStatus,
     MessageType,
     SessionType,
+    render_for_chat,
     render_for_llm,
 )
 from agents_hub.core.foundation.exceptions import DockerConfigError
+from agents_hub.core.foundation.token import redact_token
 from agents_hub.roles import Role, RoleConfig
 from agents_hub.utils.logger import get_logger
 
@@ -371,6 +374,54 @@ call_id: {msg.call_id}
         """同步 Agent 状态到 AgentMemberInfo"""
         await self.group_chat_context.runtime.update_agent_status(self.name, status)
 
+    async def _fallback_close_task(self, msg: AgentMessage, result: AgentResult | None) -> None:
+        """兜底闭环：未闭环的 TASK 补齐 mark_agent_response + 分流通知（避免 MCP 断连导致群聊无消息）"""
+        call = self.agent_call_manager.get_call(msg.call_id)
+        if not (
+            result
+            and result.text
+            and call
+            and call.message_type == MessageType.TASK
+            and not call.has_agent_response
+        ):
+            return
+
+        safe_content = redact_token(result.text)
+        self.agent_call_manager.mark_agent_response(
+            call_id=msg.call_id,
+            content=safe_content,
+            success=True,
+        )
+
+        if config.is_user_name(call.send_from):
+            result.text = render_for_chat(self.name, call.send_from, safe_content)
+            await self.group_chat_context.add_message(result)
+            await self.group_chat_context.update_agent_member_info(result)
+        else:
+            response_call = self.agent_call_manager.create_call(
+                send_from=self.name,
+                send_to=call.send_from,
+                content=safe_content,
+                message_type=MessageType.NOTIFICATION,
+            )
+            message = AgentMessage(
+                call_id=response_call.call_id,
+                content=safe_content,
+                send_from=self.name,
+                send_to=call.send_from,
+                message_type=MessageType.NOTIFICATION,
+            )
+            # 只有这个地方能直接调用message_router，别的地方只能走gourp_chat.send_message_to_agent
+            await self.message_router.send_message(message)
+        await self.group_chat_context.runtime._notify_change()
+        self.logger.info(
+            "Agent %s 兜底闭环: call_id=%s, send_from=%s, text_len=%d",
+            self.name,
+            msg.call_id,
+            call.send_from,
+            len(safe_content),
+        )
+
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
         self.logger.debug(
@@ -443,6 +494,8 @@ call_id: {msg.call_id}
             finally:
                 self._is_processing = False
                 await self._sync_status("idle")
+            # 5. 兜底闭环（避免 MCP 断连导致群聊无消息）
+            await self._fallback_close_task(msg, result)
 
             # 6. TASK 闭环提醒（暂时注释，测试阶段）
             # if self._needs_complete_task_reminder(msg):
