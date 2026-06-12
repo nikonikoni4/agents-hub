@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime
 
 from agents_hub.core.foundation import group_chat_paths
+from agents_hub.core.foundation.exceptions import FileSystemError
 from agents_hub.core.foundation.models import TaskListStatus, TaskStatus
 from agents_hub.utils.logger import get_specialized_logger
 
@@ -298,17 +299,23 @@ class TaskManager:
                 self._task_lists[list_id] = task_list
 
             self.logger.info(f"从持久化文件加载了 {len(task_list_records)} 个任务列表")
-
-        except Exception as e:
-            self.logger.error(f"加载持久化文件失败: {e}", exc_info=True)
+        except OSError as e:
+            raise FileSystemError(
+                operation="read",
+                path=str(self._persistence_path),
+                reason=str(e),
+            ) from e
 
     def _persist_task_list(self, task_list: TaskList):
         """持久化单个任务列表（追加模式）"""
-        try:
-            data = task_list.to_dict()
+        data = task_list.to_dict()
 
+        try:
             with open(self._persistence_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(data, ensure_ascii=False) + "\n")
-
-        except Exception as e:
-            self.logger.error(f"持久化任务列表失败: {e}", exc_info=True)
+        except OSError as e:
+            raise FileSystemError(
+                operation="write",
+                path=str(self._persistence_path),
+                reason=str(e),
+            ) from e

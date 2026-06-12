@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 
 from agents_hub.core.foundation import CallStatus, MessageType, group_chat_paths
+from agents_hub.core.foundation.exceptions import FileSystemError
 from agents_hub.utils.logger import get_specialized_logger
 
 from .agent_call import AgentCall
@@ -254,9 +255,12 @@ class AgentCallManager:
                 self._index_call(call)
 
             self.logger.info(f"从持久化文件加载了 {len(call_records)} 个历史调用记录")
-
-        except Exception as e:
-            self.logger.error(f"加载持久化文件失败: {e}", exc_info=True)
+        except OSError as e:
+            raise FileSystemError(
+                operation="read",
+                path=str(self._persistence_path),
+                reason=str(e),
+            ) from e
 
     def _deserialize_call(self, data: dict) -> AgentCall:
         """从字典反序列化 AgentCall"""
@@ -284,29 +288,32 @@ class AgentCallManager:
 
     def _persist_call(self, call: AgentCall):
         """持久化单个调用记录（追加模式）"""
-        try:
-            data = {
-                "call_id": call.call_id,
-                "send_from": call.send_from,
-                "send_to": call.send_to,
-                "content": call.content,
-                "message_type": call.message_type.value,
-                "status": call.status.value,
-                "created_at": call.created_at.isoformat(),
-                "started_at": call.started_at.isoformat() if call.started_at else None,
-                "completed_at": (call.completed_at.isoformat() if call.completed_at else None),
-                "error": call.error,
-                "has_agent_response": call.has_agent_response,
-                "business_task_id": call.business_task_id,
-                "timeout_seconds": call.timeout_seconds,
-                # result 不持久化（可能很大，且重启后无法恢复）
-            }
+        data = {
+            "call_id": call.call_id,
+            "send_from": call.send_from,
+            "send_to": call.send_to,
+            "content": call.content,
+            "message_type": call.message_type.value,
+            "status": call.status.value,
+            "created_at": call.created_at.isoformat(),
+            "started_at": call.started_at.isoformat() if call.started_at else None,
+            "completed_at": (call.completed_at.isoformat() if call.completed_at else None),
+            "error": call.error,
+            "has_agent_response": call.has_agent_response,
+            "business_task_id": call.business_task_id,
+            "timeout_seconds": call.timeout_seconds,
+            # result 不持久化（可能很大，且重启后无法恢复）
+        }
 
+        try:
             with open(self._persistence_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(data, ensure_ascii=False) + "\n")
-
-        except Exception as e:
-            self.logger.error(f"持久化调用记录失败: {e}", exc_info=True)
+        except OSError as e:
+            raise FileSystemError(
+                operation="write",
+                path=str(self._persistence_path),
+                reason=str(e),
+            ) from e
 
     async def _cleanup_loop(self):
         """
@@ -384,10 +391,10 @@ class AgentCallManager:
 
         重写持久化文件，只保留内存中的调用记录，去除已删除的记录
         """
-        try:
-            # 临时文件
-            temp_path = self._persistence_path.with_suffix(".tmp")
+        # 临时文件
+        temp_path = self._persistence_path.with_suffix(".tmp")
 
+        try:
             # 写入当前内存中的所有调用
             with open(temp_path, "w", encoding="utf-8") as f:
                 for call in self._calls.values():
@@ -413,9 +420,14 @@ class AgentCallManager:
             # 替换原文件
             temp_path.replace(self._persistence_path)
             self.logger.debug("持久化文件已压缩")
-
-        except Exception as e:
-            self.logger.error(f"压缩持久化文件失败: {e}", exc_info=True)
+        except OSError as e:
+            # 清理临时文件
+            temp_path.unlink(missing_ok=True)
+            raise FileSystemError(
+                operation="compact",
+                path=str(self._persistence_path),
+                reason=str(e),
+            ) from e
 
     def start_cleanup(self):
         """启动后台清理任务"""

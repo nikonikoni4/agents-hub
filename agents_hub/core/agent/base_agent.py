@@ -77,6 +77,11 @@ class Agent:
     def is_processing(self) -> bool:
         return self._is_processing
 
+    @property
+    def context_usage(self) -> int:
+        info = self.group_chat_context.agent_member_info.get(self.name)
+        return info.context_usage if info else 0
+
     def set_run(self, run: bool):
         """设置该agent是否工作"""
         # TODO 后续使用，暂时占位
@@ -314,7 +319,10 @@ class Agent:
         return agent_filename
 
     def _enqueue_complete_task_reminder(self, msg: AgentMessage):
-        """提醒 Agent 使用 complete_task 显式闭环当前任务调用。"""
+        """
+        [deprecated] : 已经弃用，但是保留代码
+        提醒 Agent 使用 complete_task 显式闭环当前任务调用。
+        """
         from agents_hub.config.types import RoleType
 
         base_content = f"""\
@@ -350,7 +358,10 @@ call_id: {msg.call_id}
         self.message_queue.put_nowait(reminder)
 
     def _needs_complete_task_reminder(self, msg: AgentMessage) -> bool:
-        """判断当前消息处理后是否仍需要显式 complete_task。"""
+        """
+        [deprecated] : 已经弃用， 但是保留代码
+        判断当前消息处理后是否仍需要显式 complete_task。
+        """
         if msg.message_type != MessageType.TASK:
             return False
         call = self.agent_call_manager.get_call(msg.call_id)
@@ -358,12 +369,7 @@ call_id: {msg.call_id}
 
     async def _sync_status(self, status: str):
         """同步 Agent 状态到 AgentMemberInfo"""
-        try:
-            await self.group_chat_context.runtime.update_agent_status(self.name, status)
-        except Exception as e:
-            self.logger.warning(
-                "同步状态失败: agent=%s, status=%s, error=%s", self.name, status, str(e)
-            )
+        await self.group_chat_context.runtime.update_agent_status(self.name, status)
 
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
@@ -414,7 +420,8 @@ call_id: {msg.call_id}
                 # 更新 context_usage
                 if result.usage:
                     input_tokens = result.usage.input_tokens
-                    if input_tokens > 0:
+                    if input_tokens > 0 and input_tokens > self.context_usage * 1000:
+                        # claude 输出的inpu_token会小于之前的输出，猜测原因是使用subagent
                         context_usage = input_tokens // 1000
                         self.logger.info(
                             "Agent %s context_usage 更新: input=%d, context_usage=%dK",
