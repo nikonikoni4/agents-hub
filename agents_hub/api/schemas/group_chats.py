@@ -239,3 +239,23 @@ class TaskListInfo(BaseModel):
             created_at=task_list.created_at.isoformat(),
             archived_at=task_list.archived_at.isoformat() if task_list.archived_at else None,
         )
+
+
+# --- Compress Context Schemas ---
+
+
+class CompressResponse(BaseModel):
+    """单个 Agent 压缩响应"""
+
+    message: str = Field(..., description="操作结果消息")
+    old_session_id: str | None = Field(None, description="旧 session ID")
+    new_session_id: str | None = Field(None, description="新 session ID")
+    context_usage_before: int = Field(0, description="压缩前 context usage (K tokens)")
+    context_usage_after: int = Field(0, description="压缩后 context usage (K tokens)")
+
+
+class CompressAllResponse(BaseModel):
+    """全量压缩响应"""
+
+    message: str = Field(..., description="操作结果消息")
+    results: list[dict] = Field(..., description="每个 Agent 的压缩结果")

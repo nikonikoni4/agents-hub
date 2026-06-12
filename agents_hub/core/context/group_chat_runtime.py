@@ -333,6 +333,26 @@ class GroupChatRuntime:
         await self._persist(lambda: self.repository.save_group_chat_session(session))
         self._message_event.set()
 
+    async def add_system_message(self, content: str) -> None:
+        """
+        添加系统消息到群聊历史
+
+        Args:
+            content: 系统消息内容
+        """
+        from agents_hub.agent_bridge.models import AgentResult
+        from agents_hub.config.types import AgentPlatform, RoleType
+
+        system_result = AgentResult(
+            text=content,
+            session_id="",
+            timestamp=datetime.now().isoformat(),
+            agent_name="__SYSTEM__",
+            platform=AgentPlatform.CLAUDE,
+            role_type=RoleType.SYSTEM,
+        )
+        await self.add_message(system_result)
+
     async def update_message_field(self, message_id: int, field_path: str, value: Any) -> bool:
         """
         更新消息中的指定字段并持久化
