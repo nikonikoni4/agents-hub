@@ -143,5 +143,11 @@ export function useMembers() {
     [members, compressingAgents]
   );
 
-  return { members: membersWithCompressing, loading, refresh: fetchMembers, toggleDockerMode, compressAgent };
+  return {
+    members: membersWithCompressing,
+    loading,
+    refresh: fetchMembers,
+    toggleDockerMode,
+    compressAgent,
+  };
 }

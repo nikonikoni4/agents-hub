@@ -34,6 +34,14 @@
 - **触发规则**：当设计或规划 core runtime 内存 SSOT、GroupChat 职责收窄、Repository 所有权迁移或 core 对外查询边界时阅读
 - **内容摘要**：Core Runtime 内存 SSOT 重构 brainstorm 设计稿，定义内存作为运行期 SSOT、文件作为 durable copy、Runtime/State/Repository/Context 职责划分和依赖注入方向
 
+## Agent 上下文压缩
+
+### agent-context-compression-design
+- **更新时间**：2026-06-12
+- **路径**：`docs/superpowers/specs/2026-06-12-agent-context-compression-design.md`
+- **触发规则**：当设计、修改或扩展 Agent CLI session 上下文压缩、session 重建或压缩留痕机制时阅读
+- **内容摘要**：Agent 上下文主动压缩设计规格，定义自动/手动触发机制、Agent 自我总结流程、立即新建 session 策略、留痕文件格式和前端同步方案
+
 ## Realtime 边界
 
 ### realtime-boundary-design

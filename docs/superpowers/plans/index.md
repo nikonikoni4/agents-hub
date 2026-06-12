@@ -73,3 +73,9 @@
 - **路径**：`docs/superpowers/plans/2026-06-04-realtime-boundary-implementation.md`
 - **触发规则**：当实现 WebSocket realtime 边界迁移、API/MCP 共享实时刷新能力或 MCP 工具结束后广播 refresh 时阅读
 - **内容摘要**：Realtime 边界实施计划，定义 realtime 模块创建、API WebSocket 改线、MCP speak/finish 后 refresh 广播接入和验证任务
+
+## agent-context-compression
+- **更新时间**：2026-06-12
+- **路径**：`docs/superpowers/plans/2026-06-12-agent-context-compression.md`
+- **触发规则**：当实现或回顾 Agent 上下文压缩、session 重建或压缩留痕机制时阅读
+- **内容摘要**：Agent 上下文主动压缩实施计划，定义 compress_context 方法、API 端点、前端 UI 集成和端到端验证任务

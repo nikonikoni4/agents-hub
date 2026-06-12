@@ -293,13 +293,13 @@ def json_to_tasks(json_content: str) -> List[Task]:
     return tasks
 
 
-def md2html(md_path: str, html_path: str):
-    """将 markdown 同步到 HTML"""
+def md2html(md_path: str, html_template_path: str, html_output_path: str):
+    """将 markdown 同步到 HTML（从模板生成到输出路径）"""
     md_content = Path(md_path).read_text(encoding='utf-8')
     tasks = parse_markdown_tasks(md_content)
 
     # 读取 HTML 模板
-    html_template = Path(html_path).read_text(encoding='utf-8')
+    html_template = Path(html_template_path).read_text(encoding='utf-8')
 
     # 将任务数据注入到 HTML 中
     json_data = tasks_to_json(tasks)
@@ -312,11 +312,14 @@ def md2html(md_path: str, html_path: str):
         html_content = re.sub(pattern, replacement, html_template, flags=re.DOTALL)
     else:
         # 如果没有找到占位符，在 </script> 前插入
-        insert_point = html_content.rfind('</script>')
+        insert_point = html_template.rfind('</script>')
         html_content = html_template[:insert_point] + f'\nconst TASKS_DATA = {json_data};\n' + html_template[insert_point:]
 
-    Path(html_path).write_text(html_content, encoding='utf-8')
-    print(f'✅ 已同步 {len(tasks)} 个任务到 {html_path}')
+    # 确保输出目录存在
+    Path(html_output_path).parent.mkdir(parents=True, exist_ok=True)
+
+    Path(html_output_path).write_text(html_content, encoding='utf-8')
+    print(f'✅ 已同步 {len(tasks)} 个任务到 {html_output_path}')
 
 
 def html2md(html_path: str, md_path: str):
@@ -402,33 +405,49 @@ def main():
 
     command = sys.argv[1]
 
-    # 默认路径
+    # 查找项目根目录
+    html_template_path = Path(__file__).parent.parent / 'assets' / 'tasks.html'
+
+    # 方式1：从脚本位置往上找（适用于项目目录下的 skills/）
     base_dir = Path(__file__).parent.parent.parent.parent
     md_path = base_dir / 'docs' / 'progress' / 'tasks.md'
-    html_path = Path(__file__).parent.parent / 'assets' / 'tasks.html'
+
+    # 方式2：如果找不到，从当前工作目录往上找 .git 或 CLAUDE.md
+    if not md_path.exists():
+        cwd = Path.cwd()
+        for parent in [cwd] + list(cwd.parents):
+            if (parent / '.git').exists() or (parent / 'CLAUDE.md').exists():
+                base_dir = parent
+                md_path = base_dir / 'docs' / 'progress' / 'tasks.md'
+                break
+
+    html_output_path = base_dir / 'docs' / 'progress' / 'tasks.html'
 
     # 检查文件是否存在
     if not md_path.exists():
         print(f'❌ 找不到 markdown 文件: {md_path}')
+        print(f'   请确保在项目目录下运行，或项目目录包含 .git/CLAUDE.md')
         sys.exit(1)
 
     if command == 'md2html':
-        if not html_path.exists():
-            print(f'❌ 找不到 HTML 文件: {html_path}')
+        if not html_template_path.exists():
+            print(f'❌ 找不到 HTML 模板: {html_template_path}')
             sys.exit(1)
-        md2html(str(md_path), str(html_path))
+        md2html(str(md_path), str(html_template_path), str(html_output_path))
 
     elif command == 'html2md':
-        if not html_path.exists():
-            print(f'❌ 找不到 HTML 文件: {html_path}')
+        if not html_output_path.exists():
+            print(f'❌ 找不到 HTML 文件: {html_output_path}')
+            print('   请先运行 md2html 生成')
             sys.exit(1)
-        html2md(str(html_path), str(md_path))
+        html2md(str(html_output_path), str(md_path))
 
     elif command == 'validate':
-        if not html_path.exists():
-            print(f'❌ 找不到 HTML 文件: {html_path}')
+        if not html_output_path.exists():
+            print(f'❌ 找不到 HTML 文件: {html_output_path}')
+            print('   请先运行 md2html 生成')
             sys.exit(1)
-        validate(str(md_path), str(html_path))
+        validate(str(md_path), str(html_output_path))
 
     else:
         print(f'❌ 未知命令: {command}')

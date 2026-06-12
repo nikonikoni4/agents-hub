@@ -1020,121 +1020,377 @@
         // Task data (mock data for demo)
         const TASKS_DATA = [
   {
-    "id": 1,
-    "title": "用户登录页面重构",
-    "source": "产品需求",
+    "id": 14,
+    "title": "远程连接",
+    "source": "idea #11",
     "status": "⏳ 待开始",
-    "created_at": "2026-06-10",
-    "description": "重构用户登录页面，支持 OAuth2.0 第三方登录，优化移动端适配",
-    "priority": "1",
-    "has_star": true
-  },
-  {
-    "id": 2,
-    "title": "数据库索引优化",
-    "source": "性能监控",
-    "status": "⏳ 待开始",
-    "created_at": "2026-06-10",
-    "description": "分析慢查询日志，为高频查询添加复合索引，目标将 P99 延迟降低 50%",
-    "priority": "2"
-  },
-  {
-    "id": 3,
-    "title": "API 限流中间件",
-    "source": "架构评审",
-    "status": "⏳ 待开始",
-    "created_at": "2026-06-09",
-    "description": "实现基于令牌桶算法的 API 限流中间件，支持按用户/IP 维度限流",
-    "priority": "3"
-  },
-  {
-    "id": 4,
-    "title": "暗黑模式适配",
-    "source": "用户反馈",
-    "status": "⏳ 待开始",
-    "created_at": "2026-06-09",
-    "description": "为前端组件库添加暗黑模式支持，包括颜色变量、图片适配和过渡动画",
-    "priority": "4"
-  },
-  {
-    "id": 5,
-    "title": "支付回调幂等性修复",
-    "source": "线上 Bug",
-    "status": "🚧 进行中",
-    "created_at": "2026-06-08",
-    "description": "支付平台重复回调导致订单状态异常，需要在回调处理中增加幂等性校验",
-    "priority": "5",
-    "modules": [
-      "支付服务：增加回调去重表",
-      "订单服务：状态机增加防重入检查"
-    ]
-  },
-  {
-    "id": 6,
-    "title": "日志采集 Pipeline",
-    "source": "运维需求",
-    "status": "🚧 进行中",
-    "created_at": "2026-06-07",
-    "description": "搭建 ELK 日志采集管道，实现应用日志的实时采集、索引和可视化查询",
-    "priority": "6",
-    "background": "当前日志分散在各服务器，排查问题需要逐台登录，效率低下"
-  },
-  {
-    "id": 7,
-    "title": "单元测试覆盖率提升",
-    "source": "质量改进",
-    "status": "🚧 进行中",
     "created_at": "2026-06-06",
-    "description": "将核心模块的单元测试覆盖率从 45% 提升到 80%，重点覆盖边界条件和异常路径",
-    "priority": "7",
-    "has_star": true
+    "description": "添加远程连接，主要是参考 OpenClaw 那样直接远程连接飞书比较简单，然后通过 Slash Command 进行一些基本的任务",
+    "priority": "7"
   },
   {
-    "id": 8,
-    "title": "WebSocket 消息推送",
-    "source": "功能需求",
-    "status": "✅ 已完成",
-    "created_at": "2026-06-05",
-    "completed_at": "2026-06-09",
-    "description": "实现基于 WebSocket 的实时消息推送，支持群聊消息和系统通知",
+    "id": 15,
+    "title": "设计跨会话记忆",
+    "source": "用户直接指定",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-06",
+    "description": "设计 Agent 的跨会话记忆机制，使 Agent 能够在不同会话之间保留和复用知识",
     "priority": "8"
   },
   {
-    "id": 9,
-    "title": "文件上传服务重构",
-    "source": "技术债",
+    "id": 16,
+    "title": "添加控制台",
+    "source": "用户直接指定",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-06",
+    "description": "添加控制台功能",
+    "priority": "9"
+  },
+  {
+    "id": 17,
+    "title": "WebSocket 身份验证",
+    "source": "用户直接指定",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-06",
+    "description": "为 WebSocket 连接添加基于 Token 的身份验证，在握手阶段验证客户端身份",
+    "priority": "10"
+  },
+  {
+    "id": 19,
+    "title": "Agent Git Worktree 隔离",
+    "source": "用户直接指定",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-07",
+    "description": "当 Agent 使用 Docker 模式且其 cwd 与群聊目录一致时，前端弹出提示是否创建 git worktree。确认后后端创建 worktree 并将该 agent 的 cwd 切换到 worktree 路径，实现目录隔离。前端成员列表需显示 agent 的实际工作路径（与群聊路径不同时高亮），后端提示词注入需包含 cwd 信息让 agent 知道自己在独立目录工作。",
+    "priority": "5",
+    "modules": [
+      "前端：成员列表（RightSidebar）显示 cwd 路径、worktree 创建确认弹窗",
+      "后端：新增 worktree 创建 API、AgentMemberInfo 增加 worktree 路径字段、提示词注入 cwd 信息",
+      "MCP：可能新增 create_worktree 工具让 agent 自主请求隔离"
+    ],
+    "has_star": true
+  },
+  {
+    "id": 21,
+    "title": "Pin 前后端连续点击 Bug",
+    "source": "用户直接指定",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-07",
+    "description": "当前 Pin 功能在前后端存在 Bug，连续快速点击 Pin/Unpin 按钮时可能触发错误。需要排查连续点击时的状态竞态问题，确保操作幂等且前端状态与后端一致。",
+    "priority": "11",
+    "modules": [
+      "前端：Pin 按钮点击事件防抖/节流、usePinnedMessages hook 状态同步",
+      "后端：pin/unpin 端点的并发处理"
+    ]
+  },
+  {
+    "id": 22,
+    "title": "Agent 任务中断后无法自动闭环",
+    "source": "用户直接指定",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-07",
+    "description": "当 Agent 正在执行任务时，如果后端被切断/重启，虽然 Agent call 状态仍为 running，但由于重启后没有新的消息来激活 Agent 的事件循环，导致任务无法完成闭环。系统需要一种机制来检测并恢复这些\"悬空\"的 running 状态任务，例如：重启时扫描未完成的 agent call，主动触发恢复流程或将其标记为异常中断。",
+    "priority": "12",
+    "modules": [
+      "后端：agent call 状态管理、重启恢复逻辑、event loop 激活机制",
+      "前端：中断任务的状态展示与用户提示"
+    ]
+  },
+  {
+    "id": 23,
+    "title": "GroupChatRuntimeState 并发竞态条件修复",
+    "source": "docs/history-bugs/2026-06-05-group-chat-runtime-state-concurrency.md",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-07",
+    "description": "`GroupChatRuntimeState` 及其关联的 `GroupChatRuntime` 在多协程并发访问时缺乏内存状态保护。Repository 层虽有 `asyncio.Lock` 保护文件 I/O，但 Runtime 层的 read-modify-write 序列存在竞态条件，可能导致持久化数据不一致。具体问题包括：",
+    "priority": "6",
+    "modules": [
+      "`agents_hub/core/context/group_chat_runtime.py`：添加 `_state_lock` 保护所有 command 方法",
+      "`agents_hub/core/context/group_chat_context.py`：锁内读取快照并校验版本",
+      "`agents_hub/core/communication/agent_call_manager.py`：`_calls` 添加 `asyncio.Lock`",
+      "`agents_hub/core/orchestration/group_chat_manager.py`：`_group_chats` 添加 `threading.RLock`"
+    ]
+  },
+  {
+    "id": 12,
+    "title": "单聊功能",
+    "source": "idea #10",
+    "status": "🚧 进行中",
+    "created_at": "2026-06-06",
+    "description": "增加单聊，分为两种：1. 完全与群组无关，即直接与一个 agent 聊天。2. 与群相关，因为每个群的每个 agent 都有自己的 session ID，与群相关的就是 consume 或 fork 这个 session ID。展现形式有两种：1. 像现在这样在聊天主界面进行单聊对话；2. 群聊加单聊，即在群聊中点击成员后进入该角色的单聊。",
+    "priority": "3",
+    "progress": [
+      "✅ New Fork 模式：已完成",
+      "⏳ Continue 模式：未完成"
+    ]
+  },
+  {
+    "id": 27,
+    "title": "群聊管理：删除 / Fork / Compact",
+    "source": "用户直接输入",
+    "status": "🚧 进行中",
+    "created_at": "2026-06-08",
+    "description": "群聊的生命周期管理功能，包括删除、fork、整体 compact 和单个成员 compact",
+    "priority": "2"
+  },
+  {
+    "id": 30,
+    "title": "Agent 质量提升四件套",
+    "source": "用户直接输入",
+    "status": "🚧 进行中",
+    "created_at": "2026-06-09",
+    "description": "",
+    "priority": "1",
+    "requirements": [
+      "`before_agent_call`：上下文压缩（会话轮转）、注入额外上下文、检查前置条件、熔断（连续失败拦截）",
+      "`after_agent_call`：自动审查、结果质量评分、触发后续流程、审计日志"
+    ],
+    "background": "CLI 模式下 Agent 表现\"降智\"——疯狂快速完成任务、缺乏架构理解、写 bug 多、审查不上心。根因：提醒机制缺少冷静期催促闭环、系统提示词引导不足、MCP 连接失败时无兜底机制、缺乏结构化的审查和上下文压缩流程。",
+    "subtasks": [
+      "30.1 MCP 连接失败检测（优先级最高，防御性）",
+      "30.2 延缓闭合提醒（改动小，效果直接）",
+      "30.3 系统提示词优化（可持续迭代）",
+      "30.4 Hook 机制设计与实现（架构级改动，收益最大）"
+    ],
+    "has_star": true
+  },
+  {
+    "id": 33,
+    "title": "前端界面优化",
+    "source": "用户直接输入",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-11",
+    "description": "前端界面整体优化，提升用户体验和视觉质量"
+  },
+  {
+    "id": 32,
+    "title": "Electron 打包",
+    "source": "用户直接输入",
+    "status": "🚧 进行中",
+    "created_at": "2026-06-10",
+    "description": "将 agents-hub 项目打包为 Electron 桌面应用，实现跨平台桌面端部署",
+    "priority": "4"
+  },
+  {
+    "id": 29,
+    "title": "Agent Bridge System Prompt 注入模式",
+    "source": "用户直接指定",
     "status": "✅ 已完成",
-    "created_at": "2026-06-04",
+    "created_at": "2026-06-08",
+    "description": "修改 Agent Bridge，支持通过 system prompt 参数直接注入系统提示词，替代当前向 cloud.md 和 agents.md 文件写入的方式。这是多 Agent 使用同一个 Cloud MD 时状态冲突问题的解决方案。",
+    "priority": "29",
+    "completed_at": "2026-06-10",
+    "modules": [
+      "`agents_hub/core/agent/base_agent.py`：修改 `_generate_tool_usage_content` 输出目标",
+      "`agents_hub/core/agent/bridge.py`：增加 system prompt 参数传递",
+      "配置层：增加注入模式的配置选项"
+    ],
+    "background": "['当前实现：系统提示词通过 `_inject_tool_usage_to_files` 方法写入 CLAUDE.md/AGENTS.md 文件', '问题：多个 Agent 并行使用同一个 Cloud MD 时，会产生文件读写竞态条件和状态冲突', '解决方案：支持通过 system prompt 参数直接注入，避免文件层面的冲突']",
+    "has_star": true
+  },
+  {
+    "id": 28,
+    "title": "群聊成员状态与路径显示优化",
+    "source": "用户直接输入",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-08",
+    "description": "增强群聊面板的成员信息展示（低优先级优化）",
+    "priority": "28",
+    "completed_at": "2026-06-10"
+  },
+  {
+    "id": 26,
+    "title": "群聊消息压缩机制激活与上下文保护",
+    "source": "用户直接指定",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-08",
+    "description": "当前 `compact_messages` 整条链路已实现但从未被触发，导致群聊消息无限累积，Agent 上下文被大量重复/低价值消息侵占。需要：",
+    "priority": "25",
     "completed_at": "2026-06-08",
-    "description": "将文件上传从同步改为异步分片上传，支持断点续传和大文件处理",
-    "priority": "9",
+    "related_docs": [
+      "`docs/design-decisions/0010-agent-context-and-prompt-architecture.md`",
+      "`docs/design-decisions/0011-agent-tool-semantics-and-blocking-rules.md`"
+    ],
+    "has_star": true
+  },
+  {
+    "id": 25,
+    "title": "前端侧栏抽屉按钮修复",
+    "source": "用户直接指定",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-07",
+    "description": "前端两个侧栏的抽屉按钮当前失效，需要修复：",
+    "priority": "24",
+    "completed_at": "2026-06-07",
+    "modules": [
+      "前端：顶栏 Header 组件（左侧栏按钮）、ChatArea 顶部（右侧栏按钮）、sidebar 状态管理"
+    ]
+  },
+  {
+    "id": 24,
+    "title": "前端文件上传发送给 Agent",
+    "source": "用户直接指定",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-07",
+    "description": "['前端需要支持用户上传文件并发送给 Agent。用户可以在聊天输入框中选择、粘贴或拖拽文件，文件随消息一起发送，Agent 能够接收并处理文件内容。当前支持的文件类型：', '暂不支持二进制类型（pdf、docx、zip 等）']",
+    "priority": "23",
+    "completed_at": "2026-06-11",
+    "modules": [
+      "前端：ChatInput 组件增加文件上传/粘贴/拖拽功能、消息气泡中文本文件预览和图片展示、上传进度与预览",
+      "后端：文件上传 API、文件存储管理、消息中附件的数据结构（区分图片/文本类型）",
+      "Agent：图片通过多模态能力传递给 LLM、文本文件注入到上下文"
+    ],
+    "has_star": true
+  },
+  {
+    "id": 20,
+    "title": "群聊成员列表增强显示",
+    "source": "用户直接指定",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-07",
+    "description": "增强群聊成员列表和聊天区域的显示信息，包含以下子项：",
+    "priority": "19",
+    "completed_at": "2026-06-10",
+    "modules": [
+      "前端：RightSidebar 成员列表（显示路径+状态）、ChatArea 顶部（群聊路径）、SessionItem（修复时间显示）",
+      "后端：AgentMemberInfo 增加 status 字段、群聊 API 返回成员 cwd 和状态、last_view_at 逻辑修正"
+    ],
+    "has_star": true
+  },
+  {
+    "id": 18,
+    "title": "前端添加内容后其他组件未更新的职责判定",
+    "source": "用户直接指定",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-07",
+    "description": "当前端添加了某个内容（如创建群聊、添加成员等）后，其他相关组件未同步更新信息。需要分析判断这个\"通知其他组件刷新\"的职责应归属前端还是后端。",
+    "priority": "17",
+    "completed_at": "2026-06-07"
+  },
+  {
+    "id": 13,
+    "title": "创建系统 Skill - Manager 工具",
+    "source": "idea #5",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "给 Manager 安排创建成员和创建团队的工具，以及如何创建团队和成员的 Skill。同时给 Manager 一个工具，让他把这些创建的成员或者团队拉进群里。一个工具加一个 Skill。流程：新会话只有 Manager → 告诉他要创建新团队和群聊 → Manager 输入成员列表（可已有或新建）→ 新建需包括名称、描述 → 系统自动拉人进群。",
+    "priority": "12",
+    "completed_at": "2026-06-10"
+  },
+  {
+    "id": 11,
+    "title": "Agent 完成工作后的文档组件",
+    "source": "idea #14",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "当一个 Agent 完成了一个代码工作或文档编写，它应该发送一个组件，这个组件就是它发送的文档的名字以及类型，点击它可以在右边的那个侧栏进行预览。并且这个组件还有几个固定的功能，比如重新生成、引用，然后添加批注再发给 Agent 让它重新生成。",
+    "priority": "10",
+    "completed_at": "2026-06-07",
     "has_star": true
   },
   {
     "id": 10,
-    "title": "缓存策略优化",
-    "source": "性能优化",
+    "title": "预览功能",
+    "source": "idea #9",
     "status": "✅ 已完成",
-    "created_at": "2026-06-03",
+    "created_at": "2026-06-06",
+    "description": "添加上预览功能，需要集成浏览器的功能。比如说让它创建一个网页，网页可以直接在这个窗口中展示。预览应该可以包括文本类的和网站类的，可以是 localhost，也可以是 HTML。",
+    "priority": "9",
+    "completed_at": "2026-06-07"
+  },
+  {
+    "id": 9,
+    "title": "代码 DIFF 功能",
+    "source": "idea #8",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "实现代码的 DIFF，不仅限于代码，就是它修改内容的 DIFF",
+    "priority": "8",
+    "completed_at": "2026-06-07"
+  },
+  {
+    "id": 8,
+    "title": "任务面板",
+    "source": "idea #7",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "当前已实现任务功能，但缺乏测试和实际使用场景。需在前端增加任务面板，以展现当前任务的实现情况。",
+    "priority": "7",
     "completed_at": "2026-06-07",
-    "description": "引入多级缓存架构（本地缓存 + Redis），优化热点数据的读取性能",
-    "priority": "10"
+    "has_star": true
   },
   {
-    "id": 11,
-    "title": "旧版 API 兼容层",
-    "source": "迁移计划",
-    "status": "❌ 已取消",
-    "created_at": "2026-06-02",
-    "cancel_reason": "旧版客户端已完成迁移，不再需要兼容层"
+    "id": 7,
+    "title": "前端 Agent call 状态显示",
+    "source": "idea #6",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "在前端添加 Agent 的 call 状态。当前后端已有完整的 Agent call 状态，需在前端补充。需要先思考展示方式，再进行实现。",
+    "priority": "6",
+    "completed_at": "2026-06-07",
+    "has_star": true
   },
   {
-    "id": 12,
-    "title": "邮件通知服务",
-    "source": "功能需求",
-    "status": "❌ 已取消",
-    "created_at": "2026-06-01",
-    "cancel_reason": "改用站内信方案替代邮件通知"
+    "id": 6,
+    "title": "消息回复/引用",
+    "source": "idea #12",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "消息操作应该有回复、引用等可以选中某个消息，然后对它进行回复，回复的时候就会附带这个消息。",
+    "priority": "5",
+    "completed_at": "2026-06-07",
+    "has_star": true
+  },
+  {
+    "id": 5,
+    "title": "消息 Pin",
+    "source": "idea #13",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "消息 pin 会做一个明确的任务固定信号，会一直发给接下来每个 agent 的信息发送。并且在群聊中应该有一个显示方式，可以独立起来。",
+    "priority": "4",
+    "completed_at": "2026-06-07",
+    "has_star": true
+  },
+  {
+    "id": 4,
+    "title": "WebSocket 群聊实时刷新",
+    "source": "idea #1",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "正式使用 WebSocket，每次添加群聊时都向前端发送消息，让前端刷新群聊信息",
+    "priority": "3",
+    "completed_at": "2026-06-07"
+  },
+  {
+    "id": 3,
+    "title": "群聊信息显示问题排查",
+    "source": "idea #2",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "排查当前群聊数据在群里面显示的问题。正常流程应该是 users @ manager，manager @ worker。每个 worker 应该先在群里说收到任务并开始执行，结束时使用 finish agent call @ manager 说任务已完成。当前有些地方没有 @，内容缺失。",
+    "priority": "2",
+    "completed_at": "2026-06-06"
+  },
+  {
+    "id": 2,
+    "title": "提示词优化 - 任务执行",
+    "source": "idea #4",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "针对完成特定任务，对系统进行专门的提示词优化",
+    "priority": "1",
+    "completed_at": "2026-06-06"
+  },
+  {
+    "id": 1,
+    "title": "提示词优化 - 群聊工具使用",
+    "source": "idea #3",
+    "status": "✅ 已完成",
+    "created_at": "2026-06-06",
+    "description": "编写如何使用 speak in the group 和 finish agent call 两个工具的使用场景，明确写在提示词里边。目前主要针对如何使用信息以及让系统回答更流畅。",
+    "priority": "1",
+    "completed_at": "2026-06-06"
   }
 ];
 

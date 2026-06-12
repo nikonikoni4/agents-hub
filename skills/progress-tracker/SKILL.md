@@ -24,7 +24,7 @@ docs/
 
 ## 可视化编辑器
 
-HTML 编辑器位于 `assets/tasks.html`，支持：
+HTML 编辑器支持：
 - 拖拽排序（SortableJS，活跃区内跨列拖拽）
 - 进行中任务优先级高于待开始任务
 - 按优先级排序（一键重排）
@@ -33,24 +33,28 @@ HTML 编辑器位于 `assets/tasks.html`，支持：
 - JSON 导入/导出/复制到剪贴板
 - 归档区（已完成 + 已取消）可折叠
 
-**同步脚本**：`scripts/sync_tasks.py`
+**文件位置**：
+- 模板：`skills/progress-tracker/assets/tasks.html`（skill 资源，勿修改）
+- 输出：`docs/progress/tasks.html`（实际数据文件，由脚本生成）
+
+**同步脚本**：`skills/progress-tracker/scripts/sync_tasks.py`
 
 ```bash
 # markdown -> html（AI 修改 tasks.md 后同步到 HTML）
-python scripts/sync_tasks.py md2html
+python skills/progress-tracker/scripts/sync_tasks.py md2html
 
 # html -> markdown（用户在 HTML 编辑器修改后同步回 md）
-python scripts/sync_tasks.py html2md
+python skills/progress-tracker/scripts/sync_tasks.py html2md
 
 # 验证数据一致性
-python scripts/sync_tasks.py validate
+python skills/progress-tracker/scripts/sync_tasks.py validate
 ```
 
 **典型工作流**：
-1. AI 读写 `tasks.md`（AI 侧的主要操作）
-2. 用户在 `tasks.html` 中拖拽排序、编辑任务（可视化操作）
-3. 用户编辑后，运行 `html2md` 同步回 markdown
-4. AI 修改 md 后，运行 `md2html` 同步到 HTML
+1. AI 读写 `docs/progress/tasks.md`（AI 侧的主要操作）
+2. 运行 `md2html` 生成 `docs/progress/tasks.html`
+3. 用户在浏览器打开 `docs/progress/tasks.html` 拖拽排序、编辑任务
+4. 用户编辑后，运行 `html2md` 同步回 markdown
 
 ---
 
