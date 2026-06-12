@@ -568,3 +568,49 @@ export interface ToolGroupResponse {
 export interface ToolCatalogResponse {
   groups: ToolGroupResponse[];
 }
+
+// ==================== 压缩相关 ====================
+
+/**
+ * 单个 Agent 压缩响应
+ * 对应后端: CompressResponse schema
+ */
+export interface CompressApiResponse {
+  /** 操作结果消息 */
+  message: string;
+  /** 旧 session ID */
+  old_session_id: string | null;
+  /** 新 session ID */
+  new_session_id: string | null;
+  /** 压缩前 context usage (K tokens) */
+  context_usage_before: number;
+  /** 压缩后 context usage (K tokens) */
+  context_usage_after: number;
+}
+
+/**
+ * 全量压缩响应
+ * 对应后端: CompressAllResponse schema
+ */
+export interface CompressAllApiResponse {
+  /** 操作结果消息 */
+  message: string;
+  /** 每个 Agent 的压缩结果 */
+  results: CompressAllResultItem[];
+}
+
+/**
+ * 全量压缩结果项
+ */
+export interface CompressAllResultItem {
+  /** Agent 名称 */
+  agent_name: string;
+  /** 状态: compressed/skipped/failed */
+  status: 'compressed' | 'skipped' | 'failed';
+  /** 旧 session ID（仅 compressed） */
+  old_session_id?: string;
+  /** 新 session ID（仅 compressed） */
+  new_session_id?: string;
+  /** 跳过/失败原因 */
+  reason?: string;
+}

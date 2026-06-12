@@ -21,6 +21,8 @@ import type {
   AgentCallInfo,
   TaskListInfo,
   UploadedFileInfo,
+  CompressApiResponse,
+  CompressAllApiResponse,
 } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
@@ -783,4 +785,23 @@ export async function uploadFile(chatId: string, file: File): Promise<UploadedFi
   return apiClient.post<UploadedFileInfo>(`/group-chats/${chatId}/upload`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+}
+
+/**
+ * 压缩指定 Agent 的上下文
+ */
+export async function compressAgentContext(
+  chatId: string,
+  agentName: string
+): Promise<CompressApiResponse> {
+  return apiClient.post<CompressApiResponse>(
+    `/group-chats/${chatId}/members/${agentName}/compress`
+  );
+}
+
+/**
+ * 全量压缩所有 Agent 的上下文
+ */
+export async function compressAllAgents(chatId: string): Promise<CompressAllApiResponse> {
+  return apiClient.post<CompressAllApiResponse>(`/group-chats/${chatId}/compress-all`);
 }

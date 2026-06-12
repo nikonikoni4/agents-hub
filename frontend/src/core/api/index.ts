@@ -21,6 +21,8 @@ export {
   deleteGroupChat,
   getAgentCalls,
   getActiveTasks,
+  compressAgentContext,
+  compressAllAgents,
 } from './groupChatApi';
 
 // 角色管理 API

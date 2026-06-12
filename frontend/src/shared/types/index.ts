@@ -41,6 +41,9 @@ export type {
   ToolGroupResponse,
   ToolCatalogResponse,
   UploadedFileInfo,
+  CompressApiResponse,
+  CompressAllApiResponse,
+  CompressAllResultItem,
 } from './api-schemas';
 
 // API 请求类型
