@@ -56,8 +56,8 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [selectedGroupChat, setSelectedGroupChat] = useState<string | null>(null);
 
-  const { leaders, workers, teams, loading, submitting, createChat } = useCreateGroupChat();
-  const { roles: allRoles, groupChats, loading: singleLoading } = useCreateChatData();
+  const { leaders, workers, teams, loading, submitting, createChat } = useCreateGroupChat(isOpen);
+  const { roles: allRoles, groupChats, loading: singleLoading } = useCreateChatData(isOpen);
   const { members: groupMembers, loading: membersLoading } = useGroupChatMembers(selectedGroupChat);
   const selectGroupChat = useSessionStore((s) => s.selectGroupChat);
   const openDraftChat = useSingleChatStore((s) => s.openDraftChat);

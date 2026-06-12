@@ -20,7 +20,7 @@ export interface TeamOption {
   members: string[];
 }
 
-export function useCreateGroupChat() {
+export function useCreateGroupChat(isOpen: boolean) {
   const [roles, setRoles] = useState<RoleApiResponse[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,9 @@ export function useCreateGroupChat() {
   const { refreshGroupChats } = useGroupChatList();
 
   useEffect(() => {
+    if (!isOpen) return;
     let cancelled = false;
+    setLoading(true);
     Promise.all([listRoles(), aggregateAllTeams()]).then(([roleData, teamData]) => {
       if (!cancelled) {
         setRoles(roleData);
@@ -39,7 +41,7 @@ export function useCreateGroupChat() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isOpen]);
 
   const createChat = useCallback(
     async (data: CreateGroupChatRequest): Promise<string | null> => {

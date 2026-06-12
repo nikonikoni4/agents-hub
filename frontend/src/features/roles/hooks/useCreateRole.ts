@@ -4,7 +4,7 @@
 
 import { useCallback, useState } from 'react';
 import { useRolesStore } from '../store/rolesStore';
-import { createRole } from '@/core/api/roleApi';
+import { createRole, addSkillToRole, updateRole } from '@/core/api/roleApi';
 import { aggregateRoleWithSkills } from '@/shared/adapters/roleAdapter';
 import { useToast } from '@/shared/components';
 import type { CreateRoleFormData } from '../types';
@@ -18,6 +18,7 @@ export function useCreateRole() {
     async (formData: CreateRoleFormData): Promise<boolean> => {
       setSubmitting(true);
       try {
+        // 1. 创建角色
         await createRole({
           name: formData.name,
           platform: formData.platform,
@@ -26,6 +27,20 @@ export function useCreateRole() {
           type: 'team_member',
           abilities: [],
         });
+
+        // 2. 添加技能（如果有）
+        if (formData.skills.length > 0) {
+          for (const skillName of formData.skills) {
+            await addSkillToRole(formData.name, skillName);
+          }
+        }
+
+        // 3. 更新工具配置（如果有）
+        if (formData.enabled_tools.length > 0) {
+          await updateRole(formData.name, {
+            enabled_tools: formData.enabled_tools,
+          });
+        }
 
         const newRole = await aggregateRoleWithSkills(formData.name);
         addRole(newRole);

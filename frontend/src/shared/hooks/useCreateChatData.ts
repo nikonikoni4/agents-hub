@@ -13,7 +13,7 @@ import { listRoles } from '@/core/api/roleApi';
 import { listGroupChatInfos } from '@/core/api/groupChatApi';
 import type { RoleApiResponse, GroupChatInfoApiResponse } from '@/shared/types';
 
-export function useCreateChatData() {
+export function useCreateChatData(isOpen: boolean) {
   const [roles, setRoles] = useState<RoleApiResponse[]>([]);
   const [groupChats, setGroupChats] = useState<GroupChatInfoApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,9 @@ export function useCreateChatData() {
   }, []);
 
   useEffect(() => {
+    if (!isOpen) return;
     let cancelled = false;
+    setLoading(true);
     Promise.all([listRoles(), listGroupChatInfos()]).then(([roleData, chatData]) => {
       if (!cancelled) {
         setRoles(roleData);
@@ -43,7 +45,7 @@ export function useCreateChatData() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isOpen]);
 
   return { roles, groupChats, loading, refresh };
 }

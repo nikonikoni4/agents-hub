@@ -21,6 +21,8 @@ export interface CreateRoleFormData {
   platform: AgentPlatform;
   avatar: string | null;
   description: string;
+  skills: string[];
+  enabled_tools: string[];
 }
 
 /**

@@ -538,6 +538,11 @@ call_id: {msg.call_id}
             await self.group_chat_context.add_message(result)
             await self.group_chat_context.update_agent_member_info(result)
         else:
+            # 保存到群聊历史，确保群聊能看到兜底闭环的消息
+            result.text = render_for_chat(self.name, call.send_from, safe_content)
+            await self.group_chat_context.add_message(result)
+            await self.group_chat_context.update_agent_member_info(result)
+
             response_call = self.agent_call_manager.create_call(
                 send_from=self.name,
                 send_to=call.send_from,
