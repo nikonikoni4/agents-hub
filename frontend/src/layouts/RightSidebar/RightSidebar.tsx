@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMembers, MemberWithRole } from '@/features/chat/hooks';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
@@ -76,10 +76,29 @@ function MaximizeIcon() {
 function MemberItem({
   member,
   onToggleDocker,
+  onCompress,
 }: {
   member: MemberWithRole;
   onToggleDocker: (memberName: string, enableDocker: boolean) => void;
+  onCompress: (memberName: string) => void;
 }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭菜单
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
+
+  const canCompress = member.isOnline && member.status !== 'busy' && !member.compressing;
+
   return (
     <div className={styles.memberItem}>
       <div className={styles.memberAvatar}>
@@ -102,7 +121,7 @@ function MemberItem({
       </div>
       <div className={styles.memberStatus}>
         <span className={member.status === 'busy' ? styles.statusBusy : styles.statusIdle}>
-          {member.status === 'busy' ? '忙碌' : '空闲'}
+          {member.compressing ? '压缩中' : member.status === 'busy' ? '忙碌' : '空闲'}
         </span>
       </div>
       <button
@@ -114,6 +133,38 @@ function MemberItem({
       >
         {member.use_docker ? '🐳' : '💻'}
       </button>
+      <div className={styles.memberMenuWrapper} ref={menuRef}>
+        <button
+          className={styles.memberMenuBtn}
+          onClick={() => setShowMenu(!showMenu)}
+          title="更多操作"
+        >
+          ⋮
+        </button>
+        {showMenu && (
+          <div className={styles.memberMenuDropdown}>
+            <button
+              className={styles.memberMenuItem}
+              disabled={!canCompress}
+              onClick={() => {
+                setShowMenu(false);
+                onCompress(member.name);
+              }}
+              title={
+                !member.isOnline
+                  ? 'Agent 离线'
+                  : member.status === 'busy'
+                    ? 'Agent 正在执行任务'
+                    : member.compressing
+                      ? '压缩中...'
+                      : '压缩上下文'
+              }
+            >
+              {member.compressing ? '压缩中...' : '压缩上下文'}
+            </button>
+          </div>
+        )}
+      </div>
       <div className={member.isOnline ? styles.onlineDot : styles.offlineDot} />
     </div>
   );
@@ -128,7 +179,7 @@ export function RightSidebar({
   onResizeEnd,
   content,
 }: RightSidebarProps) {
-  const { members, loading, toggleDockerMode } = useMembers();
+  const { members, loading, toggleDockerMode, compressAgent } = useMembers();
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const displayLocation = useSingleChatStore((s) => s.displayLocation);
@@ -191,6 +242,16 @@ export function RightSidebar({
   const handleCancelDocker = useCallback(() => {
     setDockerConfirm(null);
   }, []);
+
+  const handleCompress = useCallback(
+    (memberName: string) => {
+      compressAgent(memberName).catch((error) => {
+        const message = error instanceof Error ? error.message : '压缩上下文失败';
+        toast.error(message);
+      });
+    },
+    [compressAgent, toast]
+  );
 
   return (
     <div
@@ -255,6 +316,7 @@ export function RightSidebar({
                     key={member.name}
                     member={member}
                     onToggleDocker={handleToggleDocker}
+                    onCompress={handleCompress}
                   />
                 ))
               )}

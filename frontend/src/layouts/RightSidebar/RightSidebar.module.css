@@ -233,6 +233,58 @@
   background: var(--bg-hover);
 }
 
+.memberMenuWrapper {
+  position: relative;
+}
+
+.memberMenuBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  border-radius: 4px;
+}
+
+.memberMenuBtn:hover {
+  background: var(--bg-hover);
+}
+
+.memberMenuDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  min-width: 120px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+}
+
+.memberMenuItem {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.memberMenuItem:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.memberMenuItem:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
 .emptyText {
   font-size: 13px;
   color: var(--text-tertiary);

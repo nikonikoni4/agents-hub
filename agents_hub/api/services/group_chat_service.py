@@ -713,7 +713,7 @@ class GroupChatService:
             ) from e
 
         # 2. 执行全量压缩
-        results = await group_chat.compress_all()  # type: ignore[attr-defined]  # Task 4: GroupChat.compress_all
+        results = await group_chat.compress_all()
 
         # 3. 统计结果
         compressed_count = sum(1 for r in results if r["status"] == "compressed")

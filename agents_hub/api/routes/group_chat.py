@@ -294,3 +294,35 @@ async def upload_file(
         original_filename=file.filename or "unknown",
         content_type=file.content_type or "application/octet-stream",
     )
+
+
+@router.post(
+    "/{group_chat_id}/members/{agent_name}/compress",
+    response_model=dict,
+    responses={
+        404: {"description": "群聊或 Agent 不存在"},
+        409: {"description": "Agent 正在执行任务"},
+    },
+)
+async def compress_agent_context(
+    group_chat_id: str,
+    agent_name: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """压缩指定 Agent 的 CLI session 上下文"""
+    return await service.compress_agent_context(group_chat_id, agent_name)
+
+
+@router.post(
+    "/{group_chat_id}/compress-all",
+    response_model=dict,
+    responses={
+        404: {"description": "群聊不存在"},
+    },
+)
+async def compress_all_agents(
+    group_chat_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """全量压缩所有 Agent 的上下文"""
+    return await service.compress_all_agents(group_chat_id)

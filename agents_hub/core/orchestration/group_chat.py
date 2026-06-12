@@ -369,6 +369,56 @@ class GroupChat:
 
         await self.group_chat_context.compact_messages(agent_info)
 
+    async def compress_all(self):
+        """
+        全量压缩所有在线 Agent 的上下文
+
+        逐个处理，忙碌的 Agent 被跳过而非报错。
+
+        Returns:
+            list[dict]: 每个 Agent 的压缩结果
+        """
+        from agents_hub.core.foundation.exceptions import AgentBusyError
+
+        results = []
+
+        # 收集所有 agent（manager + workers）
+        all_agents: list[Agent] = []
+        if self.manager:
+            all_agents.append(self.manager)
+        all_agents.extend(self.workers.values())
+
+        for agent in all_agents:
+            try:
+                result = await agent.compress_context()
+                results.append(
+                    {
+                        "agent_name": agent.name,
+                        "status": "compressed",
+                        "old_session_id": result["old_session_id"],
+                        "new_session_id": result["new_session_id"],
+                    }
+                )
+            except AgentBusyError:
+                results.append(
+                    {
+                        "agent_name": agent.name,
+                        "status": "skipped",
+                        "reason": "busy",
+                    }
+                )
+            except Exception as e:
+                logger.warning("Agent %s 压缩失败: %s", agent.name, str(e))
+                results.append(
+                    {
+                        "agent_name": agent.name,
+                        "status": "failed",
+                        "reason": str(e),
+                    }
+                )
+
+        return results
+
     async def send_message_to_agent(self, message: AgentMessage):
         """
         发送消息到目标 Agent 并保存到群聊历史
