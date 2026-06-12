@@ -302,6 +302,124 @@ class Agent:
                 self.name, context_usage
             )
 
+    async def compress_context(self):
+        """
+        压缩 Agent 的 CLI session 上下文
+
+        流程：
+        1. 忙碌校验
+        2. 发送压缩 prompt 给当前 session，让 Agent 自我总结
+        3. 提取摘要
+        4. 写入留痕文件
+        5. 用摘要新建 session
+        6. 更新状态
+        7. 广播 refresh
+
+        Returns:
+            dict: 包含 old_session_id, new_session_id, context_usage_before, context_usage_after
+
+        Raises:
+            AgentBusyError: Agent 正在执行任务
+        """
+        from datetime import datetime
+
+        from agents_hub.core.foundation.exceptions import AgentBusyError
+        from agents_hub.core.foundation.prompt import COMPACT_CONTEXT_PROMPT
+
+        # 1. 忙碌校验
+        agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+        if agent_member_info and agent_member_info.status == "busy":
+            raise AgentBusyError(self.name)
+
+        old_session_id = self.main_session_id
+        context_usage_before = self.context_usage
+
+        # 2. 发送压缩 prompt 给当前 session
+        result = await self.execute(COMPACT_CONTEXT_PROMPT)
+
+        # 3. 提取摘要
+        summary = result.text if result.text else ""
+
+        # 4. 写入留痕文件
+        # Spec 明确要求：留痕文件写入失败仅 log warning，不影响压缩流程。
+        # 这是项目编码规则"中间层不做兜底"的特例，因为留痕是辅助功能而非核心路径。
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d-%H%M")
+            handoff_dir = Path(self.agent_cwd) / "docs" / "hand-off"
+            handoff_dir.mkdir(parents=True, exist_ok=True)
+            handoff_file = handoff_dir / f"{timestamp}-{self.name}-compact.md"
+            handoff_content = (
+                f"# Context Compact - {self.name} - {datetime.now().isoformat()}\n\n"
+                f"## 原 Session\n"
+                f"- session_id: {old_session_id}\n"
+                f"- context_usage: {context_usage_before}K tokens\n\n"
+                f"## 摘要\n"
+                f"{summary}\n\n"
+                f"## 新 Session\n"
+                f"- session_id: (待填充)\n"
+            )
+            handoff_file.write_text(handoff_content, encoding="utf-8")
+        except Exception as e:
+            self.logger.warning("留痕文件写入失败: %s", str(e))
+
+        # 5. 清空 main_session
+        if agent_member_info:
+            agent_member_info.main_session = None
+
+        # 6. 用摘要作为首轮 prompt 新建 session（失败时回滚 main_session）
+        try:
+            new_result = await self.execute(summary)
+        except Exception as e:
+            # 回滚 main_session 到旧值
+            if agent_member_info:
+                agent_member_info.main_session = old_session_id
+            self.logger.error(
+                "Agent %s 新建 session 失败，已回滚 main_session: %s", self.name, str(e)
+            )
+            raise
+        new_session_id = new_result.session_id
+
+        # 7. 更新留痕文件中的新 session_id
+        try:
+            handoff_content = handoff_content.replace(
+                "- session_id: (待填充)", f"- session_id: {new_session_id}"
+            )
+            handoff_file.write_text(handoff_content, encoding="utf-8")
+        except Exception:
+            pass
+
+        # 8. 更新 main_session
+        if agent_member_info:
+            agent_member_info.main_session = new_session_id
+
+        # 9. 重置 context_usage
+        await self.group_chat_context.runtime.update_agent_context_usage(self.name, 0)
+
+        # 10. 写入系统消息
+        system_msg = (
+            f"⚙️ Agent {self.name} 上下文已压缩\n"
+            f"   旧 session: {old_session_id} → 新 session: {new_session_id}\n"
+            f"   {context_usage_before}K tokens → 0K tokens"
+        )
+        await self.group_chat_context.runtime.add_system_message(system_msg)
+
+        # 11. 广播 refresh（update_agent_context_usage 内部已调用 _notify_change，无需重复调用）
+
+        self.logger.info(
+            "Agent %s 上下文已压缩: old_session=%s, new_session=%s, usage_before=%dK",
+            self.name,
+            old_session_id,
+            new_session_id,
+            context_usage_before,
+        )
+
+        return {
+            "old_session_id": old_session_id,
+            "new_session_id": new_session_id,
+            "context_usage_before": context_usage_before,
+            "context_usage_after": 0,
+        }
+
     def _build_system_prompt(self, task_manager=None) -> str | None:
         """构建 system_prompt。
 

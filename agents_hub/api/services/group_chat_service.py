@@ -630,6 +630,99 @@ class GroupChatService:
             use_docker=updated_info.use_docker,
         )
 
+    async def compress_agent_context(
+        self,
+        group_chat_id: str,
+        agent_name: str,
+    ) -> dict:
+        """压缩指定 Agent 的上下文
+
+        Args:
+            group_chat_id: 群聊 ID
+            agent_name: Agent 名称
+
+        Returns:
+            dict: 压缩结果
+
+        Raises:
+            ResourceNotFoundError: 群聊或 Agent 不存在
+            StateError: Agent 正在执行任务（409）
+        """
+        from agents_hub.core.foundation.exceptions import AgentBusyError
+
+        logger.info("压缩 Agent 上下文: group=%s, agent=%s", group_chat_id, agent_name)
+
+        # 1. 加载群聊
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 2. 查找 Agent
+        agent = group_chat._find_agent(agent_name)
+        if agent is None:
+            raise ResourceNotFoundError(
+                f"Agent '{agent_name}' 不在此群聊中",
+                details={"agent_name": agent_name},
+            )
+
+        # 3. 执行压缩
+        try:
+            result = await agent.compress_context()
+        except AgentBusyError as e:
+            raise StateError(
+                f"Agent {agent_name} 正在执行任务，无法压缩上下文",
+                details={"agent_name": agent_name},
+            ) from e
+
+        return {
+            "message": f"Agent {agent_name} 上下文已压缩",
+            "old_session_id": result["old_session_id"],
+            "new_session_id": result["new_session_id"],
+            "context_usage_before": result["context_usage_before"],
+            "context_usage_after": result["context_usage_after"],
+        }
+
+    async def compress_all_agents(
+        self,
+        group_chat_id: str,
+    ) -> dict:
+        """全量压缩所有 Agent 的上下文
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            dict: 全量压缩结果
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        logger.info("全量压缩 Agent 上下文: group=%s", group_chat_id)
+
+        # 1. 加载群聊
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 2. 执行全量压缩
+        results = await group_chat.compress_all()  # type: ignore[attr-defined]  # Task 4: GroupChat.compress_all
+
+        # 3. 统计结果
+        compressed_count = sum(1 for r in results if r["status"] == "compressed")
+
+        return {
+            "message": f"已压缩 {compressed_count} 个 Agent 的上下文",
+            "results": results,
+        }
+
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""
         info = group_chat.runtime.get_info_dict(is_active=group_chat._activated)

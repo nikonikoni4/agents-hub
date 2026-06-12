@@ -10,9 +10,9 @@
  * - 通过 store 订阅 activeSessionId（不直接 import session feature）
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
-import { getMembers, listRoles, updateMemberDockerMode } from '@/core/api';
+import { getMembers, listRoles, updateMemberDockerMode, compressAgentContext } from '@/core/api';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import type { GroupChatMemberApiItem, RoleApiResponse, RefreshSignal } from '@/shared/types';
 
@@ -24,6 +24,8 @@ export interface MemberWithRole extends GroupChatMemberApiItem {
   role: RoleApiResponse | null;
   /** 是否在线（有 main_session） */
   isOnline: boolean;
+  /** 是否正在压缩上下文（前端本地计算） */
+  compressing: boolean;
 }
 
 export function useMembers() {
@@ -31,6 +33,7 @@ export function useMembers() {
 
   const [members, setMembers] = useState<MemberWithRole[]>([]);
   const [loading, setLoading] = useState(false);
+  const [compressingAgents, setCompressingAgents] = useState<Set<string>>(new Set());
 
   const fetchMembers = useCallback(async () => {
     if (!activeSessionId) {
@@ -50,6 +53,7 @@ export function useMembers() {
         ...member,
         role: roleMap.get(member.name) ?? null,
         isOnline: member.main_session !== null,
+        compressing: false,
       }));
       setMembers(membersWithRole);
     } catch (err) {
@@ -107,5 +111,37 @@ export function useMembers() {
     [activeSessionId, members, fetchMembers]
   );
 
-  return { members, loading, refresh: fetchMembers, toggleDockerMode };
+  const compressAgent = useCallback(
+    async (agentName: string) => {
+      if (!activeSessionId) return;
+
+      // 标记开始压缩
+      setCompressingAgents((prev) => new Set(prev).add(agentName));
+
+      try {
+        await compressAgentContext(activeSessionId, agentName);
+        // 压缩成功后刷新成员列表（后端会广播 refresh，但主动刷新更可靠）
+        await fetchMembers();
+      } catch (error) {
+        console.error('Failed to compress agent context:', error);
+        throw error;
+      } finally {
+        // 标记压缩结束
+        setCompressingAgents((prev) => {
+          const next = new Set(prev);
+          next.delete(agentName);
+          return next;
+        });
+      }
+    },
+    [activeSessionId, fetchMembers]
+  );
+
+  // 合并 compressing 状态到 members
+  const membersWithCompressing = useMemo(
+    () => members.map((m) => ({ ...m, compressing: compressingAgents.has(m.name) })),
+    [members, compressingAgents]
+  );
+
+  return { members: membersWithCompressing, loading, refresh: fetchMembers, toggleDockerMode, compressAgent };
 }
