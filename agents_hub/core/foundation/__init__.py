@@ -7,6 +7,7 @@ Foundation layer - 基础层（零依赖）
 from agents_hub.exceptions import StateError
 
 from .constants import LOCAL_DATA_PATH, MAX_TOKEN
+from .errors import AgentBusyError
 from .exceptions import (
     AgentExecutionError,
     AgentNotFoundError,
@@ -33,6 +34,7 @@ __all__ = [
     # message
     "AgentMessage",
     # exceptions
+    "AgentBusyError",
     "AgentsHubError",
     "AgentNotFoundError",
     "GroupChatNotFoundError",
