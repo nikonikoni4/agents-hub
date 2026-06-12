@@ -1,7 +1,7 @@
-/* 头像选择器 - 5列网格布局 */
+/* 头像选择器 - 6列网格布局 */
 .container {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 10px;
 }
 
@@ -27,7 +27,8 @@
 
 .avatarItem.selected {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px var(--accent-shadow);
+  border-width: 3px;
+  box-shadow: 0 0 0 4px var(--accent-shadow);
 }
 
 /* 选中态勾选图标 */

@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { AvatarSelector } from './AvatarSelector';
+import { AccordionSection } from './AccordionSection';
 import { AvatarImage } from '@/shared/components';
 import { useUpdateRole } from '../hooks/useUpdateRole';
 import { useRoleSkills } from '../hooks/useRoleSkills';
@@ -40,6 +41,20 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
   const [showToolSelector, setShowToolSelector] = useState(false);
   const [toolCatalog, setToolCatalog] = useState<ToolGroupResponse[]>([]);
   const [enabledTools, setEnabledTools] = useState<string[]>([]);
+
+  const [expandedSections, setExpandedSections] = useState({
+    avatar: true,
+    description: true,
+    skills: false,
+    tools: false,
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
 
   const { updateRole, loading } = useUpdateRole();
   const { skills: roleSkills, addSkill, removeSkill } = useRoleSkills(role?.name ?? null);
@@ -123,116 +138,111 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
-          {/* 角色名称 */}
-          <div className={styles.field}>
-            <div className={styles.fieldHeader}>
-              <label className={styles.fieldLabel}>
-                角色名称
-                <span className={`${styles.badge} ${styles.badgeRequired}`}>必填</span>
-              </label>
-            </div>
-            <div className={styles.typeBadge}>{role.name}</div>
-          </div>
-
-          {/* 头像选择 */}
-          <div className={styles.field}>
-            <div className={styles.fieldHeader}>
-              <label className={styles.fieldLabel}>
-                选择头像
-                <span className={`${styles.badge} ${styles.badgeRequired}`}>必填</span>
-              </label>
-            </div>
-            <AvatarSelector selectedAvatar={avatar} onSelect={setAvatar} />
-          </div>
-
-          {/* 角色描述 */}
-          <div className={styles.field}>
-            <div className={styles.fieldHeader}>
-              <label className={styles.fieldLabel} htmlFor="edit-description">
-                角色描述
-                <span className={`${styles.badge} ${styles.badgeOptional}`}>可选</span>
-              </label>
-            </div>
-            <textarea
-              id="edit-description"
-              className={styles.textarea}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="描述角色的功能和职责..."
-              rows={3}
-            />
-            <span className={styles.fieldHint}>描述将显示在角色卡片上，帮助用户了解角色功能</span>
-          </div>
-
-          {/* 实时预览 */}
-          <div className={styles.previewSection}>
-            <div className={styles.previewAvatar}>
-              <AvatarImage avatar={avatar} fallback={role.name} />
-            </div>
-            <div className={styles.previewInfo}>
+          <div className={styles.mainContent}>
+            {/* 左侧预览区 */}
+            <div className={styles.previewPanel}>
+              <div className={styles.previewAvatar}>
+                <AvatarImage avatar={avatar} fallback={role.name} />
+              </div>
               <div className={styles.previewName}>{role.name}</div>
+              <div className={styles.typeBadge}>team_member</div>
               <div className={styles.previewDesc}>{description || '暂无描述'}</div>
             </div>
-          </div>
 
-          {/* 技能列表 */}
-          <div className={styles.field}>
-            <label className={styles.fieldLabel}>技能列表</label>
-            <div className={styles.skillsContainer}>
-              {roleSkills.length > 0 ? (
-                <div className={styles.skillsList}>
-                  {roleSkills.map((skill) => (
-                    <div key={skill.id} className={styles.skillItem}>
-                      <span className={styles.skillName}>{skill.name}</span>
-                      <button
-                        type="button"
-                        className={styles.removeSkillBtn}
-                        onClick={() => handleRemoveSkill(skill.id)}
-                        aria-label={`移除 ${skill.name}`}
-                      >
-                        ×
-                      </button>
+            {/* 右侧选项区 */}
+            <div className={styles.optionsPanel}>
+              <AccordionSection
+                title="头像选择"
+                badge={avatar ? '已选' : '必填'}
+                isOpen={expandedSections.avatar}
+                onToggle={() => toggleSection('avatar')}
+              >
+                <AvatarSelector selectedAvatar={avatar} onSelect={setAvatar} />
+              </AccordionSection>
+
+              <AccordionSection
+                title="角色描述"
+                badge="可选"
+                isOpen={expandedSections.description}
+                onToggle={() => toggleSection('description')}
+              >
+                <textarea
+                  id="edit-description"
+                  className={styles.textarea}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="描述角色的功能和职责..."
+                  rows={3}
+                />
+                <span className={styles.fieldHint}>描述将显示在角色卡片上，帮助用户了解角色功能</span>
+              </AccordionSection>
+
+              <AccordionSection
+                title="技能列表"
+                badge={`${roleSkills.length} 个`}
+                isOpen={expandedSections.skills}
+                onToggle={() => toggleSection('skills')}
+              >
+                <div className={styles.skillsContainer}>
+                  {roleSkills.length > 0 ? (
+                    <div className={styles.skillsList}>
+                      {roleSkills.map((skill) => (
+                        <div key={skill.id} className={styles.skillItem}>
+                          <span className={styles.skillName}>{skill.name}</span>
+                          <button
+                            type="button"
+                            className={styles.removeSkillBtn}
+                            onClick={() => handleRemoveSkill(skill.id)}
+                            aria-label={`移除 ${skill.name}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className={styles.noSkills}>暂无技能</div>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.addSkillBtn}
+                    onClick={() => setShowSkillSelector(true)}
+                  >
+                    + 添加技能
+                  </button>
                 </div>
-              ) : (
-                <div className={styles.noSkills}>暂无技能</div>
-              )}
-              <button
-                type="button"
-                className={styles.addSkillBtn}
-                onClick={() => setShowSkillSelector(true)}
-              >
-                + 添加技能
-              </button>
-            </div>
-          </div>
+              </AccordionSection>
 
-          {/* 工具管理 */}
-          <div className={styles.field}>
-            <label className={styles.fieldLabel}>工具</label>
-            <div className={styles.skillsContainer}>
-              <div className={styles.skillsList}>
-                {enabledTools.length > 0 ? (
-                  enabledTools.slice(0, 8).map((name) => (
-                    <span key={name} className={styles.skillItem}>
-                      {name}
-                    </span>
-                  ))
-                ) : (
-                  <span className={styles.noSkills}>全部禁用</span>
-                )}
-                {enabledTools.length > 8 && (
-                  <span className={styles.skillItem}>+{enabledTools.length - 8}</span>
-                )}
-              </div>
-              <button
-                type="button"
-                className={styles.addSkillBtn}
-                onClick={() => setShowToolSelector(true)}
+              <AccordionSection
+                title="工具管理"
+                badge={`${enabledTools.length} 个`}
+                isOpen={expandedSections.tools}
+                onToggle={() => toggleSection('tools')}
               >
-                + 管理工具
-              </button>
+                <div className={styles.skillsContainer}>
+                  <div className={styles.skillsList}>
+                    {enabledTools.length > 0 ? (
+                      enabledTools.slice(0, 8).map((name) => (
+                        <span key={name} className={styles.skillItem}>
+                          {name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className={styles.noSkills}>全部禁用</span>
+                    )}
+                    {enabledTools.length > 8 && (
+                      <span className={styles.skillItem}>+{enabledTools.length - 8}</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.addSkillBtn}
+                    onClick={() => setShowToolSelector(true)}
+                  >
+                    + 管理工具
+                  </button>
+                </div>
+              </AccordionSection>
             </div>
           </div>
 

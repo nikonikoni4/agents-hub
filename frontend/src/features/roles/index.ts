@@ -5,9 +5,6 @@
 // Components
 export { RoleManagementPanel } from './components/RoleManagementPanel';
 export { RoleCard } from './components/RoleCard';
-export { TeamList } from './components/TeamList';
-export { TeamMemberPanel } from './components/TeamMemberPanel';
-export { RoleMemberRow } from './components/RoleMemberRow';
 export { CreateRoleDialog } from './components/CreateRoleDialog';
 export { AddMemberDialog } from './components/AddMemberDialog';
 export { CreateTeamDialog } from './components/CreateTeamDialog';

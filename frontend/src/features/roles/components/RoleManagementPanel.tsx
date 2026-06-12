@@ -4,8 +4,7 @@
 
 import { useState } from 'react';
 import { RoleCard } from './RoleCard';
-import { TeamList } from './TeamList';
-import { TeamMemberPanel } from './TeamMemberPanel';
+import { TeamCard } from './TeamCard';
 import { CreateRoleDialog } from './CreateRoleDialog';
 import { EditRoleDialog } from './EditRoleDialog';
 import { AddMemberDialog } from './AddMemberDialog';
@@ -26,7 +25,7 @@ export function RoleManagementPanel() {
   const [editingRole, setEditingRole] = useState<RoleWithSkills | null>(null);
 
   const { roles, loading: rolesLoading, refreshRoles } = useRoles();
-  const { teams, selectedTeam, currentTeam, selectTeam, refreshTeams } = useTeams();
+  const { teams, selectedTeam, selectTeam, refreshTeams } = useTeams();
   const { handleDeleteTeam } = useTeamActions();
 
   const handleCreateRoleSuccess = () => {
@@ -55,7 +54,18 @@ export function RoleManagementPanel() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>角色管理</h1>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>角色管理</h1>
+          {activeTab === 'teams' && (
+            <button
+              type="button"
+              className={styles.addRoleBtn}
+              onClick={() => setShowCreateTeamDialog(true)}
+            >
+              + 新建团队
+            </button>
+          )}
+        </div>
 
         <div className={styles.tabs}>
           <button
@@ -78,14 +88,19 @@ export function RoleManagementPanel() {
       <div className={styles.content}>
         {activeTab === 'teams' ? (
           <div className={styles.teamsView}>
-            <TeamList
-              teams={teams}
-              selectedTeam={selectedTeam}
-              onSelectTeam={selectTeam}
-              onCreateTeam={() => setShowCreateTeamDialog(true)}
-              onDeleteTeam={handleDeleteTeam}
-            />
-            <TeamMemberPanel team={currentTeam} onAddMember={() => setShowAddMemberDialog(true)} />
+            <div className={styles.teamsGrid}>
+              {teams.map((team) => (
+                <TeamCard
+                  key={team.name}
+                  team={team}
+                  onAddMember={() => {
+                    selectTeam(team.name);
+                    setShowAddMemberDialog(true);
+                  }}
+                  onDeleteTeam={handleDeleteTeam}
+                />
+              ))}
+            </div>
           </div>
         ) : (
           <div className={styles.rolesView}>
