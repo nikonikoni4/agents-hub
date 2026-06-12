@@ -10,7 +10,6 @@ Agent 基类
 """
 
 import asyncio
-import re
 from pathlib import Path
 
 from agents_hub.agent_bridge import AgentResult, agent_platform_client
@@ -27,65 +26,6 @@ from agents_hub.core.foundation import (
 from agents_hub.core.foundation.exceptions import DockerConfigError
 from agents_hub.roles import Role, RoleConfig
 from agents_hub.utils.logger import get_logger
-
-
-def _parse_output_fields(text: str) -> dict:
-    """从 Agent 回复文本中解析 markdown 格式的结构化字段。
-
-    支持的格式：
-    - **Modified files:** 后跟 "- path" 列表
-    - **Git diff:** `range`
-    - **Web preview:** [title](url)
-
-    Returns:
-        dict: {
-            "cleaned_text": str,
-            "modified_files": list[str] | None,
-            "git_diff_range": str | None,
-            "web_preview_url": str | None,
-            "web_preview_title": str | None,
-        }
-    """
-    cleaned_text = text
-    modified_files = None
-    git_diff_range = None
-    web_preview_url = None
-    web_preview_title = None
-
-    # Modified files: **Modified files:** 后跟 "- path" 行
-    m = re.search(r"\*\*Modified files:\*\*\s*\n((?:\s*-\s+.+\n?)+)", text, re.IGNORECASE)
-    if m:
-        files = re.findall(r"-\s+(.+)", m.group(1))
-        files = [f.strip() for f in files if f.strip()]
-        if files:
-            modified_files = files
-        cleaned_text = cleaned_text.replace(m.group(0), "").strip()
-
-    # Git diff: **Git diff:** `range`
-    m = re.search(r"\*\*Git diff:\*\*\s*`([^`]+)`", text, re.IGNORECASE)
-    if m:
-        val = m.group(1).strip()
-        if val:
-            git_diff_range = val
-        cleaned_text = cleaned_text.replace(m.group(0), "").strip()
-
-    # Web preview: **Web preview:** [title](url)
-    m = re.search(r"\*\*Web preview:\*\*\s*\[([^\]]*)\]\(([^)]+)\)", text, re.IGNORECASE)
-    if m:
-        title = m.group(1).strip()
-        url = m.group(2).strip()
-        if url:
-            web_preview_url = url
-            web_preview_title = title
-        cleaned_text = cleaned_text.replace(m.group(0), "").strip()
-
-    return {
-        "cleaned_text": cleaned_text,
-        "modified_files": modified_files,
-        "git_diff_range": git_diff_range,
-        "web_preview_url": web_preview_url,
-        "web_preview_title": web_preview_title,
-    }
 
 
 class Agent:
@@ -432,14 +372,11 @@ call_id: {msg.call_id}
         )
         while self._run:
             # 1. 从队列中取回消息
-            # TODO 当前调用agent的call id 没有发送给send_to 端
             msg: AgentMessage = await self.message_queue.get()
-
             # 2. 检查是否是停止信号
             if msg.call_id == "__STOP__":
                 self.logger.debug("Agent 收到停止信号: %s", self.name)
                 break
-
             self.logger.debug(
                 "Agent 收到消息: agent=%s, call_id=%s, from=%s, type=%s, content_preview=%s",
                 self.name,
@@ -450,6 +387,7 @@ call_id: {msg.call_id}
             )
 
             # 3. 注入 runtime 和工具使用说明到 CLAUDE.md/AGENTS.md
+            # [deprecated]:已弃用，但保留
             # try:
             #     self._inject_runtime_to_files(self.task_manager)
             #     self._inject_tool_usage_to_files()
@@ -473,34 +411,20 @@ call_id: {msg.call_id}
             try:
                 result = await self._process_message(msg, prompt)
 
-                # 更新 context_window
+                # 更新 context_usage
                 if result.usage:
                     input_tokens = result.usage.input_tokens
                     if input_tokens > 0:
-                        context_window = input_tokens // 1000
+                        context_usage = input_tokens // 1000
                         self.logger.info(
-                            "Agent %s context_window 更新: input=%d, context_window=%dK",
+                            "Agent %s context_usage 更新: input=%d, context_usage=%dK",
                             self.name,
                             input_tokens,
-                            context_window,
+                            context_usage,
                         )
-                        try:
-                            await self.group_chat_context.runtime.update_agent_context_window(
-                                self.name, context_window
-                            )
-                        except Exception as e:  # TODO 这里不能使用Exception
-                            self.logger.warning("更新 context_window 失败: %s", str(e))
-                    else:
-                        self.logger.warning(
-                            "Agent %s context_window 未更新: input_tokens=0, cache_read=0",
-                            self.name,
+                        await self.group_chat_context.runtime.update_agent_context_usage(
+                            self.name, context_usage
                         )
-                else:
-                    self.logger.warning(
-                        "Agent %s context_window 未更新: usage=None",
-                        self.name,
-                        result.usage.input_tokens if result.usage else None,
-                    )
 
                 self.logger.info(
                     "Agent %s 完成消息处理: call_id=%s, send_from=%s, result_text=%s",
@@ -512,34 +436,6 @@ call_id: {msg.call_id}
             finally:
                 self._is_processing = False
                 await self._sync_status("idle")
-            # 5. 未闭环时把 Agent 回复写入群聊消息（避免 MCP 断连导致群聊无消息）
-            call = self.agent_call_manager.get_call(msg.call_id)
-            already_closed = call is not None and call.has_agent_response
-            if result and result.text and not already_closed:
-                try:
-                    # 从文本中解析 XML 标签字段
-                    parsed = _parse_output_fields(result.text)
-                    result.text = parsed["cleaned_text"]
-                    if parsed["modified_files"]:
-                        result.modified_files = parsed["modified_files"]
-                    if parsed["git_diff_range"]:
-                        result.git_diff_range = parsed["git_diff_range"]
-                    if parsed["web_preview_url"]:
-                        result.web_preview = {
-                            "url": parsed["web_preview_url"],
-                            "title": parsed["web_preview_title"] or "",
-                        }
-                    await self.group_chat_context.add_message(result)
-                    await self.group_chat_context.update_agent_member_info(result)
-                    await self.group_chat_context.runtime._notify_change()
-                    self.logger.info(
-                        "Agent %s 回复已写入群聊: call_id=%s, text_len=%d",
-                        self.name,
-                        msg.call_id,
-                        len(result.text),
-                    )
-                except Exception as e:
-                    self.logger.warning("写入群聊消息失败: %s", str(e))
 
             # 6. TASK 闭环提醒（暂时注释，测试阶段）
             # if self._needs_complete_task_reminder(msg):

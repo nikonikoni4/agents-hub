@@ -271,7 +271,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       cwd: '/home/user/projects/frontend-app',
       use_docker: false,
       status: 'idle',
-      context_window: null,
+      context_usage: null,
     },
     {
       name: 'Developer',
@@ -280,7 +280,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       cwd: '/home/user/projects/frontend-app',
       use_docker: true,
       status: 'busy',
-      context_window: null,
+      context_usage: null,
     },
   ],
   'mock-chat-002': [
@@ -291,7 +291,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       cwd: '/home/user/projects/backend-api',
       use_docker: false,
       status: 'idle',
-      context_window: null,
+      context_usage: null,
     },
     {
       name: 'Developer',
@@ -300,7 +300,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       cwd: '/home/user/projects/backend-api',
       use_docker: true,
       status: 'busy',
-      context_window: null,
+      context_usage: null,
     },
     {
       name: 'Tester',
@@ -309,7 +309,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       cwd: '/home/user/projects/backend-api',
       use_docker: false,
       status: 'idle',
-      context_window: null,
+      context_usage: null,
     },
   ],
   'mock-chat-003': [
@@ -320,7 +320,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       cwd: '/home/user/projects/legacy-system',
       use_docker: false,
       status: 'idle',
-      context_window: null,
+      context_usage: null,
     },
     {
       name: 'Designer',
@@ -329,7 +329,7 @@ const MOCK_MEMBERS: Record<string, GroupChatMemberApiItem[]> = {
       cwd: '/home/user/projects/legacy-system',
       use_docker: false,
       status: 'idle',
-      context_window: null,
+      context_usage: null,
     },
   ],
 };
@@ -613,7 +613,7 @@ export async function updateMemberDockerMode(
       btw_session: [],
       cwd: null,
       status: 'idle',
-      context_window: null,
+      context_usage: null,
     }
   );
 }

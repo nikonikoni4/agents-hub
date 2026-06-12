@@ -189,15 +189,12 @@ class GroupChatRepository:
                 cwd=session_data.get("cwd", ""),
                 use_docker=session_data.get("use_docker", False),
                 status=session_data.get("status", "idle"),
-                context_window=session_data.get("context_window", 0),
+                context_usage=session_data.get("context_usage", 0),
             )
 
         logger.debug(
             "load_agent_member_infos: %s",
-            {
-                k: {"status": v.status, "context_window": v.context_window}
-                for k, v in result.items()
-            },
+            {k: {"status": v.status, "context_usage": v.context_usage} for k, v in result.items()},
         )
         return result
 
@@ -226,14 +223,14 @@ class GroupChatRepository:
                     "cwd": agent_member_info.cwd,
                     "use_docker": agent_member_info.use_docker,
                     "status": agent_member_info.status,
-                    "context_window": agent_member_info.context_window,
+                    "context_usage": agent_member_info.context_usage,
                 }
 
             # 写入文件
             logger.debug(
                 "save_agent_member: %s",
                 {
-                    k: {"status": v["status"], "context_window": v["context_window"]}
+                    k: {"status": v["status"], "context_usage": v["context_usage"]}
                     for k, v in data.items()
                 },
             )

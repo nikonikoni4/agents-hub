@@ -118,7 +118,7 @@ class GroupChatRuntime:
                     "cwd": agent_member_info.cwd,
                     "use_docker": agent_member_info.use_docker,
                     "status": agent_member_info.status,
-                    "context_window": agent_member_info.context_window,
+                    "context_usage": agent_member_info.context_usage,
                 }
             )
         return members
@@ -402,27 +402,27 @@ class GroupChatRuntime:
         await self._notify_change()
         return agent_member_info
 
-    async def update_agent_context_window(
-        self, agent_name: str, context_window: int
+    async def update_agent_context_usage(
+        self, agent_name: str, context_usage: int
     ) -> AgentMemberInfo:
         """
-        更新 Agent 的 context_window 并持久化
+        更新 Agent 的 context_usage 并持久化
 
         Args:
             agent_name: Agent 名称
-            context_window: 上下文窗口大小（input_tokens/1000 取整）
+            context_usage: 上下文使用量（input_tokens/1000 取整）
 
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
         agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        old_value = agent_member_info.context_window
-        agent_member_info.context_window = context_window
+        old_value = agent_member_info.context_usage
+        agent_member_info.context_usage = context_usage
         logger.info(
-            "[Runtime] update_context_window: agent=%s, old=%d, new=%d",
+            "[Runtime] update_context_usage: agent=%s, old=%d, new=%d",
             agent_name,
             old_value,
-            context_window,
+            context_usage,
         )
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
@@ -451,13 +451,13 @@ class GroupChatRuntime:
 
     def get_agent_context(self) -> list[dict]:
         """
-        获取所有 Agent 的 context_window
+        获取所有 Agent 的 context_usage
 
         Returns:
-            list[dict]: Agent 上下文信息列表，每项包含 name 和 context_window
+            list[dict]: Agent 上下文信息列表，每项包含 name 和 context_usage
         """
         return [
-            {"name": name, "context_window": info.context_window}
+            {"name": name, "context_usage": info.context_usage}
             for name, info in self.state.agent_member_infos.items()
         ]
 

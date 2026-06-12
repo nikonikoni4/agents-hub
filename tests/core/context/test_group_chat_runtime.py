@@ -71,7 +71,7 @@ async def test_runtime_loads_files_into_memory_and_queries_dicts():
             "cwd": "/tmp/project/w1",
             "use_docker": True,
             "status": "idle",
-            "context_window": 0,
+            "context_usage": 0,
         }
     ]
 
@@ -299,46 +299,46 @@ async def test_group_chat_context_uses_runtime_for_message_and_session_commands(
     assert repository.saved_sessions is runtime.state.agent_member_infos
 
 
-# ==================== context_window 和 status 测试 ====================
+# ==================== context_usage 和 status 测试 ====================
 
 
-async def test_update_context_window_new_agent():
+async def test_update_context_usage_new_agent():
     """
-    契约：新 agent 自动创建并设置 context_window
+    契约：新 agent 自动创建并设置 context_usage
 
     验证方式：
     1. 创建 runtime 并加载
-    2. 对不存在的 agent 调用 update_agent_context_window
-    3. 验证 agent 被创建且 context_window 正确
+    2. 对不存在的 agent 调用 update_agent_context_usage
+    3. 验证 agent 被创建且 context_usage 正确
     """
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    info = await runtime.update_agent_context_window("Worker2", 42)
+    info = await runtime.update_agent_context_usage("Worker2", 42)
 
-    assert info.context_window == 42
+    assert info.context_usage == 42
     assert "Worker2" in runtime.state.agent_member_infos
     assert repository.saved_sessions is runtime.state.agent_member_infos
 
 
-async def test_update_context_window_existing_agent():
+async def test_update_context_usage_existing_agent():
     """
-    契约：更新已有 agent 的 context_window
+    契约：更新已有 agent 的 context_usage
 
     验证方式：
     1. 创建 runtime 并加载（已有 Worker1）
-    2. 调用 update_agent_context_window 更新 Worker1
-    3. 验证 context_window 被更新
+    2. 调用 update_agent_context_usage 更新 Worker1
+    3. 验证 context_usage 被更新
     """
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    info = await runtime.update_agent_context_window("Worker1", 100)
+    info = await runtime.update_agent_context_usage("Worker1", 100)
 
-    assert info.context_window == 100
-    assert runtime.state.agent_member_infos["Worker1"].context_window == 100
+    assert info.context_usage == 100
+    assert runtime.state.agent_member_infos["Worker1"].context_usage == 100
 
 
 async def test_update_status_to_busy():
@@ -426,21 +426,21 @@ async def test_get_agent_context_multiple():
 
     验证方式：
     1. 创建 runtime 并加载
-    2. 添加多个 agent 的 context_window
+    2. 添加多个 agent 的 context_usage
     3. 调用 get_agent_context 验证返回所有 agent
     """
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    await runtime.update_agent_context_window("Worker1", 50)
-    await runtime.update_agent_context_window("Worker2", 30)
+    await runtime.update_agent_context_usage("Worker1", 50)
+    await runtime.update_agent_context_usage("Worker2", 30)
 
     result = runtime.get_agent_context()
 
     assert len(result) == 2
-    assert {"name": "Worker1", "context_window": 50} in result
-    assert {"name": "Worker2", "context_window": 30} in result
+    assert {"name": "Worker1", "context_usage": 50} in result
+    assert {"name": "Worker2", "context_usage": 30} in result
 
 
 async def test_get_agent_status_empty():

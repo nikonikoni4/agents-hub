@@ -268,7 +268,7 @@ export interface GroupChatMemberApiItem {
   /** Agent 状态：idle/busy */
   status: 'idle' | 'busy';
   /** 上下文窗口大小（单位: K tokens），null 表示未知 */
-  context_window: number | null;
+  context_usage: number | null;
 }
 
 // ==================== 会话相关 ====================

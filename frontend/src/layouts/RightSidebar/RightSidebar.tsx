@@ -90,8 +90,8 @@ function MemberItem({
         <div className={styles.memberRole}>
           {member.role?.type === 'leader' ? '负责人' : '成员'}
           <span className={styles.memberPlatform}>{member.role?.platform ?? 'unknown'}</span>
-          {member.context_window != null && member.context_window > 0 && (
-            <span className={styles.memberContext}>{member.context_window}K</span>
+          {member.context_usage != null && member.context_usage > 0 && (
+            <span className={styles.memberContext}>{member.context_usage}K</span>
           )}
         </div>
         {member.cwd && (

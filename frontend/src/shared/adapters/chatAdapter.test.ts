@@ -35,7 +35,7 @@ const mockMember: GroupChatMemberApiItem = {
   cwd: '/tmp',
   use_docker: false,
   status: 'idle',
-  context_window: null,
+  context_usage: null,
 };
 
 describe('chatAdapter', () => {

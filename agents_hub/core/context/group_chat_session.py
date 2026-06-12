@@ -29,7 +29,7 @@ class AgentMemberInfo:
     cwd: str = ""  # CLI 命令启动的工作目录路径
     use_docker: bool = False  # 是否使用 Docker 沙箱执行
     status: str = "idle"  # Agent 状态：idle/busy/chatting
-    context_window: int = 0  # 上下文窗口大小（input_tokens/1000 取整）
+    context_usage: int = 0  # 上下文使用量（input_tokens/1000 取整）
 
 
 @dataclass
