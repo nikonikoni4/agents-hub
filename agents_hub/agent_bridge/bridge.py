@@ -261,6 +261,31 @@ class AgentBridge:
         """用于一次性的快速 LLM 调用，不涉及角色等内容。"""
         return await self.execute(prompt, self._bare_config)
 
+    async def stop_session(
+        self,
+        platform: AgentPlatform,
+        session_id: str,
+        use_docker: bool = False,
+    ):
+        """
+        停止指定 session 的执行
+
+        Args:
+            platform: Agent 平台
+            session_id: 会话 ID
+            use_docker: 是否为 Docker 模式
+        """
+        executor: object | None = None
+        if use_docker:
+            executor = self._docker_executors.get(platform)
+        else:
+            executor = self._executors.get(platform)
+
+        if executor and hasattr(executor, "stop_session"):
+            await executor.stop_session(session_id)
+        else:
+            logger.warning(f"Platform {platform.value} executor does not support stop_session")
+
     def _init_bare_config(self) -> RoleConfig:
         """初始化 bare 角色配置，不存在则创建。"""
         try:

@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 class CodexExecutor:
     """执行 Codex CLI 命令"""
 
+    def __init__(self):
+        # 进程追踪字典：key = session_id, value = Process
+        self._processes: dict[str, asyncio.subprocess.Process] = {}
+        self._lock = asyncio.Lock()
+
     async def execute(
         self,
         prompt: str,
@@ -67,22 +72,53 @@ class CodexExecutor:
             logger.error(f"Codex CLI not found: {CODEX_COMMAND}")
             raise CLINotFoundError(platform="Codex", command=CODEX_COMMAND) from e
 
-        assert process.stdout is not None
-        async for line in process.stdout:
-            decoded = line.decode("utf-8").strip()
-            if decoded:
-                yield decoded
+        # 注册进程（如果有 session_id）
+        if session_id:
+            async with self._lock:
+                self._processes[session_id] = process
 
-        # 等待进程结束并检查返回码
-        await process.wait()
-        if process.returncode != 0:
-            assert process.stderr is not None
-            stderr = await process.stderr.read()
-            stderr_text = stderr.decode("utf-8")
-            logger.error(f"Codex CLI exited with code {process.returncode}: {stderr_text}")
-            raise CLIExecutionError(
-                platform="Codex", exit_code=process.returncode or 1, stderr=stderr_text
-            )
+        try:
+            assert process.stdout is not None
+            async for line in process.stdout:
+                decoded = line.decode("utf-8").strip()
+                if decoded:
+                    yield decoded
+
+            # 等待进程结束并检查返回码
+            await process.wait()
+            if process.returncode != 0:
+                assert process.stderr is not None
+                stderr = await process.stderr.read()
+                stderr_text = stderr.decode("utf-8")
+                logger.error(f"Codex CLI exited with code {process.returncode}: {stderr_text}")
+                raise CLIExecutionError(
+                    platform="Codex", exit_code=process.returncode or 1, stderr=stderr_text
+                )
+        finally:
+            # 清理进程引用
+            if session_id:
+                async with self._lock:
+                    self._processes.pop(session_id, None)
+
+    async def stop_session(self, session_id: str):
+        """
+        立即终止指定 session 的进程
+
+        Args:
+            session_id: 会话 ID
+        """
+        async with self._lock:
+            process = self._processes.get(session_id)
+            if process:
+                try:
+                    process.kill()  # 立即 SIGKILL (Unix) 或 TerminateProcess (Windows)
+                    await process.wait()
+                    logger.info(f"[CodexExecutor] 已终止 session {session_id} 的进程")
+                except ProcessLookupError:
+                    # 进程已经退出
+                    logger.debug(f"[CodexExecutor] session {session_id} 的进程已不存在")
+                finally:
+                    self._processes.pop(session_id, None)
 
     def _build_command(
         self,

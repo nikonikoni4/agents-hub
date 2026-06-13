@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 class OpenCodeExecutor:
     """执行 OpenCode CLI 命令"""
 
+    def __init__(self):
+        # 进程追踪字典：key = session_id, value = Process
+        self._processes: dict[str, asyncio.subprocess.Process] = {}
+        self._lock = asyncio.Lock()
+
     async def execute(
         self,
         prompt: str,
@@ -54,40 +59,71 @@ class OpenCodeExecutor:
             logger.error(f"OpenCode CLI not found: {OPENCODE_COMMAND}")
             raise CLINotFoundError(platform="OpenCode", command=OPENCODE_COMMAND) from e
 
-        assert process.stdout is not None
-        buffer = ""
-        while True:
-            chunk = await process.stdout.read(256 * 1024)  # 256KB
-            if not chunk:
-                break
-            buffer += chunk.decode("utf-8")
-            while "\n" in buffer:
-                line, buffer = buffer.split("\n", 1)
-                decoded = line.strip()
-                if decoded:
-                    try:
-                        event = json.loads(decoded)
-                        yield self._transform_event(event)
-                    except json.JSONDecodeError:
-                        logger.warning(f"Failed to parse JSON: {decoded}")
-                        yield {"type": "text", "text": decoded}
-        if buffer.strip():
-            try:
-                event = json.loads(buffer.strip())
-                yield self._transform_event(event)
-            except json.JSONDecodeError:
-                yield {"type": "text", "text": buffer.strip()}
+        # 注册进程（如果有 session_id）
+        if session_id:
+            async with self._lock:
+                self._processes[session_id] = process
 
-        # 等待进程结束并检查返回码
-        await process.wait()
-        if process.returncode != 0:
-            assert process.stderr is not None
-            stderr = await process.stderr.read()
-            stderr_text = stderr.decode("utf-8")
-            logger.error(f"OpenCode CLI exited with code {process.returncode}: {stderr_text}")
-            raise CLIExecutionError(
-                platform="OpenCode", exit_code=process.returncode or 1, stderr=stderr_text
-            )
+        try:
+            assert process.stdout is not None
+            buffer = ""
+            while True:
+                chunk = await process.stdout.read(256 * 1024)  # 256KB
+                if not chunk:
+                    break
+                buffer += chunk.decode("utf-8")
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    decoded = line.strip()
+                    if decoded:
+                        try:
+                            event = json.loads(decoded)
+                            yield self._transform_event(event)
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse JSON: {decoded}")
+                            yield {"type": "text", "text": decoded}
+            if buffer.strip():
+                try:
+                    event = json.loads(buffer.strip())
+                    yield self._transform_event(event)
+                except json.JSONDecodeError:
+                    yield {"type": "text", "text": buffer.strip()}
+
+            # 等待进程结束并检查返回码
+            await process.wait()
+            if process.returncode != 0:
+                assert process.stderr is not None
+                stderr = await process.stderr.read()
+                stderr_text = stderr.decode("utf-8")
+                logger.error(f"OpenCode CLI exited with code {process.returncode}: {stderr_text}")
+                raise CLIExecutionError(
+                    platform="OpenCode", exit_code=process.returncode or 1, stderr=stderr_text
+                )
+        finally:
+            # 清理进程引用
+            if session_id:
+                async with self._lock:
+                    self._processes.pop(session_id, None)
+
+    async def stop_session(self, session_id: str):
+        """
+        立即终止指定 session 的进程
+
+        Args:
+            session_id: 会话 ID
+        """
+        async with self._lock:
+            process = self._processes.get(session_id)
+            if process:
+                try:
+                    process.kill()  # 立即 SIGKILL (Unix) 或 TerminateProcess (Windows)
+                    await process.wait()
+                    logger.info(f"[OpenCodeExecutor] 已终止 session {session_id} 的进程")
+                except ProcessLookupError:
+                    # 进程已经退出
+                    logger.debug(f"[OpenCodeExecutor] session {session_id} 的进程已不存在")
+                finally:
+                    self._processes.pop(session_id, None)
 
     def _build_command(
         self,

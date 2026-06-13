@@ -1,5 +1,6 @@
 """Docker Executor 基类"""
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
@@ -15,6 +16,9 @@ class DockerExecutor(ABC):
 
     def __init__(self, docker_manager: DockerManager):
         self._docker_manager = docker_manager
+        # 进程追踪字典：key = session_id, value = Process
+        self._processes: dict[str, asyncio.subprocess.Process] = {}
+        self._lock = asyncio.Lock()
 
     @abstractmethod
     def _build_command(
@@ -58,7 +62,60 @@ class DockerExecutor(ABC):
             prompt, config, session_id, fork_from=fork_from, system_prompt=system_prompt
         )
 
-        async for line in container.exec(command, cwd="/workspace"):
-            yield line
+        # 直接调用 asyncio.create_subprocess_exec，不经过 container.exec()
+        # 这样可以获取进程引用并追踪
+        docker_cmd = container.build_exec_command(command, cwd="/workspace")
+
+        process = await asyncio.create_subprocess_exec(
+            *docker_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        # 注册进程（如果有 session_id）
+        if session_id:
+            async with self._lock:
+                self._processes[session_id] = process
+
+        try:
+            assert process.stdout is not None
+            async for line in process.stdout:
+                decoded = line.decode("utf-8").strip()
+                if decoded:
+                    yield decoded
+
+            await process.wait()
+
+            if process.returncode != 0:
+                assert process.stderr is not None
+                stderr = await process.stderr.read()
+                stderr_text = stderr.decode("utf-8")
+                logger.error(f"Container exec failed: {stderr_text}")
+                raise RuntimeError(f"Container exec failed: {stderr_text}")
+        finally:
+            # 清理进程引用
+            if session_id:
+                async with self._lock:
+                    self._processes.pop(session_id, None)
 
         await self._docker_manager.release_container(config.name, group_chat_id)
+
+    async def stop_session(self, session_id: str):
+        """
+        立即终止指定 session 的进程
+
+        Args:
+            session_id: 会话 ID
+        """
+        async with self._lock:
+            process = self._processes.get(session_id)
+            if process:
+                try:
+                    process.kill()  # 立即 SIGKILL (Unix) 或 TerminateProcess (Windows)
+                    await process.wait()
+                    logger.info(f"[DockerExecutor] 已终止 session {session_id} 的进程")
+                except ProcessLookupError:
+                    # 进程已经退出
+                    logger.debug(f"[DockerExecutor] session {session_id} 的进程已不存在")
+                finally:
+                    self._processes.pop(session_id, None)

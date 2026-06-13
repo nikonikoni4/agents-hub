@@ -601,10 +601,13 @@ class GroupChat:
         # 2. 先更新状态为 "stopped"（阻止新消息投递）
         await self.runtime.update_agent_status(agent_name, "stopped")
 
-        # 3. 停止 agent.run() 循环（发送哨兵消息并设置 _run=False）
+        # 3. ⭐ 新增：立即终止正在运行的 CLI 进程
+        await self._stop_agent_process(agent)
+
+        # 4. 停止 agent.run() 循环（发送哨兵消息并设置 _run=False）
         await agent.stop()
 
-        # 4. 强制取消 agent 的 asyncio.Task
+        # 5. 强制取消 agent 的 asyncio.Task
         if self.manager and agent_name == self.manager.name:
             if self.manager_task and not self.manager_task.done():
                 self.manager_task.cancel()
@@ -631,6 +634,33 @@ class GroupChat:
             "status": "stopped",
             "processed_calls": processed_calls,
         }
+
+    async def _stop_agent_process(self, agent):
+        """
+        终止 Agent 正在运行的 CLI 进程
+
+        Args:
+            agent: Agent 实例
+        """
+        from agents_hub.agent_bridge import agent_platform_client
+
+        session_id = agent.main_session_id
+        if not session_id:
+            logger.debug("Agent %s 没有活跃 session，跳过进程终止", agent.name)
+            return  # 没有活跃 session
+
+        agent_member_info = self.group_chat_context.agent_member_info.get(agent.name)
+        use_docker = getattr(agent_member_info, "use_docker", False) if agent_member_info else False
+
+        try:
+            await agent_platform_client.stop_session(
+                platform=agent.role_config.platform,
+                session_id=session_id,
+                use_docker=use_docker,
+            )
+            logger.info("已终止 Agent %s 的 CLI 进程 (session: %s)", agent.name, session_id)
+        except Exception as e:
+            logger.warning("终止 Agent %s 进程失败: %s", agent.name, str(e))
 
     async def start_member(self, agent_name: str) -> dict:
         """

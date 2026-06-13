@@ -511,7 +511,22 @@ call_id: {msg.call_id}
         return call is not None and not call.has_agent_response
 
     async def _sync_status(self, status: str):
-        """同步 Agent 状态到 AgentMemberInfo"""
+        """
+        同步 Agent 状态到 AgentMemberInfo
+
+        如果当前状态是 "stopped"，不允许改为其他状态（防止 stop 后被 finally 覆盖）
+        """
+        # 获取当前状态
+        agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+        current_status = agent_member_info.status if agent_member_info else None
+
+        # 如果已经是 stopped 状态，不允许改为其他状态
+        if current_status == "stopped" and status != "stopped":
+            self.logger.debug(
+                "Agent %s 已处于 stopped 状态，忽略状态更新请求: %s", self.name, status
+            )
+            return
+
         await self.group_chat_context.runtime.update_agent_status(self.name, status)
 
     async def _fallback_close_task(self, msg: AgentMessage, result: AgentResult | None) -> None:
