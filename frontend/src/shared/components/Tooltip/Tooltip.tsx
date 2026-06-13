@@ -3,7 +3,7 @@
  * 支持深色背景、圆角、阴影、智能位置检测
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './Tooltip.module.css';
 
 export interface TooltipProps {
