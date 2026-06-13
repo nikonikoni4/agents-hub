@@ -361,3 +361,52 @@ async def compress_all_agents(
             ],
         }
     return await service.compress_all_agents(group_chat_id)
+
+
+@router.post(
+    "/{group_chat_id}/members/{agent_name}/stop",
+    response_model=dict,
+    responses={
+        404: {"description": "群聊或 Agent 不存在"},
+    },
+)
+async def stop_member(
+    group_chat_id: str,
+    agent_name: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """停止指定成员"""
+    return await service.stop_member(group_chat_id, agent_name)
+
+
+@router.post(
+    "/{group_chat_id}/members/{agent_name}/start",
+    response_model=dict,
+    responses={
+        404: {"description": "群聊或 Agent 不存在"},
+        409: {"description": "Agent 未处于 stopped 状态"},
+    },
+)
+async def start_member(
+    group_chat_id: str,
+    agent_name: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """重新启动已停止的成员"""
+    return await service.start_member(group_chat_id, agent_name)
+
+
+@router.post(
+    "/{group_chat_id}/members/{agent_name}/reset",
+    response_model=dict,
+    responses={
+        404: {"description": "群聊或 Agent 不存在"},
+    },
+)
+async def reset_member(
+    group_chat_id: str,
+    agent_name: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """重置成员（清空上下文并重新初始化）"""
+    return await service.reset_member(group_chat_id, agent_name)

@@ -42,7 +42,11 @@ export function TeamCard({ team, onAddMember, onDeleteTeam }: TeamCardProps) {
               <button type="button" className={styles.confirmYes} onClick={handleDelete}>
                 是
               </button>
-              <button type="button" className={styles.confirmNo} onClick={() => setDeleteConfirm(false)}>
+              <button
+                type="button"
+                className={styles.confirmNo}
+                onClick={() => setDeleteConfirm(false)}
+              >
                 否
               </button>
             </div>
@@ -57,9 +61,7 @@ export function TeamCard({ team, onAddMember, onDeleteTeam }: TeamCardProps) {
         {team.members.length === 0 ? (
           <div className={styles.empty}>暂无成员</div>
         ) : (
-          team.members.map((member) => (
-            <TeamMemberCard key={member.name} role={member} />
-          ))
+          team.members.map((member) => <TeamMemberCard key={member.name} role={member} />)
         )}
       </div>
     </div>

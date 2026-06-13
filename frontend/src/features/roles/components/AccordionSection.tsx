@@ -2,7 +2,7 @@
  * 手风琴组件 - 可折叠的内容区域
  */
 
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import styles from './CreateRoleDialog.module.css';
 
 export interface AccordionSectionProps {
@@ -13,7 +13,13 @@ export interface AccordionSectionProps {
   children: ReactNode;
 }
 
-export function AccordionSection({ title, badge, isOpen, onToggle, children }: AccordionSectionProps) {
+export function AccordionSection({
+  title,
+  badge,
+  isOpen,
+  onToggle,
+  children,
+}: AccordionSectionProps) {
   return (
     <div className={styles.accordionSection}>
       <div className={styles.accordionHeader} onClick={onToggle}>

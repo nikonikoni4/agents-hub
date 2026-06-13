@@ -938,3 +938,10 @@
 .modalConfirmBtn:hover {
   opacity: 0.9;
 }
+
+/* 菜单分隔线 */
+.menuDivider {
+  margin: 4px 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}

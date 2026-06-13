@@ -100,7 +100,14 @@ export function CreateRoleDialog({ isOpen, onClose, onSuccess }: CreateRoleDialo
   };
 
   const handleClose = () => {
-    setFormData({ name: '', platform: 'claude', avatar: null, description: '', skills: [], enabled_tools: [] });
+    setFormData({
+      name: '',
+      platform: 'claude',
+      avatar: null,
+      description: '',
+      skills: [],
+      enabled_tools: [],
+    });
     setShowSkillSelector(false);
     setShowToolSelector(false);
     onClose();

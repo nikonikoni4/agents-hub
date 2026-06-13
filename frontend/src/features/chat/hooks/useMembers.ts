@@ -12,7 +12,15 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSessionStore } from '@/features/session/store/sessionStore';
-import { getMembers, listRoles, updateMemberDockerMode, compressAgentContext } from '@/core/api';
+import {
+  getMembers,
+  listRoles,
+  updateMemberDockerMode,
+  compressAgentContext,
+  stopMember as stopMemberApi,
+  startMember as startMemberApi,
+  resetMember as resetMemberApi,
+} from '@/core/api';
 import { useCompressStatusStore } from '@/features/chat/store/compressStatusStore';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import type { GroupChatMemberApiItem, RoleApiResponse, RefreshSignal } from '@/shared/types';
@@ -138,13 +146,61 @@ export function useMembers() {
     [activeSessionId, fetchMembers]
   );
 
+  const stopMember = useCallback(
+    async (memberName: string) => {
+      if (!activeSessionId) return;
+
+      try {
+        await stopMemberApi(activeSessionId, memberName);
+        await fetchMembers();
+      } catch (error) {
+        console.error('Failed to stop member:', error);
+        throw error;
+      }
+    },
+    [activeSessionId, fetchMembers]
+  );
+
+  const startMember = useCallback(
+    async (memberName: string) => {
+      if (!activeSessionId) return;
+
+      try {
+        await startMemberApi(activeSessionId, memberName);
+        await fetchMembers();
+      } catch (error) {
+        console.error('Failed to start member:', error);
+        throw error;
+      }
+    },
+    [activeSessionId, fetchMembers]
+  );
+
+  const resetMember = useCallback(
+    async (memberName: string) => {
+      if (!activeSessionId) return;
+
+      try {
+        await resetMemberApi(activeSessionId, memberName);
+        await fetchMembers();
+      } catch (error) {
+        console.error('Failed to reset member:', error);
+        throw error;
+      }
+    },
+    [activeSessionId, fetchMembers]
+  );
+
   // 合并 compressing 状态到 members
   const membersWithCompressing = useMemo(() => {
     const result = members.map((m) => ({
       ...m,
-      compressing: pendingAgents.has(m.name)
+      compressing: pendingAgents.has(m.name),
     }));
-    console.log('[useMembers] membersWithCompressing:', result.map(m => ({ name: m.name, compressing: m.compressing })));
+    console.log(
+      '[useMembers] membersWithCompressing:',
+      result.map((m) => ({ name: m.name, compressing: m.compressing }))
+    );
     console.log('[useMembers] pendingAgents:', Array.from(pendingAgents));
     return result;
   }, [members, pendingAgents]);
@@ -155,5 +211,8 @@ export function useMembers() {
     refresh: fetchMembers,
     toggleDockerMode,
     compressAgent,
+    stopMember,
+    startMember,
+    resetMember,
   };
 }

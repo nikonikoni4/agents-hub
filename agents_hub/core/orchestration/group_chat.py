@@ -61,7 +61,7 @@ class GroupChat:
         self.workers: dict[str, Worker] = {}
         self.manager: Manager | None = None
         self.manager_task: asyncio.Task | None = None
-        self.worker_tasks: list[asyncio.Task] = []
+        self.worker_tasks: dict[str, asyncio.Task] = {}
 
         # 依赖组件（按依赖顺序初始化）
 
@@ -166,7 +166,7 @@ class GroupChat:
         if self.manager is None:
             raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())
-        self.worker_tasks = [asyncio.create_task(w.run()) for w in self.workers.values()]
+        self.worker_tasks = {name: asyncio.create_task(w.run()) for name, w in self.workers.items()}
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
     async def _init_agents(self):
@@ -270,7 +270,7 @@ class GroupChat:
         # 8. 如果群聊已激活，启动新 Worker 的任务
         if self._activated:
             new_task = asyncio.create_task(new_worker.run())
-            self.worker_tasks.append(new_task)
+            self.worker_tasks[role_name] = new_task
             logger.debug("新成员任务已启动: %s", role_name)
 
         # 9. 更新 team_members_name（运行时使用）
@@ -444,19 +444,29 @@ class GroupChat:
         # 0. 确保群聊已激活（懒加载）
         await self.activate()
 
-        # 1. 投递消息
+        # 1. 检查目标 agent 状态
+        target_agent_info = self.runtime.state.agent_member_infos.get(message.send_to)
+        if target_agent_info and target_agent_info.status == "stopped":
+            from agents_hub.exceptions import StateError
+
+            raise StateError(
+                f"无法发送消息给 {message.send_to}：该 Agent 已停止，请先启动",
+                details={"agent_name": message.send_to, "status": "stopped"},
+            )
+
+        # 2. 投递消息
         await self.message_router.send_message(message)
 
-        # 2. 获取发送方的 platform
+        # 3. 获取发送方的 platform
         sender_agent = self._find_agent(message.send_from)
         platform = sender_agent.role_config.platform if sender_agent else AgentPlatform.CLAUDE
 
-        # 3. 格式化消息内容（如果还没有 @ 前缀）
+        # 4. 格式化消息内容（如果还没有 @ 前缀）
         content = message.content
         if not content.startswith(f"@{message.send_to}"):
             content = render_for_chat(message.send_from, message.send_to, content)
 
-        # 4. 构造 AgentResult 并保存（只需要 agent_name, text, timestamp, platform）
+        # 5. 构造 AgentResult 并保存（只需要 agent_name, text, timestamp, platform）
         role_type = getattr(sender_agent, "role_type", RoleType.TEAM_MEMBER)
         sender_result = AgentResult(
             text=content,
@@ -475,6 +485,290 @@ class GroupChat:
             return self.manager
         return self.workers.get(agent_name)
 
+    async def _cleanup_agent_queue(self, agent_name: str) -> int:
+        """
+        清空 agent 的消息队列，并闭环所有未完成的 AgentCall
+
+        实现逻辑：
+        1. 获取该 agent 的所有 PENDING/RUNNING AgentCall
+        2. 对每个 call：
+           - 标记为 FAILED（success=False）
+           - content = "用户主动停止该 Agent 运行，调用失败，请等待用户下一步指令"
+           - 如果调用方不是 user：发送 NOTIFICATION 通知调用方
+           - 如果调用方是 user：保存失败消息到群聊历史
+        3. 清空消息队列
+        4. 返回处理的调用数量
+
+        Args:
+            agent_name: Agent 名称
+
+        Returns:
+            int: 处理的调用数量
+        """
+        from datetime import datetime
+
+        from agents_hub.agent_bridge import AgentResult
+        from agents_hub.core.foundation.models import CallStatus
+        from agents_hub.core.foundation.renderer import render_for_chat
+
+        agent = self._find_agent(agent_name)
+        if agent is None:
+            return 0
+
+        processed_count = 0
+
+        # 获取该 agent 的所有 PENDING/RUNNING AgentCall
+        runtime_calls = self.agent_call_manager.get_runtime_calls_for_agent(agent_name)
+
+        for call in runtime_calls:
+            if call.status in (CallStatus.PENDING, CallStatus.RUNNING):
+                # 标记为 FAILED
+                failure_content = "用户主动停止该 Agent 运行，调用失败，请等待用户下一步指令"
+                self.agent_call_manager.mark_agent_response(
+                    call_id=call.call_id,
+                    content=failure_content,
+                    success=False,
+                )
+
+                # 如果调用方不是 user，发送 NOTIFICATION 通知
+                if not config.is_user_name(call.send_from):
+                    notification_call = self.agent_call_manager.create_call(
+                        send_from=agent_name,
+                        send_to=call.send_from,
+                        content=failure_content,
+                        message_type=MessageType.NOTIFICATION,
+                    )
+                    notification_message = AgentMessage(
+                        call_id=notification_call.call_id,
+                        send_from=agent_name,
+                        send_to=call.send_from,
+                        content=failure_content,
+                        message_type=MessageType.NOTIFICATION,
+                    )
+                    await self.message_router.send_message(notification_message)
+                else:
+                    # 如果调用方是 user，保存到群聊历史
+                    result = AgentResult(
+                        agent_name=agent_name,
+                        text=render_for_chat(agent_name, call.send_from, failure_content),
+                        session_id="",
+                        timestamp=datetime.now().isoformat(),
+                        platform=agent.role_config.platform,
+                        role_type=agent.role_type,
+                    )
+                    await self.group_chat_context.add_message(result)
+
+                processed_count += 1
+
+        # 清空队列
+        while not agent.message_queue.empty():
+            try:
+                agent.message_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+        return processed_count
+
+    async def stop_member(self, agent_name: str) -> dict:
+        """
+        停止单个 agent 的运行
+
+        流程：
+        1. 验证 agent 存在
+        2. 调用 agent.stop() 停止 run() 循环
+        3. 强制取消 agent 的 asyncio.Task
+        4. 处理消息队列中的所有消息（闭环 AgentCall）
+        5. 更新状态为 "stopped"
+
+        Args:
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "stopped", "processed_calls": int}
+
+        Raises:
+            AgentNotFoundError: Agent 不存在
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+
+        # 1. 查找 agent
+        agent = self._find_agent(agent_name)
+        if agent is None:
+            raise AgentNotFoundError(agent_name)
+
+        logger.info("停止 Agent: %s", agent_name)
+
+        # 2. 先更新状态为 "stopped"（阻止新消息投递）
+        await self.runtime.update_agent_status(agent_name, "stopped")
+
+        # 3. 停止 agent.run() 循环（发送哨兵消息并设置 _run=False）
+        await agent.stop()
+
+        # 4. 强制取消 agent 的 asyncio.Task
+        if self.manager and agent_name == self.manager.name:
+            if self.manager_task and not self.manager_task.done():
+                self.manager_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self.manager_task
+                self.manager_task = None
+        else:
+            # 精确取消对应 worker 的 task
+            if agent_name in self.worker_tasks:
+                task = self.worker_tasks[agent_name]
+                if not task.done():
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
+                del self.worker_tasks[agent_name]
+
+        # 5. 清空消息队列并闭环未完成的 AgentCall
+        processed_calls = await self._cleanup_agent_queue(agent_name)
+
+        logger.info("Agent %s 已停止，处理了 %d 个待处理调用", agent_name, processed_calls)
+
+        return {
+            "agent_name": agent_name,
+            "status": "stopped",
+            "processed_calls": processed_calls,
+        }
+
+    async def start_member(self, agent_name: str) -> dict:
+        """
+        重新启动已停止的 agent
+
+        流程：
+        1. 验证 agent 存在且状态为 "stopped"
+        2. 重置 _run 标志为 True
+        3. 重新创建 asyncio.Task 启动 agent.run()
+        4. 更新状态为 "idle"
+
+        Args:
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "idle"}
+
+        Raises:
+            AgentNotFoundError: Agent 不存在
+            StateError: Agent 未处于 stopped 状态
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+        from agents_hub.exceptions import StateError
+
+        # 1. 查找 agent
+        agent = self._find_agent(agent_name)
+        if agent is None:
+            raise AgentNotFoundError(agent_name)
+
+        # 2. 获取当前状态
+        agent_member_info = self.runtime.state.agent_member_infos.get(agent_name)
+        if not agent_member_info or agent_member_info.status != "stopped":
+            raise StateError(
+                f"Agent {agent_name} 当前状态为 {agent_member_info.status if agent_member_info else 'unknown'}，只能启动 stopped 状态的 Agent",
+                details={
+                    "agent_name": agent_name,
+                    "current_status": agent_member_info.status if agent_member_info else None,
+                },
+            )
+
+        logger.info("重新启动 Agent: %s", agent_name)
+
+        # 3. 重置 _run 标志
+        agent._run = True
+
+        # 4. 创建新任务
+        if self.manager and agent_name == self.manager.name:
+            self.manager_task = asyncio.create_task(agent.run())
+        else:
+            new_task = asyncio.create_task(agent.run())
+            self.worker_tasks[agent_name] = new_task
+
+        # 5. 更新状态为 "idle"
+        await self.runtime.update_agent_status(agent_name, "idle")
+
+        logger.info("Agent %s 已重新启动", agent_name)
+
+        return {
+            "agent_name": agent_name,
+            "status": "idle",
+        }
+
+    async def reset_member(self, agent_name: str) -> dict:
+        """
+        重置 agent（清空上下文并重新初始化）
+
+        流程：
+        1. 验证 agent 存在
+        2. 如果正在运行，先 stop
+        3. 清空 main_session 和 btw_sessions
+        4. 清空消息队列
+        5. 重置 context_usage = 0
+        6. 重新执行 _initialize_single_member()（打招呼）
+        7. 自动启动（创建 run() 任务）
+
+        Args:
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "idle", "new_session_id": str}
+
+        Raises:
+            AgentNotFoundError: Agent 不存在
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+
+        # 1. 查找 agent
+        agent = self._find_agent(agent_name)
+        if agent is None:
+            raise AgentNotFoundError(agent_name)
+
+        logger.info("重置 Agent: %s", agent_name)
+
+        # 2. 如果正在运行，先停止
+        agent_member_info = self.runtime.state.agent_member_infos.get(agent_name)
+        if agent_member_info and agent_member_info.status != "stopped":
+            await self.stop_member(agent_name)
+
+        # 3. 清空 main_session 和 btw_sessions
+        if agent_member_info:
+            agent_member_info.main_session = None
+            agent_member_info.btw_session = []
+
+        # 4. 清空消息队列（stop_member 已经做了，这里确保）
+        while not agent.message_queue.empty():
+            try:
+                agent.message_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+        # 5. 重置 context_usage
+        await self.runtime.update_agent_context_usage(agent_name, 0)
+
+        # 6. 重新初始化（打招呼）
+        await self._initialize_single_member(agent)
+
+        # 7. 自动启动
+        agent._run = True
+        if self.manager and agent_name == self.manager.name:
+            self.manager_task = asyncio.create_task(agent.run())
+        else:
+            new_task = asyncio.create_task(agent.run())
+            self.worker_tasks[agent_name] = new_task
+
+        # 8. 更新状态为 "idle"
+        await self.runtime.update_agent_status(agent_name, "idle")
+
+        # 获取新 session_id
+        new_session_id = agent_member_info.main_session if agent_member_info else None
+
+        logger.info("Agent %s 已重置，新 session_id: %s", agent_name, new_session_id)
+
+        return {
+            "agent_name": agent_name,
+            "status": "idle",
+            "new_session_id": new_session_id,
+        }
+
     async def stop(self):
         """停止群聊，停止所有 agent 的 run() 任务。 暂时不要使用这个方法"""
         logger.info("停止群聊: id=%s", self.group_chat_id)
@@ -487,7 +781,7 @@ class GroupChat:
         # 等待所有任务完成
         if self.manager_task:
             await self.manager_task
-        for task in self.worker_tasks:
+        for task in self.worker_tasks.values():
             await task
 
     async def cleanup(self, timeout: float = 10.0):
@@ -529,7 +823,7 @@ class GroupChat:
         tasks = []
         if self.manager_task and not self.manager_task.done():
             tasks.append(self.manager_task)
-        tasks.extend([t for t in self.worker_tasks if not t.done()])
+        tasks.extend([t for t in self.worker_tasks.values() if not t.done()])
 
         if tasks:
             try:

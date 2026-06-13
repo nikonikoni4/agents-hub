@@ -804,7 +804,40 @@ export async function compressAgentContext(
 /**
  * 全量压缩所有 Agent 的上下文
  */
-export async function compressAllAgents(chatId: string, mock = false): Promise<CompressAllApiResponse> {
+export async function compressAllAgents(
+  chatId: string,
+  mock = false
+): Promise<CompressAllApiResponse> {
   const qs = mock ? '?mock=true' : '';
   return apiClient.post<CompressAllApiResponse>(`/group-chats/${chatId}/compress-all${qs}`);
+}
+
+/**
+ * 停止指定成员
+ */
+export async function stopMember(
+  chatId: string,
+  agentName: string
+): Promise<{ agent_name: string; status: string; processed_calls: number }> {
+  return apiClient.post(`/group-chats/${chatId}/members/${agentName}/stop`);
+}
+
+/**
+ * 重新启动已停止的成员
+ */
+export async function startMember(
+  chatId: string,
+  agentName: string
+): Promise<{ agent_name: string; status: string }> {
+  return apiClient.post(`/group-chats/${chatId}/members/${agentName}/start`);
+}
+
+/**
+ * 重置成员（清空上下文并重新初始化）
+ */
+export async function resetMember(
+  chatId: string,
+  agentName: string
+): Promise<{ agent_name: string; status: string; new_session_id: string }> {
+  return apiClient.post(`/group-chats/${chatId}/members/${agentName}/reset`);
 }

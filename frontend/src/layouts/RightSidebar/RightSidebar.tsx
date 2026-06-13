@@ -6,7 +6,7 @@ import { useTasks } from '@/features/chat/hooks/useTasks';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import { SingleChatPanel } from '@/features/single-chat/components/SingleChatPanel';
-import { AvatarImage, ResizeHandle, DiffViewer, MarkdownRenderer } from '@/shared/components';
+import { AvatarImage, ResizeHandle, DiffViewer, MarkdownRenderer, ConfirmDialog } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast/useToast';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { AgentCallsPanel } from './AgentCallsPanel';
@@ -77,15 +77,30 @@ function MemberItem({
   member,
   onToggleDocker,
   onCompress,
+  onStop,
+  onStart,
+  onReset,
 }: {
   member: MemberWithRole;
   onToggleDocker: (memberName: string, enableDocker: boolean) => void;
   onCompress: (memberName: string) => void;
+  onStop: (memberName: string) => void;
+  onStart: (memberName: string) => void;
+  onReset: (memberName: string) => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
-  console.log('[MemberItem]', member.name, 'compressing:', member.compressing, 'status:', member.status);
+  console.log(
+    '[MemberItem]',
+    member.name,
+    'compressing:',
+    member.compressing,
+    'status:',
+    member.status
+  );
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -100,6 +115,37 @@ function MemberItem({
   }, [showMenu]);
 
   const canCompress = member.isOnline && member.status !== 'busy' && !member.compressing;
+
+  const handleStop = async () => {
+    setShowMenu(false);
+    try {
+      await onStop(member.name);
+      toast.success(`已停止 ${member.name}`);
+    } catch (error) {
+      toast.error(`停止失败: ${error}`);
+    }
+  };
+
+  const handleStart = async () => {
+    setShowMenu(false);
+    try {
+      await onStart(member.name);
+      toast.success(`已启动 ${member.name}`);
+    } catch (error) {
+      toast.error(`启动失败: ${error}`);
+    }
+  };
+
+  const handleResetConfirm = async () => {
+    setShowResetConfirm(false);
+    setShowMenu(false);
+    try {
+      await onReset(member.name);
+      toast.success(`已重置 ${member.name}`);
+    } catch (error) {
+      toast.error(`重置失败: ${error}`);
+    }
+  };
 
   return (
     <div className={styles.memberItem}>
@@ -123,7 +169,13 @@ function MemberItem({
       </div>
       <div className={styles.memberStatus}>
         <span className={member.status === 'busy' ? styles.statusBusy : styles.statusIdle}>
-          {member.compressing ? '压缩中' : member.status === 'busy' ? '忙碌' : '空闲'}
+          {member.compressing
+            ? '压缩中'
+            : member.status === 'busy'
+              ? '忙碌'
+              : member.status === 'stopped'
+                ? '已停止'
+                : '空闲'}
         </span>
       </div>
       <button
@@ -145,6 +197,19 @@ function MemberItem({
         </button>
         {showMenu && (
           <div className={styles.memberMenuDropdown}>
+            {member.status === 'stopped' ? (
+              <button className={styles.memberMenuItem} onClick={handleStart}>
+                ▶️ 启动
+              </button>
+            ) : (
+              <button className={styles.memberMenuItem} onClick={handleStop}>
+                ⏸️ 停止
+              </button>
+            )}
+            <button className={styles.memberMenuItem} onClick={() => setShowResetConfirm(true)}>
+              🔄 重置
+            </button>
+            <hr className={styles.menuDivider} />
             <button
               className={styles.memberMenuItem}
               disabled={!canCompress}
@@ -168,6 +233,17 @@ function MemberItem({
         )}
       </div>
       <div className={member.isOnline ? styles.onlineDot : styles.offlineDot} />
+
+      <ConfirmDialog
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={handleResetConfirm}
+        title="确认重置"
+        message={`确认重置 ${member.name}？此操作将清空所有上下文，不可撤销。`}
+        confirmText="重置"
+        cancelText="取消"
+        variant="danger"
+      />
     </div>
   );
 }
@@ -181,7 +257,15 @@ export function RightSidebar({
   onResizeEnd,
   content,
 }: RightSidebarProps) {
-  const { members, loading, toggleDockerMode, compressAgent } = useMembers();
+  const {
+    members,
+    loading,
+    toggleDockerMode,
+    compressAgent,
+    stopMember,
+    startMember,
+    resetMember,
+  } = useMembers();
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const displayLocation = useSingleChatStore((s) => s.displayLocation);
@@ -322,6 +406,9 @@ export function RightSidebar({
                     member={member}
                     onToggleDocker={handleToggleDocker}
                     onCompress={handleCompress}
+                    onStop={stopMember}
+                    onStart={startMember}
+                    onReset={resetMember}
                   />
                 ))
               )}

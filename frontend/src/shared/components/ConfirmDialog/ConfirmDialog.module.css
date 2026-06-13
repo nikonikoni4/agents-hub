@@ -1,0 +1,179 @@
+/* 遮罩层 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: overlay-in 0.2s ease;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 弹窗容器 */
+.dialog {
+  background: var(--bg-main);
+  border-radius: var(--radius-xl);
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: dialog-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 内容区域 */
+.content {
+  padding: 24px;
+}
+
+.title {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* 操作栏 */
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  background: var(--bg-sidebar);
+  border-top: 1px solid var(--border-color);
+}
+
+/* 按钮通用样式 */
+.cancelBtn,
+.confirmBtn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* 取消按钮 */
+.cancelBtn {
+  background: var(--bg-bubble);
+  color: var(--text-primary);
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background: var(--bg-shadow);
+}
+
+.cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 确认按钮 - 基础样式 */
+.confirmBtn {
+  background: var(--accent-color);
+  color: white;
+  box-shadow: 0 2px 8px var(--accent-shadow);
+}
+
+.confirmBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-shadow);
+}
+
+.confirmBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.confirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* 变体样式 */
+.info {
+  --variant-color: var(--accent-color);
+}
+
+.warning {
+  --variant-color: #f59e0b;
+}
+
+.danger {
+  --variant-color: #ef4444;
+}
+
+.warning .confirmBtn,
+.confirmBtn.warning {
+  background: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.warning .confirmBtn:hover:not(:disabled),
+.confirmBtn.warning:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.danger .confirmBtn,
+.confirmBtn.danger {
+  background: #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.danger .confirmBtn:hover:not(:disabled),
+.confirmBtn.danger:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* 深色主题调整 */
+html[data-theme='dark'] .warning {
+  --variant-color: #fbbf24;
+}
+
+html[data-theme='dark'] .danger {
+  --variant-color: #f87171;
+}
+
+html[data-theme='dark'] .warning .confirmBtn,
+html[data-theme='dark'] .confirmBtn.warning {
+  background: #fbbf24;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+html[data-theme='dark'] .danger .confirmBtn,
+html[data-theme='dark'] .confirmBtn.danger {
+  background: #f87171;
+  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.3);
+}

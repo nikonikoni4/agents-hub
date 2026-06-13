@@ -1,6 +1,7 @@
 export * from './AvatarImage';
 export * from './Button';
 export * from './CompositeAvatar';
+export * from './ConfirmDialog';
 export * from './DiffViewer';
 export * from './FilePreviewCard';
 export * from './Icon';

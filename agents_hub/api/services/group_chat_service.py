@@ -723,6 +723,112 @@ class GroupChatService:
             "results": results,
         }
 
+    async def stop_member(self, group_chat_id: str, agent_name: str) -> dict:
+        """停止指定成员
+
+        Args:
+            group_chat_id: 群聊 ID
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "stopped", "processed_calls": int}
+
+        Raises:
+            ResourceNotFoundError: 群聊或 Agent 不存在
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+
+        logger.info("停止成员: group=%s, agent=%s", group_chat_id, agent_name)
+
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        try:
+            result = await group_chat.stop_member(agent_name)
+        except AgentNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"Agent '{agent_name}' 不在此群聊中",
+                details={"agent_name": agent_name},
+            ) from e
+
+        return result
+
+    async def start_member(self, group_chat_id: str, agent_name: str) -> dict:
+        """重新启动已停止的成员
+
+        Args:
+            group_chat_id: 群聊 ID
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "idle"}
+
+        Raises:
+            ResourceNotFoundError: 群聊或 Agent 不存在
+            StateError: Agent 未处于 stopped 状态
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+
+        logger.info("启动成员: group=%s, agent=%s", group_chat_id, agent_name)
+
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        try:
+            result = await group_chat.start_member(agent_name)
+        except AgentNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"Agent '{agent_name}' 不在此群聊中",
+                details={"agent_name": agent_name},
+            ) from e
+
+        return result
+
+    async def reset_member(self, group_chat_id: str, agent_name: str) -> dict:
+        """重置成员（清空上下文并重新初始化）
+
+        Args:
+            group_chat_id: 群聊 ID
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "idle", "new_session_id": str}
+
+        Raises:
+            ResourceNotFoundError: 群聊或 Agent 不存在
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+
+        logger.info("重置成员: group=%s, agent=%s", group_chat_id, agent_name)
+
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        try:
+            result = await group_chat.reset_member(agent_name)
+        except AgentNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"Agent '{agent_name}' 不在此群聊中",
+                details={"agent_name": agent_name},
+            ) from e
+
+        return result
+
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""
         info = group_chat.runtime.get_info_dict(is_active=group_chat._activated)

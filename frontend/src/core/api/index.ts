@@ -23,6 +23,9 @@ export {
   getActiveTasks,
   compressAgentContext,
   compressAllAgents,
+  stopMember,
+  startMember,
+  resetMember,
 } from './groupChatApi';
 
 // 角色管理 API

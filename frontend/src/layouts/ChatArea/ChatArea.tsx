@@ -484,7 +484,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
 
           const store = useCompressStatusStore.getState();
           // 标记所有在线成员为压缩中
-          members.forEach(member => {
+          members.forEach((member) => {
             if (member.isOnline) {
               store.startCompress(member.name);
             }
@@ -505,7 +505,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
             toast.error(err instanceof Error ? err.message : '压缩失败');
           } finally {
             // 清除所有成员的压缩状态
-            members.forEach(member => {
+            members.forEach((member) => {
               store.finishCompress(member.name);
             });
           }

@@ -174,7 +174,9 @@ export function EditRoleDialog({ isOpen, role, onClose, onSuccess }: EditRoleDia
                   placeholder="描述角色的功能和职责..."
                   rows={3}
                 />
-                <span className={styles.fieldHint}>描述将显示在角色卡片上，帮助用户了解角色功能</span>
+                <span className={styles.fieldHint}>
+                  描述将显示在角色卡片上，帮助用户了解角色功能
+                </span>
               </AccordionSection>
 
               <AccordionSection
