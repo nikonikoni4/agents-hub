@@ -590,10 +590,23 @@ call_id: {msg.call_id}
         while self._run:
             # 1. 从队列中取回消息
             msg: AgentMessage = await self.message_queue.get()
+
             # 2. 检查是否是停止信号
             if msg.call_id == "__STOP__":
                 self.logger.debug("Agent 收到停止信号: %s", self.name)
                 break
+
+            # 3. 检查当前状态是否已经是 stopped（防止处理消息时状态被改变）
+            agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+            current_status = agent_member_info.status if agent_member_info else None
+            if current_status == "stopped":
+                self.logger.debug(
+                    "Agent %s 已处于 stopped 状态，跳过消息处理: call_id=%s",
+                    self.name,
+                    msg.call_id,
+                )
+                continue
+
             self.logger.debug(
                 "Agent 收到消息: agent=%s, call_id=%s, from=%s, type=%s, content_preview=%s",
                 self.name,
