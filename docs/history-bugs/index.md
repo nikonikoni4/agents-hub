@@ -129,3 +129,9 @@
  - path: docs/history-bugs/2026-06-10-hide-globe-icon-in-web-preview.md
  - 触发规则：右侧栏"网页" tab 中显示地球图标，用户要求隐藏
  - 内容摘要：RightSidebar.tsx 中 webPreviewHeader 包含 GlobeIcon 组件，注释掉该组件即可隐藏图标。GlobeIcon 组件定义保留，WebPreviewCard 中的独立定义不受影响。低风险修改，易于回滚
+
+## GroupChat.activate() 幂等性缺陷导致消息投递失败
+ - updated_at : 2026-06-13
+ - path: docs/history-bugs/2026-06-13-group-chat-activate-missing-agent-registration.md
+ - 触发规则：GroupChat 对象重建后首次发送消息时，MessageRouter 中找不到接收者 agent
+ - 内容摘要：activate() 只检查 _activated 实例变量，对象重建后新实例的 MessageRouter 为空但不重新注册 agents。消息投递时抛出 AgentNotFoundError（DEBUG 级别不可见）。修复方案：在 activate() 中强制调用 _register_agents_to_router() 确保注册完成

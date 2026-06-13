@@ -102,17 +102,17 @@ class MessageRouter:
             AgentNotFoundError: 发送者或接收者不存在
         """
         if not message.content or not message.content.strip():
-            logger.debug("消息校验失败: call_id=%s, 原因=内容为空", message.call_id)
+            logger.error("消息校验失败: call_id=%s, 原因=内容为空", message.call_id)
             raise InvalidMessageError("消息内容不能为空")
         if message.send_from not in self._agents_queue:
-            logger.debug(
+            logger.error(
                 "消息校验失败: call_id=%s, 原因=发送者 '%s' 未注册",
                 message.call_id,
                 message.send_from,
             )
             raise AgentNotFoundError(message.send_from)
         if message.send_to not in self._agents_queue:
-            logger.debug(
+            logger.error(
                 "消息校验失败: call_id=%s, 原因=接收者 '%s' 未注册, 已注册agents=%s, MessageRouter_id=%s",
                 message.call_id,
                 message.send_to,

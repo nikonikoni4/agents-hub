@@ -256,6 +256,7 @@ class AgentCallManager:
 
             self.logger.info(f"从持久化文件加载了 {len(call_records)} 个历史调用记录")
         except OSError as e:
+            self.logger.error("加载持久化调用记录失败: %s", str(e), exc_info=True)
             raise FileSystemError(
                 operation="read",
                 path=str(self._persistence_path),
@@ -309,6 +310,7 @@ class AgentCallManager:
             with open(self._persistence_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(data, ensure_ascii=False) + "\n")
         except OSError as e:
+            self.logger.error("持久化调用记录失败: %s", str(e), exc_info=True)
             raise FileSystemError(
                 operation="write",
                 path=str(self._persistence_path),

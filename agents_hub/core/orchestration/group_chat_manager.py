@@ -60,8 +60,10 @@ class GroupChatManager:
     def register(self, group_chat_id: str, group_chat: GroupChat):
         """注册一个 GroupChat"""
         if not group_chat_id or not isinstance(group_chat_id, str):
+            logger.error("无效的 group_chat_id: %s", group_chat_id)
             raise ValueError(f"无效的 group_chat_id: {group_chat_id}")
         if not isinstance(group_chat, GroupChat):
+            logger.error("无效的 group_chat 类型: %s", type(group_chat))
             raise ValueError("无效的 group_chat 类型")
         self._group_chats[group_chat_id] = group_chat
         logger.info(
@@ -334,6 +336,11 @@ class GroupChatManager:
 
         # 验证 group_chat_id 一致性
         if metadata.group_chat_id != group_chat_id:
+            logger.error(
+                "metadata 中的 group_chat_id 与参数不一致: 期望=%s, 实际=%s",
+                group_chat_id,
+                metadata.group_chat_id,
+            )
             raise ValueError(
                 f"metadata 中的 group_chat_id ({metadata.group_chat_id}) "
                 f"与参数不一致 ({group_chat_id})"

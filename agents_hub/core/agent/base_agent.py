@@ -269,11 +269,12 @@ class Agent:
             )
             return result
         except Exception as e:
-            self.logger.debug(
+            self.logger.error(
                 "执行异常: agent=%s, call_id=%s, error=%s",
                 self.name,
                 msg.call_id,
                 str(e),
+                exc_info=True,
             )
             self.agent_call_manager.update_status(msg.call_id, CallStatus.FAILED)
             self.agent_call_manager.set_error(msg.call_id, str(e), exc=e)

@@ -158,12 +158,17 @@ class GroupChat:
         if self._activated:
             return
         logger.info("激活群聊: id=%s", self.group_chat_id)
+
+        # 确保 agents 已注册到 MessageRouter（防止对象重建后注册丢失）
+        self._register_agents_to_router()
+
         self._start_agent_tasks()
         self._activated = True
 
     def _start_agent_tasks(self):
         """启动所有 agent 的 run() 任务（内部方法）"""
         if self.manager is None:
+            logger.error("Manager 未初始化，无法启动 Agent 任务")
             raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())
         self.worker_tasks = {name: asyncio.create_task(w.run()) for name, w in self.workers.items()}
@@ -175,6 +180,11 @@ class GroupChat:
 
         RoleManager.get_role() 会验证 role 是否存在，不存在则抛出 RoleNotFoundError。
         """
+        # 幂等性检查：如果已初始化，直接返回
+        if self.manager is not None:
+            logger.debug("agents 已初始化，跳过: id=%s", self.group_chat_id)
+            return
+
         logger.debug("初始化 agents: id=%s, members=%s", self.group_chat_id, self.team_members_name)
         role_manager = RoleManager()
 
@@ -206,13 +216,30 @@ class GroupChat:
             )
 
         # 注册所有 agent 到 message_router
+        self._register_agents_to_router()
+
+    def _register_agents_to_router(self):
+        """注册所有 agents 到 MessageRouter（幂等）
+
+        此方法可以安全地重复调用，MessageRouter.register() 是幂等的。
+        """
+        if self.manager is None:
+            logger.error("Manager 未初始化，无法注册 agents")
+            raise StateError("Manager 未初始化，请先调用 _init_agents()")
+
+        # 注册 Manager
         self.message_router.register(self.manager.name, self.manager.message_queue)
+
+        # 注册所有 Workers
         for worker in self.workers.values():
             self.message_router.register(worker.name, worker.message_queue)
+
         # 注册 user 伪 agent，支持用户通过 API 发送消息
         self.message_router.register(config.default_user_name, asyncio.Queue())
+
         # 注册 heartbeat 系统身份，用于定时唤醒 manager
         self.message_router.register("__HEARTBEAT__", asyncio.Queue())
+
         logger.info(
             "agents 注册完成: group=%s, 已注册agents=%s, MessageRouter_id=%s",
             self.group_chat_id,
@@ -449,6 +476,7 @@ class GroupChat:
         if target_agent_info and target_agent_info.status == "stopped":
             from agents_hub.exceptions import StateError
 
+            logger.error("无法发送消息给 %s：该 Agent 已停止", message.send_to)
             raise StateError(
                 f"无法发送消息给 {message.send_to}：该 Agent 已停止，请先启动",
                 details={"agent_name": message.send_to, "status": "stopped"},
@@ -627,6 +655,10 @@ class GroupChat:
         # 5. 清空消息队列并闭环未完成的 AgentCall
         processed_calls = await self._cleanup_agent_queue(agent_name)
 
+        # 6. 从 MessageRouter 注销
+        self.message_router.unregister(agent_name)
+        logger.debug("Agent %s 已从 MessageRouter 注销", agent_name)
+
         logger.info("Agent %s 已停止，处理了 %d 个待处理调用", agent_name, processed_calls)
 
         return {
@@ -660,7 +692,7 @@ class GroupChat:
             )
             logger.info("已终止 Agent %s 的 CLI 进程 (session: %s)", agent.name, session_id)
         except Exception as e:
-            logger.warning("终止 Agent %s 进程失败: %s", agent.name, str(e))
+            logger.error("终止 Agent %s 进程失败: %s", agent.name, str(e))
 
     async def start_member(self, agent_name: str) -> dict:
         """
