@@ -135,6 +135,14 @@ complete_task 的 content 是你交给调用方的成果汇报，要做到：
 - 不要写分析过程，只写结论；不要重复已知信息
 </role_instruction>"""
 
+RULE = """
+<rule>
+1. 执行前必须掌握上下文：先读相关代码和文档，理解模块在架构中的位置、数据流方向、依赖关系，再动手。不知道代码该写在哪 = 还没准备好。
+2. 永远不要将猜测当作事实。找到"可能的原因"后，必须先验证（加日志/读代码确认逻辑路径/最小复现），确认后再执行。
+3. 遇到阻塞任务的问题，立即通过 report_progress 或 complete_task 反馈，不要闷头死磕。非阻塞问题在任务完成后通过 complete_task 汇报。
+</rule>
+"""
+
 
 def get_tool_usage(role_type: RoleType) -> str:
     """根据角色类型获取对应的 tool_usage 模板
@@ -343,7 +351,7 @@ def build_system_file_content(
     role_instruction = get_role_instruction(role_type)
     tool_usage_content = tool_usage or get_tool_usage(role_type)
 
-    return f"{PLATFORM_INFO}\n\n{tool_usage_content}\n\n{identity}\n\n{role_instruction}"
+    return f"{PLATFORM_INFO}\n\n{tool_usage_content}\n\n{identity}\n\n{role_instruction}\n\n{RULE}"
 
 
 # ====== 使用示例 ======
