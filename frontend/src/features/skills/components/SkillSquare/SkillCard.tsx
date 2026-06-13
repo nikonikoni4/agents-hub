@@ -37,9 +37,7 @@ export function SkillCard({ skill, onClick, onDelete }: SkillCardProps) {
       </div>
 
       <Tooltip content={skill.description} placement="bottom">
-        <div className={styles.skillDesc}>
-          {skill.description}
-        </div>
+        <div className={styles.skillDesc}>{skill.description}</div>
       </Tooltip>
 
       <span className={`${styles.skillTag} ${styles[skill.type]}`}>

@@ -17,12 +17,7 @@ export interface TooltipProps {
   placement?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export function Tooltip({
-  content,
-  children,
-  delay = 200,
-  placement = 'top',
-}: TooltipProps) {
+export function Tooltip({ content, children, delay = 200, placement = 'top' }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<HTMLElement>(null);

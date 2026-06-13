@@ -67,9 +67,7 @@ export function TeamCard({ team, onAddMember, onDeleteTeam }: TeamCardProps) {
           {team.members.length === 0 ? (
             <div className={styles.empty}>暂无成员</div>
           ) : (
-            team.members.map((member) => (
-              <TeamMemberCard key={member.name} role={member} compact />
-            ))
+            team.members.map((member) => <TeamMemberCard key={member.name} role={member} compact />)
           )}
         </div>
       </div>

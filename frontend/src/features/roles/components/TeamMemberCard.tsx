@@ -32,9 +32,7 @@ export function TeamMemberCard({ role, compact = false }: TeamMemberCardProps) {
         <div className={styles.compactInfo}>
           <span className={styles.compactName}>{role.name}</span>
           {role.description && (
-            <span className={styles.compactDesc}>
-              {truncateDescription(role.description)}
-            </span>
+            <span className={styles.compactDesc}>{truncateDescription(role.description)}</span>
           )}
         </div>
       </div>
