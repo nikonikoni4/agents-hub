@@ -1,50 +1,80 @@
+/* ============================================
+ * TeamCard - 团队卡片组件
+ * 展示团队信息和成员缩略列表
+ * ============================================ */
+
 .card {
   padding: 0;
   background: var(--bg-main);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
 }
 
 .card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
+  border-color: rgba(74, 158, 255, 0.2);
 }
 
+/* === 头部区域 === */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
   background: var(--bg-bubble);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .teamInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .teamName {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .memberCount {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text-tertiary);
-  padding: 2px 8px;
-  background: var(--bg-bubble);
+  padding: 3px 10px;
+  background: var(--bg-main);
   border-radius: 6px;
+  border: 1px solid var(--border-color);
 }
 
+/* === 操作按钮区 === */
 .actions {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.detailBtn {
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.detailBtn:hover {
+  background: var(--bg-shadow);
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .addBtn {
@@ -88,7 +118,7 @@
 .deleteConfirm {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .confirmText {
@@ -98,7 +128,7 @@
 
 .confirmYes,
 .confirmNo {
-  padding: 4px 10px;
+  padding: 5px 12px;
   border: none;
   font-size: 12px;
   font-weight: 500;
@@ -125,18 +155,41 @@
   background: var(--bg-selected);
 }
 
+/* === 成员网格区 === */
 .memberGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  grid-auto-rows: minmax(160px, auto);
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
   padding: 16px 20px;
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+/* Webkit 滚动条样式 */
+.memberGrid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.memberGrid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.memberGrid::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.memberGrid::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 .empty {
   grid-column: 1 / -1;
   text-align: center;
-  padding: 24px;
+  padding: 32px 20px;
   color: var(--text-tertiary);
   font-size: 13px;
+  font-style: italic;
 }

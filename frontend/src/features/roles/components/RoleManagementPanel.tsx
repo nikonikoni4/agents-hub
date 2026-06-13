@@ -56,13 +56,21 @@ export function RoleManagementPanel() {
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <h1 className={styles.title}>角色管理</h1>
-          {activeTab === 'teams' && (
+          {activeTab === 'teams' ? (
             <button
               type="button"
               className={styles.addRoleBtn}
               onClick={() => setShowCreateTeamDialog(true)}
             >
               + 新建团队
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.addRoleBtn}
+              onClick={() => setShowCreateDialog(true)}
+            >
+              + 添加角色
             </button>
           )}
         </div>
@@ -104,16 +112,6 @@ export function RoleManagementPanel() {
           </div>
         ) : (
           <div className={styles.rolesView}>
-            <div className={styles.rolesHeader}>
-              <button
-                type="button"
-                className={styles.addRoleBtn}
-                onClick={() => setShowCreateDialog(true)}
-              >
-                + 添加角色
-              </button>
-            </div>
-
             {rolesLoading ? (
               <div className={styles.loading}>加载中...</div>
             ) : roles.length === 0 ? (
