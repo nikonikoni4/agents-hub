@@ -356,7 +356,11 @@ export const ChatInput = React.memo(
           <button className={styles.iconBtn} aria-label="确认">
             <CheckCircleIcon />
           </button>
-          <button className={styles.iconBtn} onClick={handleSendClick} aria-label="发送消息">
+          <button
+            className={`${styles.iconBtn} ${inputValue.trim() ? styles.sendBtnActive : ''}`}
+            onClick={handleSendClick}
+            aria-label="发送消息"
+          >
             <SendIcon />
           </button>
         </div>
