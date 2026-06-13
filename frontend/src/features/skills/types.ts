@@ -31,6 +31,8 @@ export interface SkillDisplayItem extends SkillApiItem {
   type: SkillType;
   /** 图标颜色 */
   color: SkillColor;
+  /** 技能图标（SVG组件） */
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 /**

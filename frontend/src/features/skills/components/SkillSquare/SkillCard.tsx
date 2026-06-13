@@ -18,6 +18,8 @@ export function SkillCard({ skill, onClick, onDelete }: SkillCardProps) {
     onDelete(skill.name);
   };
 
+  const IconComponent = skill.icon;
+
   return (
     <div className={styles.skillCard} onClick={onClick}>
       <button
@@ -29,7 +31,10 @@ export function SkillCard({ skill, onClick, onDelete }: SkillCardProps) {
         <XIcon />
       </button>
 
-      <div className={`${styles.skillAvatar} ${styles[skill.color]}`}>{skill.name}</div>
+      <div className={styles.skillHeader}>
+        <IconComponent className={styles.skillIcon} />
+        <div className={`${styles.skillAvatar} ${styles[skill.color]}`}>{skill.name}</div>
+      </div>
 
       <div className={styles.skillDesc} title={skill.description}>
         {skill.description}
