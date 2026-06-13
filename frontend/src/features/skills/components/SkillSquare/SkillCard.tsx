@@ -31,7 +31,9 @@ export function SkillCard({ skill, onClick, onDelete }: SkillCardProps) {
 
       <div className={`${styles.skillAvatar} ${styles[skill.color]}`}>{skill.name}</div>
 
-      <div className={styles.skillDesc}>{skill.description}</div>
+      <div className={styles.skillDesc} title={skill.description}>
+        {skill.description}
+      </div>
 
       <span className={`${styles.skillTag} ${styles[skill.type]}`}>
         <span className={styles.skillTagDot} />
