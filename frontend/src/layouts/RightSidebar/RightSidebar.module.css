@@ -58,9 +58,11 @@
 }
 
 .tabButton.tabActive {
-  background: var(--bg-right-base, var(--bg-bubble));
+  background: transparent;
   color: var(--text-primary);
   font-weight: 600;
+  border-bottom: 2px solid var(--accent-color);
+  border-radius: 0;
 }
 
 .rightSidebar.collapsed {
@@ -192,8 +194,8 @@
 }
 
 .statusBusy {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
 }
 
 .statusIdle {

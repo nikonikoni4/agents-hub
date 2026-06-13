@@ -118,7 +118,7 @@
 
 .messageBubble {
   padding: 14px 18px;
-  border-radius: 14px;
+  border-radius: 16px;
   font-size: 14px;
   line-height: 1.65;
   word-break: break-word;
@@ -189,7 +189,7 @@
 
 .systemBubble {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   background: var(--bg-shadow);
   padding: 4px 12px;
   border-radius: 12px;
