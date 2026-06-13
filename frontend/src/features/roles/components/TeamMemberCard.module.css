@@ -102,12 +102,12 @@
 }
 
 .skillsContainer {
-  max-height: 48px;
+  max-height: 52px;
   overflow: hidden;
   position: relative;
 }
 
-.skillsContainer::after {
+.skillsContainer.hasOverflow::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -118,7 +118,7 @@
   pointer-events: none;
 }
 
-.card:hover .skillsContainer::after {
+.card:hover .skillsContainer.hasOverflow::after {
   background: linear-gradient(to bottom, transparent, var(--bg-bubble));
 }
 
