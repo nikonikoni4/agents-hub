@@ -11,6 +11,7 @@ export * from './PermissionRequest';
 export * from './ResizeHandle';
 export * from './SkillSelectorModal';
 export * from './Toast';
+export * from './Tooltip';
 export * from './ToolSelectorModal';
 export * from './UploadArea';
 export * from './UploadPreview';

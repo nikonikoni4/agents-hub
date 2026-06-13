@@ -125,6 +125,15 @@
   box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25);
 }
 
+.filterBtn:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.filterBtn:active {
+  transform: scale(0.98);
+}
+
 .filterIcon {
   width: 14px;
   height: 14px;

@@ -2,7 +2,7 @@
  * 技能卡片组件
  */
 
-import { XIcon } from '@/shared/components';
+import { XIcon, Tooltip } from '@/shared/components';
 import type { SkillDisplayItem } from '../../types';
 import styles from './SkillCard.module.css';
 
@@ -36,9 +36,11 @@ export function SkillCard({ skill, onClick, onDelete }: SkillCardProps) {
         <div className={`${styles.skillAvatar} ${styles[skill.color]}`}>{skill.name}</div>
       </div>
 
-      <div className={styles.skillDesc} title={skill.description}>
-        {skill.description}
-      </div>
+      <Tooltip content={skill.description} placement="bottom">
+        <div className={styles.skillDesc}>
+          {skill.description}
+        </div>
+      </Tooltip>
 
       <span className={`${styles.skillTag} ${styles[skill.type]}`}>
         <span className={styles.skillTagDot} />
