@@ -6,7 +6,13 @@ import { useTasks } from '@/features/chat/hooks/useTasks';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import { SingleChatPanel } from '@/features/single-chat/components/SingleChatPanel';
-import { AvatarImage, ResizeHandle, DiffViewer, MarkdownRenderer, ConfirmDialog } from '@/shared/components';
+import {
+  AvatarImage,
+  ResizeHandle,
+  DiffViewer,
+  MarkdownRenderer,
+  ConfirmDialog,
+} from '@/shared/components';
 import { useToast } from '@/shared/components/Toast/useToast';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { AgentCallsPanel } from './AgentCallsPanel';
