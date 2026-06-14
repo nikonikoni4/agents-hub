@@ -25,6 +25,7 @@ import {
   updatePermissionStatus,
   compressAllAgents,
 } from '@/core/api/groupChatApi';
+import { ApiError } from '@/core/api';
 import { useToast } from '@/shared/components';
 import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
@@ -397,6 +398,13 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         setQuotedMessage(null);
       } catch (err) {
         console.error('Failed to send message:', err);
+        // 回滚乐观更新
+        setLocalMessages((prev) => prev.filter((m) => m.id !== 0));
+        if (err instanceof ApiError && err.status === 409) {
+          toast.error(err.message || 'Agent 已停止，请先启动');
+        } else {
+          toast.error('消息发送失败，请重试');
+        }
         // 发送失败时保留引用状态，用户可重试
       }
     },
@@ -599,3 +607,4 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     </div>
   );
 }
+// test hook trigger
