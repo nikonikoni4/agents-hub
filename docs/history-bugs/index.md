@@ -147,3 +147,9 @@
  - path: docs/history-bugs/2026-06-14-agent-sleep-polling-loop-and-async-receipt.md
  - 触发规则：Manager 调用 report_progress/complete_task 后使用 sleep 轮询等待消息
  - 内容摘要：两个问题：(1) 任务回执异步性 - Manager 处理 CLI 任务时无法同时接收 Worker 回执，存在延迟（非 Bug，架构改进点）；(2) sleep 轮询循环 Bug（严重） - Manager 陷入无限 sleep 10 循环等待消息，实际上消息通过 runtime incoming_message 推送，不需要轮询。修复：调用 complete_task 后直接结束，等待系统推送
+
+## Manager run() 任务静默死亡导致消息队列堆积
+ - updated_at : 2026-06-14
+ - path: docs/history-bugs/2026-06-14-manager-run-task-silent-death.md
+ - 触发规则：stop_member 后 start_member 重启 manager，发送消息给 manager
+ - 内容摘要：activate() 幂等性缺陷 Bug 的延续。manager 的 run() 任务在处理最后一条消息后静默死亡，后续消息入队但无人消费（queue_size 递增），AgentCall 停在 PENDING。_process_message 内部无 error log，排除该环节崩溃。已添加 run() 顶层异常捕获、_on_agent_task_done 回调、heartbeat 健康检查，待复现确认具体崩溃点

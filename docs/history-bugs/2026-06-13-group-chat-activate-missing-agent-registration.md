@@ -158,6 +158,7 @@ logger.debug("Agent %s 已从 MessageRouter 注销", agent_name)
 
 - [MCP 创建群聊后发送消息报"接收者未注册"](./2026-06-08-mcp-created-group-chat-message-router-agent-not-registered.md) - 相同症状，当时未找到根因
 - [API 路由创建独立 GroupChatManager 实例导致双 Manager 状态分裂](./2026-06-06-api-route-created-separate-group-chat-manager.md) - 也涉及 MessageRouter 注册问题
+- [Manager run() 任务静默死亡导致消息队列堆积](./2026-06-14-manager-run-task-silent-death.md) - **延续**：修复 activate 幂等性后暴露的更深层问题，run() 任务缺乏异常监控
 
 ## 教训
 
