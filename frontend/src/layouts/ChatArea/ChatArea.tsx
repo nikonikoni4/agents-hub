@@ -614,3 +614,4 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
 // test hook fix verification 2
 // test hook fix verification 3
 // test hook env vars
+// test hook with absolute path
