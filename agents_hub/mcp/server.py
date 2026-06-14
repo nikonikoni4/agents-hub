@@ -156,6 +156,12 @@ async def _send_agent_call_completion_notification(
         message_type=MessageType.NOTIFICATION,
         timeout_seconds=None,
     )
+    logger.info(
+        "AgentCall 创建: call_id=%s, sender=%s, receiver=%s",
+        response_call.call_id,
+        response_call.send_from,
+        response_call.send_to,
+    )
     message = AgentMessage(
         send_from=send_from,
         send_to=send_to,
@@ -163,6 +169,7 @@ async def _send_agent_call_completion_notification(
         message_type=MessageType.NOTIFICATION,
         call_id=response_call.call_id,
     )
+    logger.info("消息投递: from=%s, to=%s", send_from, send_to)
     await group_chat.send_message_to_agent(message)
     await broadcast_group_chat_refresh(group_chat.group_chat_id)
 
@@ -193,6 +200,9 @@ async def call_agent(
         成功: {"call_id": "..."}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    logger.info(
+        "MCP 调用: call_agent, send_to=%s, content_len=%d", send_to, len(content) if content else 0
+    )
     try:
         # 1. 身份解析
         identity = group_chat_manager.resolve_token(agent_token)
@@ -208,6 +218,7 @@ async def call_agent(
         try:
             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
+            logger.warning("call_agent 群聊不存在: group_chat_id=%s", group_chat_id)
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
                 f"群聊 {group_chat_id} 不存在",
@@ -223,6 +234,12 @@ async def call_agent(
             message_type=message_type,
             timeout_seconds=timeout_seconds if need_response else None,
         )
+        logger.info(
+            "AgentCall 创建: call_id=%s, sender=%s, receiver=%s",
+            call.call_id,
+            call.send_from,
+            call.send_to,
+        )
 
         # 4. 发送消息
         message = AgentMessage(
@@ -233,6 +250,7 @@ async def call_agent(
             call_id=call.call_id,
         )
 
+        logger.info("消息投递: from=%s, to=%s", agent_name, send_to)
         await group_chat.send_message_to_agent(message)
         await broadcast_group_chat_refresh(group_chat_id)
 
@@ -240,6 +258,7 @@ async def call_agent(
         return {"call_id": call.call_id}
 
     except AgentNotFoundError as e:
+        logger.warning("call_agent: Agent 不存在: %s", str(e))
         agent_name = e.details.get("agent_name", "unknown")
         return make_error_response(
             AGENT_NOT_FOUND,
@@ -250,6 +269,7 @@ async def call_agent(
         # 已经在上面处理过了，这里是为了避免被 Exception 捕获
         raise
     except Exception as e:
+        logger.error("call_agent 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -274,6 +294,7 @@ async def assign_tasks_to_team(agent_token: str, tasks: list[dict]) -> dict:
         成功: {"created": int, "updated": int, "unchanged": int}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    logger.info("MCP 调用: assign_tasks_to_team, tasks_count=%d", len(tasks) if tasks else 0)
     try:
         # 1. 身份解析
         identity = group_chat_manager.resolve_token(agent_token)
@@ -289,6 +310,7 @@ async def assign_tasks_to_team(agent_token: str, tasks: list[dict]) -> dict:
         try:
             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
+            logger.warning("assign_tasks_to_team 群聊不存在: group_chat_id=%s", group_chat_id)
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
                 f"群聊 {group_chat_id} 不存在",
@@ -314,6 +336,7 @@ async def assign_tasks_to_team(agent_token: str, tasks: list[dict]) -> dict:
         return result
 
     except Exception as e:
+        logger.error("assign_tasks_to_team 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -337,6 +360,7 @@ async def archive_task_list(agent_token: str) -> dict:
         成功: {"archived_list_id": "...", "archived_tasks_count": int}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    logger.info("MCP 调用: archive_task_list")
     try:
         # 1. 身份解析
         identity = group_chat_manager.resolve_token(agent_token)
@@ -352,6 +376,7 @@ async def archive_task_list(agent_token: str) -> dict:
         try:
             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
+            logger.warning("archive_task_list 群聊不存在: group_chat_id=%s", group_chat_id)
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
                 f"群聊 {group_chat_id} 不存在",
@@ -375,6 +400,7 @@ async def archive_task_list(agent_token: str) -> dict:
         return result
 
     except Exception as e:
+        logger.error("archive_task_list 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -408,6 +434,7 @@ async def check_agent_call(agent_token: str, call_id: str) -> dict:
         }
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    logger.info("MCP 调用: check_agent_call, call_id=%s", call_id)
     try:
         # 1. 身份解析
         identity = group_chat_manager.resolve_token(agent_token)
@@ -423,6 +450,7 @@ async def check_agent_call(agent_token: str, call_id: str) -> dict:
         try:
             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
+            logger.warning("check_agent_call 群聊不存在: group_chat_id=%s", group_chat_id)
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
                 f"群聊 {group_chat_id} 不存在",
@@ -457,6 +485,7 @@ async def check_agent_call(agent_token: str, call_id: str) -> dict:
         }
 
     except Exception as e:
+        logger.error("check_agent_call 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -485,6 +514,11 @@ async def report_progress(agent_token: str, content: str, send_to: str | None = 
         成功: {"ok": True}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    logger.info(
+        "MCP 调用: report_progress, send_to=%s, content_len=%d",
+        send_to,
+        len(content) if content else 0,
+    )
     try:
         identity = group_chat_manager.resolve_token(agent_token)
         if identity is None:
@@ -497,6 +531,7 @@ async def report_progress(agent_token: str, content: str, send_to: str | None = 
         try:
             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
+            logger.warning("report_progress 群聊不存在: group_chat_id=%s", group_chat_id)
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
                 f"群聊 {group_chat_id} 不存在",
@@ -518,6 +553,7 @@ async def report_progress(agent_token: str, content: str, send_to: str | None = 
         return {"ok": True}
 
     except Exception as e:
+        logger.error("report_progress 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -561,6 +597,12 @@ async def complete_task(
         成功: {"call_id": "...", "status": "completed|failed"}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    logger.info(
+        "MCP 调用: complete_task, call_id=%s, success=%s, content_len=%d",
+        call_id,
+        success,
+        len(content) if content else 0,
+    )
     try:
         # 1. 验证token
         identity = group_chat_manager.resolve_token(agent_token)
@@ -575,6 +617,7 @@ async def complete_task(
         try:
             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
+            logger.warning("complete_task 群聊不存在: group_chat_id=%s", group_chat_id)
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
                 f"群聊 {group_chat_id} 不存在",
@@ -637,6 +680,7 @@ async def complete_task(
                 "has_modified_files 为 True 时 modified_files 必须非空"
             )
             assert agent_cwd is not None, "modified_files 存在时 agent_cwd 必须已初始化"
+            snapshot_failures = []
             for index, file_path in enumerate(modified_files):
                 try:
                     metadata = create_file_snapshot(
@@ -650,18 +694,30 @@ async def complete_task(
                     file_metadata_list.append(metadata)
                 except Exception as e:
                     # 单个文件失败不影响整体
-                    logger.warning(f"Failed to create snapshot for {file_path}: {e}")
+                    snapshot_failures.append((file_path, str(e)))
+            if snapshot_failures:
+                logger.warning(
+                    "complete_task: %d 个文件快照创建失败: %s",
+                    len(snapshot_failures),
+                    snapshot_failures,
+                )
 
         # 5. 完成call闭环
         # TODO : [DESIGN] 这里会把结果发在result中，但是当前也会在直接发送给agent信息，
         # 如果agent调用check_agent_call，实际上会得到2份结果，但是这里先不管
         # 一个可行的方法是使用 "agent call结束，具体内容{agent_name}会直接发送信息给你"
-        logger.debug(f"complete_task :call_id:{call_id} {success} {safe_content}")
+        logger.info(
+            "complete_task: call_id=%s, success=%s, safe_content_len=%d",
+            call_id,
+            success,
+            len(safe_content) if safe_content else 0,
+        )
         await group_chat.agent_call_manager.mark_agent_response(
             call_id=call_id,
             content=safe_content,  #  "agent call结束，具体内容{agent_name}会直接发送信息给你"
             success=success,
         )
+        logger.info("AgentCall 完成: call_id=%s", call_id)
         # 6. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
         web_preview = None
         if has_web_preview:
@@ -700,6 +756,7 @@ async def complete_task(
         return {"call_id": call_id, "status": status.value}
 
     except Exception as e:
+        logger.error("complete_task 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -735,6 +792,7 @@ async def request_permission(
     """
     from uuid import uuid4
 
+    logger.info("MCP 调用: request_permission, title=%s", title)
     try:
         # 1. 身份解析
         identity = group_chat_manager.resolve_token(agent_token)
@@ -750,6 +808,7 @@ async def request_permission(
         try:
             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError:
+            logger.warning("request_permission 群聊不存在: group_chat_id=%s", group_chat_id)
             return make_error_response(
                 GROUP_CHAT_NOT_FOUND,
                 f"群聊 {group_chat_id} 不存在",
@@ -781,6 +840,7 @@ async def request_permission(
         return {"request_id": request_id, "status": "pending"}
 
     except Exception as e:
+        logger.error("request_permission 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -812,6 +872,9 @@ async def create_group_chat(
         成功: {"group_chat_id": "...", "group_chat_name": "...", "project_path": "...", ...}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    logger.info(
+        "MCP 调用: create_group_chat, team_members=%s, project_path=%s", team_members, project_path
+    )
     try:
         # 1. 系统身份验证
         if not _verify_system_token(agent_token):
@@ -838,24 +901,28 @@ async def create_group_chat(
         }
 
     except ValidationError as e:
+        logger.warning("create_group_chat 参数校验失败: %s", str(e))
         return make_error_response(
             VALIDATION_ERROR,
             str(e),
             details=e.details,
         )
     except ResourceNotFoundError as e:
+        logger.warning("create_group_chat 资源不存在: %s", str(e))
         return make_error_response(
             AGENT_NOT_FOUND,
             str(e),
             details=e.details,
         )
     except StateError as e:
+        logger.warning("create_group_chat 状态错误: %s", str(e))
         return make_error_response(
             INTERNAL_ERROR,
             f"群聊启动失败: {str(e)}",
             details=e.details,
         )
     except Exception as e:
+        logger.error("create_group_chat 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -887,6 +954,7 @@ async def create_agent(
         成功: {"name": "...", "platform": "...", ...}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    logger.info("MCP 调用: create_agent, name=%s, platform=%s", name, platform)
     try:
         # 1. 系统身份验证
         if not _verify_system_token(agent_token):
@@ -909,18 +977,21 @@ async def create_agent(
         return asdict(role_info)
 
     except ValueError as e:
+        logger.warning("create_agent 参数校验失败: %s", str(e))
         return make_error_response(
             VALIDATION_ERROR,
             str(e),
             details={"name": name},
         )
     except RoleAlreadyExistsError as e:
+        logger.warning("create_agent 角色已存在: %s", str(e))
         return make_error_response(
             AGENT_ALREADY_EXISTS,
             str(e),
             details={"name": name},
         )
     except Exception as e:
+        logger.error("create_agent 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -940,6 +1011,7 @@ async def health_check() -> dict:
     Returns:
         成功: {"status": "healthy", "timestamp": "..."}
     """
+    logger.info("MCP 调用: health_check")
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),

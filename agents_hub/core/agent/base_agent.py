@@ -143,7 +143,7 @@ class Agent:
         self, prompt, session: str | None = None, system_prompt: str | None = None
     ) -> AgentResult:
         """执行单聊（by the way）"""
-        print(f"Info : {self.name} 执行单聊 content:{prompt[:20]}")
+        self.logger.debug("执行单聊: agent=%s, content=%s", self.name, prompt[:20])
         cwd = self.agent_cwd if self.agent_cwd else None
         return await agent_platform_client.execute(
             prompt, self.role_config, session, cwd, system_prompt=system_prompt
@@ -156,10 +156,10 @@ class Agent:
             if info.main_session:
                 return info.main_session
             else:
-                print(f"warning : {self.name}在当前群聊中无历史记录")  # TODO 替换为 logger
+                self.logger.warning("%s 在当前群聊中无历史记录", self.name)
         else:
-            print(
-                f"warning : 当前群聊无{self.name}的main session记录 [ 如果是初始化会话 忽略该警告]"
+            self.logger.warning(
+                "当前群聊无 %s 的 main session 记录（如果是初始化会话忽略该警告）", self.name
             )
         return None
 
@@ -607,9 +607,7 @@ call_id: {msg.call_id}
 
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
-        self.logger.info(
-            "Agent run() 启动: %s, 队列剩余=%d", self.name, self.message_queue.qsize()
-        )
+        self.logger.info("Agent run() 启动: %s, 队列剩余=%d", self.name, self.message_queue.qsize())
         try:
             await self._run_loop()
         except asyncio.CancelledError:
@@ -625,7 +623,7 @@ call_id: {msg.call_id}
             )
             raise
         finally:
-            self.logger.warning(
+            self.logger.info(
                 "Agent run() 已终止: agent=%s, _run=%s, queue_remaining=%d",
                 self.name,
                 self._run,

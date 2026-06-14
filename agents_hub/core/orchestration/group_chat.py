@@ -198,9 +198,7 @@ class GroupChat:
         self.worker_tasks = {}
         for name, w in self.workers.items():
             task = asyncio.create_task(w.run())
-            task.add_done_callback(
-                lambda t, n=name: self._on_agent_task_done(n, t)
-            )
+            task.add_done_callback(lambda t, n=name: self._on_agent_task_done(n, t))
             self.worker_tasks[name] = task
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
@@ -230,7 +228,7 @@ class GroupChat:
 
         # 初始化 workers
         if not self.team_members_name:
-            print("warning : 无团队成员")
+            logger.warning("无团队成员")
             return
 
         for role_name in self.team_members_name:
@@ -328,9 +326,7 @@ class GroupChat:
         # 8. 如果群聊已激活，启动新 Worker 的任务
         if self._activated:
             new_task = asyncio.create_task(new_worker.run())
-            new_task.add_done_callback(
-                lambda t, n=role_name: self._on_agent_task_done(n, t)
-            )
+            new_task.add_done_callback(lambda t, n=role_name: self._on_agent_task_done(n, t))
             self.worker_tasks[role_name] = new_task
             logger.info("新成员任务已启动: %s", role_name)
 
@@ -369,9 +365,7 @@ class GroupChat:
 
         # 检查 manager 是否需要初始化
         agent_member_info = (
-            self.runtime.get_agent_member_info(self.manager.name)
-            if self.manager
-            else None
+            self.runtime.get_agent_member_info(self.manager.name) if self.manager else None
         )
         if self.manager and (not agent_member_info or not agent_member_info.main_session):
             new_members.append(self.manager)
@@ -450,7 +444,7 @@ class GroupChat:
         all_agents.extend(self.workers.values())
 
         for agent in all_agents:
-            logger.info("压缩 Agent: %s", agent.name)
+            logger.debug("压缩 Agent: %s", agent.name)
             try:
                 result = await agent.compress_context()
                 results.append(
@@ -665,6 +659,7 @@ class GroupChat:
         # 1. 查找 agent
         agent = self._find_agent(agent_name)
         if agent is None:
+            logger.error("停止 Agent 失败: name=%s, 原因=未找到", agent_name)
             raise AgentNotFoundError(agent_name)
 
         logger.info("停止 Agent: %s", agent_name)
@@ -810,11 +805,13 @@ class GroupChat:
         self.message_router.register(agent_name, agent.message_queue)
 
         # 6. 添加 task 完成回调（检测 task 异常退出）
-        task = self.manager_task if (self.manager and agent_name == self.manager.name) else self.worker_tasks.get(agent_name)
+        task = (
+            self.manager_task
+            if (self.manager and agent_name == self.manager.name)
+            else self.worker_tasks.get(agent_name)
+        )
         if task:
-            task.add_done_callback(
-                lambda t, name=agent_name: self._on_agent_task_done(name, t)
-            )
+            task.add_done_callback(lambda t, name=agent_name: self._on_agent_task_done(name, t))
 
         # 7. 更新状态为 "idle"
         agent_info = self.runtime.get_agent_member_info(agent_name)
@@ -855,6 +852,7 @@ class GroupChat:
         # 1. 查找 agent
         agent = self._find_agent(agent_name)
         if agent is None:
+            logger.error("重置 Agent 失败: name=%s, 原因=未找到", agent_name)
             raise AgentNotFoundError(agent_name)
 
         logger.info("重置 Agent: %s", agent_name)
@@ -893,9 +891,7 @@ class GroupChat:
             )
         else:
             new_task = asyncio.create_task(agent.run())
-            new_task.add_done_callback(
-                lambda t, n=agent_name: self._on_agent_task_done(n, t)
-            )
+            new_task.add_done_callback(lambda t, n=agent_name: self._on_agent_task_done(n, t))
             self.worker_tasks[agent_name] = new_task
 
         # 8. 重新注册到 MessageRouter
@@ -1032,7 +1028,7 @@ class GroupChat:
             group_chat_manager.register_token(token, self.manager.name, self.group_chat_id)
 
         # Worker tokens
-        for worker_name, worker in self.workers.items():
+        for worker_name, _worker in self.workers.items():
             worker_info = self.runtime.get_or_create_agent_member_info(worker_name)
             if not worker_info.token:
                 token = generate_token()
@@ -1057,7 +1053,9 @@ class GroupChat:
                     break
                 # 检查 manager task 是否存活
                 if self.manager_task and self.manager_task.done():
-                    exc = self.manager_task.exception() if not self.manager_task.cancelled() else None
+                    exc = (
+                        self.manager_task.exception() if not self.manager_task.cancelled() else None
+                    )
                     heartbeat_logger.error(
                         "Manager run() 任务已退出! cancelled=%s, error=%s",
                         self.manager_task.cancelled(),

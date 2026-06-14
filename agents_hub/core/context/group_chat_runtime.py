@@ -11,11 +11,11 @@ from datetime import datetime
 from typing import Any
 
 from agents_hub.core.foundation import GroupChatType
-from agents_hub.utils.logger import get_logger
+from agents_hub.utils import get_logger
 
 from .group_chat_repository import GroupChatRepository
 from .group_chat_runtime_state import GroupChatRuntimeState
-from .group_chat_session import AgentMemberInfo
+from .group_chat_session import AgentMemberInfo, GroupChatSession
 from .group_metadata import GroupMetadata
 
 logger = get_logger(__name__)
@@ -448,19 +448,18 @@ class GroupChatRuntime:
             # 业务日志（生产环境可见）
             if context:
                 logger.info(
-                    "保存 agent_members: group=%s, context='%s'",
-                    self.group_chat_id, context
+                    "保存 agent_members: group=%s, context='%s'", self.group_chat_id, context
                 )
 
             # 调试追踪（仅 DEBUG 模式）
             if logger.isEnabledFor(logging.DEBUG):
                 import inspect
+
                 frame = inspect.currentframe().f_back
                 caller_info = f"{frame.f_code.co_filename}:{frame.f_lineno}"
                 logger.debug("调用栈: %s", caller_info)
 
             await self._save_agent_members()
-
 
     def get_agent_context(self) -> list[dict]:
         """
@@ -555,6 +554,11 @@ class GroupChatRuntime:
         try:
             result = await agent_platform_client.bare_claude_call(compact_prompt)
         except Exception as e:
+            logger.error(
+                "压缩失败: group_chat_id=%s, 原因=LLM 调用失败, error=%s",
+                self.group_chat_id,
+                str(e),
+            )
             raise CompactionError(reason=f"LLM 调用失败: {e}") from e
 
         # 解析 JSON 响应
@@ -572,8 +576,18 @@ class GroupChatRuntime:
                 try:
                     compact_data = _json.loads(json_match.group())
                 except _json.JSONDecodeError as e:
+                    logger.error(
+                        "压缩失败: group_chat_id=%s, 原因=JSON 解析失败, error=%s",
+                        self.group_chat_id,
+                        str(e),
+                    )
                     raise CompactionError(reason=f"LLM 返回的 JSON 解析失败: {e}") from e
             else:
+                logger.error(
+                    "压缩失败: group_chat_id=%s, 原因=JSON 未找到, text=%s",
+                    self.group_chat_id,
+                    text[:200],
+                )
                 raise CompactionError(reason=f"LLM 返回中未找到 JSON: {text[:200]}") from None
 
         # 构建压缩记录（对齐 compact_history.jsonl 格式）
@@ -591,7 +605,7 @@ class GroupChatRuntime:
 
     async def _notify_change(self) -> None:
         """通知外部状态变更（通过 on_change 回调）"""
-        logger.info(
+        logger.debug(
             "[Runtime] _notify_change 被调用: group_chat_id=%s, has_callback=%s",
             self.group_chat_id,
             self._on_change is not None,
@@ -599,7 +613,7 @@ class GroupChatRuntime:
         if self._on_change:
             try:
                 await self._on_change(self.group_chat_id)
-                logger.info("[Runtime] on_change 回调执行成功")
+                logger.debug("[Runtime] on_change 回调执行成功")
             except Exception:
                 logger.warning("on_change 回调失败", exc_info=True)
 
@@ -615,6 +629,7 @@ class GroupChatRuntime:
             self.state.persistence_error = None
         except Exception as e:
             self.state.persistence_error = str(e)
+            logger.error("持久化失败: group_chat_id=%s, error=%s", self.group_chat_id, str(e))
             raise
 
     # ==================== Resource Cleanup ====================

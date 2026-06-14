@@ -80,6 +80,9 @@ class GroupChatRepository:
                         else:
                             messages.append(data)
         except OSError as e:
+            logger.error(
+                "文件操作失败: operation=%s, path=%s, error=%s", "read", self.messages_file, str(e)
+            )
             raise FileSystemError(operation="read", path=self.messages_file, reason=str(e)) from e
 
         # 为旧消息补全 id（向后兼容）
@@ -136,6 +139,12 @@ class GroupChatRepository:
                     for msg in session.messages:
                         await f.write(json.dumps(msg, ensure_ascii=False) + "\n")
             except OSError as e:
+                logger.error(
+                    "文件操作失败: operation=%s, path=%s, error=%s",
+                    "write",
+                    self.messages_file,
+                    str(e),
+                )
                 raise FileSystemError(
                     operation="write", path=self.messages_file, reason=str(e)
                 ) from e
@@ -162,6 +171,12 @@ class GroupChatRepository:
                 content = await f.read()
                 data = json.loads(content)
         except OSError as e:
+            logger.error(
+                "文件操作失败: operation=%s, path=%s, error=%s",
+                "read",
+                self.agent_member_file,
+                str(e),
+            )
             raise FileSystemError(
                 operation="read", path=self.agent_member_file, reason=str(e)
             ) from e
@@ -238,6 +253,12 @@ class GroupChatRepository:
                 async with aiofiles.open(self.agent_member_file, "w", encoding="utf-8") as f:
                     await f.write(json.dumps(data, ensure_ascii=False, indent=2))
             except OSError as e:
+                logger.error(
+                    "文件操作失败: operation=%s, path=%s, error=%s",
+                    "write",
+                    self.agent_member_file,
+                    str(e),
+                )
                 raise FileSystemError(
                     operation="write", path=self.agent_member_file, reason=str(e)
                 ) from e
@@ -262,6 +283,12 @@ class GroupChatRepository:
                     if line:
                         compact_history.append(json.loads(line))
         except OSError as e:
+            logger.error(
+                "文件操作失败: operation=%s, path=%s, error=%s",
+                "read",
+                self.compact_history_file,
+                str(e),
+            )
             raise FileSystemError(
                 operation="read", path=self.compact_history_file, reason=str(e)
             ) from e
@@ -285,6 +312,12 @@ class GroupChatRepository:
                     for record in history:
                         await f.write(json.dumps(record, ensure_ascii=False) + "\n")
             except OSError as e:
+                logger.error(
+                    "文件操作失败: operation=%s, path=%s, error=%s",
+                    "write",
+                    self.compact_history_file,
+                    str(e),
+                )
                 raise FileSystemError(
                     operation="write", path=self.compact_history_file, reason=str(e)
                 ) from e
@@ -306,6 +339,12 @@ class GroupChatRepository:
                 async with aiofiles.open(self.metadata_file, "w", encoding="utf-8") as f:
                     await f.write(json.dumps(metadata.to_dict(), ensure_ascii=False, indent=2))
             except OSError as e:
+                logger.error(
+                    "文件操作失败: operation=%s, path=%s, error=%s",
+                    "write",
+                    self.metadata_file,
+                    str(e),
+                )
                 raise FileSystemError(
                     operation="write", path=self.metadata_file, reason=str(e)
                 ) from e
@@ -330,6 +369,9 @@ class GroupChatRepository:
 
                 return GroupMetadata.from_dict(data)
         except OSError as e:
+            logger.error(
+                "文件操作失败: operation=%s, path=%s, error=%s", "read", self.metadata_file, str(e)
+            )
             raise FileSystemError(operation="read", path=self.metadata_file, reason=str(e)) from e
 
     # ==================== 资源清理 ====================

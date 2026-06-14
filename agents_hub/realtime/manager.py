@@ -1,11 +1,12 @@
 """WebSocket connection manager for realtime rooms."""
 
 import contextlib
-import logging
 
 from fastapi import WebSocket
 
-logger = logging.getLogger(__name__)
+from agents_hub.utils import get_logger
+
+logger = get_logger(__name__)
 
 
 class WebSocketManager:
@@ -19,8 +20,9 @@ class WebSocketManager:
         await websocket.accept()
         self.rooms.setdefault(group_chat_id, []).append(websocket)
         logger.info(
-            f"WebSocket connected to room {group_chat_id}, "
-            f"total connections: {len(self.rooms[group_chat_id])}"
+            "WebSocket connected to room %s, total connections: %d",
+            group_chat_id,
+            len(self.rooms[group_chat_id]),
         )
 
     async def disconnect(self, websocket: WebSocket, group_chat_id: str):
@@ -32,27 +34,27 @@ class WebSocketManager:
 
         self.rooms[group_chat_id].remove(websocket)
         logger.info(
-            f"WebSocket disconnected from room {group_chat_id}, "
-            f"remaining: {len(self.rooms[group_chat_id])}"
+            "WebSocket disconnected from room %s, remaining: %d",
+            group_chat_id,
+            len(self.rooms[group_chat_id]),
         )
 
         if not self.rooms[group_chat_id]:
             del self.rooms[group_chat_id]
-            logger.info(f"Room {group_chat_id} removed (empty)")
+            logger.info("Room %s removed (empty)", group_chat_id)
 
     async def broadcast(self, group_chat_id: str, message: dict):
         """Broadcast a JSON message to all connections in a room."""
         connections = self.rooms.get(group_chat_id, [])
         if not connections:
-            logger.warning(f"Broadcast to empty room {group_chat_id}")
+            logger.warning("Broadcast to empty room %s", group_chat_id)
             return
 
         failed_connections = []
         for connection in connections:
             try:
                 await connection.send_json(message)
-            except Exception as e:
-                logger.error(f"Failed to send to connection in room {group_chat_id}: {e}")
+            except Exception:
                 failed_connections.append(connection)
 
         for conn in failed_connections:
@@ -61,9 +63,15 @@ class WebSocketManager:
 
         if not self.rooms[group_chat_id]:
             del self.rooms[group_chat_id]
-            logger.info(f"Room {group_chat_id} removed (empty after broadcast cleanup)")
+            logger.info("Room %s removed (empty after broadcast cleanup)", group_chat_id)
 
-        logger.info(
-            f"Broadcast to room {group_chat_id}: "
-            f"{len(connections) - len(failed_connections)}/{len(connections)} sent"
-        )
+        if failed_connections:
+            logger.warning(
+                "广播部分失败: room=%s, 成功=%d, 失败=%d, 总数=%d",
+                group_chat_id,
+                len(connections) - len(failed_connections),
+                len(failed_connections),
+                len(connections),
+            )
+        else:
+            logger.info("广播完成: room=%s, 发送=%d", group_chat_id, len(connections))

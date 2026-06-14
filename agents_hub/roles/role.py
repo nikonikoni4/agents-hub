@@ -10,6 +10,9 @@ import yaml
 from agents_hub.config.types import AgentPlatform
 from agents_hub.roles.exceptions import SkillAlreadyExistsError, SkillNotFoundError
 from agents_hub.roles.models import RoleConfig, RoleInfo, RoleType, SkillInfo
+from agents_hub.utils import get_logger
+
+logger = get_logger(__name__)
 
 
 class Role:
@@ -103,12 +106,14 @@ class Role:
             new_name: 新的角色名称。
         """
         data = self._read_role_json()
+        old_name = self.role_dir.name
         data["name"] = new_name
         self._write_role_json(data)
 
         new_dir = self.role_dir.parent / new_name
         self.role_dir.rename(new_dir)
         self.role_dir = new_dir
+        logger.info("角色重命名成功: old_name=%s, new_name=%s", old_name, new_name)
 
     def update_description(self, description: str) -> None:
         """更新角色职责描述。
@@ -204,6 +209,9 @@ class Role:
         target_dir = self._work_root / "skills" / skill_id
         if target_dir.exists():
             role_name = self._read_role_json()["name"]
+            logger.error(
+                "添加 skill 失败: skill_id=%s, role_name=%s, skill 已存在", skill_id, role_name
+            )
             raise SkillAlreadyExistsError(skill_id=skill_id, role_name=role_name)
 
         if global_skills_dir is None:
@@ -211,9 +219,11 @@ class Role:
 
         global_skill_dir = global_skills_dir / skill_id
         if not global_skill_dir.exists():
+            logger.error("添加 skill 失败: skill_id=%s, 全局库中不存在", skill_id)
             raise SkillNotFoundError(skill_id=skill_id)
 
         shutil.copytree(global_skill_dir, target_dir)
+        logger.info("skill 添加成功: skill_id=%s, role_name=%s", skill_id, self.role_dir.name)
 
     def remove_skill(self, skill_id: str) -> None:
         """从角色中移除 skill。
@@ -229,9 +239,11 @@ class Role:
         """
         skill_dir = self._work_root / "skills" / skill_id
         if not skill_dir.exists():
+            logger.error("移除 skill 失败: skill_id=%s, 角色中不存在", skill_id)
             raise SkillNotFoundError(skill_id=skill_id)
 
         shutil.rmtree(skill_dir)
+        logger.info("skill 移除成功: skill_id=%s, role_name=%s", skill_id, self.role_dir.name)
 
     def get_role_config(self) -> RoleConfig:
         """构造给 agent_bridge 使用的 RoleConfig。

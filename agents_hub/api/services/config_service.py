@@ -10,6 +10,9 @@ from agents_hub.api.schemas.config import ConfigInfo, ConfigUpdate
 from agents_hub.config import config
 from agents_hub.core.foundation.exceptions import DockerNotAvailableError
 from agents_hub.exceptions import ValidationError
+from agents_hub.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class ConfigService:
@@ -43,6 +46,7 @@ class ConfigService:
         """
         update_dict = update.model_dump(exclude_none=True)
         if not update_dict:
+            logger.error("更新配置失败: 未提供有效字段, update=%s", update.model_dump())
             raise ValidationError(
                 "至少需要提供一个配置字段",
                 details={"update": update.model_dump()},
@@ -56,6 +60,7 @@ class ConfigService:
             try:
                 await docker_manager.ensure_image_ready()
             except DockerNotAvailableError as e:
+                logger.error("更新配置失败: Docker 未启动, use_docker=true")
                 raise DockerNotAvailableError(
                     agent_name="config",
                     group_chat_id="",

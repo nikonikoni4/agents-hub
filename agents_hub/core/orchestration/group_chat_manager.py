@@ -332,11 +332,21 @@ class GroupChatManager:
         # 1. 查找 project_path
         project_path = group_chat_paths.find_project_path_by_group_chat_id(group_chat_id, base_path)
         if project_path is None:
+            logger.error(
+                "加载 GroupChat 失败: id=%s, 原因=找不到项目路径, base_path=%s",
+                group_chat_id,
+                base_path,
+            )
             raise FileNotFoundError(f"找不到GroupChat {group_chat_id} 对应的项目路径")
 
         # 2. 读取并验证 metadata
         metadata_file = group_chat_paths.metadata_file(group_chat_id, project_path, base_path)
         if not metadata_file.exists():
+            logger.error(
+                "加载 GroupChat 失败: id=%s, 原因=元数据文件不存在, path=%s",
+                group_chat_id,
+                metadata_file,
+            )
             raise FileNotFoundError(f"GroupChat元数据文件不存在: {metadata_file}")
 
         with open(metadata_file, encoding="utf-8") as f:
@@ -361,6 +371,11 @@ class GroupChatManager:
             group_chat_id, project_path, base_path
         )
         if not agent_member_file.exists():
+            logger.error(
+                "加载 GroupChat 失败: id=%s, 原因=agent_member 文件不存在, path=%s",
+                group_chat_id,
+                agent_member_file,
+            )
             raise FileNotFoundError(f"agent session 状态文件不存在: {agent_member_file}")
 
         with open(agent_member_file, encoding="utf-8") as f:
@@ -368,6 +383,7 @@ class GroupChatManager:
 
         team_members_name = list(session_data.keys())
         if not team_members_name:
+            logger.error("加载 GroupChat 失败: id=%s, 原因=没有团队成员信息", group_chat_id)
             raise ValueError(f"GroupChat {group_chat_id} 没有团队成员信息")
 
         # 4. 创建 GroupChat 实例
@@ -397,7 +413,7 @@ class GroupChatManager:
         group_chat_name: str | None = None,
         group_chat_id: str | None = None,
     ) -> GroupChat:
-    # 该函数实际上没有被使用
+        # 该函数实际上没有被使用
         """
         创建并启动新GroupChat
 

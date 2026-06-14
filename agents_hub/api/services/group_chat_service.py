@@ -108,6 +108,7 @@ class GroupChatService:
 
         # 1. 验证 team_members 非空
         if not team_members:
+            logger.error("创建群聊失败: team_members 为空, project=%s", project_path)
             raise ValidationError(
                 "team_members 不能为空",
                 details={"team_members": team_members},
@@ -118,6 +119,7 @@ class GroupChatService:
         available_roles = role_manager.list_role_names()
         invalid_members = [m for m in team_members if m not in available_roles]
         if invalid_members:
+            logger.error("创建群聊失败: 无效成员=%s, 可用角色=%s", invalid_members, available_roles)
             raise ResourceNotFoundError(
                 f"无效的团队成员: {', '.join(invalid_members)}",
                 details={
@@ -129,11 +131,13 @@ class GroupChatService:
         # 3. 校验项目路径
         path = Path(project_path)
         if not path.is_absolute():
+            logger.error("创建群聊失败: 项目路径非绝对路径, path=%s", project_path)
             raise ValidationError(
                 "项目路径必须是绝对路径",
                 details={"project_path": project_path},
             )
         if not path.exists():
+            logger.error("创建群聊失败: 项目路径不存在, path=%s", project_path)
             raise ResourceNotFoundError(
                 f"项目路径不存在: {project_path}",
                 details={"project_path": project_path},
@@ -185,7 +189,7 @@ class GroupChatService:
             ResourceNotFoundError: 群聊不存在或 role 已被删除
             StateError: 加载失败
         """
-        logger.debug("加载群聊: id=%s", group_chat_id)
+        logger.info("加载群聊: id=%s", group_chat_id)
         try:
             group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
@@ -208,7 +212,7 @@ class GroupChatService:
                 details={"group_chat_id": group_chat_id},
             ) from e
 
-        logger.debug("群聊加载成功: id=%s", group_chat_id)
+        logger.info("群聊加载成功: id=%s", group_chat_id)
         return await self._build_group_chat_info_from_instance(group_chat)
 
     async def delete_group_chat(self, group_chat_id: str, keep_data: bool = False) -> None:
@@ -323,6 +327,7 @@ class GroupChatService:
         try:
             group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
+            logger.error("获取群聊信息失败: 群聊不存在, id=%s", group_chat_id)
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
@@ -354,6 +359,7 @@ class GroupChatService:
         try:
             group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
+            logger.error("获取群聊成员失败: 群聊不存在, id=%s", group_chat_id)
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
@@ -387,6 +393,7 @@ class GroupChatService:
         try:
             group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
         except GroupChatNotFoundError as e:
+            logger.error("获取消息历史失败: 群聊不存在, id=%s", group_chat_id)
             raise ResourceNotFoundError(
                 f"群聊不存在: {group_chat_id}",
                 details={"group_chat_id": group_chat_id},
@@ -436,8 +443,8 @@ class GroupChatService:
 
         # 3. 校验 send_to 是群聊成员
         if send_to not in members:
-            logger.debug(
-                "目标角色校验失败: send_to='%s', available=%s",
+            logger.error(
+                "发送消息失败: 目标角色不在群聊中, send_to='%s', available=%s",
                 send_to,
                 members,
             )
@@ -585,6 +592,12 @@ class GroupChatService:
         if group_chat.manager:
             all_members.append(group_chat.manager.name)
         if role_name not in all_members:
+            logger.error(
+                "切换 Docker 失败: 角色不是群聊成员, role=%s, group=%s, available=%s",
+                role_name,
+                group_chat_id,
+                all_members,
+            )
             raise ResourceNotFoundError(
                 f"角色 '{role_name}' 不是群聊 '{group_chat_id}' 的成员",
                 details={
@@ -595,6 +608,11 @@ class GroupChatService:
 
         # 3. 如果开启 Docker，先检查全局开关
         if use_docker and not config.use_docker:
+            logger.error(
+                "切换 Docker 失败: 全局 Docker 功能已禁用, group=%s, role=%s",
+                group_chat_id,
+                role_name,
+            )
             raise ValidationError(
                 "全局 Docker 功能已禁用，请先在系统配置中启用 use_docker",
                 details={"config_use_docker": config.use_docker},
@@ -889,6 +907,12 @@ class GroupChatService:
         try:
             return get_snapshot_content(snapshot_dir, snapshot_id)
         except (ValueError, FileNotFoundError, PermissionError) as e:
+            logger.error(
+                "获取文件快照内容失败: snapshot=%s, group=%s, error=%s",
+                snapshot_id,
+                group_chat_id,
+                e,
+            )
             raise ResourceNotFoundError(
                 f"文件快照不存在或无法访问: {snapshot_id}",
                 details={
@@ -995,6 +1019,11 @@ class GroupChatService:
                 target = msg
                 break
         if target is None:
+            logger.error(
+                "置顶消息失败: 消息不存在, group=%s, message_id=%s",
+                group_chat_id,
+                message_id,
+            )
             raise MessageNotFoundError(
                 f"Message not found: message_id={message_id}",
                 details={"message_id": message_id},
@@ -1009,6 +1038,7 @@ class GroupChatService:
                 if p.get("message_id") == message_id:
                     return PinnedMessageInfo(**p)
             # 保存快照
+            logger.info("置顶消息: group=%s, message_id=%s", group_chat_id, message_id)
             pin_data = {
                 "message_id": message_id,
                 "speaker": target.get("speaker", ""),
@@ -1038,6 +1068,7 @@ class GroupChatService:
             pins = await self._read_pins(pins_path)
             new_pins = [p for p in pins if p.get("message_id") != message_id]
             if len(new_pins) != len(pins):
+                logger.info("取消置顶消息: group=%s, message_id=%s", group_chat_id, message_id)
                 await self._write_pins(pins_path, new_pins)
 
     # ==================== Group Chat Members Methods ====================
@@ -1057,6 +1088,7 @@ class GroupChatService:
         Raises:
             ResourceNotFoundError: 群聊不存在或角色不存在
         """
+        logger.info("添加群成员: group=%s, members=%s", group_chat_id, member_names)
         group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
 
         # 验证角色存在
@@ -1090,7 +1122,7 @@ class GroupChatService:
         Raises:
             ResourceNotFoundError: 群聊不存在
         """
-        logger.info("获取 Agent 调用记录: group_chat_id=%s", group_chat_id)
+        logger.debug("获取 Agent 调用记录: group_chat_id=%s", group_chat_id)
 
         # 1. 加载群聊（验证存在性）
         try:
@@ -1122,7 +1154,7 @@ class GroupChatService:
         Raises:
             ResourceNotFoundError: 群聊不存在
         """
-        logger.info("获取任务列表: group_chat_id=%s", group_chat_id)
+        logger.debug("获取任务列表: group_chat_id=%s", group_chat_id)
 
         # 1. 加载群聊（验证存在性）
         try:
@@ -1181,6 +1213,11 @@ class GroupChatService:
             message_id, "permission_request.status", status
         )
         if not updated:
+            logger.error(
+                "更新权限状态失败: 消息不存在, group=%s, message_id=%s",
+                group_chat_id,
+                message_id,
+            )
             raise MessageNotFoundError(
                 f"消息不存在: message_id={message_id}",
                 details={"message_id": message_id},
@@ -1212,6 +1249,9 @@ class GroupChatService:
                 await group_chat.send_message_to_agent(message)
 
         # 5. 广播刷新
+        logger.info(
+            "权限状态更新: group=%s, message_id=%s, status=%s", group_chat_id, message_id, status
+        )
         await broadcast_group_chat_refresh(group_chat_id)
 
         return {"message_id": message_id, "new_status": status}
@@ -1294,6 +1334,12 @@ class GroupChatService:
 
         # 3. 验证群聊存在
         await self.group_chat_manager.load_group_chat(group_chat_id)
+        logger.info(
+            "上传文件: group=%s, filename=%s, size=%d",
+            group_chat_id,
+            original_filename,
+            len(file_content),
+        )
         # FileService 存储路径：{data_path}/teams/{team_id}/{group_chat_id}/file_snapshots/
         team_id = config.team_id
 

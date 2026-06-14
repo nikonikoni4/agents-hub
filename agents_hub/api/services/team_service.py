@@ -11,6 +11,9 @@ from agents_hub.teams.exceptions import (
     TeamNotFoundError,
 )
 from agents_hub.teams.models import TeamInfo
+from agents_hub.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class TeamService:
@@ -34,6 +37,7 @@ class TeamService:
             InvalidTeamMembersError,
             TeamAlreadyExistsError,
         ) as e:
+            logger.error("创建团队失败: name=%s, error=%s", request.name, e.message)
             raise ValidationError(
                 message=e.message,
                 error_code=e.error_code,
@@ -45,6 +49,7 @@ class TeamService:
         try:
             return self.team_manager.get_team(name)
         except TeamNotFoundError as e:
+            logger.error("获取团队失败: 团队不存在, name=%s", name)
             raise ResourceNotFoundError(
                 message=e.message,
                 error_code=e.error_code,
@@ -60,6 +65,7 @@ class TeamService:
         try:
             return self.team_manager.update_team(name, request.name, request.members)
         except TeamNotFoundError as e:
+            logger.error("更新团队失败: 团队不存在, name=%s", name)
             raise ResourceNotFoundError(
                 message=e.message,
                 error_code=e.error_code,
@@ -70,6 +76,7 @@ class TeamService:
             InvalidTeamMembersError,
             TeamAlreadyExistsError,
         ) as e:
+            logger.error("更新团队失败: name=%s, error=%s", name, e.message)
             raise ValidationError(
                 message=e.message,
                 error_code=e.error_code,
@@ -81,6 +88,7 @@ class TeamService:
         try:
             self.team_manager.delete_team(name)
         except TeamNotFoundError as e:
+            logger.error("删除团队失败: 团队不存在, name=%s", name)
             raise ResourceNotFoundError(
                 message=e.message,
                 error_code=e.error_code,

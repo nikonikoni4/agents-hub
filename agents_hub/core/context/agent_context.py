@@ -13,8 +13,11 @@ from agents_hub.config.types import RoleType
 from agents_hub.core.foundation import StateError, Tag, wrap_xml
 from agents_hub.core.foundation.message import AgentMessage
 from agents_hub.core.foundation.renderer import render_for_llm
+from agents_hub.utils import get_logger
 
 from .group_chat_runtime import GroupChatRuntime
+
+logger = get_logger(__name__)
 
 
 class AgentContext:
@@ -72,6 +75,7 @@ class AgentContext:
         # 3. 未压缩的最新消息 → <recent_messages>（仅 LEADER 需要）
         group_chat_session = self.runtime.get_group_chat_session()
         if group_chat_session is None:
+            logger.error("构建上下文失败: agent=%s, 原因=GroupChatSession 未加载", self.agent_name)
             raise StateError("GroupChatSession 未加载，请先调用 load()")
         if self.role_type == RoleType.LEADER:
             new_messages = self._get_filtered_messages(last_loaded_message_index)
