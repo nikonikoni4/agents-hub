@@ -14,7 +14,7 @@ from agents_hub.core.foundation import StateError, Tag, wrap_xml
 from agents_hub.core.foundation.message import AgentMessage
 from agents_hub.core.foundation.renderer import render_for_llm
 
-from .group_chat_context import GroupChatContext
+from .group_chat_runtime import GroupChatRuntime
 
 
 class AgentContext:
@@ -27,9 +27,9 @@ class AgentContext:
     3. 更新 Agent 的上下文加载状态
     """
 
-    def __init__(self, agent_name: str, group_chat_context: GroupChatContext, role_type: RoleType):
+    def __init__(self, agent_name: str, runtime: GroupChatRuntime, role_type: RoleType):
         self.agent_name = agent_name
-        self.group_chat_context = group_chat_context
+        self.runtime = runtime
         self.role_type = role_type
 
     async def get_context(self) -> str:
@@ -53,7 +53,7 @@ class AgentContext:
         parts: list[str] = []
 
         # 1. 获取 agent 的加载状态
-        agent_member_info = self.group_chat_context.agent_member_info.get(self.agent_name)
+        agent_member_info = self.runtime.get_agent_member_info(self.agent_name)
         if not agent_member_info:
             last_loaded_compact_index = 0
             last_loaded_message_index = 0
@@ -62,7 +62,7 @@ class AgentContext:
             last_loaded_message_index = agent_member_info.context_state.last_loaded_message_index
 
         # 2. 压缩历史 → <group_chat_history>
-        compact_history = await self.group_chat_context.load_compact_history()
+        compact_history = await self.runtime.load_compact_history()
         compact_history_xml = await self._build_compact_history_xml(
             compact_history, last_loaded_compact_index
         )
@@ -70,7 +70,8 @@ class AgentContext:
             parts.append(compact_history_xml)
 
         # 3. 未压缩的最新消息 → <recent_messages>（仅 LEADER 需要）
-        if self.group_chat_context.group_chat_session is None:
+        group_chat_session = self.runtime.get_group_chat_session()
+        if group_chat_session is None:
             raise StateError("GroupChatSession 未加载，请先调用 load()")
         if self.role_type == RoleType.LEADER:
             new_messages = self._get_filtered_messages(last_loaded_message_index)
@@ -81,7 +82,7 @@ class AgentContext:
         # 4. 更新 agent 的加载状态
         await self._update_agent_context_state(
             last_loaded_compact_index=len(compact_history),
-            last_loaded_message_index=len(self.group_chat_context.group_chat_session.messages),
+            last_loaded_message_index=len(group_chat_session.messages),
         )
 
         return "\n".join(parts)
@@ -142,7 +143,7 @@ class AgentContext:
         Returns:
             过滤后的消息列表
         """
-        session = self.group_chat_context.group_chat_session
+        session = self.runtime.get_group_chat_session()
         assert session is not None
         messages = session.messages
         # 负向前瞻：@name 后不能紧跟 ASCII 字母、数字或下划线
@@ -164,7 +165,7 @@ class AgentContext:
             last_loaded_message_index: 已加载到第几条原始消息
         """
         # update_context_load_state 内部使用 get_or_create，确保 cwd 默认为 project_path
-        await self.group_chat_context.runtime.update_context_load_state(
+        await self.runtime.update_context_load_state(
             self.agent_name,
             last_loaded_compact_index,
             last_loaded_message_index,
@@ -226,17 +227,17 @@ class AgentContext:
         parts.append(f"    <type>{session_type}</type>")
 
         # agent_token
-        agent_member_info = self.group_chat_context.agent_member_info.get(self.agent_name)
+        agent_member_info = self.runtime.get_agent_member_info(self.agent_name)
         agent_token = agent_member_info.token if agent_member_info else ""
         parts.append(f"    <agent_token>{agent_token}</agent_token>")
 
         # group_chat_id
-        group_chat_id = self.group_chat_context.group_chat_id
+        group_chat_id = self.runtime.group_chat_id
         parts.append(f"    <group_chat_id>{group_chat_id}</group_chat_id>")
 
         # team_members（排除自己，带 description）
         team_members = []
-        for name, info in self.group_chat_context.agent_member_info.items():
+        for name, info in self.runtime.state.agent_member_infos.items():
             if name != self.agent_name:
                 desc = info.description if hasattr(info, "description") and info.description else ""
                 team_members.append(f"{name}（{desc}）" if desc else name)
@@ -252,7 +253,7 @@ class AgentContext:
 
         # team_workboard（仅 LEADER）
         if self.role_type == RoleType.LEADER and task_manager:
-            task_list = task_manager.get_active_task_list(self.group_chat_context.group_chat_id)
+            task_list = task_manager.get_active_task_list(self.runtime.group_chat_id)
             if task_list and task_list.tasks:
                 workboard_lines = ["    <team_workboard>", "        当前任务列表："]
                 for task in task_list.tasks:
@@ -276,7 +277,7 @@ class AgentContext:
         Returns:
             pin 消息 XML 字符串，无 pin 时返回空字符串
         """
-        session_path = Path(self.group_chat_context.repository.group_chat_session_path)
+        session_path = Path(self.runtime.repository.group_chat_session_path)
         pins_path = session_path / "pins.json"
 
         if not pins_path.exists():
