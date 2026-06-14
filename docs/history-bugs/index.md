@@ -141,3 +141,9 @@
  - path: docs/history-bugs/2026-06-14-core-module-issues.md
  - 触发规则：排查 core 模块在群聊生命周期中的问题
  - 内容摘要：记录 core 模块在群聊生命周期中的问题，包括架构性问题（Runtime/Context 耦合）、群聊创建/列表/详情加载问题、Agent 状态变化流程与问题、Agent 压缩/停止/启动/重置流程问题
+
+## Manager Agent sleep 轮询循环 Bug + 任务回执异步性问题
+ - updated_at : 2026-06-14
+ - path: docs/history-bugs/2026-06-14-agent-sleep-polling-loop-and-async-receipt.md
+ - 触发规则：Manager 调用 report_progress/complete_task 后使用 sleep 轮询等待消息
+ - 内容摘要：两个问题：(1) 任务回执异步性 - Manager 处理 CLI 任务时无法同时接收 Worker 回执，存在延迟（非 Bug，架构改进点）；(2) sleep 轮询循环 Bug（严重） - Manager 陷入无限 sleep 10 循环等待消息，实际上消息通过 runtime incoming_message 推送，不需要轮询。修复：调用 complete_task 后直接结束，等待系统推送
