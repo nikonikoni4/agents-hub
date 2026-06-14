@@ -577,13 +577,13 @@ class GroupChat:
         processed_count = 0
 
         # 获取该 agent 的所有 PENDING/RUNNING AgentCall
-        runtime_calls = self.agent_call_manager.get_runtime_calls_for_agent(agent_name)
+        runtime_calls = await self.agent_call_manager.get_runtime_calls_for_agent(agent_name)
 
         for call in runtime_calls:
             if call.status in (CallStatus.PENDING, CallStatus.RUNNING):
                 # 标记为 FAILED
                 failure_content = "用户主动停止该 Agent 运行，调用失败，请等待用户下一步指令"
-                self.agent_call_manager.mark_agent_response(
+                await self.agent_call_manager.mark_agent_response(
                     call_id=call.call_id,
                     content=failure_content,
                     success=False,
@@ -591,7 +591,7 @@ class GroupChat:
 
                 # 如果调用方不是 user，发送 NOTIFICATION 通知
                 if not config.is_user_name(call.send_from):
-                    notification_call = self.agent_call_manager.create_call(
+                    notification_call = await self.agent_call_manager.create_call(
                         send_from=agent_name,
                         send_to=call.send_from,
                         content=failure_content,

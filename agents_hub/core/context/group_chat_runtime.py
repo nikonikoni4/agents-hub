@@ -48,6 +48,7 @@ class GroupChatRuntime:
         )
         self._on_change = on_change
         self._message_event = asyncio.Event()
+        self._state_lock = asyncio.Lock()  # 保护 read-modify-write 序列的并发访问
 
     # ==================== Load ====================
 
@@ -307,13 +308,14 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        agent_member_info.token = token
-        agent_member_info.cwd = self.project_path
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        return agent_member_info
+        async with self._state_lock:
+            agent_member_info = self.get_or_create_agent_member_info(agent_name)
+            agent_member_info.token = token
+            agent_member_info.cwd = self.project_path
+            await self._persist(
+                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+            )
+            return agent_member_info
 
     async def set_agent_use_docker(self, agent_name: str, use_docker: bool) -> AgentMemberInfo:
         """
@@ -326,12 +328,13 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        agent_member_info.use_docker = use_docker
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        return agent_member_info
+        async with self._state_lock:
+            agent_member_info = self.get_or_create_agent_member_info(agent_name)
+            agent_member_info.use_docker = use_docker
+            await self._persist(
+                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+            )
+            return agent_member_info
 
     async def update_context_load_state(
         self, agent_name: str, compact_index: int, message_index: int
@@ -347,13 +350,14 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        agent_member_info.context_state.last_loaded_compact_index = compact_index
-        agent_member_info.context_state.last_loaded_message_index = message_index
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        return agent_member_info
+        async with self._state_lock:
+            agent_member_info = self.get_or_create_agent_member_info(agent_name)
+            agent_member_info.context_state.last_loaded_compact_index = compact_index
+            agent_member_info.context_state.last_loaded_message_index = message_index
+            await self._persist(
+                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+            )
+            return agent_member_info
 
     async def add_message(self, agent_result) -> None:
         """
@@ -441,23 +445,24 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_result.agent_name)
+        async with self._state_lock:
+            agent_member_info = self.get_or_create_agent_member_info(agent_result.agent_name)
 
-        # 如果没有 main_session，设置为当前 session_id
-        if not agent_member_info.main_session:
-            agent_member_info.main_session = agent_result.session_id
-        # 如果 session_id 不同且不在 btw_session 中，追加到 btw_session
-        elif (
-            agent_result.session_id != agent_member_info.main_session
-            and agent_result.session_id not in agent_member_info.btw_session
-        ):
-            agent_member_info.btw_session.append(agent_result.session_id)
+            # 如果没有 main_session，设置为当前 session_id
+            if not agent_member_info.main_session:
+                agent_member_info.main_session = agent_result.session_id
+            # 如果 session_id 不同且不在 btw_session 中，追加到 btw_session
+            elif (
+                agent_result.session_id != agent_member_info.main_session
+                and agent_result.session_id not in agent_member_info.btw_session
+            ):
+                agent_member_info.btw_session.append(agent_result.session_id)
 
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        await self._notify_change()
-        return agent_member_info
+            await self._persist(
+                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+            )
+            await self._notify_change()
+            return agent_member_info
 
     async def update_agent_context_usage(
         self, agent_name: str, context_usage: int
@@ -472,20 +477,21 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        old_value = agent_member_info.context_usage
-        agent_member_info.context_usage = context_usage
-        logger.info(
-            "[Runtime] update_context_usage: agent=%s, old=%d, new=%d",
-            agent_name,
-            old_value,
-            context_usage,
-        )
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        await self._notify_change()
-        return agent_member_info
+        async with self._state_lock:
+            agent_member_info = self.get_or_create_agent_member_info(agent_name)
+            old_value = agent_member_info.context_usage
+            agent_member_info.context_usage = context_usage
+            logger.info(
+                "[Runtime] update_context_usage: agent=%s, old=%d, new=%d",
+                agent_name,
+                old_value,
+                context_usage,
+            )
+            await self._persist(
+                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+            )
+            await self._notify_change()
+            return agent_member_info
 
     async def update_agent_status(self, agent_name: str, status: str) -> AgentMemberInfo:
         """
@@ -498,13 +504,14 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        agent_member_info.status = status
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        await self._notify_change()
-        return agent_member_info
+        async with self._state_lock:
+            agent_member_info = self.get_or_create_agent_member_info(agent_name)
+            agent_member_info.status = status
+            await self._persist(
+                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+            )
+            await self._notify_change()
+            return agent_member_info
 
     def get_agent_context(self) -> list[dict]:
         """

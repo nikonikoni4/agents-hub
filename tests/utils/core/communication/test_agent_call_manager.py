@@ -45,9 +45,10 @@ def manager(tmp_project):
 class TestAgentCallManagerCreate:
     """测试 create_call()"""
 
-    def test_create_call_returns_agent_call(self, manager):
+    @pytest.mark.asyncio
+    async def test_create_call_returns_agent_call(self, manager):
         """契约：create_call() 创建并返回 AgentCall"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a",
             send_to="b",
             content="hello",
@@ -61,78 +62,86 @@ class TestAgentCallManagerCreate:
         assert call.timeout_seconds == 30
         assert call.status == CallStatus.PENDING
 
-    def test_create_call_stored_internally(self, manager):
+    @pytest.mark.asyncio
+    async def test_create_call_stored_internally(self, manager):
         """契约：创建的调用可通过 get_call() 获取"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.NOTIFICATION
         )
-        retrieved = manager.get_call(call.call_id)
+        retrieved = await manager.get_call(call.call_id)
         assert retrieved is call
 
 
 class TestAgentCallManagerGet:
     """测试 get_call()"""
 
-    def test_get_call_exists(self, manager):
+    @pytest.mark.asyncio
+    async def test_get_call_exists(self, manager):
         """契约：获取已存在的调用返回正确对象"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
-        result = manager.get_call(call.call_id)
+        result = await manager.get_call(call.call_id)
         assert result is call
 
-    def test_get_call_not_exists(self, manager):
+    @pytest.mark.asyncio
+    async def test_get_call_not_exists(self, manager):
         """契约：获取不存在的调用返回 None"""
-        result = manager.get_call("nonexistent_id")
+        result = await manager.get_call("nonexistent_id")
         assert result is None
 
 
 class TestAgentCallManagerUpdateStatus:
     """测试 update_status()"""
 
-    def test_update_to_running_sets_started_at(self, manager):
+    @pytest.mark.asyncio
+    async def test_update_to_running_sets_started_at(self, manager):
         """契约：更新为 RUNNING 时设置 started_at"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
         assert call.started_at is None
 
-        manager.update_status(call.call_id, CallStatus.RUNNING)
+        await manager.update_status(call.call_id, CallStatus.RUNNING)
 
         assert call.status == CallStatus.RUNNING
         assert call.started_at is not None
 
-    def test_update_to_completed_sets_completed_at(self, manager):
+    @pytest.mark.asyncio
+    async def test_update_to_completed_sets_completed_at(self, manager):
         """契约：更新为 COMPLETED 时设置 completed_at"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
-        manager.update_status(call.call_id, CallStatus.COMPLETED)
+        await manager.update_status(call.call_id, CallStatus.COMPLETED)
 
         assert call.status == CallStatus.COMPLETED
         assert call.completed_at is not None
 
-    def test_update_to_failed_sets_completed_at(self, manager):
+    @pytest.mark.asyncio
+    async def test_update_to_failed_sets_completed_at(self, manager):
         """契约：更新为 FAILED 时设置 completed_at"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
-        manager.update_status(call.call_id, CallStatus.FAILED)
+        await manager.update_status(call.call_id, CallStatus.FAILED)
 
         assert call.status == CallStatus.FAILED
         assert call.completed_at is not None
 
-    def test_update_nonexistent_silent(self, manager):
+    @pytest.mark.asyncio
+    async def test_update_nonexistent_silent(self, manager):
         """契约：更新不存在的调用静默处理"""
-        manager.update_status("nonexistent", CallStatus.RUNNING)  # 不应报错
+        await manager.update_status("nonexistent", CallStatus.RUNNING)  # 不应报错
 
-    def test_update_same_status_skips_update(self, manager):
+    @pytest.mark.asyncio
+    async def test_update_same_status_skips_update(self, manager):
         """契约：相同状态的更新会被跳过，不触发持久化和时间戳更新"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
         # 第一次更新为 RUNNING
-        manager.update_status(call.call_id, CallStatus.RUNNING)
+        await manager.update_status(call.call_id, CallStatus.RUNNING)
         first_started_at = call.started_at
 
         # 等待一小段时间确保时间戳会不同
@@ -141,7 +150,7 @@ class TestAgentCallManagerUpdateStatus:
         time.sleep(0.01)
 
         # 再次更新为 RUNNING（相同状态）
-        manager.update_status(call.call_id, CallStatus.RUNNING)
+        await manager.update_status(call.call_id, CallStatus.RUNNING)
 
         # 验证：时间戳未被更新（说明跳过了更新）
         assert call.started_at == first_started_at, "相同状态不应更新时间戳"
@@ -151,23 +160,25 @@ class TestAgentCallManagerUpdateStatus:
 class TestAgentCallManagerResultSet:
     """测试 set_result() 和 set_error()"""
 
-    def test_set_result_marks_completed(self, manager):
+    @pytest.mark.asyncio
+    async def test_set_result_marks_completed(self, manager):
         """契约：set_result() 设置结果并标记 COMPLETED"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
-        manager.set_result(call.call_id, {"answer": "42"})
+        await manager.set_result(call.call_id, {"answer": "42"})
 
         assert call.result == {"answer": "42"}
         assert call.status == CallStatus.COMPLETED
         assert call.completed_at is not None
 
-    def test_set_error_marks_failed(self, manager):
+    @pytest.mark.asyncio
+    async def test_set_error_marks_failed(self, manager):
         """契约：set_error() 设置错误并标记 FAILED"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
-        manager.set_error(call.call_id, "something broke")
+        await manager.set_error(call.call_id, "something broke")
 
         assert call.error == "something broke"
         assert call.status == CallStatus.FAILED
@@ -177,26 +188,28 @@ class TestAgentCallManagerResultSet:
 class TestAgentCallManagerAgentResponse:
     """测试 AgentCall 显式回复闭环标志"""
 
-    def test_mark_agent_response_success_marks_completed(self, manager):
+    @pytest.mark.asyncio
+    async def test_mark_agent_response_success_marks_completed(self, manager):
         """契约：成功回复会标记 has_agent_response 并完成调用"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
 
-        manager.mark_agent_response(call.call_id, content="done", success=True)
+        await manager.mark_agent_response(call.call_id, content="done", success=True)
 
         assert call.has_agent_response is True
         assert call.result == "done"
         assert call.status == CallStatus.COMPLETED
         assert call.completed_at is not None
 
-    def test_mark_agent_response_failure_marks_failed(self, manager):
+    @pytest.mark.asyncio
+    async def test_mark_agent_response_failure_marks_failed(self, manager):
         """契约：失败回复会标记 has_agent_response 并失败调用"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="a", send_to="b", content="hi", message_type=MessageType.TASK
         )
 
-        manager.mark_agent_response(call.call_id, content="blocked", success=False)
+        await manager.mark_agent_response(call.call_id, content="blocked", success=False)
 
         assert call.has_agent_response is True
         assert call.error == "blocked"
@@ -207,81 +220,88 @@ class TestAgentCallManagerAgentResponse:
 class TestAgentCallManagerRuntimeCalls:
     """测试面向 runtime 注入的接收方调用查询"""
 
-    def test_runtime_calls_for_agent_includes_unanswered_task_calls(self, manager):
+    @pytest.mark.asyncio
+    async def test_runtime_calls_for_agent_includes_unanswered_task_calls(self, manager):
         """契约：未显式回复的 TASK 调用会持续暴露给接收方 runtime"""
-        first = manager.create_call(
+        first = await manager.create_call(
             send_from="Manager",
             send_to="worker",
             content="实现登录页面",
             message_type=MessageType.TASK,
         )
-        second = manager.create_call(
+        second = await manager.create_call(
             send_from="user",
             send_to="worker",
             content="顺便检查报错",
             message_type=MessageType.TASK,
         )
-        other_agent_call = manager.create_call(
+        other_agent_call = await manager.create_call(
             send_from="Manager",
             send_to="other",
             content="不应出现",
             message_type=MessageType.TASK,
         )
-        manager.mark_agent_response(other_agent_call.call_id, content="done", success=True)
+        await manager.mark_agent_response(other_agent_call.call_id, content="done", success=True)
 
-        calls = manager.get_runtime_calls_for_agent("worker")
+        calls = await manager.get_runtime_calls_for_agent("worker")
 
         assert [call.call_id for call in calls] == [first.call_id, second.call_id]
 
-    def test_runtime_calls_for_agent_excludes_finished_task_calls(self, manager):
+    @pytest.mark.asyncio
+    async def test_runtime_calls_for_agent_excludes_finished_task_calls(self, manager):
         """契约：已显式回复闭环的 TASK 调用不再暴露给 runtime"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="Manager",
             send_to="worker",
             content="实现登录页面",
             message_type=MessageType.TASK,
         )
-        manager.mark_agent_response(call.call_id, content="done", success=True)
+        await manager.mark_agent_response(call.call_id, content="done", success=True)
 
-        calls = manager.get_runtime_calls_for_agent("worker")
+        calls = await manager.get_runtime_calls_for_agent("worker")
 
         assert calls == []
 
-    def test_runtime_calls_for_agent_keeps_notification_for_one_processing_round(self, manager):
+    @pytest.mark.asyncio
+    async def test_runtime_calls_for_agent_keeps_notification_for_one_processing_round(self, manager):
         """契约：NOTIFICATION 在执行完成前暴露，完成后从 runtime 中移除"""
-        call = manager.create_call(
+        call = await manager.create_call(
             send_from="Manager",
             send_to="worker",
             content="FYI: API 已更新",
             message_type=MessageType.NOTIFICATION,
         )
 
-        assert manager.get_runtime_calls_for_agent("worker") == [call]
+        calls = await manager.get_runtime_calls_for_agent("worker")
+        assert calls == [call]
 
-        manager.update_status(call.call_id, CallStatus.COMPLETED)
+        await manager.update_status(call.call_id, CallStatus.COMPLETED)
 
-        assert manager.get_runtime_calls_for_agent("worker") == []
+        calls = await manager.get_runtime_calls_for_agent("worker")
+        assert calls == []
 
 
 class TestAgentCallManagerStats:
     """测试 get_stats()"""
 
-    def test_get_stats_empty(self, manager):
+    @pytest.mark.asyncio
+    async def test_get_stats_empty(self, manager):
         """契约：无调用时统计为空"""
-        stats = manager.get_stats()
+        stats = await manager.get_stats()
         assert stats["total"] == 0
         assert stats["by_status"] == {}
         assert stats["by_message_type"] == {}
 
-    def test_get_stats_returns_correct_counts(self, manager):
+    @pytest.mark.asyncio
+    async def test_get_stats_returns_correct_counts(self, manager):
         """契约：统计反映实际调用状态分布"""
-        manager.create_call(send_from="a", send_to="b", content="1", message_type=MessageType.TASK)
-        c2 = manager.create_call(
+        await manager.create_call(send_from="a", send_to="b", content="1", message_type=MessageType.TASK)
+        c2 = await manager.create_call(
             send_from="a", send_to="b", content="2", message_type=MessageType.NOTIFICATION
         )
-        manager.update_status(c2.call_id, CallStatus.RUNNING)
+        await manager.update_status(c2.call_id, CallStatus.RUNNING)
 
-        stats = manager.get_stats()
+        stats = await manager.get_stats()
         assert stats["total"] == 2
         assert stats["by_status"]["pending"] == 1
         assert stats["by_status"]["running"] == 1

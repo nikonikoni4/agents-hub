@@ -221,7 +221,7 @@ class Agent:
         # 3. system prompt 不再动态生成（保留通道）
         system_prompt = None
 
-        self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
+        await self.agent_call_manager.update_status(msg.call_id, CallStatus.RUNNING)
         self.logger.debug(
             "状态更新为 RUNNING: call_id=%s, agent=%s",
             msg.call_id,
@@ -254,7 +254,7 @@ class Agent:
                 )
                 result = await self.btw_execute(prompt, system_prompt=system_prompt)
             if msg.message_type != MessageType.TASK:
-                self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)
+                await self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)
             self.logger.debug(
                 "执行完成: agent=%s, call_id=%s, result_len=%d",
                 self.name,
@@ -277,8 +277,8 @@ class Agent:
                 str(e),
                 exc_info=True,
             )
-            self.agent_call_manager.update_status(msg.call_id, CallStatus.FAILED)
-            self.agent_call_manager.set_error(msg.call_id, str(e), exc=e)
+            await self.agent_call_manager.update_status(msg.call_id, CallStatus.FAILED)
+            await self.agent_call_manager.set_error(msg.call_id, str(e), exc=e)
             raise AgentExecutionError(
                 agent_name=self.name,
                 reason=str(e),
@@ -502,14 +502,14 @@ call_id: {msg.call_id}
         )
         self.message_queue.put_nowait(reminder)
 
-    def _needs_complete_task_reminder(self, msg: AgentMessage) -> bool:
+    async def _needs_complete_task_reminder(self, msg: AgentMessage) -> bool:
         """
         [deprecated] : 已经弃用， 但是保留代码
         判断当前消息处理后是否仍需要显式 complete_task。
         """
         if msg.message_type != MessageType.TASK:
             return False
-        call = self.agent_call_manager.get_call(msg.call_id)
+        call = await self.agent_call_manager.get_call(msg.call_id)
         return call is not None and not call.has_agent_response
 
     async def _sync_status(self, status: str):
@@ -533,7 +533,9 @@ call_id: {msg.call_id}
 
     async def _fallback_close_task(self, msg: AgentMessage, result: AgentResult | None) -> None:
         """兜底闭环：未闭环的 TASK 补齐 mark_agent_response + 分流通知（避免 MCP 断连导致群聊无消息）"""
-        call = self.agent_call_manager.get_call(msg.call_id)
+        if msg.message_type != MessageType.TASK:
+            return
+        call = await self.agent_call_manager.get_call(msg.call_id)
         if not (
             result
             and result.text
@@ -544,7 +546,7 @@ call_id: {msg.call_id}
             return
 
         safe_content = redact_token(result.text)
-        self.agent_call_manager.mark_agent_response(
+        await self.agent_call_manager.mark_agent_response(
             call_id=msg.call_id,
             content=safe_content,
             success=True,
@@ -560,7 +562,7 @@ call_id: {msg.call_id}
             await self.runtime.add_message(result)
             await self.runtime.update_agent_member_info_from_result(result)
 
-            response_call = self.agent_call_manager.create_call(
+            response_call = await self.agent_call_manager.create_call(
                 send_from=self.name,
                 send_to=call.send_from,
                 content=safe_content,

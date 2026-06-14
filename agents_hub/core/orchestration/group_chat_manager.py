@@ -46,6 +46,7 @@ class GroupChatManager:
         self._group_chats: dict[str, GroupChat] = {}
         self._tokens: dict[str, tuple[str, str]] = {}  # token → (agent_name, group_chat_id)
         self._token_lock = threading.RLock()  # 保护 _tokens 字典的并发访问
+        self._group_chats_lock = threading.RLock()  # 保护 _group_chats 字典的并发访问
         GroupChatManager._initialized = True
 
     @classmethod
@@ -65,18 +66,20 @@ class GroupChatManager:
         if not isinstance(group_chat, GroupChat):
             logger.error("无效的 group_chat 类型: %s", type(group_chat))
             raise ValueError("无效的 group_chat 类型")
-        self._group_chats[group_chat_id] = group_chat
-        logger.info(
-            "GroupChat 已注册: id=%s, GroupChatManager_id=%s, 已注册群聊数=%d",
-            group_chat_id,
-            id(self),
-            len(self._group_chats),
-        )
+        with self._group_chats_lock:
+            self._group_chats[group_chat_id] = group_chat
+            logger.info(
+                "GroupChat 已注册: id=%s, GroupChatManager_id=%s, 已注册群聊数=%d",
+                group_chat_id,
+                id(self),
+                len(self._group_chats),
+            )
 
     def is_active_group(self, group_chat_id: str) -> bool:
         """检查GroupChat的 agent 是否已激活（run() 任务是否在运行）"""
-        group_chat = self._group_chats.get(group_chat_id)
-        return group_chat is not None and group_chat._activated
+        with self._group_chats_lock:
+            group_chat = self._group_chats.get(group_chat_id)
+            return group_chat is not None and group_chat._activated
 
     def get_active_group_info(self, group_chat_id: str) -> dict[str, object] | None:
         """
@@ -88,10 +91,11 @@ class GroupChatManager:
         Returns:
             GroupChat信息字典，如果GroupChat不存在则返回 None
         """
-        group_chat = self._group_chats.get(group_chat_id)
-        if group_chat is None:
-            return None
-        return group_chat.runtime.get_info_dict(is_active=self.is_active_group(group_chat_id))
+        with self._group_chats_lock:
+            group_chat = self._group_chats.get(group_chat_id)
+            if group_chat is None:
+                return None
+            return group_chat.runtime.get_info_dict(is_active=self.is_active_group(group_chat_id))
 
     async def load_group_chat(self, group_chat_id: str) -> GroupChat:
         """获取 GroupChat，优先从内存加载，不存在时从磁盘加载
@@ -106,15 +110,16 @@ class GroupChatManager:
             GroupChatNotFoundError: GroupChat不存在（内存和磁盘都没有）
         """
         # 1. 优先从内存获取
-        group_chat = self._group_chats.get(group_chat_id)
-        if group_chat:
-            logger.debug(
-                "从内存加载GroupChat: id=%s, GroupChatManager_id=%s, 已注册群聊数=%d",
-                group_chat_id,
-                id(self),
-                len(self._group_chats),
-            )
-            return group_chat
+        with self._group_chats_lock:
+            group_chat = self._group_chats.get(group_chat_id)
+            if group_chat:
+                logger.debug(
+                    "从内存加载GroupChat: id=%s, GroupChatManager_id=%s, 已注册群聊数=%d",
+                    group_chat_id,
+                    id(self),
+                    len(self._group_chats),
+                )
+                return group_chat
 
         # 2. 从磁盘加载
         logger.debug(
@@ -160,13 +165,16 @@ class GroupChatManager:
         - 如果 group_chat_id 不存在，静默返回（幂等性）
         - 清理超时后会强制取消任务
         """
-        group_chat = self._group_chats.get(group_chat_id)
+        with self._group_chats_lock:
+            group_chat = self._group_chats.get(group_chat_id)
+
         if group_chat:
             logger.info("注销GroupChat: id=%s", group_chat_id)
             # 先清理资源
             await group_chat.cleanup(timeout=timeout)
             # 再删除引用
-            self._group_chats.pop(group_chat_id, None)
+            with self._group_chats_lock:
+                self._group_chats.pop(group_chat_id, None)
             # 清理该GroupChat的所有 token
             self.unregister_tokens(group_chat_id)
             logger.info("GroupChat注销完成: id=%s", group_chat_id)
@@ -271,6 +279,8 @@ class GroupChatManager:
                     metadata = GroupMetadata.from_dict(data)
 
                     # 构造返回信息
+                    is_active = self.is_active_group(metadata.group_chat_id)
+
                     group_chats.append(
                         {
                             "group_chat_id": metadata.group_chat_id,
@@ -278,7 +288,7 @@ class GroupChatManager:
                             "project_path": metadata.project_path,
                             "created_at": metadata.created_at.isoformat(),
                             "group_type": metadata.group_type,
-                            "is_active": self.is_active_group(metadata.group_chat_id),
+                            "is_active": is_active,
                         }
                     )
                 except Exception:
@@ -373,6 +383,7 @@ class GroupChatManager:
         await group_chat.load()
 
         # 6. 注册到 GroupChatManager（不激活，激活应在用户发送消息时触发）
+        # 注意：register() 内部已经有锁保护，这里直接调用即可
         self.register(group_chat_id, group_chat)
 
         logger.info("磁盘加载GroupChat完成: id=%s, members=%s", group_chat_id, team_members_name)
@@ -430,6 +441,7 @@ class GroupChatManager:
         await group_chat.start()
 
         # 4. 注册到 GroupChatManager
+        # 注意：register() 内部已经有锁保护，这里直接调用即可
         self.register(group_chat_id, group_chat)
 
         logger.info("GroupChat创建完成: id=%s", group_chat_id)

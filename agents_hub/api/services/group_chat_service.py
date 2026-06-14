@@ -451,7 +451,7 @@ class GroupChatService:
 
         # 4. 创建 AgentCall
         logger.debug("创建 AgentCall: from=%s, to=%s", config.default_user_name, send_to)
-        call = group_chat.agent_call_manager.create_call(
+        call = await group_chat.agent_call_manager.create_call(
             send_from=config.default_user_name,
             send_to=send_to,
             content=content,
@@ -1102,7 +1102,7 @@ class GroupChatService:
             ) from e
 
         # 2. 从 AgentCallManager 获取所有调用记录
-        all_calls = group_chat.agent_call_manager.list_all_calls()
+        all_calls = await group_chat.agent_call_manager.list_all_calls()
 
         # 3. 按创建时间升序排序
         sorted_calls = sorted(all_calls, key=lambda call: call.created_at)
@@ -1196,7 +1196,7 @@ class GroupChatService:
                     f"权限请求已{'批准' if status == 'approved' else '拒绝'}: "
                     f"{target_msg['permission_request'].get('title', '')}"
                 )
-                call = group_chat.agent_call_manager.create_call(
+                call = await group_chat.agent_call_manager.create_call(
                     send_from=config.default_user_name,
                     send_to=requested_by,
                     content=notification_content,

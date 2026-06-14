@@ -132,7 +132,7 @@ class TestScenario2CallAgent:
         assert call_id != "", "call_id 不应该为空"
 
         # 验证 AgentCall 已创建
-        call = group_chat.agent_call_manager.get_call(call_id)
+        call = await group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该已创建"
         assert call.send_from == "Leader", "发送者应该是 Leader"
         assert call.send_to == "小王", "接收者应该是小王"
@@ -160,7 +160,7 @@ class TestScenario2CallAgent:
         await asyncio.sleep(2)
 
         # 验证 AgentCall 状态已变更（说明 Worker 收到并处理了消息）
-        call = group_chat.agent_call_manager.get_call(call_id)
+        call = await group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
         # Worker 的 run() 任务会将 TASK 从 PENDING -> RUNNING；
         # COMPLETED 只能由 complete_task 显式闭环产生。
@@ -206,12 +206,12 @@ class TestScenario3WorkerResponse:
         max_wait = 15
         for i in range(max_wait):
             await asyncio.sleep(1)
-            call = group_chat.agent_call_manager.get_call(call_id)
+            call = await group_chat.agent_call_manager.get_call(call_id)
             if call and call.status == CallStatus.COMPLETED:
                 break
 
         # 验证 AgentCall 状态已更新为 COMPLETED
-        call = group_chat.agent_call_manager.get_call(call_id)
+        call = await group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
         assert call.status == CallStatus.COMPLETED, (
             f"AgentCall 状态应该是 COMPLETED，实际: {call.status}"

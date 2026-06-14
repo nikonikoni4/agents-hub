@@ -149,7 +149,7 @@ async def _send_agent_call_completion_notification(
     content: str,
 ) -> None:
     """创建并投递 AgentCall 完成通知，唤醒原调用方。"""
-    response_call = group_chat.agent_call_manager.create_call(
+    response_call = await group_chat.agent_call_manager.create_call(
         send_from=send_from,
         send_to=send_to,
         content=content,
@@ -216,7 +216,7 @@ async def call_agent(
 
         # 3. 创建 AgentCall
         message_type = MessageType.TASK if need_response else MessageType.NOTIFICATION
-        call = group_chat.agent_call_manager.create_call(
+        call = await group_chat.agent_call_manager.create_call(
             send_from=agent_name,
             send_to=send_to,
             content=content,
@@ -430,7 +430,7 @@ async def check_agent_call(agent_token: str, call_id: str) -> dict:
             )
 
         # 3. 查询 AgentCall
-        call = group_chat.agent_call_manager.get_call(call_id)
+        call = await group_chat.agent_call_manager.get_call(call_id)
         if call is None:
             return make_error_response(
                 AGENT_CALL_NOT_FOUND,
@@ -581,7 +581,7 @@ async def complete_task(
                 details={"group_chat_id": group_chat_id},
             )
 
-        call = group_chat.agent_call_manager.get_call(call_id)
+        call = await group_chat.agent_call_manager.get_call(call_id)
         if call is None:
             return make_error_response(
                 AGENT_CALL_NOT_FOUND,
@@ -657,7 +657,7 @@ async def complete_task(
         # 如果agent调用check_agent_call，实际上会得到2份结果，但是这里先不管
         # 一个可行的方法是使用 "agent call结束，具体内容{agent_name}会直接发送信息给你"
         logger.debug(f"complete_task :call_id:{call_id} {success} {safe_content}")
-        group_chat.agent_call_manager.mark_agent_response(
+        await group_chat.agent_call_manager.mark_agent_response(
             call_id=call_id,
             content=safe_content,  #  "agent call结束，具体内容{agent_name}会直接发送信息给你"
             success=success,
