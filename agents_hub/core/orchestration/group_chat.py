@@ -286,7 +286,7 @@ class GroupChat:
         worker_info.token = token
         worker_info.cwd = self.runtime.project_path
         group_chat_manager.register_token(token, role_name, self.group_chat_id)
-        await self.runtime.save_agent_members()
+        await self.runtime.save_agent_members(context=f"Add member {role_name}")
 
         # 8. 如果群聊已激活，启动新 Worker 的任务
         if self._activated:
@@ -635,7 +635,7 @@ class GroupChat:
         # 2. 先更新状态为 "stopped"（阻止新消息投递）
         agent_info = self.runtime.get_agent_member_info(agent_name)
         agent_info.status = "stopped"
-        await self.runtime.save_agent_members()
+        await self.runtime.save_agent_members(context=f"Stop agent {agent_name}")
 
         # 3. ⭐ 新增：立即终止正在运行的 CLI 进程
         await self._stop_agent_process(agent)
@@ -782,7 +782,7 @@ class GroupChat:
         # 7. 更新状态为 "idle"
         agent_info = self.runtime.get_agent_member_info(agent_name)
         agent_info.status = "idle"
-        await self.runtime.save_agent_members()
+        await self.runtime.save_agent_members(context=f"Start agent {agent_name}")
 
         logger.info("Agent %s 已重新启动", agent_name)
 
@@ -842,7 +842,7 @@ class GroupChat:
         # 5. 重置 context_usage
         agent_info = self.runtime.get_agent_member_info(agent_name)
         agent_info.context_usage = 0
-        await self.runtime.save_agent_members()
+        await self.runtime.save_agent_members(context=f"Reset agent {agent_name}")
 
         # 6. 重新初始化（打招呼）
         await self._initialize_single_member(agent)
@@ -866,7 +866,7 @@ class GroupChat:
 
         # 9. 更新状态为 "idle"
         agent_info.status = "idle"
-        await self.runtime.save_agent_members()
+        await self.runtime.save_agent_members(context=f"Reset agent {agent_name} complete")
 
         # 获取新 session_id
         new_session_id = agent_member_info.main_session if agent_member_info else None

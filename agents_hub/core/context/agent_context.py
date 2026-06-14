@@ -168,7 +168,9 @@ class AgentContext:
         agent_info = self.runtime.get_agent_member_info(self.agent_name)
         agent_info.context_state.last_loaded_compact_index = last_loaded_compact_index
         agent_info.context_state.last_loaded_message_index = last_loaded_message_index
-        await self.runtime.save_agent_members()
+        await self.runtime.save_agent_members(
+            context=f"Agent {self.agent_name} context load state update"
+        )
 
     async def build_user_prompt(
         self,

@@ -303,7 +303,9 @@ class Agent:
             # 更新 context_usage
             agent_info = self.runtime.get_agent_member_info(self.name)
             agent_info.context_usage = context_usage
-            await self.runtime.save_agent_members()
+            await self.runtime.save_agent_members(
+                context=f"Agent {self.name} context_usage → {context_usage}K"
+            )
 
     async def compress_context(self):
         """
@@ -534,7 +536,7 @@ call_id: {msg.call_id}
 
         # 更新状态
         agent_member_info.status = status
-        await self.runtime.save_agent_members()
+        await self.runtime.save_agent_members(context=f"Agent {self.name} status → {status}")
 
     async def _fallback_close_task(self, msg: AgentMessage, result: AgentResult | None) -> None:
         """兜底闭环：未闭环的 TASK 补齐 mark_agent_response + 分流通知（避免 MCP 断连导致群聊无消息）"""

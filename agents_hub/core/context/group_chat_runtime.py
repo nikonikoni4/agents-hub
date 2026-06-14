@@ -5,6 +5,7 @@
 """
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
@@ -433,13 +434,31 @@ class GroupChatRuntime:
         )
         await self._notify_change()
 
-    async def save_agent_members(self):
+    async def save_agent_members(self, context: str | None = None):
         """
         持久化所有 agent 成员信息并通知变更（带锁保护）
+
+        Args:
+            context: 可选的修改上下文描述，用于调试追踪
+                     例如："Agent stop", "Status sync: busy"
 
         并发安全：通过 _state_lock 保护 read-modify-write 序列
         """
         async with self._state_lock:
+            # 业务日志（生产环境可见）
+            if context:
+                logger.info(
+                    "保存 agent_members: group=%s, context='%s'",
+                    self.group_chat_id, context
+                )
+
+            # 调试追踪（仅 DEBUG 模式）
+            if logger.isEnabledFor(logging.DEBUG):
+                import inspect
+                frame = inspect.currentframe().f_back
+                caller_info = f"{frame.f_code.co_filename}:{frame.f_lineno}"
+                logger.debug("调用栈: %s", caller_info)
+
             await self._save_agent_members()
 
 
