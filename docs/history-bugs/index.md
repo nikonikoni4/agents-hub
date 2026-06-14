@@ -135,3 +135,9 @@
  - path: docs/history-bugs/2026-06-13-group-chat-activate-missing-agent-registration.md
  - 触发规则：GroupChat 对象重建后首次发送消息时，MessageRouter 中找不到接收者 agent
  - 内容摘要：activate() 只检查 _activated 实例变量，对象重建后新实例的 MessageRouter 为空但不重新注册 agents。消息投递时抛出 AgentNotFoundError（DEBUG 级别不可见）。修复方案：在 activate() 中强制调用 _register_agents_to_router() 确保注册完成
+
+## Core 模块问题报告（排查记录）
+ - updated_at : 2026-06-14
+ - path: docs/history-bugs/2026-06-14-core-module-issues.md
+ - 触发规则：排查 core 模块在群聊生命周期中的问题
+ - 内容摘要：记录 core 模块在群聊生命周期中的问题，包括架构性问题（Runtime/Context 耦合）、群聊创建/列表/详情加载问题、Agent 状态变化流程与问题、Agent 压缩/停止/启动/重置流程问题
