@@ -879,7 +879,7 @@ class GroupChat:
         1. 所有 Agent 任务被停止
         2. AgentCallManager 清理任务被停止
         3. MessageRouter 被清空
-        4. GroupChatContext 被关闭
+        4. GroupChatRuntime 被关闭
         5. 注销所有 token
         6. 所有引用被清空
 
