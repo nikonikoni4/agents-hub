@@ -15,7 +15,7 @@ from agents_hub.config import config
 from agents_hub.config.types import RoleType
 from agents_hub.core.agent import Agent, Manager, Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
-from agents_hub.core.context import GroupChatContext, GroupChatRuntime
+from agents_hub.core.context import GroupChatRuntime
 from agents_hub.core.foundation import (
     AgentMessage,
     GroupChatType,
@@ -70,8 +70,6 @@ class GroupChat:
             project_path,
             on_change=broadcast_group_chat_refresh,
         )
-        # TODO : 直接这里runtime和其他模块耦合性太高了，比如保存数据走，context->runtime->repo,
-        self.group_chat_context = GroupChatContext(self.runtime)
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
         self.task_manager = TaskManager(self.group_chat_id, project_path)
@@ -103,7 +101,7 @@ class GroupChat:
         )
 
         # 1. 加载上下文数据
-        await self.group_chat_context.load()
+        await self.runtime.load()
 
         # 幂等性检查：如果 metadata 已存在，跳过 initialize_metadata
         if self.runtime.state.metadata is not None:
@@ -144,7 +142,7 @@ class GroupChat:
         logger.info("加载群聊: id=%s", self.group_chat_id)
 
         # 1. 加载上下文数据
-        await self.group_chat_context.load()
+        await self.runtime.load()
 
         # 2. 初始化并注册 agents（含 role 验证）
         await self._init_agents()
@@ -204,7 +202,7 @@ class GroupChat:
         manager_role = role_manager.get_role(config.default_manager_name)
         self.manager = Manager(
             manager_role,
-            self.group_chat_context,
+            self.runtime,
             self.agent_call_manager,
             self.message_router,
             self.task_manager,
@@ -221,7 +219,7 @@ class GroupChat:
             role = role_manager.get_role(role_name)
             self.workers[role_name] = Worker(
                 role,
-                self.group_chat_context,
+                self.runtime,
                 self.agent_call_manager,
                 self.message_router,
                 self.task_manager,
@@ -280,10 +278,10 @@ class GroupChat:
             logger.debug("成员已存在，跳过添加: %s", role_name)
             return
 
-        # 3. 创建新 Worker（共享 group_chat_context）
+        # 3. 创建新 Worker（共享 runtime）
         new_worker = Worker(
             role,
-            self.group_chat_context,  # ⭐ 所有 Agent 共享同一个 context
+            self.runtime,  # ⭐ 所有 Agent 共享同一个 runtime
             self.agent_call_manager,
             self.message_router,
             self.task_manager,
@@ -297,7 +295,7 @@ class GroupChat:
 
         # 6. ⭐ 关键：立即创建并持久化空条目（防止崩溃后丢失）
         self.runtime.get_or_create_agent_member_info(role_name)
-        await self.runtime.repository.save_agent_member(self.runtime.state.agent_member_infos)
+        await self.runtime.save_agent_member_infos()
 
         # 7. 生成并注册 token
         from .group_chat_manager import group_chat_manager
@@ -334,8 +332,8 @@ class GroupChat:
             prompt = f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{manager_name},你使用一句话简单介绍一下自己"
 
         result = await agent.execute(prompt)
-        await self.group_chat_context.update_agent_member_info(result)
-        await self.group_chat_context.add_message(result)
+        await self.runtime.update_agent_member_info_from_result(result)
+        await self.runtime.add_message(result)
 
     async def _initialize_new_members(self):
         """
@@ -347,7 +345,7 @@ class GroupChat:
 
         # 检查 manager 是否需要初始化
         agent_member_info = (
-            self.group_chat_context.agent_member_info.get(self.manager.name)
+            self.runtime.get_agent_member_info(self.manager.name)
             if self.manager
             else None
         )
@@ -356,7 +354,7 @@ class GroupChat:
 
         # 检查 workers 是否需要初始化
         for name, worker in self.workers.items():
-            agent_member_info = self.group_chat_context.agent_member_info.get(name)
+            agent_member_info = self.runtime.get_agent_member_info(name)
             if not agent_member_info or not agent_member_info.main_session:
                 new_members.append(worker)
 
@@ -383,8 +381,8 @@ class GroupChat:
 
         # 保存结果
         for result in results:
-            await self.group_chat_context.update_agent_member_info(result)
-            await self.group_chat_context.add_message(result)
+            await self.runtime.update_agent_member_info_from_result(result)
+            await self.runtime.add_message(result)
 
     async def compact_history(self):
         """
@@ -406,7 +404,7 @@ class GroupChat:
             worker_role = role_manager.get_role(name)
             agent_info[name] = worker_role.get_role_config().description or "团队成员"
 
-        await self.group_chat_context.compact_messages(agent_info)
+        await self.runtime.compact_messages(agent_info)
 
     async def compress_all(self):
         """
@@ -526,7 +524,7 @@ class GroupChat:
             role_type=role_type,
             files=message.files,
         )
-        await self.group_chat_context.add_message(sender_result)
+        await self.runtime.add_message(sender_result)
 
     def _find_agent(self, agent_name: str):
         """查找 agent 实例（manager 或 worker）"""
@@ -605,7 +603,7 @@ class GroupChat:
                         platform=agent.role_config.platform,
                         role_type=agent.role_type,
                     )
-                    await self.group_chat_context.add_message(result)
+                    await self.runtime.add_message(result)
 
                 processed_count += 1
 
@@ -702,7 +700,7 @@ class GroupChat:
             logger.debug("Agent %s 没有活跃 session，跳过进程终止", agent.name)
             return  # 没有活跃 session
 
-        agent_member_info = self.group_chat_context.agent_member_info.get(agent.name)
+        agent_member_info = self.runtime.get_agent_member_info(agent.name)
         use_docker = getattr(agent_member_info, "use_docker", False) if agent_member_info else False
 
         try:
@@ -934,8 +932,8 @@ class GroupChat:
         # 4. 清空 MessageRouter
         self.message_router.clear()
 
-        # 5. 关闭 GroupChatContext
-        self.group_chat_context.close()
+        # 5. 关闭 GroupChatRuntime
+        self.runtime.close()
 
         # 6. 注销所有 token
         from .group_chat_manager import group_chat_manager

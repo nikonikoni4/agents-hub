@@ -386,6 +386,7 @@ class GroupChatManager:
         group_chat_name: str | None = None,
         group_chat_id: str | None = None,
     ) -> GroupChat:
+    # 该函数实际上没有被使用
         """
         创建并启动新GroupChat
 

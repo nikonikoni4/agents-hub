@@ -15,7 +15,7 @@ from pathlib import Path
 from agents_hub.agent_bridge import AgentResult, agent_platform_client
 from agents_hub.config import config
 from agents_hub.core.communication import AgentCallManager, MessageRouter
-from agents_hub.core.context import AgentContext, GroupChatContext
+from agents_hub.core.context import AgentContext, GroupChatRuntime
 from agents_hub.core.foundation import (
     AgentExecutionError,
     AgentMessage,
@@ -46,7 +46,7 @@ class Agent:
     def __init__(
         self,
         role: Role,
-        group_chat_context: GroupChatContext,
+        runtime: GroupChatRuntime,
         agent_call_manager: AgentCallManager,
         message_router: MessageRouter,
         task_manager=None,
@@ -55,8 +55,8 @@ class Agent:
         self.name = self.role_config.name
         self.role_type = self.role_config.role_type
         self.message_queue: asyncio.Queue[AgentMessage] = asyncio.Queue()  # 私有队列
-        self.group_chat_context = group_chat_context
-        self.agent_context = AgentContext(self.name, group_chat_context, self.role_type)
+        self.runtime = runtime
+        self.agent_context = AgentContext(self.name, runtime, self.role_type)
         self.message_router = message_router
         self.agent_call_manager = agent_call_manager
         self.task_manager = task_manager
@@ -67,17 +67,17 @@ class Agent:
 
     @property
     def agent_token(self) -> str:
-        info = self.group_chat_context.agent_member_info.get(self.name)
+        info = self.runtime.get_agent_member_info(self.name)
         return info.token if info else ""
 
     @property
     def agent_cwd(self) -> str:
-        info = self.group_chat_context.agent_member_info.get(self.name)
+        info = self.runtime.get_agent_member_info(self.name)
         return info.cwd if info else ""
 
     @property
     def context_usage(self) -> int:
-        info = self.group_chat_context.agent_member_info.get(self.name)
+        info = self.runtime.get_agent_member_info(self.name)
         return info.context_usage if info else 0
 
     def set_run(self, run: bool):
@@ -151,9 +151,10 @@ class Agent:
 
     @property
     def main_session_id(self):
-        if self.group_chat_context.agent_member_info.get(self.name):
-            if self.group_chat_context.agent_member_info[self.name].main_session:
-                return self.group_chat_context.agent_member_info[self.name].main_session
+        info = self.runtime.get_agent_member_info(self.name)
+        if info:
+            if info.main_session:
+                return info.main_session
             else:
                 print(f"warning : {self.name}在当前群聊中无历史记录")  # TODO 替换为 logger
         else:
@@ -164,7 +165,7 @@ class Agent:
 
     def _validate_docker_config(self):
         """校验 Docker 配置（在 _process_message 中调用）"""
-        agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+        agent_member_info = self.runtime.get_agent_member_info(self.name)
         if not agent_member_info:
             return
 
@@ -173,12 +174,12 @@ class Agent:
             return
 
         agent_cwd = agent_member_info.cwd
-        group_chat_path = self.group_chat_context.get_project_path()
+        group_chat_path = self.runtime.project_path
 
         if self._is_same_path(agent_cwd, group_chat_path):
             raise DockerConfigError(
                 agent_name=self.name,
-                group_chat_id=self.group_chat_context.group_chat_id,
+                group_chat_id=self.runtime.group_chat_id,
                 reason=(
                     f"Docker 隔离不必要：Agent CWD 与群聊路径相同。\n"
                     f"  Agent CWD: {agent_cwd}\n"
@@ -214,7 +215,7 @@ class Agent:
         # self._validate_docker_config()
 
         # 2. 读取 use_docker 配置
-        agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+        agent_member_info = self.runtime.get_agent_member_info(self.name)
         use_docker = getattr(agent_member_info, "use_docker", False) if agent_member_info else False
 
         # 3. system prompt 不再动态生成（保留通道）
@@ -242,7 +243,7 @@ class Agent:
                 result = await self.execute(
                     full_prompt,
                     use_docker=use_docker,
-                    group_chat_id=self.group_chat_context.group_chat_id,
+                    group_chat_id=self.runtime.group_chat_id,
                     system_prompt=system_prompt,
                 )
             else:
@@ -299,7 +300,7 @@ class Agent:
                 input_tokens,
                 context_usage,
             )
-            await self.group_chat_context.runtime.update_agent_context_usage(
+            await self.runtime.update_agent_context_usage(
                 self.name, context_usage
             )
 
@@ -330,7 +331,7 @@ class Agent:
         self.logger.info("Agent %s 开始压缩上下文", self.name)
 
         # 1. 忙碌校验
-        agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+        agent_member_info = self.runtime.get_agent_member_info(self.name)
         if agent_member_info and agent_member_info.status == "busy":
             raise AgentBusyError(self.name)
 
@@ -396,7 +397,7 @@ class Agent:
             agent_member_info.main_session = new_session_id
 
         # 9. 重置 context_usage
-        await self.group_chat_context.runtime.update_agent_context_usage(self.name, 0)
+        await self.runtime.update_agent_context_usage(self.name, 0)
 
         # 10. 写入系统消息
         system_msg = (
@@ -404,7 +405,7 @@ class Agent:
             f"   旧 session: {old_session_id} → 新 session: {new_session_id}\n"
             f"   {context_usage_before}K tokens → 0K tokens"
         )
-        await self.group_chat_context.runtime.add_system_message(system_msg)
+        await self.runtime.add_system_message(system_msg)
 
         # 11. 广播 refresh（update_agent_context_usage 内部已调用 _notify_change，无需重复调用）
 
@@ -446,7 +447,7 @@ class Agent:
 
         文件名格式：{agent_name}_{group_chat_id}
         """
-        group_chat_id = self.group_chat_context.group_chat_id
+        group_chat_id = self.runtime.group_chat_id
         agent_filename = f"{self.name}_{group_chat_id}"
 
         if not self.role_config.work_root:
@@ -518,7 +519,7 @@ call_id: {msg.call_id}
         如果当前状态是 "stopped"，不允许改为其他状态（防止 stop 后被 finally 覆盖）
         """
         # 获取当前状态
-        agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+        agent_member_info = self.runtime.get_agent_member_info(self.name)
         current_status = agent_member_info.status if agent_member_info else None
 
         # 如果已经是 stopped 状态，不允许改为其他状态
@@ -528,7 +529,7 @@ call_id: {msg.call_id}
             )
             return
 
-        await self.group_chat_context.runtime.update_agent_status(self.name, status)
+        await self.runtime.update_agent_status(self.name, status)
 
     async def _fallback_close_task(self, msg: AgentMessage, result: AgentResult | None) -> None:
         """兜底闭环：未闭环的 TASK 补齐 mark_agent_response + 分流通知（避免 MCP 断连导致群聊无消息）"""
@@ -551,13 +552,13 @@ call_id: {msg.call_id}
 
         if config.is_user_name(call.send_from):
             result.text = render_for_chat(self.name, call.send_from, safe_content)
-            await self.group_chat_context.add_message(result)
-            await self.group_chat_context.update_agent_member_info(result)
+            await self.runtime.add_message(result)
+            await self.runtime.update_agent_member_info_from_result(result)
         else:
             # 保存到群聊历史，确保群聊能看到兜底闭环的消息
             result.text = render_for_chat(self.name, call.send_from, safe_content)
-            await self.group_chat_context.add_message(result)
-            await self.group_chat_context.update_agent_member_info(result)
+            await self.runtime.add_message(result)
+            await self.runtime.update_agent_member_info_from_result(result)
 
             response_call = self.agent_call_manager.create_call(
                 send_from=self.name,
@@ -574,7 +575,7 @@ call_id: {msg.call_id}
             )
             # 只有这个地方能直接调用message_router，别的地方只能走gourp_chat.send_message_to_agent
             await self.message_router.send_message(message)
-        await self.group_chat_context.runtime._notify_change()
+        await self.runtime._notify_change()
         self.logger.info(
             "Agent %s 兜底闭环: call_id=%s, send_from=%s, text_len=%d",
             self.name,
@@ -598,7 +599,7 @@ call_id: {msg.call_id}
                 break
 
             # 3. 检查当前状态是否已经是 stopped（防止处理消息时状态被改变）
-            agent_member_info = self.group_chat_context.agent_member_info.get(self.name)
+            agent_member_info = self.runtime.get_agent_member_info(self.name)
             current_status = agent_member_info.status if agent_member_info else None
             if current_status == "stopped":
                 self.logger.debug(

@@ -5,7 +5,7 @@ Worker Agent
 """
 
 from agents_hub.core.communication import AgentCallManager, MessageRouter
-from agents_hub.core.context import GroupChatContext
+from agents_hub.core.context import GroupChatRuntime
 from agents_hub.roles import Role
 
 from .base_agent import Agent
@@ -51,9 +51,9 @@ complete_task 的 content 是你交给调用方的成果汇报，要做到：
     def __init__(
         self,
         role: Role,
-        group_chat_context: GroupChatContext,
+        runtime: GroupChatRuntime,
         agent_call_manager: AgentCallManager,
         message_router: MessageRouter,
         task_manager=None,
     ):
-        super().__init__(role, group_chat_context, agent_call_manager, message_router, task_manager)
+        super().__init__(role, runtime, agent_call_manager, message_router, task_manager)

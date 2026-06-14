@@ -1,0 +1,149 @@
+<#
+.SYNOPSIS
+    启动 Agents Hub 开发服务器（前端 + 后端，分屏显示）
+
+.DESCRIPTION
+    在两个终端窗口中分别启动后端和前端，方便同时查看日志。
+
+.PARAMETER BackendPort
+    后端 API 端口。不指定时使用分支配置或默认 8099
+
+.PARAMETER FrontendPort
+    前端开发服务器端口。不指定时使用分支配置或默认 5173
+
+.PARAMETER Mode
+    Vite 启动模式，默认 development
+
+.EXAMPLE
+    .\dev.ps1
+    .\dev.ps1 -BackendPort 8100 -FrontendPort 5174
+    .\dev.ps1 -Mode branch-feature-a
+#>
+
+param(
+    [int]$BackendPort = 0,
+    [int]$FrontendPort = 0,
+    [string]$Mode = "development"
+)
+
+function Write-Color {
+    param([string]$Text, [string]$Color = "White")
+    Write-Host $Text -ForegroundColor $Color
+}
+
+function Get-EnvPort {
+    param([string]$FilePath, [string]$Key, [int]$Default)
+    if (Test-Path $FilePath) {
+        $match = Select-String -Path $FilePath -Pattern "^$Key=(\d+)" | Select-Object -First 1
+        if ($match) { return [int]$match.Matches[0].Groups[1].Value }
+    }
+    return $Default
+}
+
+# ===== 确定端口 =====
+$defaultBackendPort = 8099
+$defaultFrontendPort = 5173
+$modeEnvFile = "frontend/.env.$Mode"
+
+if ($Mode -ne "development" -and (Test-Path $modeEnvFile)) {
+    Write-Color "读取分支配置: $modeEnvFile" "Green"
+    if ($BackendPort -eq 0) {
+        $BackendPort = Get-EnvPort -FilePath $modeEnvFile -Key "VITE_API_PORT" -Default $defaultBackendPort
+    }
+    if ($FrontendPort -eq 0) {
+        $FrontendPort = Get-EnvPort -FilePath $modeEnvFile -Key "VITE_DEV_PORT" -Default $defaultFrontendPort
+    }
+} else {
+    if ($Mode -ne "development") {
+        Write-Color "分支配置不存在: $modeEnvFile，使用默认端口" "Yellow"
+    }
+    if ($BackendPort -eq 0) { $BackendPort = $defaultBackendPort }
+    if ($FrontendPort -eq 0) { $FrontendPort = $defaultFrontendPort }
+}
+
+# ===== 创建 .env.local =====
+$envLocalFile = "frontend/.env.local"
+$envLines = @()
+
+if ($Mode -ne "development" -and (Test-Path $modeEnvFile)) {
+    $envLines += Get-Content -Path $modeEnvFile | Where-Object {
+        $_ -notmatch "^VITE_DEV_PORT=" -and $_ -notmatch "^VITE_API_PORT="
+    }
+}
+
+if (-not ($envLines | Where-Object { $_ -match "^VITE_USE_MOCK=" })) {
+    $envLines += "VITE_USE_MOCK=false"
+}
+if (-not ($envLines | Where-Object { $_ -match "^VITE_API_BASE_URL=" })) {
+    $envLines += "VITE_API_BASE_URL=/api/v1"
+}
+
+$envLines += "VITE_DEV_PORT=$FrontendPort"
+$envLines += "VITE_API_PORT=$BackendPort"
+$envLines | Out-File -FilePath $envLocalFile -Encoding utf8
+
+# ===== 显示启动信息 =====
+Write-Color "`n========================================" "Cyan"
+Write-Color "  Agents Hub 开发服务器" "Cyan"
+Write-Color "========================================" "Cyan"
+Write-Color "  后端端口: $BackendPort" "Yellow"
+Write-Color "  前端端口: $FrontendPort" "Yellow"
+Write-Color "  Vite 模式: $Mode" "Yellow"
+Write-Color "========================================`n" "Cyan"
+
+# ===== 在新窗口启动后端 =====
+Write-Color "[1/2] 启动后端 (新窗口, 端口 $BackendPort)..." "Green"
+
+$backendScript = @"
+`$Host.UI.RawUI.WindowTitle = "Agents Hub Backend (port $BackendPort)"
+Set-Location "$PWD"
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  后端服务器" -ForegroundColor Cyan
+Write-Host "  端口: $BackendPort" -ForegroundColor Yellow
+Write-Host "  健康检查: http://localhost:$BackendPort/health" -ForegroundColor Yellow
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+python -m uvicorn agents_hub.api.app:app --host 0.0.0.0 --port $BackendPort
+Write-Host ""
+Write-Host "后端已停止，按任意键关闭..." -ForegroundColor Yellow
+`$null = `$Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+"@
+
+$backendScript | Out-File -FilePath ".backend-launcher.ps1" -Encoding utf8
+Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", ".backend-launcher.ps1"
+
+# 等待后端启动
+Write-Color "等待后端启动..." "Gray"
+Start-Sleep -Seconds 4
+
+try {
+    $response = Invoke-WebRequest -Uri "http://localhost:$BackendPort/health" -UseBasicParsing -TimeoutSec 5
+    if ($response.StatusCode -eq 200) {
+        Write-Color "后端启动成功: http://localhost:$BackendPort" "Green"
+    }
+} catch {
+    Write-Color "后端可能还在启动中，请查看后端窗口" "Yellow"
+}
+
+# ===== 在当前窗口启动前端 =====
+Write-Color "[2/2] 启动前端 (当前窗口, 端口 $FrontendPort)..." "Green"
+Write-Color "`n前端日志输出在下方，后端日志在新窗口中" "Gray"
+Write-Color "关闭此窗口会自动清理后端进程`n" "Gray"
+
+$viteArgs = @("dev")
+if ($Mode -ne "development") {
+    $viteArgs += "--mode", $Mode
+}
+
+Set-Location frontend
+& pnpm @viteArgs
+
+# ===== 清理 =====
+Write-Color "`n正在清理..." "Yellow"
+Set-Location ..
+
+# 清理临时文件
+Remove-Item -Path ".backend-launcher.ps1" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path $envLocalFile -Force -ErrorAction SilentlyContinue
+
+Write-Color "已停止前端，后端窗口需要手动关闭" "Yellow"
