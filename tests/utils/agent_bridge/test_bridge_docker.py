@@ -183,21 +183,19 @@ class TestAgentExecuteDocker:
             description="test agent",
         )
 
-        group_chat_context = MagicMock()
-        group_chat_context.agent_member_info = {
-            "test_agent": SimpleNamespace(
-                main_session="session_1",
-                btw_session=[],
-                token="test_token",
-                cwd="/tmp/workspace",
-                use_docker=True,
-            )
-        }
-        group_chat_context.group_chat_id = "gc_test_123"
+        runtime = MagicMock()
+        runtime.get_agent_member_info.return_value = SimpleNamespace(
+            main_session="session_1",
+            btw_session=[],
+            token="test_token",
+            cwd="/tmp/workspace",
+            use_docker=True,
+        )
+        runtime.group_chat_id = "gc_test_123"
 
         agent = Agent(
             role,
-            group_chat_context,
+            runtime,
             MagicMock(),
             MagicMock(),
         )
@@ -242,21 +240,19 @@ class TestAgentProcessMessageDocker:
             description="test agent",
         )
 
-        group_chat_context = MagicMock()
-        group_chat_context.agent_member_info = {
-            "test_agent": SimpleNamespace(
-                main_session="session_1",
-                btw_session=[],
-                token="test_token",
-                cwd="/tmp/workspace",
-                use_docker=True,
-            )
-        }
-        group_chat_context.group_chat_id = "gc_test_123"
+        runtime = MagicMock()
+        runtime.get_agent_member_info.return_value = SimpleNamespace(
+            main_session="session_1",
+            btw_session=[],
+            token="test_token",
+            cwd="/tmp/workspace",
+            use_docker=True,
+        )
+        runtime.group_chat_id = "gc_test_123"
 
         agent = Agent(
             role,
-            group_chat_context,
+            runtime,
             MagicMock(),
             MagicMock(),
         )
@@ -309,13 +305,13 @@ class TestAgentProcessMessageDocker:
             description="test agent",
         )
 
-        group_chat_context = MagicMock()
-        group_chat_context.agent_member_info = {}  # 空字典
-        group_chat_context.group_chat_id = "gc_test_123"
+        runtime = MagicMock()
+        runtime.get_agent_member_info.return_value = None
+        runtime.group_chat_id = "gc_test_123"
 
         agent = Agent(
             role,
-            group_chat_context,
+            runtime,
             MagicMock(),
             MagicMock(),
         )

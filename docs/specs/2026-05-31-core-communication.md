@@ -203,6 +203,6 @@ Agent.run() 循环：
 
 ## Out of Spec
 
-- MessageRouter 不负责消息持久化（持久化由 context 层的 GroupChatContext 负责）
+- MessageRouter 不负责消息持久化（持久化由 context 层的 GroupChatRuntime 负责）
 - AgentCallManager 不负责 Agent 执行（执行由 agent_bridge 负责）
 - 清理策略的具体实现细节（保留时间配置等）可能随版本调整

@@ -12,7 +12,7 @@ trigger: 修改 core/orchestration、core/context、MCP tool、API service 中�
 **禁止**：
 - ❌ 已经拿到 `GroupChat` 实例时再扫描磁盘读取群聊状态
 - ❌ 为了 API 返回值直接读 `group_metadata.json` 或 `agent_member.json`
-- ❌ 从 `GroupChatContext.repository` 读取业务状态
+- ❌ 从 `GroupChatRuntime.repository` 读取业务状态
 
 **示例**：
 ```python

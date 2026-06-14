@@ -103,7 +103,7 @@ agent_a 调用 call_agent
 
 ```
 agent 调用 report_progress
-       → 直接调用 GroupChatContext.add_message()
+       → 直接调用 GroupChatRuntime.add_message()
        → 保存到群聊历史
        → 不经过 MessageRouter
 ```
@@ -119,10 +119,10 @@ agent 调用 report_progress
 
 **MessageRouter 不负责**：
 - ❌ 决定哪些消息需要保存到群聊历史
-- ❌ 调用 `GroupChatContext.add_message()`
+- ❌ 调用 `GroupChatRuntime.add_message()`
 - ❌ 区分消息类型（TASK / NOTIFICATION）
 - ❌ 判断调用方是 user 还是 agent
-- ❌ 依赖 `GroupChatContext` 或任何业务层组件
+- ❌ 依赖 `GroupChatRuntime` 或任何业务层组件
 
 **原因**：
 1. MessageRouter 属于 communication 层，不应依赖 context 层（违反分层原则）
@@ -193,7 +193,7 @@ class MessageRouter:
         
         不做：
         - 不调用 add_message()
-        - 不依赖 GroupChatContext
+        - 不依赖 GroupChatRuntime
         - 不区分消息类型
         """
     
@@ -300,13 +300,13 @@ async def report_progress(
     
     立即保存到群聊历史
     """
-    await group_chat.group_chat_context.add_message(...)
+    await group_chat.runtime.add_message(...)
 ```
 
-### GroupChatContext 接口
+### GroupChatRuntime 接口
 
 ```python
-class GroupChatContext:
+class GroupChatRuntime:
     async def add_message(self, result: AgentResult):
         """
         保存消息到群聊历史
@@ -331,9 +331,9 @@ N/A（后端消息流转机制，无前端交互）
 ### 验收点
 
 1. **MessageRouter 职责纯粹**
-   - ✅ MessageRouter 不依赖 GroupChatContext
+   - ✅ MessageRouter 不依赖 GroupChatRuntime
    - ✅ send_message() 只做投递，不调用 add_message()
-   - ✅ MessageRouter 可以独立测试（不需要 mock GroupChatContext）
+   - ✅ MessageRouter 可以独立测试（不需要 mock GroupChatRuntime）
 
 2. **GroupChat 统一包装**
    - ✅ GroupChat.send_message_to_agent() 包装投递和保存

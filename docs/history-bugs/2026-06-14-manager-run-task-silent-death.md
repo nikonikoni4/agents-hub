@@ -6,6 +6,8 @@
 
 **关联**: [GroupChat.activate() 幂等性缺陷导致消息投递失败](./2026-06-13-group-chat-activate-missing-agent-registration.md) 的延续
 
+log:"docs\history-bugs\agents_hub-bug-2026-06-14.log"
+
 ## 问题描述
 
 停止并重启 manager 后，用户发送的消息成功入队（queue_size 递增：3→4→5→6），但 manager 的 `run()` 任务不再消费消息。AgentCall 状态永远停在 PENDING。

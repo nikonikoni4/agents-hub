@@ -23,7 +23,7 @@ trigger: 修改 agents_hub/core/ 或依赖 core 行为的代码时
 
 **禁止**：
 - ❌ 在 `GroupChatManager`、API service 或 MCP tool 中直接打开 `agent_member.json`、`group_metadata.json`、消息 jsonl 来获取已加载群聊状态
-- ❌ 从 `group_chat.group_chat_context.repository` 读取业务状态
+- ❌ 从 `group_chat.runtime.repository` 读取业务状态
 
 **示例**：
 ```python

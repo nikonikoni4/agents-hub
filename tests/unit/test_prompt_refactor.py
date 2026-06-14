@@ -203,7 +203,7 @@ class TestBuildUserPrompt:
 
     @pytest.fixture
     def mock_group_chat_context(self):
-        """创建 mock 的 GroupChatContext"""
+        """创建 mock 的 GroupChatRuntime"""
         from agents_hub.core.context.group_chat_session import GroupChatSession
 
         context = MagicMock()
@@ -211,9 +211,9 @@ class TestBuildUserPrompt:
 
         # 创建真实的 session
         session = GroupChatSession(group_chat_id="test-chat-id")
-        context.group_chat_session = session
+        context.state.group_chat_session = session
 
-        # agent_member_info
+        # agent_member_infos (via state)
         agent_info = MagicMock()
         agent_info.token = "tok_test123"
         agent_info.description = "测试角色"
@@ -226,7 +226,7 @@ class TestBuildUserPrompt:
         worker_info.context_state.last_loaded_compact_index = 0
         worker_info.context_state.last_loaded_message_index = 0
 
-        context.agent_member_info = {
+        context.state.agent_member_infos = {
             "manager": agent_info,
             "worker_a": worker_info,
         }
@@ -235,9 +235,8 @@ class TestBuildUserPrompt:
         context.repository = MagicMock()
         context.repository.group_chat_session_path = "/tmp/test"
 
-        # runtime
-        context.runtime = MagicMock()
-        context.runtime.update_context_load_state = AsyncMock()
+        # update_context_load_state
+        context.update_context_load_state = AsyncMock()
 
         # load_compact_history (async)
         context.load_compact_history = AsyncMock(return_value=[])
@@ -259,7 +258,7 @@ class TestBuildUserPrompt:
 
         agent_context = AgentContext(
             agent_name="manager",
-            group_chat_context=mock_group_chat_context,
+            runtime=mock_group_chat_context,
             role_type=RoleType.LEADER,
         )
 
@@ -294,7 +293,7 @@ class TestBuildUserPrompt:
 
         agent_context = AgentContext(
             agent_name="manager",
-            group_chat_context=mock_group_chat_context,
+            runtime=mock_group_chat_context,
             role_type=RoleType.LEADER,
         )
 
@@ -328,7 +327,7 @@ class TestBuildUserPrompt:
 
         agent_context = AgentContext(
             agent_name="worker_a",
-            group_chat_context=mock_group_chat_context,
+            runtime=mock_group_chat_context,
             role_type=RoleType.TEAM_MEMBER,
         )
 
@@ -360,7 +359,7 @@ class TestBuildUserPrompt:
 
         agent_context = AgentContext(
             agent_name="manager",
-            group_chat_context=mock_group_chat_context,
+            runtime=mock_group_chat_context,
             role_type=RoleType.LEADER,
         )
 

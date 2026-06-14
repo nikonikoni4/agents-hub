@@ -137,10 +137,10 @@ Team 是一个 Pydantic 模型，定义团队成员列表：
 
 GroupChat 是核心编排单元，协调 Agent、消息路由和上下文管理。
 
-当前实现中，GroupChat 在初始化时创建并持有 `GroupChatContext`、`MessageRouter`、`AgentCallManager` 和 `TaskManager`。`GroupChatContext` 内部创建并持有 `GroupChatRepository`；部分编排逻辑会通过 `group_chat_context.repository` 读取 `project_path`、保存群聊元数据或保存 Agent session 状态。
+当前实现中，GroupChat 在初始化时创建并持有 `GroupChatRuntime`、`MessageRouter`、`AgentCallManager` 和 `TaskManager`。`GroupChatRuntime` 内部持有 `GroupChatRepository`；部分编排逻辑会通过 `runtime.repository` 读取 `project_path`、保存群聊元数据或保存 Agent session 状态。
 
 **启动流程**（start / load）：
-1. 加载上下文数据（GroupChatContext.load()）
+1. 加载上下文数据（GroupChatRuntime.load()）
 2. 首次创建时保存群聊元数据
 3. 初始化 Manager 和 Workers（通过 RoleManager 获取角色配置，Worker 跳过与 `config.default_manager_name` 同名的成员）
 4. 生成或恢复 Agent Token 并注册到 GroupChatManager 索引
@@ -164,7 +164,7 @@ GroupChat 是核心编排单元，协调 Agent、消息路由和上下文管理�
 3. 停止 AgentCallManager 清理任务
 4. 清空 MessageRouter
 5. 从 GroupChatManager 注销所有 Agent Token
-6. 关闭 GroupChatContext
+6. 关闭 GroupChatRuntime
 7. 清空所有引用
 
 **压缩历史**：compact_history() 方法收集所有 Agent 的职责描述，调用 context 层的压缩逻辑。
@@ -211,10 +211,10 @@ orchestration → agent → communication → foundation
               context ────────┘
 ```
 
-- agent 层依赖 communication（MessageRouter、AgentCallManager）和 context（GroupChatContext、AgentContext）
-- orchestration 层依赖 agent（Agent、Manager、Worker）和 context（GroupChatContext）
+- agent 层依赖 communication（MessageRouter、AgentCallManager）和 context（GroupChatRuntime、AgentContext）
+- orchestration 层依赖 agent（Agent、Manager、Worker）和 context（GroupChatRuntime）
 - orchestration 层的 GroupChat 是当前实现中唯一同时持有 communication、context 和 task/call 管理组件的编排单元
-- 当前实现中，GroupChat 不直接创建 Repository；Repository 由 GroupChatContext 创建并暴露给 GroupChat 的部分生命周期逻辑使用
+- 当前实现中，GroupChat 持有 GroupChatRuntime，Runtime 持有 GroupChatRepository
 
 ### MCP Tool 契约
 

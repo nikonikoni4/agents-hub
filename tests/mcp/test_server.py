@@ -50,7 +50,7 @@ def mock_group_chat():
     mock.task_manager = MagicMock()
     mock.agent_call_manager = MagicMock()
     mock.team = MagicMock()
-    mock.group_chat_context.add_message = AsyncMock()
+    mock.runtime.add_message = AsyncMock()
     return mock
 
 
@@ -494,7 +494,7 @@ class TestSpeakInGroupChat:
             )
 
         assert result == {"ok": True}
-        mock_group_chat.group_chat_context.add_message.assert_called_once()
+        mock_group_chat.runtime.add_message.assert_called_once()
         mock_broadcast.assert_awaited_once_with(group_chat_id)
 
 
@@ -564,7 +564,7 @@ class TestFinishAgentCall:
         assert sent_message.send_to == "Leader"
         assert sent_message.content == "任务已完成"
         assert sent_message.message_type == MessageType.NOTIFICATION
-        mock_group_chat.group_chat_context.add_message.assert_not_called()
+        mock_group_chat.runtime.add_message.assert_not_called()
         mock_broadcast.assert_awaited_once_with(group_chat_id)
 
     @pytest.mark.asyncio
@@ -658,8 +658,8 @@ class TestFinishAgentCall:
         mock_group_chat.agent_call_manager.mark_agent_response.assert_called_once()
         mock_group_chat.agent_call_manager.create_call.assert_not_called()
         mock_group_chat.send_message_to_agent.assert_not_called()
-        mock_group_chat.group_chat_context.add_message.assert_awaited_once()
-        agent_result = mock_group_chat.group_chat_context.add_message.call_args.args[0]
+        mock_group_chat.runtime.add_message.assert_awaited_once()
+        agent_result = mock_group_chat.runtime.add_message.call_args.args[0]
         assert agent_result.agent_name == worker_name
         assert agent_result.text == "@Alice 用户任务完成，token=[REDACTED]"
         mock_broadcast.assert_awaited_once_with(group_chat_id)
@@ -797,8 +797,8 @@ class TestFinishAgentCall:
             )
 
         assert result == {"call_id": "call_456", "status": CallStatus.COMPLETED.value}
-        mock_group_chat.group_chat_context.add_message.assert_awaited_once()
-        agent_result = mock_group_chat.group_chat_context.add_message.call_args.args[0]
+        mock_group_chat.runtime.add_message.assert_awaited_once()
+        agent_result = mock_group_chat.runtime.add_message.call_args.args[0]
         assert agent_result.web_preview is not None
         assert agent_result.web_preview["url"] == "http://localhost:3000"
         assert agent_result.web_preview["title"] == "我的网页"
@@ -849,5 +849,5 @@ class TestFinishAgentCall:
             )
 
         assert result == {"call_id": "call_456", "status": CallStatus.COMPLETED.value}
-        agent_result = mock_group_chat.group_chat_context.add_message.call_args.args[0]
+        agent_result = mock_group_chat.runtime.add_message.call_args.args[0]
         assert agent_result.web_preview is None

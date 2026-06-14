@@ -40,7 +40,7 @@ class TestGroupChatTokenLifecycle:
         await group_chat.start()
 
         # 验证 manager 的 token 已注册
-        manager_session = group_chat.group_chat_context.agent_member_info.get("Leader")
+        manager_session = group_chat.runtime.get_agent_member_info("Leader")
         assert manager_session is not None
         assert manager_session.token != ""
 
@@ -51,7 +51,7 @@ class TestGroupChatTokenLifecycle:
 
         # 验证 workers 的 token 已注册
         for worker_name in ["小王", "小李"]:
-            worker_session = group_chat.group_chat_context.agent_member_info.get(worker_name)
+            worker_session = group_chat.runtime.get_agent_member_info(worker_name)
             assert worker_session is not None
             assert worker_session.token != ""
 
@@ -72,8 +72,8 @@ class TestGroupChatTokenLifecycle:
         await group_chat.start()
 
         # 获取生成的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
-        worker_token = group_chat.group_chat_context.agent_member_info["小王"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
+        worker_token = group_chat.runtime.get_agent_member_info("小王").token
 
         # 清理
         await group_chat.cleanup()
@@ -109,8 +109,8 @@ class TestGroupChatTokenLifecycle:
         await group_chat.start()
 
         # 获取生成的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
-        worker_token = group_chat.group_chat_context.agent_member_info["小王"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
+        worker_token = group_chat.runtime.get_agent_member_info("小王").token
 
         # 验证 token 已注册
         assert group_chat_manager.resolve_token(manager_token) is not None

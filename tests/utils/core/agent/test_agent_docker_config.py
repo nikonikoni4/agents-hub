@@ -39,24 +39,21 @@ def create_agent_with_docker_config(
 ):
     """创建带有 Docker 配置的 Agent 实例"""
     role = create_mock_role(agent_name)
-    group_chat_context = MagicMock()
-    group_chat_context.group_chat_id = "gc_test_123"
-    group_chat_context.agent_member_info = {
-        agent_name: SimpleNamespace(
-            main_session="session_1",
-            btw_session=[],
-            token="test_token",
-            cwd=agent_cwd,
-            use_docker=use_docker,
-        )
-    }
-    # Mock get_project_path() instead of repository.project_path
-    group_chat_context.get_project_path.return_value = group_chat_path
+    runtime = MagicMock()
+    runtime.group_chat_id = "gc_test_123"
+    runtime.get_agent_member_info.return_value = SimpleNamespace(
+        main_session="session_1",
+        btw_session=[],
+        token="test_token",
+        cwd=agent_cwd,
+        use_docker=use_docker,
+    )
+    runtime.get_project_path.return_value = group_chat_path
 
     agent_call_manager = MagicMock()
     message_router = MagicMock()
 
-    return Agent(role, group_chat_context, agent_call_manager, message_router)
+    return Agent(role, runtime, agent_call_manager, message_router)
 
 
 class TestValidateDockerConfig:
@@ -65,10 +62,10 @@ class TestValidateDockerConfig:
     def test_no_agent_member_info_skips_validation(self):
         """契约 1：agent_member_info 不存在时静默跳过"""
         role = create_mock_role("test_agent")
-        group_chat_context = MagicMock()
-        group_chat_context.agent_member_info = {}  # 空字典，无 agent_member_info
+        runtime = MagicMock()
+        runtime.get_agent_member_info.return_value = None
 
-        agent = Agent(role, group_chat_context, MagicMock(), MagicMock())
+        agent = Agent(role, runtime, MagicMock(), MagicMock())
 
         # 不应抛出异常
         agent._validate_docker_config()

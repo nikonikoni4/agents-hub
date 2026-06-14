@@ -31,11 +31,11 @@ def create_mock_role(name: str = "test_agent"):
 @pytest.fixture
 def mock_deps():
     """提供 Agent 所需的 mock 依赖"""
-    group_chat_context = MagicMock()
-    group_chat_context.agent_member_info = {}
+    runtime = MagicMock()
+    runtime.get_agent_member_info.return_value = None
     agent_call_manager = MagicMock()
     message_router = MagicMock()
-    return group_chat_context, agent_call_manager, message_router
+    return runtime, agent_call_manager, message_router
 
 
 class TestAgentStop:

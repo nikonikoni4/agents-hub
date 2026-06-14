@@ -26,7 +26,7 @@
  - updated_at : 2026-06-04
  - path: `docs/specs/2026-05-31-core-context.md`
  - 触发规则：当设计、修改或扩展群聊会话管理、上下文压缩、Agent 增量加载或持久化机制时阅读
- - 内容摘要：core/context 层规格，定义会话状态模型、Agent session 管理（含 token/cwd/use_docker）、上下文压缩、增量加载、GroupChatContext 通过 GroupChatRuntime 间接持有 Repository 的持久化契约
+ - 内容摘要：core/context 层规格，定义会话状态模型、Agent session 管理（含 token/cwd/use_docker）、上下文压缩、增量加载、GroupChatRuntime 直接持有 Repository 的持久化契约
 
 ## core-agent-orchestration
  - updated_at : 2026-06-04
