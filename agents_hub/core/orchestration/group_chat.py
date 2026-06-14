@@ -181,7 +181,16 @@ class GroupChat:
             logger.error("Manager 未初始化，无法启动 Agent 任务")
             raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())
-        self.worker_tasks = {name: asyncio.create_task(w.run()) for name, w in self.workers.items()}
+        self.manager_task.add_done_callback(
+            lambda t: self._on_agent_task_done(self.manager.name, t)
+        )
+        self.worker_tasks = {}
+        for name, w in self.workers.items():
+            task = asyncio.create_task(w.run())
+            task.add_done_callback(
+                lambda t, n=name: self._on_agent_task_done(n, t)
+            )
+            self.worker_tasks[name] = task
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
     async def _init_agents(self):
@@ -307,8 +316,11 @@ class GroupChat:
         # 8. 如果群聊已激活，启动新 Worker 的任务
         if self._activated:
             new_task = asyncio.create_task(new_worker.run())
+            new_task.add_done_callback(
+                lambda t, n=role_name: self._on_agent_task_done(n, t)
+            )
             self.worker_tasks[role_name] = new_task
-            logger.debug("新成员任务已启动: %s", role_name)
+            logger.info("新成员任务已启动: %s", role_name)
 
         # 9. 更新 team_members_name（运行时使用）
         self.team_members_name.append(role_name)
@@ -654,7 +666,7 @@ class GroupChat:
         # 4. 停止 agent.run() 循环（发送哨兵消息并设置 _run=False）
         await agent.stop()
 
-        # 5. 强制取消 agent 的 asyncio.Task
+        # 5. 强制取消 agent run 的 asyncio.Task
         if self.manager and agent_name == self.manager.name:
             if self.manager_task and not self.manager_task.done():
                 self.manager_task.cancel()
@@ -685,6 +697,22 @@ class GroupChat:
             "status": "stopped",
             "processed_calls": processed_calls,
         }
+
+    def _on_agent_task_done(self, agent_name: str, task: asyncio.Task):
+        """检测 agent run() 任务异常退出的回调"""
+        if task.cancelled():
+            logger.debug("Agent %s 的 run() 任务已被取消", agent_name)
+            return
+        exc = task.exception()
+        if exc:
+            logger.error(
+                "Agent %s 的 run() 任务异常退出: error=%s",
+                agent_name,
+                str(exc),
+                exc_info=(type(exc), exc, exc.__traceback__),
+            )
+        else:
+            logger.info("Agent %s 的 run() 任务正常结束", agent_name)
 
     async def _stop_agent_process(self, agent):
         """
@@ -767,7 +795,14 @@ class GroupChat:
         # 5. 重新注册到 MessageRouter
         self.message_router.register(agent_name, agent.message_queue)
 
-        # 6. 更新状态为 "idle"
+        # 6. 添加 task 完成回调（检测 task 异常退出）
+        task = self.manager_task if (self.manager and agent_name == self.manager.name) else self.worker_tasks.get(agent_name)
+        if task:
+            task.add_done_callback(
+                lambda t, name=agent_name: self._on_agent_task_done(name, t)
+            )
+
+        # 7. 更新状态为 "idle"
         await self.runtime.update_agent_status(agent_name, "idle")
 
         logger.info("Agent %s 已重新启动", agent_name)
@@ -835,8 +870,14 @@ class GroupChat:
         agent._run = True
         if self.manager and agent_name == self.manager.name:
             self.manager_task = asyncio.create_task(agent.run())
+            self.manager_task.add_done_callback(
+                lambda t: self._on_agent_task_done(self.manager.name, t)
+            )
         else:
             new_task = asyncio.create_task(agent.run())
+            new_task.add_done_callback(
+                lambda t, n=agent_name: self._on_agent_task_done(n, t)
+            )
             self.worker_tasks[agent_name] = new_task
 
         # 8. 重新注册到 MessageRouter
@@ -1018,6 +1059,14 @@ class GroupChat:
                 await asyncio.sleep(self._heartbeat_interval)
                 if not self._activated or self.manager is None:
                     break
+                # 检查 manager task 是否存活
+                if self.manager_task and self.manager_task.done():
+                    exc = self.manager_task.exception() if not self.manager_task.cancelled() else None
+                    heartbeat_logger.error(
+                        "Manager run() 任务已退出! cancelled=%s, error=%s",
+                        self.manager_task.cancelled(),
+                        str(exc) if exc else None,
+                    )
                 # 检查是否有 worker 连续失败已停止
                 stopped_workers = [name for name, w in self.workers.items() if not w._run]
                 if stopped_workers:

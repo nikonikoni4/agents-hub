@@ -586,9 +586,33 @@ call_id: {msg.call_id}
 
     async def run(self):
         """持续监听私有队列，处理收到的消息"""
-        self.logger.debug(
+        self.logger.info(
             "Agent run() 启动: %s, 队列剩余=%d", self.name, self.message_queue.qsize()
         )
+        try:
+            await self._run_loop()
+        except asyncio.CancelledError:
+            self.logger.info("Agent run() 被取消: %s", self.name)
+            raise
+        except Exception as e:
+            self.logger.error(
+                "Agent run() 异常退出: agent=%s, error=%s, queue_remaining=%d",
+                self.name,
+                str(e),
+                self.message_queue.qsize(),
+                exc_info=True,
+            )
+            raise
+        finally:
+            self.logger.warning(
+                "Agent run() 已终止: agent=%s, _run=%s, queue_remaining=%d",
+                self.name,
+                self._run,
+                self.message_queue.qsize(),
+            )
+
+    async def _run_loop(self):
+        """run() 的实际消息处理循环"""
         while self._run:
             # 1. 从队列中取回消息
             msg: AgentMessage = await self.message_queue.get()
@@ -609,15 +633,6 @@ call_id: {msg.call_id}
                 )
                 continue
 
-            self.logger.debug(
-                "Agent 收到消息: agent=%s, call_id=%s, from=%s, type=%s, content_preview=%s",
-                self.name,
-                msg.call_id,
-                msg.send_from,
-                msg.message_type,
-                msg.content[:50] if msg.content else "",
-            )
-
             # 3. 注入 runtime 和工具使用说明到 CLAUDE.md/AGENTS.md
             # [deprecated]:已弃用，但保留
             # try:
@@ -631,13 +646,12 @@ call_id: {msg.call_id}
             prompt = render_for_llm(msg)
             status = "chatting" if msg.session_type == SessionType.BTW else "busy"
             await self._sync_status(status)
-            self.logger.info(
-                "Agent %s 开始处理消息: call_id=%s, send_from=%s, message_type=%s, content=%s",
+            self.logger.debug(
+                "Agent %s 开始处理消息: call_id=%s, send_from=%s, message_type=%s",
                 self.name,
                 msg.call_id,
                 msg.send_from,
                 msg.message_type,
-                msg.content[:100] if msg.content else "",
             )
             try:
                 result = await self._process_message(msg, prompt)
