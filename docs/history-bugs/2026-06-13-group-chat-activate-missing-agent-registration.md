@@ -2,114 +2,93 @@
 
 **updated_at**: 2026-06-13
 
+**状态**: ✅ 已修复（预防性修复），但根因未完全确认，待重构时进一步排查
+
 ## 问题描述
 
-Manager 通过 MCP `call_agent` 派活给前端执行者后，消息一直未送达。AgentCall 状态停留在 PENDING，前端执行者完全未收到任务。
+Manager 派活给前端执行者后，消息未送达。AgentCall 状态停留在 PENDING，前端执行者完全未收到任务。
 
 **核心症状**：
 - Call ID `936bf532` 创建成功（21:31:21）
-- MCP 工具返回 `{"call_id":"936bf532"}`，未报错
-- 前端执行者最后活动时间 21:28:30，之后停止工作
-- 日志中没有任何 ERROR/EXCEPTION，只有 call 创建日志
+- **消息投递完全没有日志**（既没有成功也没有失败）
+- `send_message()` 的 DEBUG 日志缺失，说明消息根本没有进入投递流程
+- 1小时9分钟后（22:40:42）该 call 被标记为 failed
+- 日志中没有任何 ERROR/EXCEPTION
 
-## 根本原因
+## 根本原因（未完全确认）
 
-### 触发条件
+## 根本原因（未完全确认）
 
-GroupChat 对象被重新创建（如服务重启、热重载、GC 回收后重新加载）后，首次调用 `send_message_to_agent()` 时：
+### 已确认的事实
 
-1. **新 GroupChat 实例的 MessageRouter 是全新对象**（agents 未注册）
-2. `send_message_to_agent()` 调用 `activate()` 懒加载启动 agents
-3. `activate()` 只检查 `_activated` 标志（实例变量）
-4. 如果 `_activated=False`，只启动 agent 任务，**不重新注册 agents 到 MessageRouter**
-5. 消息投递时，MessageRouter 中找不到接收者，抛出 `AgentNotFoundError`
+1. **消息投递被完全跳过**
+   - 21:31:21 创建 call 936bf532
+   - **没有 `send_message()` 的任何日志**（无论成功或失败）
+   - ⚠️ 注意：`send_message()` 使用 DEBUG 级别日志，当前日志级别为 INFO，因此看不到
+   - **真实问题**：关键流程使用 DEBUG 日志，导致排查困难
+   - 22:40:42 call 被标记为 failed（1小时9分钟后）
 
-### 代码位置
+2. **应用频繁重启**
+   - 20:47、20:49、21:04、21:07、21:11、21:19、21:21 多次重启
+   - 原因：开发调试 + 端口 8765 冲突
+   - 每次重启后 GroupChat 对象从磁盘重新加载
 
-**agents_hub/core/orchestration/group_chat.py:151-162**
-```python
-async def activate(self):
-    """激活群聊：启动所有 agent 的 run() 任务"""
-    if self._activated:  # ⚠️ 只检查实例变量
-        return
-    logger.info("激活群聊: id=%s", self.group_chat_id)
-    self._start_agent_tasks()  # ⚠️ 只启动任务，不注册
-    self._activated = True
-```
+3. **MessageRouter 注册记录**
+   - 21:21:24 agents 注册完成（MessageRouter_id=2429898331472）
+   - 21:22:23 激活群聊，agents 正常工作
+   - 21:31:21 创建 call 时**没有重新注册**
 
-**agents_hub/core/orchestration/group_chat.py:208-221**
-```python
-async def _init_agents(self):
-    """初始化 manager 和 workers，注册到 message_router"""
-    ...
-    # 注册所有 agent 到 message_router
-    self.message_router.register(self.manager.name, self.manager.message_queue)
-    for worker in self.workers.values():
-        self.message_router.register(worker.name, worker.message_queue)
-    # ⚠️ 注册在 _init_agents() 中，但 activate() 不调用它
-```
+### 可能的原因（待确认）
 
-**agents_hub/core/communication/message_router.py:114-122**
-```python
-if message.send_to not in self._agents_queue:
-    logger.debug(  # ⚠️ DEBUG 级别，日志中不可见
-        "消息校验失败: call_id=%s, 原因=接收者 '%s' 未注册, 已注册agents=%s",
-        message.call_id,
-        message.send_to,
-        list(self._agents_queue.keys()),
-    )
-    raise AgentNotFoundError(message.send_to)
-```
+#### 假设1：MessageRouter 被意外清空（可能性较高）
+- 某个操作调用了 `message_router.clear()` 或批量 `unregister()`
+- 但日志中没有找到 cleanup 或 unregister 的记录
+- 需要重构时排查所有可能清空 MessageRouter 的路径
 
-### 时间线证据
+#### 假设2：消息投递代码路径被跳过（可能性中等）
+- `send_message_to_agent()` 内部某个条件判断导致提前返回
+- 异常被静默吞掉（虽然已增强日志，但可能仍有遗漏）
 
-```
-20:50:08 - agents 注册完成 (MessageRouter_id=2670173702864)
-20:55:39 - 激活群聊
-21:19:28 - agents 重新注册 (MessageRouter_id=3010499645120) ← GroupChat 重建
-21:21:24 - agents 再次注册 (MessageRouter_id=2429898331472) ← 又一次重建
-21:22:23 - 激活群聊（第二次）
-21:31:21 - 创建 call 936bf532，没有注册日志！ ← bug 发生
-          MCP 返回成功但消息未送达
-```
+#### 假设3：GroupChat 实例不一致（可能性较低）
+- 创建 call 和投递消息使用了不同的 GroupChat 实例
+- 但日志显示 GroupChatManager_id 一致，且用户确认是从前端 @ 触发
 
-**MessageRouter ID 变化**证明 GroupChat 被多次重建，但第三次重建后没有重新注册。
+### 排除的原因
 
-### 为什么异常没有体现在日志中
-
-1. `AgentNotFoundError` 日志级别是 **DEBUG**（message_router.py:116）
-2. 异常在 `message_router.send_message()` 抛出后应传播到 MCP 层
-3. 但 MCP `call_agent` 返回成功 `{"call_id":"936bf532"}`，说明异常被某处吞掉（待进一步排查）
+1. ❌ **对象重建后未注册**：重启后 `load()` 会调用 `_init_agents()` 完成注册
+2. ❌ **MCP 多进程问题**：用户确认是从前端 @ 触发，不走 MCP
+3. ❌ **activate() 未调用**：21:22 已激活，agents 正常工作了一段时间
 
 ## 修复方案
 
-### 方案 1：在 activate() 中强制重新注册（推荐）
+### 实施的修复（预防性）
 
-**目标**：确保每次激活时 agents 都已注册到 MessageRouter
+虽然根因未完全确认，但实施了以下修复以增强系统健壮性：
 
+#### 1. 提取注册逻辑为独立方法（agents_hub/core/orchestration/group_chat.py）
+
+新增 `_register_agents_to_router()` 方法（幂等）：
+   
 ```python
-async def activate(self):
-    """激活群聊：启动所有 agent 的 run() 任务"""
-    if self._activated:
-        return
-    logger.info("激活群聊: id=%s", self.group_chat_id)
-    
-    # ⭐ 确保 agents 已注册到 MessageRouter
-    self._register_agents_to_router()
-    
-    self._start_agent_tasks()
-    self._activated = True
-
 def _register_agents_to_router(self):
-    """注册所有 agents 到 MessageRouter（幂等）"""
+    """注册所有 agents 到 MessageRouter（幂等）
+    
+    此方法可以安全地重复调用，MessageRouter.register() 是幂等的。
+    """
     if self.manager is None:
         raise StateError("Manager 未初始化，请先调用 _init_agents()")
     
-    # 幂等注册（register 可重复调用）
+    # 注册 Manager
     self.message_router.register(self.manager.name, self.manager.message_queue)
+    
+    # 注册所有 Workers
     for worker in self.workers.values():
         self.message_router.register(worker.name, worker.message_queue)
+    
+    # 注册 user 伪 agent
     self.message_router.register(config.default_user_name, asyncio.Queue())
+    
+    # 注册 heartbeat 系统身份
     self.message_router.register("__HEARTBEAT__", asyncio.Queue())
     
     logger.info(
@@ -120,43 +99,52 @@ def _register_agents_to_router(self):
     )
 ```
 
-**优点**：
-- 根本解决问题，无论 GroupChat 重建多少次都能正确注册
-- 保持 activate() 的懒加载语义
-- 注册操作幂等，重复调用无副作用
+#### 2. 修改 activate() 确保注册
 
-### 方案 2：AgentNotFoundError 改为 ERROR 级别（临时方案）
-
-**目标**：让问题可见，方便排查
-
+在 `activate()` 方法中添加注册调用：
+   
 ```python
-# agents_hub/core/communication/message_router.py:114
-if message.send_to not in self._agents_queue:
-    logger.error(  # 改为 ERROR
-        "消息校验失败: call_id=%s, 原因=接收者 '%s' 未注册, 已注册agents=%s, MessageRouter_id=%s",
-        message.call_id,
-        message.send_to,
-        list(self._agents_queue.keys()),
-        id(self),
-    )
-    raise AgentNotFoundError(message.send_to)
+async def activate(self):
+    """激活群聊：启动所有 agent 的 run() 任务"""
+    if self._activated:
+        return
+    logger.info("激活群聊: id=%s", self.group_chat_id)
+    
+    # ⭐ 确保 agents 已注册到 MessageRouter（防止注册丢失）
+    self._register_agents_to_router()
+    
+    self._start_agent_tasks()
+    self._activated = True
 ```
 
-**优点**：
-- 快速实施，立即可见
-- 帮助定位其他潜在的未注册问题
+**效果**：无论什么原因导致 MessageRouter 被清空，首次 `send_message_to_agent()` 时都会重新注册。
 
-**缺点**：
-- 不解决根本问题，只是让问题可见
+#### 3. 增强 _init_agents() 的幂等性
 
-### 方案 3：检查为什么 MCP 异常被吞掉（补充排查）
+添加幂等性检查：
+   
+```python
+async def _init_agents(self):
+    """初始化 manager 和 workers，注册到 message_router"""
+    
+    # 幂等性检查：如果已初始化，直接返回
+    if self.manager is not None:
+        logger.debug("agents 已初始化，跳过: id=%s", self.group_chat_id)
+        return
+    
+    logger.debug("初始化 agents: id=%s, members=%s", self.group_chat_id, self.team_members_name)
+    # ... 后续逻辑保持不变
+```
 
-需要确认 `group_chat.send_message_to_agent()` 抛出的 `AgentNotFoundError` 为什么没有传播到 MCP 层。
+#### 4. 补充 stop_member() 的注销逻辑
 
-检查点：
-1. `mcp/server.py:236` 的 `await group_chat.send_message_to_agent(message)` 周围是否有隐式 try-catch
-2. `group_chat.py:458` 的 `await self.message_router.send_message(message)` 是否被意外捕获
-3. MCP 层的异常处理顺序（line 242-257）是否正确
+agent 停止后从 MessageRouter 注销：
+   
+```python
+# 从 MessageRouter 注销
+self.message_router.unregister(agent_name)
+logger.debug("Agent %s 已从 MessageRouter 注销", agent_name)
+```
 
 ## 复现步骤
 
@@ -173,7 +161,39 @@ if message.send_to not in self._agents_queue:
 
 ## 教训
 
-1. **幂等性设计需考虑对象生命周期**：`_activated` 是实例变量，对象重建后会重置，需要确保重建后的激活过程完整
+1. **日志机制不完善是根本问题**：关键流程（`send_message()`）使用 DEBUG 级别，生产环境无法排查问题
 2. **关键错误必须用 ERROR 级别**：AgentNotFoundError 是致命错误，不应该是 DEBUG 级别
-3. **分层初始化容易漏步骤**：`_init_agents()` 负责注册，`activate()` 负责启动，两者分离容易导致遗漏
-4. **异常传播路径必须清晰**：MCP 返回成功但实际失败，说明异常被意外吞掉，需要排查
+3. **预防性修复的价值**：即使根因未找到，增强系统容错能力也是有意义的
+4. **分层初始化容易漏步骤**：`_init_agents()` 负责注册，`activate()` 负责启动，两者分离容易导致遗漏
+
+## 后续行动
+
+### 重构时必须完成的排查
+
+1. **完善日志机制（最高优先级）**
+   - 在 `send_message_to_agent()` 入口添加 INFO 日志（记录 call_id、from、to）
+   - 记录 MessageRouter 状态变化（注册/注销/清空）
+   - 统一关键流程的日志级别规范
+
+2. **排查消息投递被跳过的原因**
+   - 完善日志后复现问题
+   - 检查 `send_message_to_agent()` 的所有代码路径
+   - 确认是否有条件判断导致提前返回
+
+3. **排查 MessageRouter 被清空的原因**
+   - 搜索所有 `message_router.clear()` 调用
+   - 检查是否有批量 `unregister()` 
+   - 确认 `cleanup()` 的调用时机和条件
+
+### 改进建议
+
+**日志级别规范**：
+- **INFO**：关键流程入口/出口（消息投递、agent 启动/停止、GroupChat 生命周期）
+- **ERROR**：所有异常抛出前、关键操作失败
+- **DEBUG**：内部状态变化、详细参数
+
+**本次修复的局限性**：
+- ✅ 增强了系统容错能力（activate 时强制注册）
+- ✅ 提升了错误可见性（ERROR 日志）
+- ❌ 未找到真正的根因（因为日志不足）
+- ⚠️ 重构时需要先完善日志，再复现并彻底解决问题
