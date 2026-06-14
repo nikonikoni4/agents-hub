@@ -105,11 +105,15 @@ class GroupChat:
         # 1. 加载上下文数据
         await self.group_chat_context.load()
 
-        # 2. 初始化并保存群聊元数据
-        await self.runtime.initialize_metadata(
-            group_chat_name=self.group_chat_name,
-            group_type=self.group_type,
-        )
+        # 幂等性检查：如果 metadata 已存在，跳过 initialize_metadata
+        if self.runtime.state.metadata is not None:
+            logger.debug("群聊 metadata 已存在，跳过初始化: id=%s", self.group_chat_id)
+        else:
+            # 2. 初始化并保存群聊元数据
+            await self.runtime.initialize_metadata(
+                group_chat_name=self.group_chat_name,
+                group_type=self.group_type,
+            )
 
         # 3-4. 初始化并注册 agents（含 role 验证）
         await self._init_agents()
@@ -122,6 +126,10 @@ class GroupChat:
 
         # 7. 启动所有 agent 的 run() 任务
         self._start_agent_tasks()
+
+        # 8. 启动 AgentCall 清理循环
+        self.agent_call_manager.start_cleanup()
+
         self._activated = True
         logger.info("群聊启动完成: id=%s", self.group_chat_id)
 
@@ -146,6 +154,10 @@ class GroupChat:
 
         # 4. 初始化新成员（第一次会话的成员）
         await self._initialize_new_members()
+
+        # 5. 启动 AgentCall 清理循环
+        self.agent_call_manager.start_cleanup()
+
         logger.info("群聊加载完成: id=%s", self.group_chat_id)
 
     async def activate(self):
@@ -468,6 +480,15 @@ class GroupChat:
         from agents_hub.config.types import AgentPlatform
         from agents_hub.core.foundation import render_for_chat
 
+        logger.info(
+            "send_message_to_agent 入口: group=%s, call_id=%s, from=%s, to=%s, type=%s",
+            self.group_chat_id,
+            message.call_id,
+            message.send_from,
+            message.send_to,
+            message.message_type,
+        )
+
         # 0. 确保群聊已激活（懒加载）
         await self.activate()
 
@@ -745,7 +766,10 @@ class GroupChat:
             new_task = asyncio.create_task(agent.run())
             self.worker_tasks[agent_name] = new_task
 
-        # 5. 更新状态为 "idle"
+        # 5. 重新注册到 MessageRouter
+        self.message_router.register(agent_name, agent.message_queue)
+
+        # 6. 更新状态为 "idle"
         await self.runtime.update_agent_status(agent_name, "idle")
 
         logger.info("Agent %s 已重新启动", agent_name)
@@ -817,7 +841,10 @@ class GroupChat:
             new_task = asyncio.create_task(agent.run())
             self.worker_tasks[agent_name] = new_task
 
-        # 8. 更新状态为 "idle"
+        # 8. 重新注册到 MessageRouter
+        self.message_router.register(agent_name, agent.message_queue)
+
+        # 9. 更新状态为 "idle"
         await self.runtime.update_agent_status(agent_name, "idle")
 
         # 获取新 session_id
