@@ -321,13 +321,14 @@ class GroupChatRuntime:
         Args:
             agent_result: Agent 执行结果
         """
-        session = self.state.require_session()
-        session.add_message(agent_result)
-        current_session = self.state.require_session()
-        if session.messages is not current_session.messages:
-            logger.warning("群聊 message 引用不一致: session=%s", id(session))
-        await self._persist(lambda: self.repository.save_group_chat_session(session))
-        self._message_event.set()
+        async with self._state_lock:
+            session = self.state.require_session()
+            session.add_message(agent_result)
+            current_session = self.state.require_session()
+            if session.messages is not current_session.messages:
+                logger.warning("群聊 message 引用不一致: session=%s", id(session))
+            await self._persist(lambda: self.repository.save_group_chat_session(session))
+            self._message_event.set()
 
     async def add_system_message(self, content: str) -> None:
         """
@@ -361,17 +362,18 @@ class GroupChatRuntime:
         Returns:
             bool: 是否找到并更新了消息
         """
-        session = self.state.require_session()
-        for msg in session.messages:
-            if msg.get("id") == message_id:
-                parts = field_path.split(".")
-                target = msg
-                for part in parts[:-1]:
-                    target = target.setdefault(part, {})
-                target[parts[-1]] = value
-                await self._persist(lambda: self.repository.save_group_chat_session(session))
-                return True
-        return False
+        async with self._state_lock:
+            session = self.state.require_session()
+            for msg in session.messages:
+                if msg.get("id") == message_id:
+                    parts = field_path.split(".")
+                    target = msg
+                    for part in parts[:-1]:
+                        target = target.setdefault(part, {})
+                    target[parts[-1]] = value
+                    await self._persist(lambda: self.repository.save_group_chat_session(session))
+                    return True
+            return False
 
     async def append_compact_record_and_mark_compacted(self, compact_record: dict) -> None:
         """

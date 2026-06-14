@@ -183,6 +183,9 @@ class MockAgentResult:
         self.cwd = None
         self.modified_files = None
         self.git_diff_range = None
+        self.permission_request = None
+        self.web_preview = None
+        self.files = None
 
 
 async def test_runtime_commands_update_memory_then_persist():
@@ -198,7 +201,11 @@ async def test_runtime_commands_update_memory_then_persist():
     assert runtime.state.metadata is metadata
     assert repository.saved_metadata is metadata
 
-    agent_member_info = await runtime.set_agent_token_and_default_cwd("Worker1", "tok_1")
+    # 直接赋值 + save（替代已删除的 set_agent_token_and_default_cwd）
+    agent_member_info = runtime.get_or_create_agent_member_info("Worker1")
+    agent_member_info.token = "tok_1"
+    # cwd 已经在 FakeRepository 中设置为 "/tmp/project/w1"
+    await runtime.save_agent_members()
     assert agent_member_info.token == "tok_1"
     assert agent_member_info.cwd == "/tmp/project/w1"
     assert repository.saved_sessions is runtime.state.agent_member_infos
@@ -206,7 +213,11 @@ async def test_runtime_commands_update_memory_then_persist():
     await runtime.set_agent_use_docker("Worker1", False)
     assert runtime.state.agent_member_infos["Worker1"].use_docker is False
 
-    await runtime.update_context_load_state("Worker1", 3, 7)
+    # 直接赋值 + save（替代已删除的 update_context_load_state）
+    agent_member_info = runtime.get_agent_member_info("Worker1")
+    agent_member_info.context_state.last_loaded_compact_index = 3
+    agent_member_info.context_state.last_loaded_message_index = 7
+    await runtime.save_agent_members()
     context_state = runtime.state.agent_member_infos["Worker1"].context_state
     assert context_state.last_loaded_compact_index == 3
     assert context_state.last_loaded_message_index == 7
@@ -231,7 +242,7 @@ async def test_update_agent_member_info_handles_empty_main_session():
 
     # Create new agent with no main_session
     result = MockAgentResult(agent_name="Worker2", session_id="s2")
-    agent_member_info = await runtime.update_agent_member_info_from_result(result)
+    agent_member_info = await runtime.update_agent_session(result)
 
     assert agent_member_info.main_session == "s2"
     assert agent_member_info.btw_session == []
@@ -244,7 +255,7 @@ async def test_update_agent_member_info_appends_different_session_to_btw():
 
     # Worker1 already has main_session="s1"
     result = MockAgentResult(agent_name="Worker1", session_id="s2")
-    agent_member_info = await runtime.update_agent_member_info_from_result(result)
+    agent_member_info = await runtime.update_agent_session(result)
 
     assert agent_member_info.main_session == "s1"
     assert "s2" in agent_member_info.btw_session
@@ -288,7 +299,7 @@ async def test_runtime_handles_message_and_member_info_commands():
     await runtime.load()
 
     result = MockAgentResult(agent_name="Worker2", session_id="s2", text="hello from w2")
-    await runtime.update_agent_member_info_from_result(result)
+    await runtime.update_agent_session(result)
     await runtime.add_message(result)
 
     assert runtime.state.agent_member_infos["Worker2"].main_session == "s2"
@@ -305,14 +316,16 @@ async def test_update_context_usage_new_agent():
 
     验证方式：
     1. 创建 runtime 并加载
-    2. 对不存在的 agent 调用 update_agent_context_usage
+    2. 对不存在的 agent 调用直接赋值 + save
     3. 验证 agent 被创建且 context_usage 正确
     """
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    info = await runtime.update_agent_context_usage("Worker2", 42)
+    info = runtime.get_or_create_agent_member_info("Worker2")
+    info.context_usage = 42
+    await runtime.save_agent_members()
 
     assert info.context_usage == 42
     assert "Worker2" in runtime.state.agent_member_infos
@@ -325,14 +338,16 @@ async def test_update_context_usage_existing_agent():
 
     验证方式：
     1. 创建 runtime 并加载（已有 Worker1）
-    2. 调用 update_agent_context_usage 更新 Worker1
+    2. 直接赋值 + save 更新 Worker1
     3. 验证 context_usage 被更新
     """
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    info = await runtime.update_agent_context_usage("Worker1", 100)
+    info = runtime.get_agent_member_info("Worker1")
+    info.context_usage = 100
+    await runtime.save_agent_members()
 
     assert info.context_usage == 100
     assert runtime.state.agent_member_infos["Worker1"].context_usage == 100
@@ -344,14 +359,16 @@ async def test_update_status_to_busy():
 
     验证方式：
     1. 创建 runtime 并加载
-    2. 调用 update_agent_status 设置为 busy
+    2. 直接赋值 + save 设置为 busy
     3. 验证 status 被更新并持久化
     """
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    info = await runtime.update_agent_status("Worker1", "busy")
+    info = runtime.get_agent_member_info("Worker1")
+    info.status = "busy"
+    await runtime.save_agent_members()
 
     assert info.status == "busy"
     assert repository.saved_sessions is runtime.state.agent_member_infos
@@ -363,14 +380,16 @@ async def test_update_status_to_chatting():
 
     验证方式：
     1. 创建 runtime 并加载
-    2. 调用 update_agent_status 设置为 chatting
+    2. 直接赋值 + save 设置为 chatting
     3. 验证 status 被更新
     """
     repository = FakeRepository()
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    info = await runtime.update_agent_status("Worker1", "chatting")
+    info = runtime.get_agent_member_info("Worker1")
+    info.status = "chatting"
+    await runtime.save_agent_members()
 
     assert info.status == "chatting"
 
@@ -388,8 +407,11 @@ async def test_update_status_to_idle():
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    await runtime.update_agent_status("Worker1", "busy")
-    info = await runtime.update_agent_status("Worker1", "idle")
+    info = runtime.get_agent_member_info("Worker1")
+    info.status = "busy"
+    await runtime.save_agent_members()
+    info.status = "idle"
+    await runtime.save_agent_members()
 
     assert info.status == "idle"
 
@@ -430,8 +452,11 @@ async def test_get_agent_context_multiple():
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    await runtime.update_agent_context_usage("Worker1", 50)
-    await runtime.update_agent_context_usage("Worker2", 30)
+    info1 = runtime.get_agent_member_info("Worker1")
+    info1.context_usage = 50
+    info2 = runtime.get_or_create_agent_member_info("Worker2")
+    info2.context_usage = 30
+    await runtime.save_agent_members()
 
     result = runtime.get_agent_context()
 
@@ -476,8 +501,11 @@ async def test_get_agent_status_multiple():
     runtime = GroupChatRuntime("gc_1", "/tmp/project", repository=repository)
     await runtime.load()
 
-    await runtime.update_agent_status("Worker1", "busy")
-    await runtime.update_agent_status("Worker2", "chatting")
+    info1 = runtime.get_agent_member_info("Worker1")
+    info1.status = "busy"
+    info2 = runtime.get_or_create_agent_member_info("Worker2")
+    info2.status = "chatting"
+    await runtime.save_agent_members()
 
     result = runtime.get_agent_status()
 
