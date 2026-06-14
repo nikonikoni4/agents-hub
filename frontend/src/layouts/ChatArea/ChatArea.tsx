@@ -612,3 +612,5 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
 // test hook environment
 // test hook fix verification
 // test hook fix verification 2
+// test hook fix verification 3
+// test hook env vars
