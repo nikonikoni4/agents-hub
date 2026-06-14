@@ -405,3 +405,28 @@
   background: var(--accent-color);
   color: #fff;
 }
+
+/* 底部项目路径 */
+.chatFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 28px 12px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+}
+
+.footerIcon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.footerPath {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, 'SF Mono', 'Monaco', 'Courier New', monospace);
+}

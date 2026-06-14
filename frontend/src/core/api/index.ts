@@ -14,6 +14,8 @@ export {
   getGroupChatInfo,
   listGroupChats,
   listGroupChatInfos,
+  getProjectsSummary,
+  listGroupChatsWithPagination,
   getMessages,
   getMembers,
   sendMessage,

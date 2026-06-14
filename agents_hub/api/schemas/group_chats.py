@@ -19,6 +19,14 @@ class GroupChatCreate(BaseModel):
     group_chat_name: str | None = Field(None, description="群聊名称，不提供则使用 group_chat_id")
 
 
+class ProjectSummary(BaseModel):
+    """项目摘要信息"""
+
+    project_path: str
+    group_chat_count: int
+    last_update_at: datetime | None = None
+
+
 class GroupChatInfo(BaseModel):
     """群聊详细信息"""
 
@@ -31,6 +39,16 @@ class GroupChatInfo(BaseModel):
     last_speaker: str | None = None
     last_message: str | None = None
     last_update_time: str | None = None
+
+
+class GroupChatListResponse(BaseModel):
+    """群聊列表响应（分页）"""
+
+    items: list[GroupChatInfo]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
 
 
 class GroupChatMember(BaseModel):

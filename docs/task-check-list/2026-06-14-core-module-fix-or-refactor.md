@@ -42,42 +42,42 @@
 
 **问题**：关键流程使用 DEBUG 级别，生产环境无法排查问题
 
-- [ ] 在 `agents_hub/core/orchestration/group_chat.py` 的 `send_message_to_agent()` 入口添加 INFO 日志（记录 call_id、from、to）
-- [ ] 将所有 `AgentNotFoundError` 改为 ERROR 级别
-- [ ] 在 `agents_hub/core/communication/message_router.py` 的 `register()`/`unregister()` 添加 INFO 日志
-- [ ] 记录 MessageRouter 当前注册状态
-- [ ] 验证：查看日志，确认关键流程可见
+- [x] 在 `agents_hub/core/orchestration/group_chat.py` 的 `send_message_to_agent()` 入口添加 INFO 日志（记录 call_id、from、to）
+- [x] 将所有 `AgentNotFoundError` 改为 ERROR 级别
+- [x] 在 `agents_hub/core/communication/message_router.py` 的 `register()`/`unregister()` 添加 INFO 日志
+- [x] 记录 MessageRouter 当前注册状态
+- [x] 验证：查看日志，确认关键流程可见
 
 ### 2. AgentCall 清理循环启动（来源：子Agent审查 + 原始问题报告）
 
 **问题**：`start_cleanup()` 从未被调用，导致内存泄漏、超时检测失效
 
-- [ ] 在 `agents_hub/core/orchestration/group_chat.py` 的 `start()` 方法（line ~126）后添加 `self.agent_call_manager.start_cleanup()`
-- [ ] 在 `agents_hub/core/orchestration/group_chat.py` 的 `load()` 方法（line ~149）后添加 `self.agent_call_manager.start_cleanup()`
-- [ ] 验证清理循环正常运行：观察日志中是否有定期清理记录
-- [ ] 测试：创建多个已完成的 AgentCall，等待清理时间后验证它们被正确删除
+- [x] 在 `agents_hub/core/orchestration/group_chat.py` 的 `start()` 方法（line ~126）后添加 `self.agent_call_manager.start_cleanup()`
+- [x] 在 `agents_hub/core/orchestration/group_chat.py` 的 `load()` 方法（line ~149）后添加 `self.agent_call_manager.start_cleanup()`
+- [x] 验证清理循环正常运行：观察日志中是否有定期清理记录
+- [x] 测试：创建多个已完成的 AgentCall，等待清理时间后验证它们被正确删除
 
 ### 3. Agent 重启后注册到 MessageRouter（来源：子Agent审查 + 原始问题报告）
 
 **问题**：`stop_member` 注销但 `start_member`/`reset_member` 未重新注册，导致无法接收消息
 
-- [ ] 在 `agents_hub/core/orchestration/group_chat.py` 的 `start_member()` 方法中，启动任务后添加 `self.message_router.register(agent_name, agent.message_queue)`
-- [ ] 在 `agents_hub/core/orchestration/group_chat.py` 的 `reset_member()` 方法中，启动任务后添加 `self.message_router.register(agent_name, agent.message_queue)`
-- [ ] 验证注册成功：检查日志中是否有 INFO 级别的注册记录
-- [ ] 测试：停止一个 agent → 重启 → 发送消息 → 验证能正常接收
+- [x] 在 `agents_hub/core/orchestration/group_chat.py` 的 `start_member()` 方法中，启动任务后添加 `self.message_router.register(agent_name, agent.message_queue)`
+- [x] 在 `agents_hub/core/orchestration/group_chat.py` 的 `reset_member()` 方法中，启动任务后添加 `self.message_router.register(agent_name, agent.message_queue)`
+- [x] 验证注册成功：检查日志中是否有 INFO 级别的注册记录
+- [x] 测试：停止一个 agent → 重启 → 发送消息 → 验证能正常接收
 
 ### 4. 修复 created_at 覆盖问题（来源：原始问题报告 + 子Agent审查）
 
 **问题**：`start()` 和 `add_group_chat_members()` 都会调用 `initialize_metadata()` 覆盖 created_at
 
-- [ ] 在 `agents_hub/core/orchestration/group_chat.py` 的 `start()` 方法开头添加幂等性检查：
+- [x] 在 `agents_hub/core/orchestration/group_chat.py` 的 `start()` 方法开头添加幂等性检查：
   ```python
   if self.runtime.state.metadata is not None:
       logger.debug("群聊已初始化，跳过 start()")
       return
   ```
-- [ ] 检查 `add_group_chat_members()` 中的 `initialize_metadata()` 调用，移除或修复
-- [ ] 验证 created_at 不再被覆盖：创建群聊 → 记录 created_at → 重启应用 → 验证 created_at 保持不变
+- [x] 检查 `add_group_chat_members()` 中的 `initialize_metadata()` 调用，移除或修复
+- [x] 验证 created_at 不再被覆盖：创建群聊 → 记录 created_at → 重启应用 → 验证 created_at 保持不变
 
 ---
 
@@ -161,10 +161,22 @@
 
 ### 8. Week 3 - 生命周期管理重构（12h）
 
-- [ ] 统一 GroupChat 的 start/load/activate 流程
-- [ ] 重构 Agent 的 start/stop/reset 操作，确保注册/注销完整
-- [ ] 统一持久化接口，避免引用不一致
-- [ ] 更新相关 spec 文档
+- [x] 统一 GroupChat 的 start/load/activate 流程
+  - `start()`: 启动群聊（首次创建），包含初始化、注册、启动任务
+  - `load()`: 加载已有群聊（只读，不启动 agent），包含初始化、注册
+  - `activate()`: 激活群聊，启动所有 agent 的 run() 任务
+  - 三个方法共享 `_init_agents()` 和 `_register_agents_to_router()` 逻辑
+- [x] 重构 Agent 的 start/stop/reset 操作，确保注册/注销完整
+  - `start_member()`: 重置 _run 标志、创建任务、重新注册到 MessageRouter（第 796 行）
+  - `stop_member()`: 设置 _run=False、更新状态为 stopped
+  - `reset_member()`: 停止、清空会话、重置状态、重新初始化、重新注册到 MessageRouter（第 884 行）
+- [x] 统一持久化接口，避免引用不一致
+  - 所有持久化操作统一使用 `runtime` 的方法：
+    - `runtime.save_agent_member_infos()`
+    - `runtime.update_agent_member_info_from_result()`
+    - `runtime.add_message()`
+- [x] 更新相关 spec 文档
+  - 提交 `1627aa9`: docs+tests: 清理 hand-off 文件，更新 specs 和 tests 适配 runtime API
 
 ### 9. Week 4 - 测试验证（8h）
 
@@ -173,7 +185,10 @@
   - 删除已废弃的 `test_group_chat_context.py`，重写 `test_group_chat_runtime.py` 中 1 个测试
   - 942 个测试可收集，774 个通过（剩余 262 个失败为 pre-existing 问题，非本次重构引入）
 - [ ] 编写集成测试覆盖生命周期操作
+  - 现有 `test_full_lifecycle` 测试覆盖 GroupChatManager 生命周期
+  - 缺少专门的 start_member/reset_member/stop_member 集成测试
 - [ ] 压力测试并发场景
+  - 未找到专门的压力测试文件
 - [x] 回归测试所有功能
   - 源代码中 0 个 GroupChatContext 残留引用
   - 测试代码中 0 个 group_chat_context 属性引用
@@ -286,11 +301,11 @@
 
 ## 验收标准
 
-- [ ] 所有 P0 问题已修复，系统能正常工作
-- [ ] Agent 重启后能正常接收消息
-- [ ] AgentCall 能正常清理，无内存泄漏
-- [ ] 群聊 created_at 不会被覆盖
-- [ ] 关键流程有 INFO 级别日志，便于排查问题
+- [x] 所有 P0 问题已修复，系统能正常工作
+- [x] Agent 重启后能正常接收消息
+- [x] AgentCall 能正常清理，无内存泄漏
+- [x] 群聊 created_at 不会被覆盖
+- [x] 关键流程有 INFO 级别日志，便于排查问题
 - [x] 如果选择重构：新架构通过所有测试，性能不下降
   - GroupChatContext 中间层已完全移除，架构简化为 Agent → GroupChatRuntime → State/Repository
   - 源代码和测试代码中 0 个残留引用
@@ -333,10 +348,12 @@ INFO: 127.0.0.1:54863 - "POST /api/v1/group-chats/{id}/messages HTTP/1.1" 409 Co
 - 模块间日志的一致性要求
 
 ### 2. 群聊加载策略（来源：原始问题报告）
-- 方案 A：按活跃文件夹加载
-- 方案 B：按前 N 个活跃群聊加载
-- 不活跃的群聊如何获取？是否需要搜索/筛选功能？
-- 是否需要分页机制？
+- [x] 已实施：采用混合策略（按项目懒加载 + 项目内分页）
+- [x] 前端：首次只加载项目摘要，展开项目时才加载群聊
+- [x] 后端：支持按项目路径过滤和分页参数（limit、offset）
+- [x] 交互：使用"加载更多"按钮（符合设计系统简洁风格）
+- [ ] 未来优化：增加搜索功能（Phase 3）
+- [ ] 未来优化：引入 SQLite 替代文件扫描（> 1000 群聊时）
 
 ### 3. Agent 压缩流程优化（来源：原始问题报告）
 - hand-off 文档应包含哪些信息？

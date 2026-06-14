@@ -46,8 +46,19 @@ export function useChatMessages() {
   const pendingCleanupRef = useRef<(() => void) | null>(null);
 
   // 从 store 中查找当前 session 的标题
-  const activeTitle =
-    projectGroups.flatMap((g) => g.sessions).find((s) => s.id === activeSessionId)?.title ?? null;
+  const activeTitle = (() => {
+    for (const group of projectGroups) {
+      // 优先查找 loadedSessions（群聊），回退到 sessions（单聊）
+      const sessions =
+        group.loadedSessions && group.loadedSessions.length > 0
+          ? group.loadedSessions
+          : group.sessions;
+
+      const found = sessions?.find((s) => s.id === activeSessionId);
+      if (found) return found.title;
+    }
+    return null;
+  })();
 
   // 初始加载最新消息
   useEffect(() => {

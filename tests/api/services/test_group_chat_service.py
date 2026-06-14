@@ -316,14 +316,14 @@ async def test_list_group_chats_returns_all(service, mock_group_chat_manager):
             "group_chat_id": "gc_1",
             "group_chat_name": "Group 1",
             "project_path": "/path/1",
-            "created_at": datetime(2026, 6, 1, 10, 0, 0),
+            "created_at": "2026-06-01T10:00:00",
             "group_type": "manager_orchestrate",
         },
         {
             "group_chat_id": "gc_2",
             "group_chat_name": "Group 2",
             "project_path": "/path/2",
-            "created_at": datetime(2026, 6, 2, 10, 0, 0),
+            "created_at": "2026-06-02T10:00:00",
             "group_type": "manager_orchestrate",
         },
     ]
@@ -334,11 +334,13 @@ async def test_list_group_chats_returns_all(service, mock_group_chat_manager):
     result = await service.list_group_chats(is_active_only=False)
 
     # Assert
-    assert len(result) == 2
-    assert result[0].group_chat_id == "gc_1"
-    assert result[0].is_active is True
-    assert result[1].group_chat_id == "gc_2"
-    assert result[1].is_active is False
+    assert result.total == 2
+    assert len(result.items) == 2
+    # 按 created_at 降序排列，gc_2 (2026-06-02) 在前
+    assert result.items[0].group_chat_id == "gc_2"
+    assert result.items[0].is_active is False
+    assert result.items[1].group_chat_id == "gc_1"
+    assert result.items[1].is_active is True
 
 
 async def test_list_group_chats_active_only(service, mock_group_chat_manager):
@@ -349,14 +351,14 @@ async def test_list_group_chats_active_only(service, mock_group_chat_manager):
             "group_chat_id": "gc_active",
             "group_chat_name": "Active Group",
             "project_path": "/path/active",
-            "created_at": datetime(2026, 6, 1, 10, 0, 0),
+            "created_at": "2026-06-01T10:00:00",
             "group_type": "manager_orchestrate",
         },
         {
             "group_chat_id": "gc_inactive",
             "group_chat_name": "Inactive Group",
             "project_path": "/path/inactive",
-            "created_at": datetime(2026, 6, 2, 10, 0, 0),
+            "created_at": "2026-06-02T10:00:00",
             "group_type": "manager_orchestrate",
         },
     ]
@@ -367,9 +369,10 @@ async def test_list_group_chats_active_only(service, mock_group_chat_manager):
     result = await service.list_group_chats(is_active_only=True)
 
     # Assert
-    assert len(result) == 1
-    assert result[0].group_chat_id == "gc_active"
-    assert result[0].is_active is True
+    assert result.total == 1
+    assert len(result.items) == 1
+    assert result.items[0].group_chat_id == "gc_active"
+    assert result.items[0].is_active is True
 
 
 async def test_list_group_chats_empty(service, mock_group_chat_manager):
@@ -381,7 +384,8 @@ async def test_list_group_chats_empty(service, mock_group_chat_manager):
     result = await service.list_group_chats()
 
     # Assert
-    assert result == []
+    assert result.total == 0
+    assert len(result.items) == 0
 
 
 # Task 7: get_group_chat_info 测试

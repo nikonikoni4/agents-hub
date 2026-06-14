@@ -42,3 +42,26 @@
   padding-left: 16px;
   margin-top: 4px;
 }
+
+.load-more-btn {
+  width: 100%;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.load-more-btn:hover {
+  background: var(--bg-shadow);
+}
+
+.load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

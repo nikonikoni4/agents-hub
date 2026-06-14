@@ -23,9 +23,11 @@ import aiofiles
 from agents_hub.api.schemas.group_chats import (
     AgentCallInfo,
     GroupChatInfo,
+    GroupChatListResponse,
     GroupChatMember,
     MessageInfo,
     PinnedMessageInfo,
+    ProjectSummary,
     TaskListInfo,
     UploadedFileInfo,
 )
@@ -265,51 +267,118 @@ class GroupChatService:
 
         logger.info("群聊删除成功: id=%s", group_chat_id)
 
-    async def list_group_chats(self, is_active_only: bool = False) -> list[GroupChatInfo]:
-        """列出所有群聊
+    async def get_projects_summary(self) -> list[ProjectSummary]:
+        """获取所有项目的摘要信息
+
+        Returns:
+            list[ProjectSummary]: 项目摘要列表
+                - project_path: 项目路径
+                - group_chat_count: 该项目下的群聊数量
+                - last_update_at: 该项目下最后活跃时间（取群聊 created_at 最大值）
+        """
+        logger.debug("获取项目摘要")
+        all_chats = self.group_chat_manager.list_all_group_chats()
+
+        # 按项目路径分组统计
+        projects: dict[str, ProjectSummary] = {}
+        for chat in all_chats:
+            path = chat["project_path"]
+            if path not in projects:
+                projects[path] = ProjectSummary(
+                    project_path=path,
+                    group_chat_count=0,
+                    last_update_at=None,
+                )
+            projects[path].group_chat_count += 1
+
+            # 更新最后活跃时间（从 created_at 解析）
+            chat_created = datetime.fromisoformat(chat["created_at"])
+            current_last_update = projects[path].last_update_at
+            if current_last_update is None or chat_created > current_last_update:
+                projects[path].last_update_at = chat_created
+
+        result = list(projects.values())
+        logger.debug("项目摘要返回 %d 个项目", len(result))
+        return result
+
+    async def list_group_chats(
+        self,
+        project_path: str | None = None,
+        limit: int = 10,
+        offset: int = 0,
+        is_active_only: bool = False,
+    ) -> GroupChatListResponse:
+        """列出群聊（支持分页和项目过滤）
 
         Args:
+            project_path: 项目路径过滤（可选）
+            limit: 每页数量（默认 10）
+            offset: 偏移量（默认 0）
             is_active_only: True=只返回活跃群聊，False=返回所有群聊
 
         Returns:
-            list[GroupChatInfo]（群聊信息）:
-                - group_chat_id: str, 群聊唯一标识
-                - group_chat_name: str | None, 群聊显示名称
-                - project_path: str, 关联的项目路径
-                - created_at: datetime, 创建时间
-                - group_type: GroupChatType, 编排模式
-                - is_active: bool, agent 是否已激活（run() 任务是否在运行）
+            GroupChatListResponse:
+                - items: 群聊信息列表
+                - total: 总数量
+                - limit: 每页数量
+                - offset: 偏移量
+                - has_more: 是否还有更多
         """
-        logger.debug("列出群聊: is_active_only=%s", is_active_only)
-        # 1. 调用 GroupChatManager.list_all_group_chats()
+        logger.debug(
+            "列出群聊: project_path=%s, limit=%d, offset=%d, is_active_only=%s",
+            project_path,
+            limit,
+            offset,
+            is_active_only,
+        )
+
+        # 1. 获取所有群聊
         all_metadata = self.group_chat_manager.list_all_group_chats()
 
-        # 2. 转换为 GroupChatInfo 列表
-        result: list[GroupChatInfo] = []
-        for metadata_dict in all_metadata:
-            # 转换为 GroupMetadata 对象（from_dict 处理 created_at 的 ISO 字符串转换）
-            metadata = GroupMetadata.from_dict(metadata_dict)
+        # 2. 按项目路径过滤
+        if project_path:
+            all_metadata = [m for m in all_metadata if m["project_path"] == project_path]
 
-            # 检查是否在内存中（活跃状态）
+        # 3. 转换为 GroupMetadata 对象并检查活跃状态
+        filtered: list[tuple[GroupMetadata, bool]] = []
+        for metadata_dict in all_metadata:
+            metadata = GroupMetadata.from_dict(metadata_dict)
             is_active = self.group_chat_manager.is_active_group(metadata.group_chat_id)
 
-            # 3. 如果 is_active_only=True，过滤出活跃的
             if is_active_only and not is_active:
                 continue
 
-            result.append(
-                GroupChatInfo(
-                    group_chat_id=metadata.group_chat_id,
-                    group_chat_name=metadata.group_chat_name,
-                    project_path=metadata.project_path,
-                    created_at=metadata.created_at,
-                    group_type=GroupChatType(metadata.group_type),
-                    is_active=is_active,
-                )
-            )
+            filtered.append((metadata, is_active))
 
-        logger.debug("群聊列表返回 %d 条结果", len(result))
-        return result
+        # 4. 按 created_at 降序排序
+        filtered.sort(key=lambda x: x[0].created_at, reverse=True)
+
+        # 5. 计算分页
+        total = len(filtered)
+        has_more = (offset + limit) < total
+        paginated = filtered[offset : offset + limit]
+
+        # 6. 转换为 GroupChatInfo
+        items = [
+            GroupChatInfo(
+                group_chat_id=metadata.group_chat_id,
+                group_chat_name=metadata.group_chat_name,
+                project_path=metadata.project_path,
+                created_at=metadata.created_at,
+                group_type=GroupChatType(metadata.group_type),
+                is_active=is_active,
+            )
+            for metadata, is_active in paginated
+        ]
+
+        logger.debug("群聊列表返回: total=%d, items=%d, has_more=%s", total, len(items), has_more)
+        return GroupChatListResponse(
+            items=items,
+            total=total,
+            limit=limit,
+            offset=offset,
+            has_more=has_more,
+        )
 
     async def get_group_chat_info(self, group_chat_id: str) -> GroupChatInfo:
         """获取群聊详细信息

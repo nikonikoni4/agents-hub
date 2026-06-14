@@ -10,6 +10,7 @@ from agents_hub.api.schemas.group_chats import (
     AgentCallInfo,
     GroupChatCreate,
     GroupChatInfo,
+    GroupChatListResponse,
     GroupChatMember,
     MessageCreate,
     MessageInfo,
@@ -18,6 +19,7 @@ from agents_hub.api.schemas.group_chats import (
     PinMessageRequest,
     PinnedMessageInfo,
     PinOperationResponse,
+    ProjectSummary,
     TaskListInfo,
     UploadedFileInfo,
     UseDockerUpdate,
@@ -46,13 +48,29 @@ async def create_group_chat(
     )
 
 
-@router.get("", response_model=list[GroupChatInfo])
+@router.get("/projects/summary", response_model=list[ProjectSummary])
+async def get_projects_summary(
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取所有项目摘要（项目路径、群聊数量、最后更新时间）"""
+    return await service.get_projects_summary()
+
+
+@router.get("", response_model=GroupChatListResponse)
 async def list_group_chats(
+    project_path: str | None = Query(None, description="项目路径过滤"),
+    limit: int = Query(10, ge=1, le=100, description="每页数量"),
+    offset: int = Query(0, ge=0, description="偏移量"),
     is_active_only: bool = Query(False, description="是否只返回活跃群聊"),
     service: GroupChatService = Depends(get_group_chat_service),
 ):
-    """列出所有群聊"""
-    return await service.list_group_chats(is_active_only=is_active_only)
+    """列出群聊（支持分页和项目过滤）"""
+    return await service.list_group_chats(
+        project_path=project_path,
+        limit=limit,
+        offset=offset,
+        is_active_only=is_active_only,
+    )
 
 
 @router.get("/{group_chat_id}", response_model=GroupChatInfo)

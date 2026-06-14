@@ -26,8 +26,9 @@ export function useDeleteGroupChat() {
         .map((group) => ({
           ...group,
           sessions: group.sessions.filter((s) => s.id !== chatId),
+          loadedSessions: group.loadedSessions?.filter((s) => s.id !== chatId),
         }))
-        .filter((group) => group.sessions.length > 0);
+        .filter((group) => group.sessions.length > 0 || (group.loadedSessions?.length ?? 0) > 0);
 
       setProjectGroups(updatedGroups);
 
@@ -36,7 +37,7 @@ export function useDeleteGroupChat() {
         await deleteGroupChat(chatId, keepData);
       } catch (error) {
         // 3. 失败时重新加载列表（回滚）
-        await refreshGroupChats();
+        refreshGroupChats();
         throw error;
       } finally {
         setDeleting(false);
