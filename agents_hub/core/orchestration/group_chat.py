@@ -85,9 +85,12 @@ class GroupChat:
         """
         启动群聊（首次创建）
 
-        1. 执行公共初始化流程
-        2. 初始化 metadata（首次创建特有）
-        3. 启动 agent 任务
+        1. 加载上下文数据
+        2. 初始化 agents
+        3. 确保 tokens
+        4. 初始化新成员（打招呼）
+        5. 初始化 metadata
+        6. 启动 agent 任务
         """
         # 幂等性检查提前到入口
         if self._activated:
@@ -101,8 +104,20 @@ class GroupChat:
             self.team_members_name,
         )
 
-        # 公共初始化流程
-        await self._initialize_common()
+        # 加载上下文数据
+        await self.runtime.load()
+
+        # 初始化 agents
+        await self._init_agents()
+
+        # 确保所有 agent 都有 token
+        await self._ensure_tokens()
+
+        # 初始化新成员（首次创建时所有成员都是新的）
+        await self._initialize_new_members()
+
+        # 启动清理循环
+        self.agent_call_manager.start_cleanup()
 
         # start() 特有：初始化 metadata
         if self.runtime.state.metadata is None:
@@ -121,13 +136,27 @@ class GroupChat:
         """
         加载已有群聊（不启动 agent）
 
-        1. 执行公共初始化流程
-        2. 等待后续调用 activate() 启动 agent
+        只读操作：
+        1. 加载上下文数据
+        2. 初始化 agents
+        3. 确保 tokens
+        4. 启动清理循环
+
+        注意：不会初始化新成员（无 LLM 调用），等待后续 activate() 时处理
         """
         logger.info("加载群聊: id=%s", self.group_chat_id)
 
-        # 公共初始化流程（与 start 共享）
-        await self._initialize_common()
+        # 加载上下文数据
+        await self.runtime.load()
+
+        # 初始化 agents
+        await self._init_agents()
+
+        # 确保所有 agent 都有 token
+        await self._ensure_tokens()
+
+        # 启动清理循环
+        self.agent_call_manager.start_cleanup()
 
         # load() 不设置 _activated，等待 activate()
         logger.info("群聊加载完成: id=%s", self.group_chat_id)
@@ -138,6 +167,11 @@ class GroupChat:
 
         在 load() 之后调用，用于需要 agent 处理消息的场景（如发送消息）。
         已激活时重复调用无副作用。
+
+        流程：
+        1. 注册 agents 到 MessageRouter
+        2. 初始化新成员（如果有无 session 的成员）
+        3. 启动所有 agent 的 run() 任务
         """
         if self._activated:
             return
@@ -145,6 +179,9 @@ class GroupChat:
 
         # 确保 agents 已注册到 MessageRouter（防止对象重建后注册丢失）
         self._register_agents_to_router()
+
+        # 初始化新成员（获取 session）
+        await self._initialize_new_members()
 
         self._start_agent_tasks()
         self._activated = True
@@ -1008,32 +1045,6 @@ class GroupChat:
 
         # 统一保存
         await self.runtime.save_agent_members()
-
-    async def _initialize_common(self):
-        """
-        公共初始化流程（start 和 load 共用）
-
-        执行：
-        1. 加载上下文数据
-        2. 初始化 agents
-        3. 确保 tokens（生成或恢复）
-        4. 初始化新成员（打招呼）
-        5. 启动清理循环
-        """
-        # 1. 加载上下文数据
-        await self.runtime.load()
-
-        # 2. 初始化 agents
-        await self._init_agents()
-
-        # 3. 确保所有 agent 都有 token
-        await self._ensure_tokens()
-
-        # 4. 初始化新成员
-        await self._initialize_new_members()
-
-        # 5. 启动清理循环
-        self.agent_call_manager.start_cleanup()
 
     async def _heartbeat_loop(self):
         """定时唤醒 Manager 检查任务进度"""

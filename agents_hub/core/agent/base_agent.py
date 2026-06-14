@@ -302,6 +302,12 @@ class Agent:
             )
             # 更新 context_usage
             agent_info = self.runtime.get_agent_member_info(self.name)
+            if not agent_info:
+                self.logger.warning(
+                    "Agent %s 的 member info 不存在，无法更新 context_usage", self.name
+                )
+                return
+
             agent_info.context_usage = context_usage
             await self.runtime.save_agent_members(
                 context=f"Agent {self.name} context_usage → {context_usage}K"
@@ -525,7 +531,13 @@ call_id: {msg.call_id}
         """
         # 获取当前状态
         agent_member_info = self.runtime.get_agent_member_info(self.name)
-        current_status = agent_member_info.status if agent_member_info else None
+        if not agent_member_info:
+            self.logger.warning(
+                "Agent %s 的 member info 不存在，无法同步状态: %s", self.name, status
+            )
+            return
+
+        current_status = agent_member_info.status
 
         # 如果已经是 stopped 状态，不允许改为其他状态
         if current_status == "stopped" and status != "stopped":
