@@ -64,7 +64,7 @@ class GroupChatManager:
             logger.error("无效的 group_chat_id: %s", group_chat_id)
             raise ValueError(f"无效的 group_chat_id: {group_chat_id}")
         if not isinstance(group_chat, GroupChat):
-            logger.error("无效的 group_chat 类型: %s", type(group_chat))
+            logger.error("无效的 group_chat 类型: %s", type(group_chat))  # type: ignore[unreachable]
             raise ValueError("无效的 group_chat 类型")
         with self._group_chats_lock:
             self._group_chats[group_chat_id] = group_chat

@@ -170,6 +170,7 @@ class AgentContext:
         """
         # 更新上下文加载状态
         agent_info = self.runtime.get_agent_member_info(self.agent_name)
+        assert agent_info is not None, f"Agent {self.agent_name} not found"
         agent_info.context_state.last_loaded_compact_index = last_loaded_compact_index
         agent_info.context_state.last_loaded_message_index = last_loaded_message_index
         await self.runtime.save_agent_members(

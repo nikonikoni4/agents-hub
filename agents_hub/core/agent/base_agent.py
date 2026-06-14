@@ -407,6 +407,7 @@ class Agent:
 
         # 9. 重置 context_usage
         agent_info = self.runtime.get_agent_member_info(self.name)
+        assert agent_info is not None, f"Agent {self.name} not found"
         agent_info.context_usage = 0
         await self.runtime.save_agent_members()
 

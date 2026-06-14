@@ -455,8 +455,12 @@ class GroupChatRuntime:
             if logger.isEnabledFor(logging.DEBUG):
                 import inspect
 
-                frame = inspect.currentframe().f_back
-                caller_info = f"{frame.f_code.co_filename}:{frame.f_lineno}"
+                frame = inspect.currentframe()
+                caller_info = (
+                    f"{frame.f_back.f_code.co_filename}:{frame.f_back.f_lineno}"
+                    if frame and frame.f_back
+                    else "unknown"
+                )
                 logger.debug("调用栈: %s", caller_info)
 
             await self._save_agent_members()

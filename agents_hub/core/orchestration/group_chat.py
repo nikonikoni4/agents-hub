@@ -192,13 +192,12 @@ class GroupChat:
             logger.error("Manager 未初始化，无法启动 Agent 任务")
             raise StateError("Manager 未初始化，请先调用 _init_agents()")
         self.manager_task = asyncio.create_task(self.manager.run())
-        self.manager_task.add_done_callback(
-            lambda t: self._on_agent_task_done(self.manager.name, t)
-        )
+        manager_name = self.manager.name
+        self.manager_task.add_done_callback(lambda t: self._on_agent_task_done(manager_name, t))
         self.worker_tasks = {}
         for name, w in self.workers.items():
             task = asyncio.create_task(w.run())
-            task.add_done_callback(lambda t, n=name: self._on_agent_task_done(n, t))
+            task.add_done_callback(lambda t, n=name: self._on_agent_task_done(n, t))  # type: ignore[misc]
             self.worker_tasks[name] = task
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
@@ -326,7 +325,7 @@ class GroupChat:
         # 8. 如果群聊已激活，启动新 Worker 的任务
         if self._activated:
             new_task = asyncio.create_task(new_worker.run())
-            new_task.add_done_callback(lambda t, n=role_name: self._on_agent_task_done(n, t))
+            new_task.add_done_callback(lambda t, n=role_name: self._on_agent_task_done(n, t))  # type: ignore[misc]
             self.worker_tasks[role_name] = new_task
             logger.info("新成员任务已启动: %s", role_name)
 
@@ -666,6 +665,7 @@ class GroupChat:
 
         # 2. 先更新状态为 "stopped"（阻止新消息投递）
         agent_info = self.runtime.get_agent_member_info(agent_name)
+        assert agent_info is not None, f"Agent {agent_name} not found"
         agent_info.status = "stopped"
         await self.runtime.save_agent_members(context=f"Stop agent {agent_name}")
 
@@ -811,10 +811,11 @@ class GroupChat:
             else self.worker_tasks.get(agent_name)
         )
         if task:
-            task.add_done_callback(lambda t, name=agent_name: self._on_agent_task_done(name, t))
+            task.add_done_callback(lambda t, name=agent_name: self._on_agent_task_done(name, t))  # type: ignore[misc]
 
         # 7. 更新状态为 "idle"
         agent_info = self.runtime.get_agent_member_info(agent_name)
+        assert agent_info is not None, f"Agent {agent_name} not found"
         agent_info.status = "idle"
         await self.runtime.save_agent_members(context=f"Start agent {agent_name}")
 
@@ -876,6 +877,7 @@ class GroupChat:
 
         # 5. 重置 context_usage
         agent_info = self.runtime.get_agent_member_info(agent_name)
+        assert agent_info is not None, f"Agent {agent_name} not found"
         agent_info.context_usage = 0
         await self.runtime.save_agent_members(context=f"Reset agent {agent_name}")
 
@@ -886,12 +888,11 @@ class GroupChat:
         agent._run = True
         if self.manager and agent_name == self.manager.name:
             self.manager_task = asyncio.create_task(agent.run())
-            self.manager_task.add_done_callback(
-                lambda t: self._on_agent_task_done(self.manager.name, t)
-            )
+            mgr_name = self.manager.name
+            self.manager_task.add_done_callback(lambda t: self._on_agent_task_done(mgr_name, t))
         else:
             new_task = asyncio.create_task(agent.run())
-            new_task.add_done_callback(lambda t, n=agent_name: self._on_agent_task_done(n, t))
+            new_task.add_done_callback(lambda t, n=agent_name: self._on_agent_task_done(n, t))  # type: ignore[misc]
             self.worker_tasks[agent_name] = new_task
 
         # 8. 重新注册到 MessageRouter
