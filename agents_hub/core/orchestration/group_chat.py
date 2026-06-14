@@ -85,14 +85,15 @@ class GroupChat:
         """
         启动群聊（首次创建）
 
-        1. 加载上下文数据
-        2. 立即保存群聊元数据
-        3. 初始化 manager 和 workers
-        4. 注册所有 agent 到 message_router
-        5. 生成并注册 token 到 GroupChatManager
-        6. 对第一次进入群聊的成员执行初始化（打招呼）
-        7. 启动所有 agent 的 run() 任务
+        1. 执行公共初始化流程
+        2. 初始化 metadata（首次创建特有）
+        3. 启动 agent 任务
         """
+        # 幂等性检查提前到入口
+        if self._activated:
+            logger.warning("群聊已启动，跳过: id=%s", self.group_chat_id)
+            return
+
         logger.info(
             "启动群聊: id=%s, name=%s, members=%s",
             self.group_chat_id,
@@ -100,62 +101,35 @@ class GroupChat:
             self.team_members_name,
         )
 
-        # 1. 加载上下文数据
-        await self.runtime.load()
+        # 公共初始化流程
+        await self._initialize_common()
 
-        # 幂等性检查：如果 metadata 已存在，跳过 initialize_metadata
-        if self.runtime.state.metadata is not None:
-            logger.debug("群聊 metadata 已存在，跳过初始化: id=%s", self.group_chat_id)
-        else:
-            # 2. 初始化并保存群聊元数据
+        # start() 特有：初始化 metadata
+        if self.runtime.state.metadata is None:
             await self.runtime.initialize_metadata(
                 group_chat_name=self.group_chat_name,
                 group_type=self.group_type,
             )
 
-        # 3-4. 初始化并注册 agents（含 role 验证）
-        await self._init_agents()
-
-        # 5. 生成并注册 token
-        await self._generate_and_register_tokens()
-
-        # 6. 初始化新成员（第一次会话的成员）
-        await self._initialize_new_members()
-
-        # 7. 启动所有 agent 的 run() 任务
+        # start() 特有：立即启动 agent 任务
         self._start_agent_tasks()
-
-        # 8. 启动 AgentCall 清理循环
-        self.agent_call_manager.start_cleanup()
-
         self._activated = True
+
         logger.info("群聊启动完成: id=%s", self.group_chat_id)
 
     async def load(self):
         """
-        加载已有的群聊（只读，不启动 agent）
+        加载已有群聊（不启动 agent）
 
-        从 agent_member.json 加载已有 session，恢复 manager 和 workers，
-        并验证每个 role 是否存在。恢复并注册 token。对新增成员执行初始化（打招呼）。
-        不启动 agent.run() 任务，需要发消息时调用 activate()。
+        1. 执行公共初始化流程
+        2. 等待后续调用 activate() 启动 agent
         """
         logger.info("加载群聊: id=%s", self.group_chat_id)
 
-        # 1. 加载上下文数据
-        await self.runtime.load()
+        # 公共初始化流程（与 start 共享）
+        await self._initialize_common()
 
-        # 2. 初始化并注册 agents（含 role 验证）
-        await self._init_agents()
-
-        # 3. 恢复并注册 token（必须在 _initialize_new_members 之前）
-        await self._restore_and_register_tokens()
-
-        # 4. 初始化新成员（第一次会话的成员）
-        await self._initialize_new_members()
-
-        # 5. 启动 AgentCall 清理循环
-        self.agent_call_manager.start_cleanup()
-
+        # load() 不设置 _activated，等待 activate()
         logger.info("群聊加载完成: id=%s", self.group_chat_id)
 
     async def activate(self):
@@ -303,15 +277,16 @@ class GroupChat:
         self.workers[role_name] = new_worker
 
         # 6. ⭐ 关键：立即创建并持久化空条目（防止崩溃后丢失）
-        self.runtime.get_or_create_agent_member_info(role_name)
-        await self.runtime.save_agent_member_infos()
+        worker_info = self.runtime.get_or_create_agent_member_info(role_name)
 
         # 7. 生成并注册 token
         from .group_chat_manager import group_chat_manager
 
         token = generate_token()
+        worker_info.token = token
+        worker_info.cwd = self.runtime.project_path
         group_chat_manager.register_token(token, role_name, self.group_chat_id)
-        await self.runtime.set_agent_token_and_default_cwd(role_name, token)
+        await self.runtime.save_agent_members()
 
         # 8. 如果群聊已激活，启动新 Worker 的任务
         if self._activated:
@@ -344,7 +319,7 @@ class GroupChat:
             prompt = f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{manager_name},你使用一句话简单介绍一下自己"
 
         result = await agent.execute(prompt)
-        await self.runtime.update_agent_member_info_from_result(result)
+        await self.runtime.update_agent_session(result)
         await self.runtime.add_message(result)
 
     async def _initialize_new_members(self):
@@ -393,7 +368,7 @@ class GroupChat:
 
         # 保存结果
         for result in results:
-            await self.runtime.update_agent_member_info_from_result(result)
+            await self.runtime.update_agent_session(result)
             await self.runtime.add_message(result)
 
     async def compact_history(self):
@@ -658,7 +633,9 @@ class GroupChat:
         logger.info("停止 Agent: %s", agent_name)
 
         # 2. 先更新状态为 "stopped"（阻止新消息投递）
-        await self.runtime.update_agent_status(agent_name, "stopped")
+        agent_info = self.runtime.get_agent_member_info(agent_name)
+        agent_info.status = "stopped"
+        await self.runtime.save_agent_members()
 
         # 3. ⭐ 新增：立即终止正在运行的 CLI 进程
         await self._stop_agent_process(agent)
@@ -803,7 +780,9 @@ class GroupChat:
             )
 
         # 7. 更新状态为 "idle"
-        await self.runtime.update_agent_status(agent_name, "idle")
+        agent_info = self.runtime.get_agent_member_info(agent_name)
+        agent_info.status = "idle"
+        await self.runtime.save_agent_members()
 
         logger.info("Agent %s 已重新启动", agent_name)
 
@@ -861,7 +840,9 @@ class GroupChat:
                 break
 
         # 5. 重置 context_usage
-        await self.runtime.update_agent_context_usage(agent_name, 0)
+        agent_info = self.runtime.get_agent_member_info(agent_name)
+        agent_info.context_usage = 0
+        await self.runtime.save_agent_members()
 
         # 6. 重新初始化（打招呼）
         await self._initialize_single_member(agent)
@@ -884,7 +865,8 @@ class GroupChat:
         self.message_router.register(agent_name, agent.message_queue)
 
         # 9. 更新状态为 "idle"
-        await self.runtime.update_agent_status(agent_name, "idle")
+        agent_info.status = "idle"
+        await self.runtime.save_agent_members()
 
         # 获取新 session_id
         new_session_id = agent_member_info.main_session if agent_member_info else None
@@ -988,67 +970,70 @@ class GroupChat:
         self.worker_tasks.clear()
         logger.info("群聊资源清理完成: id=%s", self.group_chat_id)
 
-    async def _generate_and_register_tokens(self) -> None:
+    async def _ensure_tokens(self) -> None:
         """
-        为所有 agent 生成 token 并注册到 GroupChatManager
+        确保所有 agent 都有 token（生成或恢复）并注册到 GroupChatManager
 
-        为 manager 和所有 workers 生成唯一的 token，
-        并将 token 注册到 GroupChatManager 的索引中。
-        同时更新 Runtime 中的 agent_member_info。
+        策略：
+        - 如果 agent 已有 token → 使用已有的（load 场景）
+        - 如果 agent 没有 token → 生成新的（start 场景或新增成员）
         """
         from .group_chat_manager import group_chat_manager
 
-        logger.debug("生成并注册 tokens: id=%s", self.group_chat_id)
-        # 为 manager 生成并注册 token
+        logger.debug("确保所有 agent 都有 token: id=%s", self.group_chat_id)
+
+        # Manager token
         if self.manager:
-            token = generate_token()
+            manager_info = self.runtime.get_or_create_agent_member_info(self.manager.name)
+            if not manager_info.token:
+                token = generate_token()
+                manager_info.token = token
+                manager_info.cwd = self.runtime.project_path
+            else:
+                token = manager_info.token
+
             group_chat_manager.register_token(token, self.manager.name, self.group_chat_id)
-            await self.runtime.set_agent_token_and_default_cwd(self.manager.name, token)
 
-        # 为 workers 生成并注册 token
-        for worker_name in self.workers:
-            token = generate_token()
+        # Worker tokens
+        for worker_name, worker in self.workers.items():
+            worker_info = self.runtime.get_or_create_agent_member_info(worker_name)
+            if not worker_info.token:
+                token = generate_token()
+                worker_info.token = token
+                worker_info.cwd = self.runtime.project_path
+            else:
+                token = worker_info.token
+
             group_chat_manager.register_token(token, worker_name, self.group_chat_id)
-            await self.runtime.set_agent_token_and_default_cwd(worker_name, token)
 
-    async def _restore_and_register_tokens(self) -> None:
+        # 统一保存
+        await self.runtime.save_agent_members()
+
+    async def _initialize_common(self):
         """
-        从持久化恢复 token 并注册到 GroupChatManager
+        公共初始化流程（start 和 load 共用）
 
-        从 Runtime 中读取已保存的 token，
-        并将它们注册到 GroupChatManager 的索引中。
-        如果某个 agent 没有 token，则生成新的 token。
+        执行：
+        1. 加载上下文数据
+        2. 初始化 agents
+        3. 确保 tokens（生成或恢复）
+        4. 初始化新成员（打招呼）
+        5. 启动清理循环
         """
-        from .group_chat_manager import group_chat_manager
+        # 1. 加载上下文数据
+        await self.runtime.load()
 
-        logger.debug("恢复并注册 tokens: id=%s", self.group_chat_id)
-        # 恢复 manager 的 token
-        if self.manager:
-            agent_member_info = self.runtime.state.agent_member_infos.get(self.manager.name)
-            if agent_member_info and agent_member_info.token:
-                # 恢复已有的 token
-                group_chat_manager.register_token(
-                    agent_member_info.token, self.manager.name, self.group_chat_id
-                )
-            else:
-                # 生成新的 token
-                token = generate_token()
-                group_chat_manager.register_token(token, self.manager.name, self.group_chat_id)
-                await self.runtime.set_agent_token_and_default_cwd(self.manager.name, token)
+        # 2. 初始化 agents
+        await self._init_agents()
 
-        # 恢复 workers 的 token
-        for worker_name in self.workers:
-            agent_member_info = self.runtime.state.agent_member_infos.get(worker_name)
-            if agent_member_info and agent_member_info.token:
-                # 恢复已有的 token
-                group_chat_manager.register_token(
-                    agent_member_info.token, worker_name, self.group_chat_id
-                )
-            else:
-                # 生成新的 token
-                token = generate_token()
-                group_chat_manager.register_token(token, worker_name, self.group_chat_id)
-                await self.runtime.set_agent_token_and_default_cwd(worker_name, token)
+        # 3. 确保所有 agent 都有 token
+        await self._ensure_tokens()
+
+        # 4. 初始化新成员
+        await self._initialize_new_members()
+
+        # 5. 启动清理循环
+        self.agent_call_manager.start_cleanup()
 
     async def _heartbeat_loop(self):
         """定时唤醒 Manager 检查任务进度"""

@@ -164,12 +164,11 @@ class AgentContext:
             last_loaded_compact_index: 已加载到第几条压缩历史
             last_loaded_message_index: 已加载到第几条原始消息
         """
-        # update_context_load_state 内部使用 get_or_create，确保 cwd 默认为 project_path
-        await self.runtime.update_context_load_state(
-            self.agent_name,
-            last_loaded_compact_index,
-            last_loaded_message_index,
-        )
+        # 更新上下文加载状态
+        agent_info = self.runtime.get_agent_member_info(self.agent_name)
+        agent_info.context_state.last_loaded_compact_index = last_loaded_compact_index
+        agent_info.context_state.last_loaded_message_index = last_loaded_message_index
+        await self.runtime.save_agent_members()
 
     async def build_user_prompt(
         self,

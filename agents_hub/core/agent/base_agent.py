@@ -300,9 +300,10 @@ class Agent:
                 input_tokens,
                 context_usage,
             )
-            await self.runtime.update_agent_context_usage(
-                self.name, context_usage
-            )
+            # 更新 context_usage
+            agent_info = self.runtime.get_agent_member_info(self.name)
+            agent_info.context_usage = context_usage
+            await self.runtime.save_agent_members()
 
     async def compress_context(self):
         """
@@ -397,7 +398,9 @@ class Agent:
             agent_member_info.main_session = new_session_id
 
         # 9. 重置 context_usage
-        await self.runtime.update_agent_context_usage(self.name, 0)
+        agent_info = self.runtime.get_agent_member_info(self.name)
+        agent_info.context_usage = 0
+        await self.runtime.save_agent_members()
 
         # 10. 写入系统消息
         system_msg = (
@@ -407,7 +410,7 @@ class Agent:
         )
         await self.runtime.add_system_message(system_msg)
 
-        # 11. 广播 refresh（update_agent_context_usage 内部已调用 _notify_change，无需重复调用）
+        # 11. 广播 refresh（save_agent_members 内部已调用 _notify_change，无需重复调用）
 
         self.logger.info(
             "Agent %s 上下文已压缩: old_session=%s, new_session=%s, usage_before=%dK",
@@ -529,7 +532,9 @@ call_id: {msg.call_id}
             )
             return
 
-        await self.runtime.update_agent_status(self.name, status)
+        # 更新状态
+        agent_member_info.status = status
+        await self.runtime.save_agent_members()
 
     async def _fallback_close_task(self, msg: AgentMessage, result: AgentResult | None) -> None:
         """兜底闭环：未闭环的 TASK 补齐 mark_agent_response + 分流通知（避免 MCP 断连导致群聊无消息）"""
@@ -555,12 +560,12 @@ call_id: {msg.call_id}
         if config.is_user_name(call.send_from):
             result.text = render_for_chat(self.name, call.send_from, safe_content)
             await self.runtime.add_message(result)
-            await self.runtime.update_agent_member_info_from_result(result)
+            await self.runtime.update_agent_session(result)
         else:
             # 保存到群聊历史，确保群聊能看到兜底闭环的消息
             result.text = render_for_chat(self.name, call.send_from, safe_content)
             await self.runtime.add_message(result)
-            await self.runtime.update_agent_member_info_from_result(result)
+            await self.runtime.update_agent_session(result)
 
             response_call = await self.agent_call_manager.create_call(
                 send_from=self.name,

@@ -297,26 +297,6 @@ class GroupChatRuntime:
         await self._persist(lambda: self.repository.save_group_metadata(metadata))
         return metadata
 
-    async def set_agent_token_and_default_cwd(self, agent_name: str, token: str) -> AgentMemberInfo:
-        """
-        设置 Agent 的 token 和默认工作目录
-
-        Args:
-            agent_name: Agent 名称
-            token: Agent token
-
-        Returns:
-            AgentMemberInfo: 更新后的会话信息
-        """
-        async with self._state_lock:
-            agent_member_info = self.get_or_create_agent_member_info(agent_name)
-            agent_member_info.token = token
-            agent_member_info.cwd = self.project_path
-            await self._persist(
-                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-            )
-            return agent_member_info
-
     async def set_agent_use_docker(self, agent_name: str, use_docker: bool) -> AgentMemberInfo:
         """
         设置 Agent 是否使用 Docker
@@ -331,32 +311,7 @@ class GroupChatRuntime:
         async with self._state_lock:
             agent_member_info = self.get_or_create_agent_member_info(agent_name)
             agent_member_info.use_docker = use_docker
-            await self._persist(
-                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-            )
-            return agent_member_info
-
-    async def update_context_load_state(
-        self, agent_name: str, compact_index: int, message_index: int
-    ) -> AgentMemberInfo:
-        """
-        更新 Agent 的上下文加载状态
-
-        Args:
-            agent_name: Agent 名称
-            compact_index: 已加载的压缩历史索引
-            message_index: 已加载的消息索引
-
-        Returns:
-            AgentMemberInfo: 更新后的会话信息
-        """
-        async with self._state_lock:
-            agent_member_info = self.get_or_create_agent_member_info(agent_name)
-            agent_member_info.context_state.last_loaded_compact_index = compact_index
-            agent_member_info.context_state.last_loaded_message_index = message_index
-            await self._persist(
-                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-            )
+            await self._save_agent_members()
             return agent_member_info
 
     async def add_message(self, agent_result) -> None:
@@ -435,9 +390,13 @@ class GroupChatRuntime:
         )
         await self._persist(lambda: self.repository.save_group_chat_session(session))
 
-    async def update_agent_member_info_from_result(self, agent_result) -> AgentMemberInfo:
+    async def update_agent_session(self, agent_result) -> AgentMemberInfo:
         """
         根据 Agent 执行结果更新会话信息
+
+        业务逻辑：
+        - 如果没有 main_session → 设置为当前 session_id
+        - 如果 session_id 不同且不在 btw_session → 追加到 btw_session
 
         Args:
             agent_result: Agent 执行结果（包含 agent_name, session_id）
@@ -458,60 +417,29 @@ class GroupChatRuntime:
             ):
                 agent_member_info.btw_session.append(agent_result.session_id)
 
-            await self._persist(
-                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-            )
-            await self._notify_change()
+            await self._save_agent_members()
             return agent_member_info
 
-    async def update_agent_context_usage(
-        self, agent_name: str, context_usage: int
-    ) -> AgentMemberInfo:
+    async def _save_agent_members(self):
         """
-        更新 Agent 的 context_usage 并持久化
+        持久化所有 agent 成员信息并通知变更
 
-        Args:
-            agent_name: Agent 名称
-            context_usage: 上下文使用量（input_tokens/1000 取整）
+        Note: agent_member.json 是整体文件，任何字段修改都会触发全量保存
+        """
+        await self._persist(
+            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
+        )
+        await self._notify_change()
 
-        Returns:
-            AgentMemberInfo: 更新后的会话信息
+    async def save_agent_members(self):
+        """
+        持久化所有 agent 成员信息并通知变更（带锁保护）
+
+        并发安全：通过 _state_lock 保护 read-modify-write 序列
         """
         async with self._state_lock:
-            agent_member_info = self.get_or_create_agent_member_info(agent_name)
-            old_value = agent_member_info.context_usage
-            agent_member_info.context_usage = context_usage
-            logger.info(
-                "[Runtime] update_context_usage: agent=%s, old=%d, new=%d",
-                agent_name,
-                old_value,
-                context_usage,
-            )
-            await self._persist(
-                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-            )
-            await self._notify_change()
-            return agent_member_info
+            await self._save_agent_members()
 
-    async def update_agent_status(self, agent_name: str, status: str) -> AgentMemberInfo:
-        """
-        更新 Agent 的 status 并持久化
-
-        Args:
-            agent_name: Agent 名称
-            status: 状态值（idle/busy/chatting）
-
-        Returns:
-            AgentMemberInfo: 更新后的会话信息
-        """
-        async with self._state_lock:
-            agent_member_info = self.get_or_create_agent_member_info(agent_name)
-            agent_member_info.status = status
-            await self._persist(
-                lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-            )
-            await self._notify_change()
-            return agent_member_info
 
     def get_agent_context(self) -> list[dict]:
         """
@@ -637,12 +565,6 @@ class GroupChatRuntime:
 
         # 追加压缩记录并标记压缩位置
         await self.append_compact_record_and_mark_compacted(compact_record)
-
-    async def save_agent_member_infos(self) -> None:
-        """保存所有 agent 会话信息"""
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
 
     # ==================== Persistence Helper ====================
 
