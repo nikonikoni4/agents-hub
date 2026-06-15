@@ -297,7 +297,7 @@ def test_create_snapshot_with_head_ref_range(tmp_path):
 
     # 再提交2次（共3次），每次都修改文件
     for i in range(1, 3):
-        test_file.write_text(f"line1\nline{i+1}\n")
+        test_file.write_text(f"line1\nline{i + 1}\n")
         subprocess.run(["git", "add", "test.py"], cwd=cwd, check=True, capture_output=True)
         subprocess.run(
             ["git", "commit", "-m", f"commit {i}"],

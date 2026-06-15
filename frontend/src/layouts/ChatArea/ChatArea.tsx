@@ -599,3 +599,4 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     </div>
   );
 }
+// test hook trigger 3
