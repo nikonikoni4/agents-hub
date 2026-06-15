@@ -623,45 +623,7 @@ await self.runtime.update_agent_status(agent_name, "idle")
 
 在 `start_member` 中添加 `message_router.register(agent_name, agent.message_queue)`
 
----
 
-## 八、Agent 停止流程（_cleanup_agent_queue）
-
-### 关键函数调用链
-
-```
-stop_member(agent_name)
-    ├─> runtime.update_agent_status("stopped")
-    ├─> _stop_agent_process(agent)  # 终止 CLI 进程
-    ├─> agent.stop()  # 发送停止信号
-    ├─> 取消 asyncio.Task
-    ├─> _cleanup_agent_queue(agent_name)
-    │   ├─> get_runtime_calls_for_agent(agent_name)  # 获取 PENDING/RUNNING 的 call
-    │   ├─> 对每个 call：
-    │   │   ├─> mark_agent_response(call_id, content, success=False)
-    │   │   ├─> 调用方不是 user：
-    │   │   │   └─> create_call + send_message (NOTIFICATION)
-    │   │   └─> 调用方是 user：
-    │   │       └─> add_message(result)
-    │   └─> 清空消息队列
-    └─> message_router.unregister(agent_name)
-```
-
-### 问题：_cleanup_agent_queue 需要仔细判断（待讨论）
-
-#### 问题描述
-
-这里有大问题，需要后续仔细判断。以下问题不一定准确：
-
-1. **没有判断消息类型是不是 Message.TASK 就直接 mark_agent_response**
-
-2. **按照惯例，所有发送消息都应该保留到群消息，所有群消息保存都应该使用回调函数通知前端更新**
-
-3. **该不该以 stop 的 agent 身份发送消息？**
-   - 当前不确定状态
-   - 如果简单一点，至少需要增加上系统标识
-
----
 
 ## 七、Agent 压缩流程
 

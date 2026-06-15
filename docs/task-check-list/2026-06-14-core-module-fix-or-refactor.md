@@ -338,7 +338,7 @@ INFO: 127.0.0.1:54863 - "POST /api/v1/group-chats/{id}/messages HTTP/1.1" 409 Co
 - 显示 toast 提示（如："无法发送消息：Agent XXX 已停止，请先启动"）
 
 **优先级**：P2（用户体验问题，非阻塞）
-
+已经完成
 ---
 
 ### 2. Logger 使用规范（来源：原始问题报告）
@@ -346,7 +346,7 @@ INFO: 127.0.0.1:54863 - "POST /api/v1/group-chats/{id}/messages HTTP/1.1" 409 Co
 - 日志级别的使用标准（何时用 debug/info/warning/error）
 - 日志消息的格式规范（是否包含上下文信息、变量格式等）
 - 模块间日志的一致性要求
-
+已经完成
 ### 2. 群聊加载策略（来源：原始问题报告）
 - [x] 已实施：采用混合策略（按项目懒加载 + 项目内分页）
 - [x] 前端：首次只加载项目摘要，展开项目时才加载群聊
@@ -364,7 +364,7 @@ INFO: 127.0.0.1:54863 - "POST /api/v1/group-chats/{id}/messages HTTP/1.1" 409 Co
 - 是否需要判断消息类型（TASK vs NOTIFICATION）？
 - 是否所有清理消息都应保留到群聊历史？
 - 是否以 stopped agent 身份发送消息，还是系统身份？
-
+误判：_cleanup_agent_queue问题不大
 ### 5. AgentCall 和 Task 的保留策略（来源：原始问题报告 + 子Agent审查）
 - 已完成的 AgentCall 应保留多长时间？
 - 已归档的任务应保留多长时间？
