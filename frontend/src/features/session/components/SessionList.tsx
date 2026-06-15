@@ -32,19 +32,21 @@ export function SessionList() {
           单聊
         </button>
       </div>
-      {groups.length === 0 ? (
-        <div className="session-list-empty">
-          <p>{activeTab === 'group' ? '暂无群聊' : '暂无单聊'}</p>
-        </div>
-      ) : (
-        groups.map((group) => (
-          <ProjectGroup
-            key={group.projectPath}
-            group={group}
-            type={activeTab === 'group' ? 'group_chat' : 'single_chat'}
-          />
-        ))
-      )}
+      <div className="session-groups">
+        {groups.length === 0 ? (
+          <div className="session-list-empty">
+            <p>{activeTab === 'group' ? '暂无群聊' : '暂无单聊'}</p>
+          </div>
+        ) : (
+          groups.map((group) => (
+            <ProjectGroup
+              key={group.projectPath}
+              group={group}
+              type={activeTab === 'group' ? 'group_chat' : 'single_chat'}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
