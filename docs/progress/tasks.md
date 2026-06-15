@@ -6,6 +6,22 @@
 
 ## 待开始
 
+### 34. 文档重构与全面 Code Review ⭐
+- **来源**：用户直接指定
+- **状态**：⏳ 待开始
+- **创建时间**：2026-06-15
+- **优先级**：0
+- **描述**：整理重构全部文档内容，并对仓库进行全面的 code-review
+- **子任务拆分**：
+  - 34.1 文档重构：整理、优化、统一所有文档的格式和内容
+  - 34.2 全面 Code Review：对仓库代码进行全面审查，识别潜在问题和改进点
+- **涉及模块**：
+  - 文档：docs/、CLAUDE.md、specs、design-decisions
+  - 代码：全部后端和前端代码
+- **备注**：
+  - 文档重构需先阅读 `docs/docs-rules/index.md` 和 `docs/docs-rules/docs-write-rules.md`
+  - Code Review 可使用 local-code-review skill 或 code-review skill
+
 ### 14. 远程连接
 - **来源**：idea #11
 - **状态**：⏳ 待开始
