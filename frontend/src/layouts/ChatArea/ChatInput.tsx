@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   PlusIcon,
-  CheckCircleIcon,
   SendIcon,
   UploadPreview,
   ImagePreviewModal,
@@ -332,9 +331,6 @@ export const ChatInput = React.memo(
               ))}
             </div>
           )}
-          <button className={styles.iconBtn} onClick={handleAttachmentClick} aria-label="添加附件">
-            <PlusIcon />
-          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -353,8 +349,8 @@ export const ChatInput = React.memo(
             onKeyDown={handleKeyDown}
             onInput={adjustTextareaHeight}
           />
-          <button className={styles.iconBtn} aria-label="确认">
-            <CheckCircleIcon />
+          <button className={styles.iconBtn} onClick={handleAttachmentClick} aria-label="添加附件">
+            <PlusIcon />
           </button>
           <button
             className={`${styles.iconBtn} ${inputValue.trim() ? styles.sendBtnActive : ''}`}
