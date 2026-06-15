@@ -60,6 +60,9 @@ class AgentResult:
     permission_request: dict | None = None  # 权限请求数据
     web_preview: dict | None = None  # 网页预览数据 {"url": "...", "title": "..."}
     files: list[dict] | None = None  # 上传文件列表
+    git_head_before: str | None = None  # Git HEAD（执行前），用于检测提交
+    untracked_before: set[str] | None = None  # 已废弃，保留向后兼容
+    status_before: dict[str, str] | None = None  # 执行前的工作区状态（推荐使用）
 
 
 # 向后兼容别名（待废弃）

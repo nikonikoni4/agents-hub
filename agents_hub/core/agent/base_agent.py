@@ -10,6 +10,7 @@ Agent 基类
 """
 
 import asyncio
+import re
 from pathlib import Path
 
 from agents_hub.agent_bridge import AgentResult, agent_platform_client
@@ -37,10 +38,8 @@ class Agent:
     SHARED_RULES = """\
 ## 群聊消息显示规则
 
-1. **report_progress**：所有 agent 都会看到，但只有被调用和激活时才会传给它。当你接受到一个任务的时候必须使用report_progress发送"收到任务，我将xx"
-2. **complete_task**：会显示在群聊中，并激活目标 agent
-3. **不要同时调用 report_progress 和 complete_task**
-4. **任务结束时使用 complete_task，不要使用 report_progress**
+1. 直接输出的内容会显示在群聊中
+2. 如果涉及文件修改或网页预览，在输出末尾添加 <changes> XML 块
 """
 
     def __init__(
@@ -227,6 +226,35 @@ class Agent:
             msg.call_id,
             self.name,
         )
+
+        # 记录 Git 状态（用于文件变更兜底捕获）
+        git_head_before = None
+        status_before = None
+        if self.agent_cwd:
+            try:
+                from agents_hub.core.foundation.file_snapshot import (
+                    get_git_head,
+                    get_working_tree_status,
+                )
+
+                git_head_before = get_git_head(self.agent_cwd)
+                if git_head_before:
+                    self.logger.info(
+                        "[Git 兜底] 记录执行前状态: HEAD=%s, agent=%s",
+                        git_head_before[:8],
+                        self.name,
+                    )
+                    # 记录完整的工作区状态
+                    status_before = get_working_tree_status(self.agent_cwd)
+                    if status_before:
+                        self.logger.info(
+                            "[Git 兜底] 记录 %d 个文件的状态 (agent=%s)",
+                            len(status_before),
+                            self.name,
+                        )
+            except Exception as e:
+                self.logger.warning("[Git 兜底] 记录执行前状态失败，Git 兜底将不可用: %s", str(e))
+
         try:
             if msg.session_type == SessionType.MAIN:
                 self.logger.debug(
@@ -253,6 +281,11 @@ class Agent:
                     msg.call_id,
                 )
                 result = await self.btw_execute(prompt, system_prompt=system_prompt)
+
+            # 保存 Git 状态到 result（供 fallback 使用）
+            if git_head_before:
+                result.git_head_before = git_head_before
+                result.status_before = status_before
             if msg.message_type != MessageType.TASK:
                 await self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)
             self.logger.debug(
@@ -551,6 +584,94 @@ call_id: {msg.call_id}
         agent_member_info.status = status
         await self.runtime.save_agent_members(context=f"Agent {self.name} status → {status}")
 
+    def _parse_changes_xml(self, text: str) -> dict | None:
+        """解析 <changes> XML 块，提取变更信息。
+
+        Args:
+            text: Agent 输出的文本
+
+        Returns:
+            解析结果字典，格式：
+            {
+                "files": ["file1.py", "file2.py"],
+                "diff": "HEAD",
+                "preview_url": "http://...",
+                "preview_title": "标题"
+            }
+            如果没有 <changes> 块或解析失败，返回 None
+        """
+        match = re.search(r"<changes>(.*?)</changes>", text, re.DOTALL)
+        if not match:
+            return None
+
+        xml_content = match.group(1)
+
+        def extract_tag(tag: str) -> str | None:
+            tag_match = re.search(rf"<{tag}>(.*?)</{tag}>", xml_content, re.DOTALL)
+            return tag_match.group(1).strip() if tag_match else None
+
+        files_str = extract_tag("files")
+        files = [f.strip() for f in files_str.split(",")] if files_str else []
+
+        return {
+            "files": files,
+            "diff": extract_tag("diff"),
+            "preview_url": extract_tag("preview_url"),
+            "preview_title": extract_tag("preview_title"),
+        }
+
+    def _strip_changes_xml(self, text: str) -> str:
+        """从文本中移除 <changes> XML 块（不展示给用户）。"""
+        return re.sub(r"<changes>.*?</changes>", "", text, flags=re.DOTALL).strip()
+
+    async def _process_file_changes(
+        self,
+        result: AgentResult,
+        call_id: str,
+        files: list[str],
+        diff: str | None,
+    ) -> None:
+        """处理文件变更：创建快照并更新 result。
+
+        Args:
+            result: AgentResult 对象
+            call_id: AgentCall ID
+            files: 修改的文件路径列表
+            diff: Git diff 基准（如 "HEAD"）
+        """
+        from agents_hub.core.foundation.file_snapshot import create_file_snapshot
+        from agents_hub.core.foundation.paths import group_chat_paths
+
+        snapshot_dir = group_chat_paths.file_snapshots_dir(
+            self.runtime.group_chat_id, self.runtime.project_path
+        )
+
+        file_metadata_list = []
+        snapshot_failures = []
+        for index, file_path in enumerate(files):
+            try:
+                metadata = create_file_snapshot(
+                    snapshot_dir=snapshot_dir,
+                    call_id=call_id,
+                    file_path=file_path,
+                    index=index,
+                    cwd=self.agent_cwd,
+                    git_diff_range=diff,
+                )
+                file_metadata_list.append(metadata)
+            except Exception as e:
+                snapshot_failures.append((file_path, str(e)))
+
+        if snapshot_failures:
+            self.logger.warning(
+                "文件快照创建失败: %d 个: %s",
+                len(snapshot_failures),
+                snapshot_failures,
+            )
+
+        result.modified_files = file_metadata_list
+        result.git_diff_range = diff
+
     async def _fallback_close_task(self, msg: AgentMessage, result: AgentResult | None) -> None:
         """兜底闭环：未闭环的 TASK 补齐 mark_agent_response + 分流通知（避免 MCP 断连导致群聊无消息）"""
         if msg.message_type != MessageType.TASK:
@@ -566,6 +687,71 @@ call_id: {msg.call_id}
             return
 
         safe_content = redact_token(result.text)
+
+        # 优先级：XML > Git Snapshot 兜底
+        changes = self._parse_changes_xml(safe_content)
+        if changes:
+            # 从展示内容中移除 <changes> 块
+            safe_content = self._strip_changes_xml(safe_content)
+
+            # 处理文件快照
+            if changes["files"]:
+                await self._process_file_changes(
+                    result, msg.call_id, changes["files"], changes["diff"]
+                )
+
+            # 处理网页预览
+            if changes["preview_url"]:
+                preview_url = changes["preview_url"]
+                # 只对相对路径转换为 file:/// 绝对路径，HTTP/HTTPS URL 保持不变
+                if not preview_url.startswith(("file:///", "http://", "https://")):
+                    abs_path = Path(self.agent_cwd) / preview_url
+                    preview_url = f"file:///{abs_path.as_posix()}"
+                result.web_preview = {
+                    "url": preview_url,
+                    "title": changes["preview_title"] or "",
+                }
+        elif result.git_head_before and self.agent_cwd:
+            # Git Snapshot 兜底：agent 没有通过 XML 报告文件变更
+            try:
+                self.logger.info(
+                    "[Git 兜底] 触发：agent 未输出 XML <changes> (agent=%s, call_id=%s)",
+                    self.name,
+                    msg.call_id,
+                )
+                from agents_hub.core.foundation.file_snapshot import get_git_changed_files
+
+                # 使用状态对比模式（推荐）
+                status_before = getattr(result, "status_before", None)
+                if status_before is not None:
+                    self.logger.info("[Git 兜底] 使用状态对比模式")
+                    git_files = get_git_changed_files(
+                        self.agent_cwd,
+                        base_ref=result.git_head_before,
+                        status_before=status_before,
+                    )
+                else:
+                    # 降级：如果 status_before 不存在（旧数据或异常），跳过兜底
+                    self.logger.warning("[Git 兜底] status_before 不存在，跳过 Git 兜底")
+                    git_files = []
+
+                if git_files:
+                    self.logger.info(
+                        "[Git 兜底] 捕获到 %d 个文件变更 (agent=%s, call_id=%s)",
+                        len(git_files),
+                        self.name,
+                        msg.call_id,
+                    )
+                    for f in git_files[:10]:
+                        self.logger.info("[Git 兜底]   - %s", Path(f).name)
+                    if len(git_files) > 10:
+                        self.logger.info("[Git 兜底]   ... 还有 %d 个文件", len(git_files) - 10)
+                    await self._process_file_changes(result, msg.call_id, git_files, None)
+                else:
+                    self.logger.info("[Git 兜底] 未检测到文件变更")
+            except Exception as e:
+                self.logger.error("[Git 兜底] 执行失败，但不影响主流程: %s", str(e), exc_info=True)
+
         await self.agent_call_manager.mark_agent_response(
             call_id=msg.call_id,
             content=safe_content,
