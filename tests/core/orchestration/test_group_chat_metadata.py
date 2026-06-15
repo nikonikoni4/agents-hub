@@ -186,14 +186,14 @@ class TestGroupChatMetadataIntegration:
             group_chat.manager = None
             group_chat.workers = {}
 
-        async def fake_generate_tokens():
+        async def fake_ensure_tokens():
             return None
 
         async def fake_initialize_members():
             return None
 
         monkeypatch.setattr(group_chat, "_init_agents", fake_init_agents)
-        monkeypatch.setattr(group_chat, "_generate_and_register_tokens", fake_generate_tokens)
+        monkeypatch.setattr(group_chat, "_ensure_tokens", fake_ensure_tokens)
         monkeypatch.setattr(group_chat, "_initialize_new_members", fake_initialize_members)
         monkeypatch.setattr(group_chat, "_start_agent_tasks", lambda: None)
 

@@ -13,8 +13,9 @@
 
 .skillCard:hover {
   border-color: var(--accent-color);
+  background: var(--bg-main);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .skillCard:hover .skillAvatar {
@@ -50,12 +51,27 @@
   opacity: 1;
 }
 
+/* 技能头部（图标+名称） */
+.skillHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* 技能图标 */
+.skillIcon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
 /* 技能头像 */
 .skillAvatar {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 6px;
-  margin-bottom: 12px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;

@@ -72,13 +72,13 @@ class TestScenario1TokenGeneration:
     async def test_group_chat_generates_tokens(self, group_chat):
         """测试 GroupChat 创建时生成 token"""
         # 验证 manager 的 token
-        manager_session = group_chat.group_chat_context.agent_member_info.get("Leader")
+        manager_session = group_chat.runtime.get_agent_member_info("Leader")
         assert manager_session is not None, "Manager 应该有 session 信息"
         assert manager_session.token != "", "Manager 应该有 token"
 
         # 验证 workers 的 token
         for worker_name in ["小王", "小李"]:
-            worker_session = group_chat.group_chat_context.agent_member_info.get(worker_name)
+            worker_session = group_chat.runtime.get_agent_member_info(worker_name)
             assert worker_session is not None, f"{worker_name} 应该有 session 信息"
             assert worker_session.token != "", f"{worker_name} 应该有 token"
 
@@ -86,7 +86,7 @@ class TestScenario1TokenGeneration:
     async def test_tokens_registered_in_manager(self, group_chat):
         """测试 token 已注册到 GroupChatManager"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # 验证可以解析 token
         result = group_chat_manager.resolve_token(manager_token)
@@ -95,7 +95,7 @@ class TestScenario1TokenGeneration:
 
         # 验证 workers 的 token
         for worker_name in ["小王", "小李"]:
-            worker_token = group_chat.group_chat_context.agent_member_info[worker_name].token
+            worker_token = group_chat.runtime.get_agent_member_info(worker_name).token
             result = group_chat_manager.resolve_token(worker_token)
             assert result is not None, f"{worker_name} token 应该可以解析"
             assert result == (worker_name, "test_e2e_chat"), f"{worker_name} token 解析结果应该正确"
@@ -113,7 +113,7 @@ class TestScenario2CallAgent:
     async def test_manager_calls_worker(self, group_chat):
         """测试 Manager 使用 token 调用 call_agent"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # Manager 派活给小王
         result = await call_agent(
@@ -132,7 +132,7 @@ class TestScenario2CallAgent:
         assert call_id != "", "call_id 不应该为空"
 
         # 验证 AgentCall 已创建
-        call = group_chat.agent_call_manager.get_call(call_id)
+        call = await group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该已创建"
         assert call.send_from == "Leader", "发送者应该是 Leader"
         assert call.send_to == "小王", "接收者应该是小王"
@@ -143,7 +143,7 @@ class TestScenario2CallAgent:
     async def test_worker_receives_message(self, group_chat):
         """测试 Worker 收到消息（通过 AgentCall 状态验证）"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # Manager 派活给小王
         result = await call_agent(
@@ -160,7 +160,7 @@ class TestScenario2CallAgent:
         await asyncio.sleep(2)
 
         # 验证 AgentCall 状态已变更（说明 Worker 收到并处理了消息）
-        call = group_chat.agent_call_manager.get_call(call_id)
+        call = await group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
         # Worker 的 run() 任务会将 TASK 从 PENDING -> RUNNING；
         # COMPLETED 只能由 complete_task 显式闭环产生。
@@ -181,7 +181,7 @@ class TestScenario3WorkerResponse:
     async def test_worker_completes_and_responds(self, group_chat):
         """测试 Worker 完成任务后显式闭环"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # Manager 派活给小王
         result = await call_agent(
@@ -193,7 +193,7 @@ class TestScenario3WorkerResponse:
 
         call_id = result["call_id"]
 
-        worker_token = group_chat.group_chat_context.agent_session_id["小王"].token
+        worker_token = group_chat.runtime.get_agent_member_info("小王").token
         finish_result = await complete_task(
             agent_token=worker_token,
             call_id=call_id,
@@ -206,12 +206,12 @@ class TestScenario3WorkerResponse:
         max_wait = 15
         for i in range(max_wait):
             await asyncio.sleep(1)
-            call = group_chat.agent_call_manager.get_call(call_id)
+            call = await group_chat.agent_call_manager.get_call(call_id)
             if call and call.status == CallStatus.COMPLETED:
                 break
 
         # 验证 AgentCall 状态已更新为 COMPLETED
-        call = group_chat.agent_call_manager.get_call(call_id)
+        call = await group_chat.agent_call_manager.get_call(call_id)
         assert call is not None, "AgentCall 应该存在"
         assert call.status == CallStatus.COMPLETED, (
             f"AgentCall 状态应该是 COMPLETED，实际: {call.status}"
@@ -232,7 +232,7 @@ class TestScenario4CheckAgentCall:
     async def test_manager_checks_call_status(self, group_chat):
         """测试 Manager 使用 token 调用 check_agent_call"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # Manager 派活给小王
         call_result = await call_agent(
@@ -263,7 +263,7 @@ class TestScenario4CheckAgentCall:
     async def test_check_nonexistent_call(self, group_chat):
         """测试查询不存在的 AgentCall"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # 查询不存在的 call_id
         result = await check_agent_call(
@@ -290,7 +290,7 @@ class TestScenario5AssignTasks:
     async def test_manager_assigns_tasks(self, group_chat):
         """测试 Manager 使用 token 调用 assign_tasks_to_team"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # Manager 分配任务
         tasks = [
@@ -316,7 +316,7 @@ class TestScenario5AssignTasks:
     async def test_worker_cannot_assign_tasks(self, group_chat):
         """测试 Worker 无权分配任务"""
         # 获取 worker 的 token
-        worker_token = group_chat.group_chat_context.agent_member_info["小王"].token
+        worker_token = group_chat.runtime.get_agent_member_info("小王").token
 
         # Worker 尝试分配任务
         tasks = [
@@ -336,7 +336,7 @@ class TestScenario5AssignTasks:
     async def test_update_existing_tasks(self, group_chat):
         """测试更新已有任务"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # 第一次分配任务
         tasks = [
@@ -385,7 +385,7 @@ class TestScenario6ArchiveTaskList:
     async def test_manager_archives_task_list(self, group_chat):
         """测试 Manager 使用 token 调用 archive_task_list"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # 先分配一些任务
         tasks = [
@@ -409,7 +409,7 @@ class TestScenario6ArchiveTaskList:
     async def test_worker_cannot_archive_tasks(self, group_chat):
         """测试 Worker 无权归档任务"""
         # 获取 worker 的 token
-        worker_token = group_chat.group_chat_context.agent_member_info["小王"].token
+        worker_token = group_chat.runtime.get_agent_member_info("小王").token
 
         # Worker 尝试归档任务
         result = await archive_task_list(agent_token=worker_token)
@@ -431,7 +431,7 @@ class TestCompleteWorkflow:
     async def test_complete_mcp_workflow(self, group_chat):
         """测试完整的 MCP 工具流程"""
         # 获取 manager 的 token
-        manager_token = group_chat.group_chat_context.agent_member_info["Leader"].token
+        manager_token = group_chat.runtime.get_agent_member_info("Leader").token
 
         # 1. Manager 派活给小王
         call_result = await call_agent(

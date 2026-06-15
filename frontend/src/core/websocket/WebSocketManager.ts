@@ -157,7 +157,12 @@ class WebSocketManager {
    * 创建 WebSocket 连接
    */
   private _createConnection(chatId: string): void {
-    const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000/api/v1';
+    // 优先使用 VITE_WS_BASE_URL，否则根据 VITE_API_PORT 动态构建
+    let wsBaseUrl = import.meta.env.VITE_WS_BASE_URL;
+    if (!wsBaseUrl) {
+      const apiPort = import.meta.env.VITE_API_PORT || '8099';
+      wsBaseUrl = `ws://localhost:${apiPort}/api/v1`;
+    }
     const wsUrl = `${wsBaseUrl}/ws/group_chat/${chatId}`;
 
     // eslint-disable-next-line no-console

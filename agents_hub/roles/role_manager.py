@@ -1,7 +1,6 @@
 """RoleManager 类 - 角色生命周期管理。"""
 
 import json
-import logging
 import os
 import re
 import shutil
@@ -18,8 +17,9 @@ from agents_hub.roles.exceptions import (
 from agents_hub.roles.models import RoleInfo, RoleType
 from agents_hub.roles.prompt_file import build_system_file_content
 from agents_hub.roles.role import Role
+from agents_hub.utils import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RoleManager:
@@ -57,14 +57,19 @@ class RoleManager:
             ValueError: 名称不合法时抛出。
         """
         if not name:
+            logger.error("角色名验证失败: 名称为空")
             raise ValueError("Role name cannot be empty")
         if name.startswith("."):
+            logger.error("角色名验证失败: name=%s, 不能以点号开头", name)
             raise ValueError("Role name cannot start with '.'")
         if name.endswith(" "):
+            logger.error("角色名验证失败: name=%s, 不能以空格结尾", name)
             raise ValueError("Role name cannot end with space")
         if " " in name:
+            logger.error("角色名验证失败: name=%s, 不能包含空格", name)
             raise ValueError(f"Invalid role name: '{name}'. Cannot contain spaces")
         if re.search(r'[\\/:*?"<>|]', name):
+            logger.error("角色名验证失败: name=%s, 不能包含特殊字符", name)
             raise ValueError(f"Invalid role name: '{name}'. Cannot contain: \\ / : * ? \" < > |")
         # Windows 保留名
         reserved = {
@@ -92,6 +97,7 @@ class RoleManager:
             "LPT9",
         }
         if name.upper() in reserved:
+            logger.error("角色名验证失败: name=%s, Windows 保留名称", name)
             raise ValueError(f"Invalid role name: '{name}' is a Windows reserved name")
 
     def _check_name_prefix_conflict(self, name: str) -> None:
@@ -111,6 +117,7 @@ class RoleManager:
             if existing == name:
                 continue
             if name.startswith(existing) or existing.startswith(name):
+                logger.error("角色名冲突: name=%s, 冲突角色=%s, 名称不能互为前缀", name, existing)
                 raise ValueError(
                     f"Role name '{name}' conflicts with existing role '{existing}': "
                     f"names cannot be prefixes of each other"
@@ -149,7 +156,8 @@ class RoleManager:
                                 disabled_tools=data.get("disabled_tools"),
                             )
                         )
-                    except (json.JSONDecodeError, KeyError):
+                    except (json.JSONDecodeError, KeyError) as e:
+                        logger.warning("跳过损坏的 role.json: path=%s, error=%s", role_json, e)
                         continue
         return roles
 
@@ -198,11 +206,17 @@ class RoleManager:
         role_dir = self.agents_dir / name
         if not role_dir.exists():
             available_roles = self.list_role_names()
+            logger.error(
+                "获取角色失败: name=%s, 角色目录不存在, 已有角色=%s", name, available_roles
+            )
             raise RoleNotFoundError(role_name=name, available_roles=available_roles)
 
         role_json = role_dir / "role.json"
         if not role_json.exists():
             available_roles = self.list_role_names()
+            logger.error(
+                "获取角色失败: name=%s, role.json 不存在, 已有角色=%s", name, available_roles
+            )
             raise RoleNotFoundError(role_name=name, available_roles=available_roles)
 
         return Role(role_dir)
@@ -261,15 +275,17 @@ class RoleManager:
             RoleAlreadyExistsError: 角色已存在。
             PlatformConfigNotFoundError: 平台配置目录不存在。
         """
+        logger.info("开始创建角色: name=%s, platform=%s", name, platform.value)
         self._validate_role_name(name)
         self._check_name_prefix_conflict(name)
 
         role_dir = self.agents_dir / name
         if role_dir.exists():
             if self._is_role_incomplete(role_dir, platform):
-                logger.info(f"角色 {name} 目录存在但配置不完整，重新创建")
+                logger.info("角色目录存在但配置不完整，重新创建: name=%s", name)
                 shutil.rmtree(role_dir)
             else:
+                logger.error("创建角色失败: name=%s, 角色已存在", name)
                 raise RoleAlreadyExistsError(role_name=name)
 
         role_dir.mkdir(parents=True)
@@ -303,7 +319,8 @@ class RoleManager:
                 (work_root / "CLAUDE.md").write_text(system_file_content, encoding="utf-8")
             elif platform == AgentPlatform.CODEX:
                 (work_root / "AGENTS.md").write_text(system_file_content, encoding="utf-8")
-        except Exception:
+        except Exception as e:
+            logger.error("创建角色失败: name=%s, platform=%s, error=%s", name, platform.value, e)
             shutil.rmtree(role_dir, ignore_errors=True)
             raise
 
@@ -320,6 +337,7 @@ class RoleManager:
             json.dumps(role_json, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
+        logger.info("角色创建成功: name=%s, platform=%s", name, platform.value)
         return Role(role_dir)
 
     def delete_role(self, name: str) -> None:
@@ -337,8 +355,10 @@ class RoleManager:
         role_dir = self.agents_dir / name
         if not role_dir.exists():
             available_roles = self.list_role_names()
+            logger.error("删除角色失败: name=%s, 角色不存在, 已有角色=%s", name, available_roles)
             raise RoleNotFoundError(role_name=name, available_roles=available_roles)
 
+        logger.info("删除角色: name=%s", name)
         shutil.rmtree(role_dir)
 
     def _init_claude_config(self, work_root: Path) -> None:
@@ -355,6 +375,7 @@ class RoleManager:
         """
         home_claude = Path.home() / ".claude"
         if not home_claude.exists():
+            logger.error("初始化 Claude 配置失败: 配置目录不存在, path=%s", home_claude)
             raise PlatformConfigNotFoundError(platform="Claude", config_path=str(home_claude))
 
         settings_src = home_claude / "settings.json"
@@ -375,6 +396,7 @@ class RoleManager:
         """
         home_codex = Path.home() / ".codex"
         if not home_codex.exists():
+            logger.error("初始化 Codex 配置失败: 配置目录不存在, path=%s", home_codex)
             raise PlatformConfigNotFoundError(platform="Codex", config_path=str(home_codex))
 
         for file_name in ["auth.json", "config.toml"]:

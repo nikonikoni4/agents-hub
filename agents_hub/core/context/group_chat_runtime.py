@@ -5,16 +5,17 @@
 """
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 
 from agents_hub.core.foundation import GroupChatType
-from agents_hub.utils.logger import get_logger
+from agents_hub.utils import get_logger
 
 from .group_chat_repository import GroupChatRepository
 from .group_chat_runtime_state import GroupChatRuntimeState
-from .group_chat_session import AgentMemberInfo
+from .group_chat_session import AgentMemberInfo, GroupChatSession
 from .group_metadata import GroupMetadata
 
 logger = get_logger(__name__)
@@ -48,6 +49,7 @@ class GroupChatRuntime:
         )
         self._on_change = on_change
         self._message_event = asyncio.Event()
+        self._state_lock = asyncio.Lock()  # 保护 read-modify-write 序列的并发访问
 
     # ==================== Load ====================
 
@@ -194,6 +196,43 @@ class GroupChatRuntime:
         """
         return list(self.state.agent_member_infos.keys())
 
+    def get_agent_member_info(self, agent_name: str) -> AgentMemberInfo | None:
+        """
+        获取 Agent 会话信息（不自动创建）
+
+        Args:
+            agent_name: Agent 名称
+
+        Returns:
+            AgentMemberInfo 或 None（如果不存在）
+        """
+        return self.state.agent_member_infos.get(agent_name)
+
+    def get_group_chat_session(self) -> "GroupChatSession | None":
+        """
+        获取群聊会话
+
+        Returns:
+            GroupChatSession 或 None（如果未加载）
+        """
+        return self.state.group_chat_session
+
+    def require_group_chat_session(self) -> "GroupChatSession":
+        """
+        获取群聊会话（必须存在）
+
+        Returns:
+            GroupChatSession
+
+        Raises:
+            StateError: 如果 session 未加载
+        """
+        from agents_hub.core.foundation import StateError
+
+        if self.state.group_chat_session is None:
+            raise StateError("GroupChatSession 未加载，请先调用 load()")
+        return self.state.group_chat_session
+
     async def load_compact_history(self) -> list[dict]:
         """
         加载压缩历史记录
@@ -259,25 +298,6 @@ class GroupChatRuntime:
         await self._persist(lambda: self.repository.save_group_metadata(metadata))
         return metadata
 
-    async def set_agent_token_and_default_cwd(self, agent_name: str, token: str) -> AgentMemberInfo:
-        """
-        设置 Agent 的 token 和默认工作目录
-
-        Args:
-            agent_name: Agent 名称
-            token: Agent token
-
-        Returns:
-            AgentMemberInfo: 更新后的会话信息
-        """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        agent_member_info.token = token
-        agent_member_info.cwd = self.project_path
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        return agent_member_info
-
     async def set_agent_use_docker(self, agent_name: str, use_docker: bool) -> AgentMemberInfo:
         """
         设置 Agent 是否使用 Docker
@@ -289,34 +309,11 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        agent_member_info.use_docker = use_docker
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        return agent_member_info
-
-    async def update_context_load_state(
-        self, agent_name: str, compact_index: int, message_index: int
-    ) -> AgentMemberInfo:
-        """
-        更新 Agent 的上下文加载状态
-
-        Args:
-            agent_name: Agent 名称
-            compact_index: 已加载的压缩历史索引
-            message_index: 已加载的消息索引
-
-        Returns:
-            AgentMemberInfo: 更新后的会话信息
-        """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        agent_member_info.context_state.last_loaded_compact_index = compact_index
-        agent_member_info.context_state.last_loaded_message_index = message_index
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        return agent_member_info
+        async with self._state_lock:
+            agent_member_info = self.get_or_create_agent_member_info(agent_name)
+            agent_member_info.use_docker = use_docker
+            await self._save_agent_members()
+            return agent_member_info
 
     async def add_message(self, agent_result) -> None:
         """
@@ -325,13 +322,14 @@ class GroupChatRuntime:
         Args:
             agent_result: Agent 执行结果
         """
-        session = self.state.require_session()
-        session.add_message(agent_result)
-        current_session = self.state.require_session()
-        if session.messages is not current_session.messages:
-            logger.warning("群聊 message 引用不一致: session=%s", id(session))
-        await self._persist(lambda: self.repository.save_group_chat_session(session))
-        self._message_event.set()
+        async with self._state_lock:
+            session = self.state.require_session()
+            session.add_message(agent_result)
+            current_session = self.state.require_session()
+            if session.messages is not current_session.messages:
+                logger.warning("群聊 message 引用不一致: session=%s", id(session))
+            await self._persist(lambda: self.repository.save_group_chat_session(session))
+            self._message_event.set()
 
     async def add_system_message(self, content: str) -> None:
         """
@@ -365,17 +363,18 @@ class GroupChatRuntime:
         Returns:
             bool: 是否找到并更新了消息
         """
-        session = self.state.require_session()
-        for msg in session.messages:
-            if msg.get("id") == message_id:
-                parts = field_path.split(".")
-                target = msg
-                for part in parts[:-1]:
-                    target = target.setdefault(part, {})
-                target[parts[-1]] = value
-                await self._persist(lambda: self.repository.save_group_chat_session(session))
-                return True
-        return False
+        async with self._state_lock:
+            session = self.state.require_session()
+            for msg in session.messages:
+                if msg.get("id") == message_id:
+                    parts = field_path.split(".")
+                    target = msg
+                    for part in parts[:-1]:
+                        target = target.setdefault(part, {})
+                    target[parts[-1]] = value
+                    await self._persist(lambda: self.repository.save_group_chat_session(session))
+                    return True
+            return False
 
     async def append_compact_record_and_mark_compacted(self, compact_record: dict) -> None:
         """
@@ -394,9 +393,13 @@ class GroupChatRuntime:
         )
         await self._persist(lambda: self.repository.save_group_chat_session(session))
 
-    async def update_agent_member_info_from_result(self, agent_result) -> AgentMemberInfo:
+    async def update_agent_session(self, agent_result) -> AgentMemberInfo:
         """
         根据 Agent 执行结果更新会话信息
+
+        业务逻辑：
+        - 如果没有 main_session → 设置为当前 session_id
+        - 如果 session_id 不同且不在 btw_session → 追加到 btw_session
 
         Args:
             agent_result: Agent 执行结果（包含 agent_name, session_id）
@@ -404,70 +407,63 @@ class GroupChatRuntime:
         Returns:
             AgentMemberInfo: 更新后的会话信息
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_result.agent_name)
+        async with self._state_lock:
+            agent_member_info = self.get_or_create_agent_member_info(agent_result.agent_name)
 
-        # 如果没有 main_session，设置为当前 session_id
-        if not agent_member_info.main_session:
-            agent_member_info.main_session = agent_result.session_id
-        # 如果 session_id 不同且不在 btw_session 中，追加到 btw_session
-        elif (
-            agent_result.session_id != agent_member_info.main_session
-            and agent_result.session_id not in agent_member_info.btw_session
-        ):
-            agent_member_info.btw_session.append(agent_result.session_id)
+            # 如果没有 main_session，设置为当前 session_id
+            if not agent_member_info.main_session:
+                agent_member_info.main_session = agent_result.session_id
+            # 如果 session_id 不同且不在 btw_session 中，追加到 btw_session
+            elif (
+                agent_result.session_id != agent_member_info.main_session
+                and agent_result.session_id not in agent_member_info.btw_session
+            ):
+                agent_member_info.btw_session.append(agent_result.session_id)
 
+            await self._save_agent_members()
+            return agent_member_info
+
+    async def _save_agent_members(self):
+        """
+        持久化所有 agent 成员信息并通知变更
+
+        Note: agent_member.json 是整体文件，任何字段修改都会触发全量保存
+        """
         await self._persist(
             lambda: self.repository.save_agent_member(self.state.agent_member_infos)
         )
         await self._notify_change()
-        return agent_member_info
 
-    async def update_agent_context_usage(
-        self, agent_name: str, context_usage: int
-    ) -> AgentMemberInfo:
+    async def save_agent_members(self, context: str | None = None):
         """
-        更新 Agent 的 context_usage 并持久化
+        持久化所有 agent 成员信息并通知变更（带锁保护）
 
         Args:
-            agent_name: Agent 名称
-            context_usage: 上下文使用量（input_tokens/1000 取整）
+            context: 可选的修改上下文描述，用于调试追踪
+                     例如："Agent stop", "Status sync: busy"
 
-        Returns:
-            AgentMemberInfo: 更新后的会话信息
+        并发安全：通过 _state_lock 保护 read-modify-write 序列
         """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        old_value = agent_member_info.context_usage
-        agent_member_info.context_usage = context_usage
-        logger.info(
-            "[Runtime] update_context_usage: agent=%s, old=%d, new=%d",
-            agent_name,
-            old_value,
-            context_usage,
-        )
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        await self._notify_change()
-        return agent_member_info
+        async with self._state_lock:
+            # 业务日志（生产环境可见）
+            if context:
+                logger.info(
+                    "保存 agent_members: group=%s, context='%s'", self.group_chat_id, context
+                )
 
-    async def update_agent_status(self, agent_name: str, status: str) -> AgentMemberInfo:
-        """
-        更新 Agent 的 status 并持久化
+            # 调试追踪（仅 DEBUG 模式）
+            if logger.isEnabledFor(logging.DEBUG):
+                import inspect
 
-        Args:
-            agent_name: Agent 名称
-            status: 状态值（idle/busy/chatting）
+                frame = inspect.currentframe()
+                caller_info = (
+                    f"{frame.f_back.f_code.co_filename}:{frame.f_back.f_lineno}"
+                    if frame and frame.f_back
+                    else "unknown"
+                )
+                logger.debug("调用栈: %s", caller_info)
 
-        Returns:
-            AgentMemberInfo: 更新后的会话信息
-        """
-        agent_member_info = self.get_or_create_agent_member_info(agent_name)
-        agent_member_info.status = status
-        await self._persist(
-            lambda: self.repository.save_agent_member(self.state.agent_member_infos)
-        )
-        await self._notify_change()
-        return agent_member_info
+            await self._save_agent_members()
 
     def get_agent_context(self) -> list[dict]:
         """
@@ -493,11 +489,127 @@ class GroupChatRuntime:
             for name, info in self.state.agent_member_infos.items()
         ]
 
+    async def compact_messages(self, agent_info: dict[str, str]):
+        """
+        压缩群聊消息历史
+
+        从 last_compacted_loc 到最新的消息进行压缩，生成：
+        1. summary: 所有 agent 共享的简短内容说明
+        2. 为每个 agent 生成专门的压缩信息
+
+        Args:
+            agent_info: agent 信息字典，格式为 {agent_name: agent_work_scope}
+
+        Raises:
+            CompactionError: 压缩失败
+        """
+        import json as _json
+
+        from agents_hub.agent_bridge import agent_platform_client
+        from agents_hub.core.foundation import MAX_TOKEN, CompactionError, StateError
+
+        # 获取未压缩的消息
+        if self.state.group_chat_session is None:
+            raise StateError("GroupChatSession 未加载，请先调用 load()")
+        uncompacted_messages = self.state.group_chat_session.get_uncompact_messages()
+
+        # 如果没有未压缩的消息，直接返回
+        if not uncompacted_messages:
+            return
+
+        # 估算 token 数量（粗略：4 个字符 ≈ 1 token）
+        total_chars = sum(len(msg.get("content", "")) for msg in uncompacted_messages)
+        estimated_tokens = total_chars // 4
+
+        if estimated_tokens < MAX_TOKEN:
+            print(f"未压缩消息估算 token 数量为 {estimated_tokens}，小于阈值 {MAX_TOKEN}，跳过压缩")
+            return
+
+        print(f"未压缩消息估算 token 数量为 {estimated_tokens}，开始压缩...")
+
+        # 构建消息历史文本
+        messages_text = "\n".join(
+            [f"[{msg['agent_name']}]: {msg['content']}" for msg in uncompacted_messages]
+        )
+
+        # 构建 agent 信息描述
+        agent_descriptions = "\n".join([f"- {name}: {scope}" for name, scope in agent_info.items()])
+
+        # 一次性生成 summary 和所有 agent 的专门信息
+        first_agent = list(agent_info.keys())[0] if agent_info else "agent_name"
+        compact_prompt = f"""请总结下面的对话记录，请严格按照要求输出 JSON。
+
+对话记录：
+<message_list>
+{messages_text}
+</message_list>
+
+参与者职责：
+{agent_descriptions}
+
+任务：将上述对话总结为 JSON 格式，包含：
+1. summary: 整体对话的1-2句话总结
+2. agent_specific: 为每个参与者提取与其职责相关的2-3句话关键信息
+
+输出格式（只输出这个 JSON，不要有任何其他内容）：
+{{"summary": "...", "agent_specific": {{"{first_agent}": "...", ...}}}}"""
+
+        # 调用 bare_claude_call 进行压缩
+        try:
+            result = await agent_platform_client.bare_claude_call(compact_prompt)
+        except Exception as e:
+            logger.error(
+                "压缩失败: group_chat_id=%s, 原因=LLM 调用失败, error=%s",
+                self.group_chat_id,
+                str(e),
+            )
+            raise CompactionError(reason=f"LLM 调用失败: {e}") from e
+
+        # 解析 JSON 响应
+        try:
+            # 提取 JSON（LLM 可能会在 JSON 前后添加其他文本）
+            text = result.text.strip()
+            # 尝试直接解析
+            compact_data = _json.loads(text)
+        except _json.JSONDecodeError:
+            # 尝试从文本中提取 JSON
+            import re
+
+            json_match = re.search(r"\{[\s\S]*\}", text)
+            if json_match:
+                try:
+                    compact_data = _json.loads(json_match.group())
+                except _json.JSONDecodeError as e:
+                    logger.error(
+                        "压缩失败: group_chat_id=%s, 原因=JSON 解析失败, error=%s",
+                        self.group_chat_id,
+                        str(e),
+                    )
+                    raise CompactionError(reason=f"LLM 返回的 JSON 解析失败: {e}") from e
+            else:
+                logger.error(
+                    "压缩失败: group_chat_id=%s, 原因=JSON 未找到, text=%s",
+                    self.group_chat_id,
+                    text[:200],
+                )
+                raise CompactionError(reason=f"LLM 返回中未找到 JSON: {text[:200]}") from None
+
+        # 构建压缩记录（对齐 compact_history.jsonl 格式）
+        content = {"summary": compact_data.get("summary", "")}
+        content.update(compact_data.get("agent_specific", {}))
+        compact_record = {
+            "create_at": datetime.now().isoformat(),
+            "content": content,
+        }
+
+        # 追加压缩记录并标记压缩位置
+        await self.append_compact_record_and_mark_compacted(compact_record)
+
     # ==================== Persistence Helper ====================
 
     async def _notify_change(self) -> None:
         """通知外部状态变更（通过 on_change 回调）"""
-        logger.info(
+        logger.debug(
             "[Runtime] _notify_change 被调用: group_chat_id=%s, has_callback=%s",
             self.group_chat_id,
             self._on_change is not None,
@@ -505,7 +617,7 @@ class GroupChatRuntime:
         if self._on_change:
             try:
                 await self._on_change(self.group_chat_id)
-                logger.info("[Runtime] on_change 回调执行成功")
+                logger.debug("[Runtime] on_change 回调执行成功")
             except Exception:
                 logger.warning("on_change 回调失败", exc_info=True)
 
@@ -521,6 +633,7 @@ class GroupChatRuntime:
             self.state.persistence_error = None
         except Exception as e:
             self.state.persistence_error = str(e)
+            logger.error("持久化失败: group_chat_id=%s, error=%s", self.group_chat_id, str(e))
             raise
 
     # ==================== Resource Cleanup ====================

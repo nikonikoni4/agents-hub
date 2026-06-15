@@ -21,7 +21,10 @@ export function useCreateChatData(isOpen: boolean) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [roleData, chatData] = await Promise.all([listRoles(), listGroupChatInfos()]);
+      const [roleData, chatData] = await Promise.all([
+        listRoles(),
+        listGroupChatInfos({ isActiveOnly: false }),
+      ]);
       setRoles(roleData);
       setGroupChats(chatData);
     } catch (err) {
@@ -35,13 +38,15 @@ export function useCreateChatData(isOpen: boolean) {
     if (!isOpen) return;
     let cancelled = false;
     setLoading(true);
-    Promise.all([listRoles(), listGroupChatInfos()]).then(([roleData, chatData]) => {
-      if (!cancelled) {
-        setRoles(roleData);
-        setGroupChats(chatData);
-        setLoading(false);
+    Promise.all([listRoles(), listGroupChatInfos({ isActiveOnly: false })]).then(
+      ([roleData, chatData]) => {
+        if (!cancelled) {
+          setRoles(roleData);
+          setGroupChats(chatData);
+          setLoading(false);
+        }
       }
-    });
+    );
     return () => {
       cancelled = true;
     };

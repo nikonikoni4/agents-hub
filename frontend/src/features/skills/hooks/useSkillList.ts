@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { listSkills } from '@/core/api/skillApi';
+import { ZapIcon } from '@/shared/components';
 import type { SkillDisplayItem, SkillColor } from '../types';
 import type { SkillApiItem } from '@/shared/types';
 
@@ -28,6 +29,7 @@ function adaptSkillForDisplay(skill: SkillApiItem, index: number): SkillDisplayI
     ...skill,
     type: 'local',
     color: COLORS[index % COLORS.length]!,
+    icon: ZapIcon,
   };
 }
 

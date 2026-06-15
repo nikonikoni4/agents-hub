@@ -12,7 +12,7 @@ trigger: 修改 core/orchestration、core/context、MCP tool、API service 中�
 **禁止**：
 - ❌ 已经拿到 `GroupChat` 实例时再扫描磁盘读取群聊状态
 - ❌ 为了 API 返回值直接读 `group_metadata.json` 或 `agent_member.json`
-- ❌ 从 `GroupChatContext.repository` 读取业务状态
+- ❌ 从 `GroupChatRuntime.repository` 读取业务状态
 
 **示例**：
 ```python
@@ -53,7 +53,7 @@ await group_chat.runtime.repository.save_agent_member(...)
 ```python
 # ✅ 正确
 if config.is_user_name(call.send_from):
-    await group_chat.group_chat_context.add_message(...)
+    await group_chat.runtime.add_message(...)
 
 # ❌ 错误
 if call.send_from == config.default_user_name:
@@ -70,13 +70,13 @@ if call.send_from == config.default_user_name:
 **示例**：
 ```python
 # ✅ 正确：公开发言
-await group_chat.group_chat_context.add_message(chat_result)
+await group_chat.runtime.add_message(chat_result)
 
 # ✅ 正确：Agent-to-Agent 完成通知
 group_chat.message_router.send_message(notification_message)
 
 # ❌ 错误：任务完成时直接写群聊给 Agent 调用方
-await group_chat.group_chat_context.add_message(result_for_manager)
+await group_chat.runtime.add_message(result_for_manager)
 ```
 
 ## 决策规则

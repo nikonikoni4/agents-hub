@@ -139,6 +139,10 @@ class SingleChatManager:
         # fork 或 continue 类型：从群聊获取 agent 会话信息
         if request.type in (SingleChatType.FORK, SingleChatType.CONTINUE_GROUP_CHAT):
             if not request.group_chat_id:
+                logger.error(
+                    "创建单聊失败: fork/continue 类型缺少 group_chat_id, type=%s",
+                    request.type.value,
+                )
                 raise ValidationError(
                     "fork/continue 类型必须提供 group_chat_id",
                     details={"type": request.type.value},
@@ -203,6 +207,7 @@ class SingleChatManager:
             ResourceNotFoundError: 单聊不存在
         """
         if single_chat_id not in self._index:
+            logger.error("获取单聊失败: 单聊不存在, id=%s", single_chat_id)
             raise ResourceNotFoundError(
                 f"单聊不存在: {single_chat_id}",
                 details={"single_chat_id": single_chat_id},
@@ -270,6 +275,12 @@ class SingleChatManager:
             ResourceNotFoundError: 单聊不存在
         """
         index = self.get_single_chat(single_chat_id)
+        logger.info(
+            "发送单聊消息: id=%s, agent=%s, content_len=%d",
+            single_chat_id,
+            index.agent_name,
+            len(content),
+        )
         role = self._role_manager.get_role(index.agent_name)
         role_config = role.get_role_config()
 

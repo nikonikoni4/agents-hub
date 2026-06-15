@@ -118,7 +118,7 @@
 
 .messageBubble {
   padding: 14px 18px;
-  border-radius: 14px;
+  border-radius: 16px;
   font-size: 14px;
   line-height: 1.65;
   word-break: break-word;
@@ -189,7 +189,7 @@
 
 .systemBubble {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   background: var(--bg-shadow);
   padding: 4px 12px;
   border-radius: 12px;
@@ -203,19 +203,20 @@
 
 .chatInputWrapper {
   background: var(--bg-input-wrapper);
-  border: none;
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   padding: 14px 18px;
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   transition: all 0.2s ease;
 }
 
 .chatInputWrapper:focus-within {
   background: var(--bg-input-wrapper-focus);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
 }
 
 .chatInput {
@@ -393,4 +394,39 @@
 .toggleLocationBtn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.sendBtnActive {
+  color: var(--accent-color);
+  background: var(--accent-color-light);
+}
+
+.sendBtnActive:hover {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+/* 底部项目路径 */
+.chatFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 28px 12px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+}
+
+.footerIcon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.footerPath {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, 'SF Mono', 'Monaco', 'Courier New', monospace);
 }

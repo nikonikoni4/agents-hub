@@ -37,6 +37,7 @@ class AgentCallManager:
         """
         self._calls: dict[str, AgentCall] = {}  # call_id -> AgentCall
         self._calls_by_receiver: dict[str, list[str]] = {}  # agent_name -> call_id list
+        self._lock = asyncio.Lock()  # 保护 _calls 和 _calls_by_receiver 的并发访问
         self._cleanup_task: asyncio.Task | None = None
         self._running = False
         self._cleanup_interval = cleanup_interval
@@ -58,7 +59,7 @@ class AgentCallManager:
         # 加载历史调用记录
         self._load_from_persistence()
 
-    def create_call(
+    async def create_call(
         self,
         send_from: str,
         send_to: str,
@@ -89,8 +90,11 @@ class AgentCallManager:
             timeout_seconds=timeout_seconds,
             business_task_id=business_task_id,
         )
-        self._calls[call.call_id] = call
-        self._index_call(call)
+
+        async with self._lock:
+            self._calls[call.call_id] = call
+            self._index_call(call)
+
         self.logger.info(
             f"创建调用 {call.call_id}: {send_from} -> {send_to}, "
             f"类型={message_type.value}, 超时={timeout_seconds}s"
@@ -101,7 +105,7 @@ class AgentCallManager:
 
         return call
 
-    def get_call(self, call_id: str) -> AgentCall | None:
+    async def get_call(self, call_id: str) -> AgentCall | None:
         """
         获取调用详情
 
@@ -111,38 +115,46 @@ class AgentCallManager:
         Returns:
             AgentCall | None: 调用记录，不存在则返回 None
         """
-        if call := self._calls.get(call_id):
+        async with self._lock:
+            call = self._calls.get(call_id)
+
+        if call:
             return call
 
         # 查询不到，记录警告日志
         self.logger.warning(f"调用 {call_id} 不存在，可能已被清理或系统重启导致数据丢失")
         return None
 
-    def list_all_calls(self) -> list[AgentCall]:
+    async def list_all_calls(self) -> list[AgentCall]:
         """
         获取所有调用记录（用于 API 查询）
 
         Returns:
             list[AgentCall]: 所有调用记录列表
         """
-        return list(self._calls.values())
+        async with self._lock:
+            return list(self._calls.values())
 
-    def get_runtime_calls_for_agent(self, agent_name: str) -> list[AgentCall]:
+    async def get_runtime_calls_for_agent(self, agent_name: str) -> list[AgentCall]:
         """
         获取需要注入到指定接收方 runtime 的调用列表。
 
         TASK 调用在接收方显式回复闭环前持续暴露；NOTIFICATION 调用只在完成前暴露。
         """
         calls: list[AgentCall] = []
-        for call_id in self._calls_by_receiver.get(agent_name, []):
-            call = self._calls.get(call_id)
+        async with self._lock:
+            call_ids = self._calls_by_receiver.get(agent_name, []).copy()
+
+        for call_id in call_ids:
+            async with self._lock:
+                call = self._calls.get(call_id)
             if call is None:
                 continue
             if self._should_include_in_runtime(call):
                 calls.append(call)
         return calls
 
-    def update_status(self, call_id: str, status: CallStatus):
+    async def update_status(self, call_id: str, status: CallStatus):
         """
         更新调用状态
 
@@ -150,7 +162,11 @@ class AgentCallManager:
             call_id: 调用 ID
             status: 新状态
         """
-        if call := self._calls.get(call_id):
+        async with self._lock:
+            call = self._calls.get(call_id)
+            if not call:
+                return
+
             old_status = call.status
 
             # 如果状态没有变化，跳过更新
@@ -164,12 +180,12 @@ class AgentCallManager:
             elif status in (CallStatus.COMPLETED, CallStatus.FAILED, CallStatus.TIMEOUT):
                 call.completed_at = datetime.now()
 
-            self.logger.info(f"调用 {call_id} 状态变更: {old_status.value} -> {status.value}")
+        self.logger.info(f"调用 {call_id} 状态变更: {old_status.value} -> {status.value}")
 
-            # 更新持久化
-            self._persist_call(call)
+        # 更新持久化
+        self._persist_call(call)
 
-    def set_result(self, call_id: str, result: object):
+    async def set_result(self, call_id: str, result: object):
         """
         设置调用结果
 
@@ -177,16 +193,21 @@ class AgentCallManager:
             call_id: 调用 ID
             result: 执行结果（AgentResult）
         """
-        if call := self._calls.get(call_id):
+        async with self._lock:
+            call = self._calls.get(call_id)
+            if not call:
+                return
+
             call.result = result
             call.status = CallStatus.COMPLETED
             call.completed_at = datetime.now()
-            self.logger.info(f"调用 {call_id} 完成，结果类型: {type(result).__name__}")
 
-            # 更新持久化
-            self._persist_call(call)
+        self.logger.info(f"调用 {call_id} 完成，结果类型: {type(result).__name__}")
 
-    def set_error(self, call_id: str, error: str, exc: BaseException | None = None):
+        # 更新持久化
+        self._persist_call(call)
+
+    async def set_error(self, call_id: str, error: str, exc: BaseException | None = None):
         """
         设置调用错误
 
@@ -195,16 +216,21 @@ class AgentCallManager:
             error: 错误信息
             exc: 原始异常对象（用于保留完整 traceback）
         """
-        if call := self._calls.get(call_id):
+        async with self._lock:
+            call = self._calls.get(call_id)
+            if not call:
+                return
+
             call.error = error
             call.status = CallStatus.FAILED
             call.completed_at = datetime.now()
-            self.logger.error(f"调用 {call_id} 失败: {error}", exc_info=exc)
 
-            # 更新持久化
-            self._persist_call(call)
+        self.logger.error(f"调用 {call_id} 失败: {error}", exc_info=exc)
 
-    def mark_agent_response(self, call_id: str, content: str, success: bool = True):
+        # 更新持久化
+        self._persist_call(call)
+
+    async def mark_agent_response(self, call_id: str, content: str, success: bool = True):
         """
         标记调用已被接收方 Agent 显式回复闭环。
 
@@ -213,7 +239,11 @@ class AgentCallManager:
             content: Agent 对调用方的最终回复内容
             success: True 表示任务完成，False 表示任务失败或无法继续
         """
-        if call := self._calls.get(call_id):
+        async with self._lock:
+            call = self._calls.get(call_id)
+            if not call:
+                return
+
             call.has_agent_response = True
             if success:
                 call.result = content
@@ -223,10 +253,11 @@ class AgentCallManager:
                 call.error = content
                 call.status = CallStatus.FAILED
             call.completed_at = datetime.now()
-            self.logger.info(
-                f"调用 {call_id} 已显式回复闭环: status={call.status.value}, success={success}"
-            )
-            self._persist_call(call)
+
+        self.logger.info(
+            f"调用 {call_id} 已显式回复闭环: status={call.status.value}, success={success}"
+        )
+        self._persist_call(call)
 
     def _load_from_persistence(self):
         """从持久化文件加载历史调用记录"""
@@ -256,6 +287,7 @@ class AgentCallManager:
 
             self.logger.info(f"从持久化文件加载了 {len(call_records)} 个历史调用记录")
         except OSError as e:
+            self.logger.error("加载持久化调用记录失败: %s", str(e), exc_info=True)
             raise FileSystemError(
                 operation="read",
                 path=str(self._persistence_path),
@@ -309,6 +341,7 @@ class AgentCallManager:
             with open(self._persistence_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(data, ensure_ascii=False) + "\n")
         except OSError as e:
+            self.logger.error("持久化调用记录失败: %s", str(e), exc_info=True)
             raise FileSystemError(
                 operation="write",
                 path=str(self._persistence_path),
@@ -330,15 +363,17 @@ class AgentCallManager:
                 await asyncio.sleep(self._cleanup_interval)
 
                 # 1. 检查超时
-                timeout_count = self._check_timeouts()
+                timeout_count = await self._check_timeouts_async()
                 if timeout_count > 0:
                     self.logger.warning(f"检测到 {timeout_count} 个超时调用")
 
                 # 2. 清理可删除的调用
-                deleted_count = self._cleanup_deletable_calls()
+                deleted_count = await self._cleanup_deletable_calls()
                 if deleted_count > 0:
+                    async with self._lock:
+                        remaining = len(self._calls)
                     self.logger.info(
-                        f"清理完成，删除 {deleted_count} 个调用，当前剩余 {len(self._calls)} 个调用"
+                        f"清理完成，删除 {deleted_count} 个调用，当前剩余 {remaining} 个调用"
                     )
 
             except asyncio.CancelledError:
@@ -347,7 +382,7 @@ class AgentCallManager:
             except Exception as e:
                 self.logger.error(f"清理循环发生错误: {e}", exc_info=True)
 
-    def _check_timeouts(self) -> int:
+    async def _check_timeouts_async(self) -> int:
         """
         检查并更新超时的调用
 
@@ -355,13 +390,16 @@ class AgentCallManager:
             int: 超时调用的数量
         """
         timeout_count = 0
-        for call_id, call in list(self._calls.items()):
+        async with self._lock:
+            call_items = list(self._calls.items())
+
+        for call_id, call in call_items:
             if call.is_timeout():
-                self.update_status(call_id, CallStatus.TIMEOUT)
+                await self.update_status(call_id, CallStatus.TIMEOUT)
                 timeout_count += 1
         return timeout_count
 
-    def _cleanup_deletable_calls(self) -> int:
+    async def _cleanup_deletable_calls(self) -> int:
         """
         清理可删除的调用
 
@@ -369,12 +407,21 @@ class AgentCallManager:
             int: 删除的调用数量
         """
         deleted_count = 0
-        for call_id, call in list(self._calls.items()):
+        async with self._lock:
+            call_items = list(self._calls.items())
+
+        calls_to_delete = []
+        for call_id, call in call_items:
             if call.can_be_deleted(self._retention_config):
                 self.logger.debug(
                     f"删除调用 {call_id}: {call.send_from} -> {call.send_to}, "
                     f"状态={call.status.value}, 类型={call.message_type.value}"
                 )
+                calls_to_delete.append((call_id, call))
+
+        # 批量删除
+        async with self._lock:
+            for call_id, call in calls_to_delete:
                 del self._calls[call_id]
                 self._unindex_call(call)
                 deleted_count += 1
@@ -395,9 +442,13 @@ class AgentCallManager:
         temp_path = self._persistence_path.with_suffix(".tmp")
 
         try:
-            # 写入当前内存中的所有调用
+            # 写入当前内存中的所有调用（需要在锁外操作，避免阻塞）
+            # 注意：这里不能使用 async with，因为这是同步方法
+            # 我们需要确保在访问 _calls 时是安全的
+            calls_snapshot = list(self._calls.values())
+
             with open(temp_path, "w", encoding="utf-8") as f:
-                for call in self._calls.values():
+                for call in calls_snapshot:
                     data = {
                         "call_id": call.call_id,
                         "send_from": call.send_from,
@@ -452,7 +503,7 @@ class AgentCallManager:
             self._cleanup_task = None
         self.logger.info("后台清理任务已停止")
 
-    def get_stats(self) -> dict:
+    async def get_stats(self) -> dict:
         """
         获取统计信息
 
@@ -460,12 +511,16 @@ class AgentCallManager:
             dict: 统计信息，包括各状态的调用数量
         """
         stats: dict[str, int | dict[str, int]] = {
-            "total": len(self._calls),
+            "total": 0,
             "by_status": {},
             "by_message_type": {},
         }
 
-        for call in self._calls.values():
+        async with self._lock:
+            stats["total"] = len(self._calls)
+            calls_snapshot = list(self._calls.values())
+
+        for call in calls_snapshot:
             # 按状态统计
             status_key = call.status.value
             by_status = stats["by_status"]

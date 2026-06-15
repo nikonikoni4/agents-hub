@@ -16,7 +16,7 @@ from agents_hub.agent_bridge.models import AgentResult
 from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.core.agent import Worker
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
-from agents_hub.core.context import GroupChatContext, GroupChatRuntime
+from agents_hub.core.context import GroupChatRuntime
 from agents_hub.roles.role_manager import RoleManager
 from agents_hub.utils.logger import setup_logging
 
@@ -103,10 +103,8 @@ class TestOpenCodeAgent:
 
         如果失败，说明：Agent 与 OpenCode 集成存在问题
         """
-        # 创建 GroupChatContext mock
         group_chat_id = "test_group_123"
         runtime = GroupChatRuntime(group_chat_id, project_path)
-        group_chat_context = GroupChatContext(runtime)
 
         # 创建通信组件
         message_router = MessageRouter()
@@ -116,7 +114,7 @@ class TestOpenCodeAgent:
         # 创建 Worker
         worker = Worker(
             opencode_role,
-            group_chat_context,
+            runtime,
             agent_call_manager,
             message_router,
             task_manager,
@@ -155,10 +153,8 @@ class TestOpenCodeAgent:
 
         如果失败，说明：系统提示词构建存在问题
         """
-        # 创建 GroupChatContext mock
         group_chat_id = "test_group_456"
         runtime = GroupChatRuntime(group_chat_id, project_path)
-        group_chat_context = GroupChatContext(runtime)
 
         # 创建通信组件
         message_router = MessageRouter()
@@ -168,7 +164,7 @@ class TestOpenCodeAgent:
         # 创建 Worker
         worker = Worker(
             opencode_role,
-            group_chat_context,
+            runtime,
             agent_call_manager,
             message_router,
             task_manager,

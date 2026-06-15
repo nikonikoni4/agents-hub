@@ -47,15 +47,27 @@ export interface SessionItem {
 }
 
 /**
- * 项目分组
+ * 项目分组（群聊和单聊通用）
  */
 export interface ProjectGroup {
   /** 项目路径（完整） */
   projectPath: string;
   /** 项目名称（从路径提取） */
   projectName: string;
-  /** 该项目下的 sessions（按 lastUpdateAt 降序） */
+  /** 该项目下的 sessions（按 lastUpdateAt 降序，单聊必需，群聊兼容） */
   sessions: SessionItem[];
+
+  // 以下为群聊分页专用字段（可选）
+  /** 群聊总数 */
+  totalCount?: number;
+  /** 群聊增量加载的数据 */
+  loadedSessions?: SessionItem[];
+  /** 已加载数量 */
+  loadedCount?: number;
+  /** 是否还有更多 */
+  hasMore?: boolean;
+  /** 加载中状态 */
+  isLoading?: boolean;
 }
 
 // ==================== 核心聚合函数 ====================

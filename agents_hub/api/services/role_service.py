@@ -8,6 +8,9 @@ from agents_hub.roles.exceptions import ValidationError
 from agents_hub.roles.models import RoleInfo, SkillInfo
 from agents_hub.roles.role_manager import RoleManager
 from agents_hub.tools.catalog import ALL_TOOLS, get_all_tool_names
+from agents_hub.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class RoleService:
@@ -86,6 +89,7 @@ class RoleService:
             if skill.id == skill_id:
                 return skill
         # 如果添加成功但无法获取元数据，说明全局 skill 的 skill.json 可能损坏
+        logger.error("添加角色 skill 失败: 元数据无效, role=%s, skill=%s", name, skill_id)
         raise ValidationError(
             message=f"Skill '{skill_id}' 已添加但元数据无效",
             error_code="SKILL_METADATA_INVALID",

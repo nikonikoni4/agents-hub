@@ -1,8 +1,8 @@
 ---
-version: 1.4
+version: 1.5
 created_at: 2026-05-31
-updated_at: 2026-06-06
-last_updated: 修正持有关系描述：GroupChatContext 持有 Runtime，Runtime 持有 Repository
+updated_at: 2026-06-14
+last_updated: 移除 GroupChatContext 中间层，Agent 直接持有 GroupChatRuntime
 abstract: core/context 层的正式规格，定义群聊会话管理、Agent 上下文增量加载、消息压缩策略和持久化机制
 id: spec-core-context
 title: Core Context 层规格
@@ -14,7 +14,7 @@ code_scope:
   - agents_hub/core/context/
 contract_refs:
   - agents_hub/core/context/group_chat_session.py
-  - agents_hub/core/context/group_chat_context.py
+  - agents_hub/core/context/group_chat_runtime.py
   - agents_hub/core/context/group_chat_repository.py
   - agents_hub/core/context/agent_context.py
   - agents_hub/core/foundation/constants.py
@@ -32,13 +32,14 @@ contract_refs:
 | 1.2 | 路径管理改用 group_chat_paths 集中管理 |
 | 1.3 | 对齐现有 GroupChatContext 创建 Repository、metadata 持久化和 AgentMemberInfo 字段 |
 | 1.4 | 修正持有关系描述：GroupChatContext 持有 Runtime，Runtime 持有 Repository |
+| 1.5 | 移除 GroupChatContext 中间层，Agent 直接持有 GroupChatRuntime |
 
 ## Overview
 
 context 层是 core 的**状态管理层**，负责群聊会话的生命周期管理。核心职责：
 
 1. **会话状态**（GroupChatSession）：管理群聊的消息历史和元数据
-2. **上下文管理**（GroupChatContext）：协调消息管理、session 管理和上下文压缩，通过持有 GroupChatRuntime 间接访问 GroupChatRepository
+2. **上下文管理**（GroupChatRuntime）：协调消息管理、session 管理和上下文压缩，直接访问 GroupChatRepository
 3. **持久化**（GroupChatRepository）：文件读写、路径记录和并发控制
 4. **增量加载**（AgentContext）：为每个 Agent 提供个性化的增量上下文
 
@@ -145,7 +146,7 @@ AgentContext 为每个 Agent 提供**增量加载**的上下文，避免重复�
 
 ### 持久化机制
 
-GroupChatRepository 由 GroupChatRuntime 创建并持有，GroupChatContext 通过构造函数注入 Runtime 并通过 `repository` 属性（向后兼容访问器）间接暴露。Repository 负责群聊相关文件的读写，使用独立的 asyncio.Lock 保护写操作：
+GroupChatRepository 由 GroupChatRuntime 创建并持有，通过 `repository` 属性暴露。Repository 负责群聊相关文件的读写，使用独立的 asyncio.Lock 保护写操作：
 
 | 文件 | 格式 | 锁 | 说明 |
 |------|------|-----|------|
@@ -183,10 +184,10 @@ metadata_file = group_chat_paths.metadata_file(group_chat_id, project_path)
 ### 跨层依赖
 
 - context 依赖 foundation 的 `MAX_TOKEN`、`StateError`、`Tag`、`wrap_xml`
-- context 的压缩功能需要调用 LLM（`bare_claude_call`），此依赖通过**可注入接口**（CompactionLLM protocol）解耦，由 orchestration 层在初始化 GroupChatContext 时注入具体实现，避免 context 直接依赖 agent_bridge
+- context 的压缩功能需要调用 LLM（`bare_claude_call`），此依赖通过**可注入接口**（CompactionLLM protocol）解耦，由 orchestration 层在初始化 GroupChatRuntime 时注入具体实现，避免 context 直接依赖 agent_bridge
 - agent 层通过 `AgentContext.get_context()` 获取增量上下文
-- agent 层通过 `GroupChatContext.add_message()` 写入消息
-- orchestration 层的 GroupChat 创建并持有 GroupChatContext 实例；GroupChatContext 持有 GroupChatRuntime（通过构造函数注入），Runtime 持有 GroupChatRepository 并通过 context.repository 属性（向后兼容）暴露给部分编排逻辑使用
+- agent 层通过 `GroupChatRuntime.add_message()` 写入消息
+- orchestration 层的 GroupChat 创建并持有 GroupChatRuntime 实例；Runtime 持有 GroupChatRepository
 
 ### 与 Agent 的协作模式
 
@@ -201,7 +202,7 @@ Agent._process_message():
 
 ### 资源清理
 
-GroupChatContext.close() 负责释放资源：
+GroupChatRuntime.close() 负责释放资源：
 - 关闭 Repository（预留接口，当前 asyncio.Lock 不需要显式释放）
 - 清空内存引用（group_chat_session、agent_member_info）
 - 幂等可重复调用

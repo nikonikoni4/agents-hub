@@ -39,3 +39,9 @@
  - path: generated/006/
  - 触发规则：ci-check 技能触发的提交前检查
  - 内容摘要：代码审查 + 文档一致性检查（ARCHITECTURE.md / specs / CONTEXT.md）
+
+## 核心模块架构审查 007
+ - updated_at : 2026-06-14
+ - path: generated/007/
+ - 触发规则：GroupChatContext → GroupChatRuntime 重构期间的架构审查
+ - 内容摘要：6 份审查报告 — Agent 状态生命周期、Agent 生命周期、GroupChat 生命周期、AgentCall 生命周期、并发安全性、GroupChatContext/Runtime 架构评估

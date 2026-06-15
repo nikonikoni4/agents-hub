@@ -20,7 +20,7 @@ async def test_report_progress_redacts_token():
 
     token = generate_token()
     group_chat = MagicMock()
-    group_chat.group_chat_context.add_message = AsyncMock()
+    group_chat.runtime.add_message = AsyncMock()
 
     with patch("agents_hub.mcp.server.group_chat_manager") as manager:
         manager.resolve_token.return_value = ("worker", "group_1")
@@ -33,8 +33,8 @@ async def test_report_progress_redacts_token():
         )
 
     assert result == {"ok": True}
-    group_chat.group_chat_context.add_message.assert_called_once()
-    agent_result = group_chat.group_chat_context.add_message.call_args.args[0]
+    group_chat.runtime.add_message.assert_called_once()
+    agent_result = group_chat.runtime.add_message.call_args.args[0]
     assert "[REDACTED]" in agent_result.text
     assert token not in agent_result.text
     assert agent_result.text.startswith("@Leader ")
@@ -47,7 +47,7 @@ async def test_complete_task_redacts_token_before_result_and_group_chat():
 
     token = generate_token()
     group_chat = MagicMock()
-    group_chat.group_chat_context.add_message = AsyncMock()
+    group_chat.runtime.add_message = AsyncMock()
     call = MagicMock()
     call.call_id = "call_1"
     call.send_from = "user"
@@ -73,8 +73,8 @@ async def test_complete_task_redacts_token_before_result_and_group_chat():
         content="任务完成，token=[REDACTED]",
         success=True,
     )
-    group_chat.group_chat_context.add_message.assert_called_once()
-    agent_result = group_chat.group_chat_context.add_message.call_args.args[0]
+    group_chat.runtime.add_message.assert_called_once()
+    agent_result = group_chat.runtime.add_message.call_args.args[0]
     assert "[REDACTED]" in agent_result.text
     assert token not in agent_result.text
     assert agent_result.text.startswith("@user ")
@@ -86,7 +86,7 @@ async def test_report_progress_uses_agent_metadata():
     from agents_hub.mcp.server import report_progress
 
     group_chat = MagicMock()
-    group_chat.group_chat_context.add_message = AsyncMock()
+    group_chat.runtime.add_message = AsyncMock()
     worker = MagicMock()
     worker.name = "worker"
     worker.role_type = RoleType.LEADER
@@ -104,6 +104,6 @@ async def test_report_progress_uses_agent_metadata():
         )
 
     assert result == {"ok": True}
-    agent_result = group_chat.group_chat_context.add_message.call_args.args[0]
+    agent_result = group_chat.runtime.add_message.call_args.args[0]
     assert agent_result.platform == AgentPlatform.CODEX
     assert agent_result.role_type == RoleType.LEADER

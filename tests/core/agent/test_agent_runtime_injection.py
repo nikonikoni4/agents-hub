@@ -17,21 +17,21 @@ import pytest
 from agents_hub.config.types import RoleType
 from agents_hub.core.agent.base_agent import Agent
 from agents_hub.core.communication import AgentCallManager, MessageRouter, TaskManager
-from agents_hub.core.context import GroupChatContext
+from agents_hub.core.context import GroupChatRuntime
 from agents_hub.core.foundation import (
     CallStatus,
     MessageType,
-    Role,
-    RoleConfig,
 )
+from agents_hub.roles.models import RoleConfig
+from agents_hub.roles.role import Role
 
 
 @pytest.fixture
 def mock_group_chat_context():
-    """创建 mock GroupChatContext"""
-    context = MagicMock(spec=GroupChatContext)
+    """创建 mock GroupChatRuntime"""
+    context = MagicMock(spec=GroupChatRuntime)
     context.group_chat_id = "gc_test123"
-    context.agent_member_info = {
+    context.state.agent_member_infos = {
         "Manager": MagicMock(token="tok_manager_abc123"),
         "Worker1": MagicMock(token="tok_worker1_def456"),
         "Worker2": MagicMock(token="tok_worker2_ghi789"),
@@ -103,7 +103,7 @@ def manager_agent(mock_group_chat_context):
 
     agent = Agent(
         role=role,
-        group_chat_context=mock_group_chat_context,
+        runtime=mock_group_chat_context,
         agent_call_manager=agent_call_manager,
         message_router=message_router,
     )
@@ -130,7 +130,7 @@ def worker_agent(mock_group_chat_context):
 
     agent = Agent(
         role=role,
-        group_chat_context=mock_group_chat_context,
+        runtime=mock_group_chat_context,
         agent_call_manager=agent_call_manager,
         message_router=message_router,
     )

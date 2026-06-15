@@ -490,7 +490,34 @@ const MOCK_TASK_LIST: TaskListInfo = {
   created_at: '2026-06-07T09:00:00Z',
 };
 
+/**
+ * 项目摘要信息
+ */
+export interface ProjectSummary {
+  project_path: string;
+  group_chat_count: number;
+  last_update_at: string | null;
+}
+
+/**
+ * 群聊列表响应（分页）
+ */
+export interface GroupChatListResponse {
+  items: GroupChatInfoApiResponse[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 // ==================== API 接口 ====================
+
+/**
+ * 获取所有项目摘要
+ */
+export async function getProjectsSummary(): Promise<ProjectSummary[]> {
+  return apiClient.get<ProjectSummary[]>('/group-chats/projects/summary');
+}
 
 /**
  * 创建并启动新群聊
@@ -516,6 +543,7 @@ export async function getGroupChatInfo(chatId: string): Promise<GroupChatApiResp
  * 列出所有群聊
  *
  * @param isActiveOnly - 是否只返回活跃群聊
+ * @deprecated 使用 listGroupChats 支持分页
  */
 export async function listGroupChats(
   isActiveOnly: boolean = false
@@ -535,17 +563,67 @@ export async function listGroupChats(
  * 返回包含 last_speaker、last_message、last_update_at 的完整信息
  * 用于 Session 列表展示
  *
- * @param isActiveOnly - 是否只返回活跃群聊
+ * @param params.projectPath - 项目路径过滤
+ * @param params.isActiveOnly - 是否只返回活跃群聊
  */
-export async function listGroupChatInfos(
-  isActiveOnly: boolean = false
-): Promise<GroupChatInfoApiResponse[]> {
+export async function listGroupChatInfos(params: {
+  projectPath?: string;
+  isActiveOnly?: boolean;
+}): Promise<GroupChatInfoApiResponse[]> {
+  const response = await mockableRequest(
+    () =>
+      apiClient.get<GroupChatListResponse>('/group-chats', {
+        params: {
+          project_path: params.projectPath,
+          is_active_only: params.isActiveOnly ?? false,
+          limit: 1000, // 一次性加载所有
+          offset: 0,
+        },
+      }),
+    {
+      items: params.isActiveOnly
+        ? MOCK_GROUP_CHAT_INFOS.filter((c) => c.is_active)
+        : MOCK_GROUP_CHAT_INFOS,
+      total: params.isActiveOnly
+        ? MOCK_GROUP_CHAT_INFOS.filter((c) => c.is_active).length
+        : MOCK_GROUP_CHAT_INFOS.length,
+      limit: 1000,
+      offset: 0,
+      has_more: false,
+    }
+  );
+  return response.items;
+}
+
+/**
+ * 列出群聊（支持分页和项目过滤）
+ */
+export async function listGroupChatsWithPagination(params: {
+  projectPath?: string;
+  limit?: number;
+  offset?: number;
+  isActiveOnly?: boolean;
+}): Promise<GroupChatListResponse> {
   return mockableRequest(
     () =>
-      apiClient.get<GroupChatInfoApiResponse[]>('/group-chats', {
-        params: { is_active_only: isActiveOnly, include_info: true },
+      apiClient.get<GroupChatListResponse>('/group-chats', {
+        params: {
+          project_path: params.projectPath,
+          limit: params.limit ?? 10,
+          offset: params.offset ?? 0,
+          is_active_only: params.isActiveOnly ?? false,
+        },
       }),
-    isActiveOnly ? MOCK_GROUP_CHAT_INFOS.filter((c) => c.is_active) : MOCK_GROUP_CHAT_INFOS
+    {
+      items: MOCK_GROUP_CHAT_INFOS.slice(
+        params.offset ?? 0,
+        (params.offset ?? 0) + (params.limit ?? 10)
+      ),
+      total: MOCK_GROUP_CHAT_INFOS.length,
+      limit: params.limit ?? 10,
+      offset: params.offset ?? 0,
+      has_more: (params.offset ?? 0) + (params.limit ?? 10) < MOCK_GROUP_CHAT_INFOS.length,
+    }
   );
 }
 

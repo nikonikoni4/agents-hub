@@ -25,10 +25,10 @@ import {
   updatePermissionStatus,
   compressAllAgents,
 } from '@/core/api/groupChatApi';
+import { ApiError } from '@/core/api';
 import { useToast } from '@/shared/components';
 import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import { RightSidebarContent } from '@/shared/types/layout';
-import { extractProjectName } from '@/shared/adapters/sessionAdapter';
 import { ChatInput } from './ChatInput';
 import styles from './ChatArea.module.css';
 
@@ -276,7 +276,13 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
   const activeProjectPath = useMemo(() => {
     if (!activeSessionId) return null;
     for (const group of projectGroups) {
-      const session = group.sessions.find((s) => s.id === activeSessionId);
+      // 优先查找 loadedSessions（群聊），回退到 sessions（单聊）
+      const sessions =
+        group.loadedSessions && group.loadedSessions.length > 0
+          ? group.loadedSessions
+          : group.sessions;
+
+      const session = sessions?.find((s) => s.id === activeSessionId);
       if (session) {
         return session.projectPath;
       }
@@ -397,6 +403,13 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
         setQuotedMessage(null);
       } catch (err) {
         console.error('Failed to send message:', err);
+        // 回滚乐观更新
+        setLocalMessages((prev) => prev.filter((m) => m.id !== 0));
+        if (err instanceof ApiError && err.status === 409) {
+          toast.error(err.message || 'Agent 已停止，请先启动');
+        } else {
+          toast.error('消息发送失败，请重试');
+        }
         // 发送失败时保留引用状态，用户可重试
       }
     },
@@ -535,7 +548,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
           <div className={styles.chatTitle}>{activeTitle ?? '会话'}</div>
           {activeProjectPath && (
             <div className={styles.chatProjectPath} title={activeProjectPath}>
-              📁 {extractProjectName(activeProjectPath)}
+              📁 {activeProjectPath}
             </div>
           )}
         </div>
@@ -599,4 +612,3 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     </div>
   );
 }
-// test hook trigger 3

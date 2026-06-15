@@ -33,11 +33,11 @@ def create_mock_agent(session_path: Path) -> Agent:
         work_root=None,
     )
 
-    # Mock GroupChatContext
-    mock_context = MagicMock()
-    mock_context.repository.group_chat_session_path = str(session_path)
-    mock_context.agent_member_info = {}
-    mock_context.group_chat_id = "test-chat-id"
+    # Mock GroupChatRuntime
+    mock_runtime = MagicMock()
+    mock_runtime.repository.group_chat_session_path = str(session_path)
+    mock_runtime.state.agent_member_infos = {}
+    mock_runtime.group_chat_id = "test-chat-id"
 
     # Mock Dependencies
     mock_call_manager = MagicMock()
@@ -45,7 +45,7 @@ def create_mock_agent(session_path: Path) -> Agent:
 
     agent = Agent(
         role=mock_role,
-        group_chat_context=mock_context,
+        runtime=mock_runtime,
         agent_call_manager=mock_call_manager,
         message_router=mock_message_router,
     )

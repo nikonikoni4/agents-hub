@@ -33,6 +33,8 @@ coverage
 # 环境变量
 .env.local
 .env.*.local
+.env.branch-*
+!.env.branch-example
 
 # Vite
 .vite

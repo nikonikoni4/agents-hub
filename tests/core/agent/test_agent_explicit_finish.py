@@ -7,11 +7,11 @@ import pytest
 from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.core.agent.base_agent import Agent
 from agents_hub.core.communication import AgentCallManager, MessageRouter
-from agents_hub.core.context import GroupChatContext, GroupChatRuntime
+from agents_hub.core.context import GroupChatRuntime
 from agents_hub.core.context.group_chat_session import AgentMemberInfo
+from agents_hub.agent_bridge.models import AgentResult
 from agents_hub.core.foundation import (
     AgentMessage,
-    AgentResult,
     CallStatus,
     MessageType,
     SessionType,
@@ -40,15 +40,14 @@ class MockRole:
 
 
 @pytest.fixture
-async def group_chat_context(tmp_path):
-    runtime = GroupChatRuntime(group_chat_id="gc_explicit_finish", project_path=str(tmp_path))
-    context = GroupChatContext(runtime)
-    runtime.state.agent_member_infos["worker"] = AgentMemberInfo(
+async def runtime(tmp_path):
+    rt = GroupChatRuntime(group_chat_id="gc_explicit_finish", project_path=str(tmp_path))
+    rt.state.agent_member_infos["worker"] = AgentMemberInfo(
         main_session="session_worker",
         token="tok_worker",
     )
-    await context.load()
-    return context
+    await rt.load()
+    return rt
 
 
 @pytest.fixture
@@ -63,10 +62,10 @@ def message_router():
 
 
 @pytest.fixture
-def agent(group_chat_context, agent_call_manager, message_router):
+def agent(runtime, agent_call_manager, message_router):
     agent = Agent(
         role=MockRole("worker"),
-        group_chat_context=group_chat_context,
+        runtime=runtime,
         agent_call_manager=agent_call_manager,
         message_router=message_router,
     )
@@ -96,7 +95,7 @@ async def test_run_does_not_write_process_result_to_group_chat(
 
     monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
 
-    call = agent_call_manager.create_call(
+    call = await agent_call_manager.create_call(
         send_from="Leader",
         send_to="worker",
         content="do work",
@@ -125,7 +124,7 @@ async def test_run_does_not_write_process_result_to_group_chat(
 
     await agent.run()
 
-    assert agent.group_chat_context.group_chat_session.messages == []
+    assert agent.runtime.state.group_chat_session.messages == []
 
 
 @pytest.mark.asyncio
@@ -139,7 +138,7 @@ async def test_unfinished_task_sends_system_prompt_to_finish_call(
 
     monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
 
-    call = agent_call_manager.create_call(
+    call = await agent_call_manager.create_call(
         send_from="Leader",
         send_to="worker",
         content="do task",
@@ -189,7 +188,7 @@ async def test_finished_task_does_not_send_system_prompt(agent, agent_call_manag
 
     monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
 
-    call = agent_call_manager.create_call(
+    call = await agent_call_manager.create_call(
         send_from="Leader",
         send_to="worker",
         content="do task",
@@ -234,7 +233,7 @@ async def test_failed_finished_task_status_is_not_overwritten(
 
     monkeypatch.setattr("agents_hub.agent_bridge.agent_platform_client.execute", mock_execute)
 
-    call = agent_call_manager.create_call(
+    call = await agent_call_manager.create_call(
         send_from="Leader",
         send_to="worker",
         content="do task",
@@ -279,7 +278,7 @@ async def test_consecutive_no_finish_increments_counter(agent, agent_call_manage
     agent.max_consecutive_no_finish = 5  # 降低阈值便于测试
 
     for i in range(3):
-        call = agent_call_manager.create_call(
+        call = await agent_call_manager.create_call(
             send_from="Leader",
             send_to="worker",
             content=f"task {i}",
@@ -321,7 +320,7 @@ async def test_consecutive_no_finish_stops_agent(agent, agent_call_manager, monk
     agent.max_consecutive_no_finish = 3
 
     for i in range(3):
-        call = agent_call_manager.create_call(
+        call = await agent_call_manager.create_call(
             send_from="Leader",
             send_to="worker",
             content=f"task {i}",
@@ -376,7 +375,7 @@ async def test_successful_finish_resets_counter(agent, agent_call_manager, monke
 
     # 前 2 个 TASK 未闭环
     for i in range(2):
-        call = agent_call_manager.create_call(
+        call = await agent_call_manager.create_call(
             send_from="Leader",
             send_to="worker",
             content=f"task {i}",

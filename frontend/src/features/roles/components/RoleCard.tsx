@@ -60,7 +60,11 @@ export function RoleCard({ role, onClick, onEdit }: RoleCardProps) {
         </div>
       </div>
 
-      {role.description && <p className={styles.description}>{role.description}</p>}
+      {role.description && (
+        <p className={styles.description} title={role.description}>
+          {role.description}
+        </p>
+      )}
 
       <div className={styles.skills}>
         <span className={styles.skillsLabel}>Skills:</span>
