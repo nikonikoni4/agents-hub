@@ -129,6 +129,10 @@ class ClaudeExecutor:
         if system_prompt:
             cmd.extend(["--append-system-prompt", system_prompt])
 
+        # 添加禁用工具列表（必须使用 = 格式）
+        if config.disabled_tools:
+            cmd.append(f"--disallowedTools={','.join(config.disabled_tools)}")
+
         cmd.append(prompt)
         return cmd
 

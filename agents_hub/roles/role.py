@@ -263,4 +263,5 @@ class Role:
             description=data.get("description"),
             work_root=str(self._work_root.resolve()),
             role_type=role_type,
+            disabled_tools=data.get("disabled_tools"),
         )

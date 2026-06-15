@@ -23,6 +23,7 @@ class RoleConfig:
         False  # Claude CLI 极简模式：跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现
     )
     # 极简模式用于——秘书工作——即简单的llm调用工作 （暂定），后续如果为了追求简单可能会设置单独的llm AIP call，而不是使用CLI
+    disabled_tools: list[str] | None = None  # 禁用的工具列表（通过 CLI --disallowedTools 传递）
 
 
 @dataclass
