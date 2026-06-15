@@ -149,10 +149,10 @@
  - 内容摘要：两个问题：(1) 任务回执异步性 - Manager 处理 CLI 任务时无法同时接收 Worker 回执，存在延迟（非 Bug，架构改进点）；(2) sleep 轮询循环 Bug（严重） - Manager 陷入无限 sleep 10 循环等待消息，实际上消息通过 runtime incoming_message 推送，不需要轮询。修复：调用 complete_task 后直接结束，等待系统推送
 
 ## Manager run() 任务静默死亡导致消息队列堆积
- - updated_at : 2026-06-14
+ - updated_at : 2026-06-15
  - path: docs/history-bugs/2026-06-14-manager-run-task-silent-death.md
- - 触发规则：stop_member 后 start_member 重启 manager，发送消息给 manager
- - 内容摘要：activate() 幂等性缺陷 Bug 的延续。manager 的 run() 任务在处理最后一条消息后静默死亡，后续消息入队但无人消费（queue_size 递增），AgentCall 停在 PENDING。_process_message 内部无 error log，排除该环节崩溃。已添加 run() 顶层异常捕获、_on_agent_task_done 回调、heartbeat 健康检查，待复现确认具体崩溃点
+ - 触发规则：stop_member 后 start_member 重启 manager，发送消息给 manager；依次停止所有 Worker 后再停止 Manager
+ - 内容摘要：两个相关问题：(1) activate() 幂等性缺陷 Bug 的延续，manager 的 run() 任务静默死亡导致消息堆积，已添加诊断日志；(2) 停止 Worker 后停止 Manager 时，cleanup 流程直接调用 message_router.send_message() 绕过 GroupChat 包装层，导致异常无完整堆栈。违反编码规则（Agent 间通信必须通过控制面），已修复为使用 send_message_to_agent() 包装层并添加异常容错
 
 ## broadcast_group_chat_refresh 全链路问题审查
  - updated_at : 2026-06-15

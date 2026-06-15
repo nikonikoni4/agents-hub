@@ -55,9 +55,12 @@ await group_chat.runtime.repository.save_agent_member(...)
 if config.is_user_name(call.send_from):
     await group_chat.runtime.add_message(...)
 
-# ❌ 错误
+# ❌ 错误：使用字符串等号判断 user 身份
 if call.send_from == config.default_user_name:
-    group_chat.message_router.send_message(notification)
+    ...
+
+# ❌ 错误：绕过 GroupChat 包装层直接调用 message_router
+group_chat.message_router.send_message(notification)
 ```
 
 ### 显式公开和任务闭环分开
@@ -72,7 +75,10 @@ if call.send_from == config.default_user_name:
 # ✅ 正确：公开发言
 await group_chat.runtime.add_message(chat_result)
 
-# ✅ 正确：Agent-to-Agent 完成通知
+# ✅ 正确：Agent-to-Agent 完成通知（必须通过 GroupChat 包装层）
+await group_chat.send_message_to_agent(notification_message)
+
+# ❌ 错误：绕过 GroupChat 包装层直接调用 message_router
 group_chat.message_router.send_message(notification_message)
 
 # ❌ 错误：任务完成时直接写群聊给 Agent 调用方

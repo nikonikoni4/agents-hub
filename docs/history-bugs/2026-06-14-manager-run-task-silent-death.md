@@ -1,8 +1,8 @@
 # Manager run() 任务静默死亡导致消息队列堆积
 
-**updated_at**: 2026-06-14
+**updated_at**: 2026-06-15
 
-**状态**: 🔍 诊断日志已添加，待复现确认根因
+**状态**: ✅ 已修复（两个相关问题均已解决）
 
 **关联**: [GroupChat.activate() 幂等性缺陷导致消息投递失败](./2026-06-13-group-chat-activate-missing-agent-registration.md) 的延续
 
@@ -142,6 +142,7 @@ async def run(self):
 - [GroupChat.activate() 幂等性缺陷导致消息投递失败](./2026-06-13-group-chat-activate-missing-agent-registration.md) — 前一个 Bug，消息投递失败
 - [MCP 创建群聊后发送消息报"接收者未注册"](./2026-06-08-mcp-created-group-chat-message-router-agent-not-registered.md) — 相似症状
 - [Manager Agent sleep 轮询循环 Bug](./2026-06-14-agent-sleep-polling-loop-and-async-receipt.md) — manager 行为异常
+- [broadcast_group_chat_refresh 全链路问题审查](./2026-06-15-broadcast-refresh-full-chain-issues.md) — 相似异常处理问题
 
 ## 教训
 
@@ -149,3 +150,76 @@ async def run(self):
 2. **try/finally 不等于 try/except**：finally 只保证清理代码执行，不捕获异常
 3. **run() 作为长生命周期协程必须有顶层异常处理**：否则任何未捕获异常都会导致 task 静默死亡
 4. **缺少 task 健康监控**：没有 done_callback、没有 heartbeat 检查，task 死了没人知道
+5. **遵守编码规则**：Agent 间通信必须通过 GroupChat.send_message_to_agent()，不要直接调用 message_router
+6. **清理流程的容错**：停止 Agent 时的清理逻辑应该容忍接收者已停止的情况，不能因为发送通知失败就阻断整个清理流程
+7. **异常必须有完整日志**：raise 前必须记录完整上下文，或者在合适的层级 catch 并记录
+
+---
+
+## 附加问题：停止 Worker 后停止 Manager 导致异常无堆栈
+
+**发现时间**: 2026-06-15
+
+**问题描述**: 在复现历史 bug 时，依次停止所有 Worker 后再停止 Manager，前端弹出了一个错误 toast（关闭失败），但这个错误只有 ERROR 日志，没有完整的异常堆栈。
+
+### 根本原因
+
+**代码位置**: `agents_hub/core/orchestration/group_chat.py:612`
+
+**问题链**:
+1. 停止 Worker 时，`_cleanup_agent_queue()` 会闭环该 Worker 的待处理调用
+2. 如果调用方不是 user（例如是 Manager），会发送 NOTIFICATION 通知
+3. 代码直接调用了 `message_router.send_message()`，绕过了 `GroupChat.send_message_to_agent()` 包装层
+4. 当依次停止所有 Agent 后，最后停止 Manager 时：
+   - Manager 尝试向已停止的 Worker 发送闭环通知
+   - Worker 已从 MessageRouter 注销
+   - `message_router.send_message()` 内部 `_validate_message()` 发现接收者未注册，记录 ERROR 日志并 raise `AgentNotFoundError`
+   - 异常向上冒泡，但调用方 `_cleanup_agent_queue` 没有 catch
+   - 最终在更上层被捕获（可能是 API 层），但完整 traceback 未记录到日志
+
+### 为什么只有 ERROR 没有堆栈？
+
+`message_router.py:105-106`:
+```python
+except (AgentNotFoundError, InvalidMessageError):
+    raise  # 直接向上传递，不记录额外日志
+```
+
+所以只有 `_validate_message()` 内部的 ERROR 日志，后续没有捕获和记录完整异常堆栈。
+
+### 违反的编码规则
+
+根据 `agents_hub/core/CLAUDE.md`:
+
+> **Agent 间消息必须经过控制面**
+>
+> 禁止：
+> - ❌ 直接调用 `message_router.send_message()`（必须通过 `GroupChat.send_message_to_agent()` 统一包装）
+
+`GroupChat.send_message_to_agent()` 在投递前会检查目标 Agent 状态（第 512-519 行），如果已停止会抛出 `StateError`，而不是让消息进入 router 后才失败。
+
+### 修复方案
+
+已修改 `group_chat.py:612`，改为：
+
+```python
+# 使用 GroupChat 包装层，处理接收者已停止的情况
+try:
+    await self.send_message_to_agent(notification_message)
+except Exception as e:
+    # 接收者可能已停止或注销，记录警告但不阻断清理流程
+    logger.warning(
+        "无法发送停止通知 %s -> %s: %s（接收者可能已停止）",
+        agent_name,
+        call.send_from,
+        str(e),
+    )
+```
+
+### 历史 Bug 关联
+
+这个问题与历史 bug（`docs/history-bugs/2026-06-14-manager-run-task-silent-death.md`）有相似之处，都是异常被 raise 但没有完整记录到日志。这类问题的共同特征是：
+
+1. 底层代码只记录 ERROR，然后 raise
+2. 中间层不 catch，让异常继续冒泡
+3. 顶层可能捕获了，但没有记录完整堆栈

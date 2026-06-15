@@ -78,6 +78,17 @@ async def lifespan(app: FastAPI):
         )
     )
 
+    # 抑制 Windows IOCP accept 阶段的 "Task exception was never retrieved" 警告
+    # WinError 64("指定的网络名不再可用")是客户端瞬断导致的无害异常
+    def _mcp_task_done(task: asyncio.Task) -> None:
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            logger.warning("MCP server task 异常退出: %s", exc)
+
+    mcp_task.add_done_callback(_mcp_task_done)
+
     # 后台启动微信 channel（仅当 token 已存在时），不阻塞 lifespan
     wechat_task = asyncio.create_task(_start_wechat_channel())
 

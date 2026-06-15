@@ -609,7 +609,17 @@ class GroupChat:
                         content=failure_content,
                         message_type=MessageType.NOTIFICATION,
                     )
-                    await self.message_router.send_message(notification_message)
+                    # 使用 GroupChat 包装层，处理接收者已停止的情况
+                    try:
+                        await self.send_message_to_agent(notification_message)
+                    except Exception as e:
+                        # 接收者可能已停止或注销，记录警告但不阻断清理流程
+                        logger.warning(
+                            "无法发送停止通知 %s -> %s: %s（接收者可能已停止）",
+                            agent_name,
+                            call.send_from,
+                            str(e),
+                        )
                 else:
                     # 如果调用方是 user，保存到群聊历史
                     result = AgentResult(

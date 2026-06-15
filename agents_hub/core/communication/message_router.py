@@ -103,7 +103,8 @@ class MessageRouter:
                 send_to=message.send_to,
             ) from None
         except (AgentNotFoundError, InvalidMessageError):
-            raise  # 直接向上传递
+            # 直接向上传递，_validate_message() 已在首次发现点记录了 ERROR
+            raise
         except Exception as e:
             logger.error(
                 "消息投递失败: call_id=%s, from=%s, to=%s, 原因=未知错误: %s",

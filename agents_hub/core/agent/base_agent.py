@@ -596,7 +596,17 @@ call_id: {msg.call_id}
                 message_type=MessageType.NOTIFICATION,
             )
             # 只有这个地方能直接调用message_router，别的地方只能走gourp_chat.send_message_to_agent
-            await self.message_router.send_message(message)
+            try:
+                await self.message_router.send_message(message)
+            except Exception as e:
+                # 接收者可能已注销/停止，但兜底闭环的主要目标（保存到历史）已完成
+                # 通知未送达不影响闭环成功，调用方下次启动后能从历史中看到结果
+                self.logger.warning(
+                    "兜底闭环通知未送达 %s -> %s: %s（消息已保存到群聊历史）",
+                    self.name,
+                    call.send_from,
+                    str(e),
+                )
         # update_agent_session 内部已通过 _save_agent_members() → _notify_change() 触发广播，无需重复调用
         self.logger.info(
             "Agent %s 兜底闭环: call_id=%s, send_from=%s, text_len=%d",

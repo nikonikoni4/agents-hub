@@ -30,10 +30,10 @@ async def broadcast_group_chat_refresh(
 
     realtime_manager = manager or get_realtime_manager()
     signal = make_refresh_signal(group_chat_id)
-    logger.info(
-        "[Realtime] broadcast_group_chat_refresh: group_chat_id=%s, manager=%s",
+    connection_count = len(realtime_manager.rooms.get(group_chat_id, []))
+    logger.debug(
+        "[Realtime] broadcast_group_chat_refresh: group_chat_id=%s, connections=%d",
         group_chat_id,
-        realtime_manager,
+        connection_count,
     )
     await realtime_manager.broadcast(group_chat_id, signal.model_dump(mode="json"))
-    logger.info("[Realtime] broadcast 执行完成")

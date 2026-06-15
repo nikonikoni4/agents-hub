@@ -47,7 +47,7 @@ class WebSocketManager:
         """Broadcast a JSON message to all connections in a room."""
         connections = self.rooms.get(group_chat_id, [])
         if not connections:
-            logger.warning("Broadcast to empty room %s", group_chat_id)
+            logger.debug("Broadcast to empty room %s (前端未连接或已切换)", group_chat_id)
             return
 
         failed_connections = []

@@ -55,17 +55,66 @@ logger.info("AgentCall 创建/完成: call_id=%s, ...", ...)
 
 ### ERROR：异常抛出前必须记录完整上下文
 
-**规则**：所有 raise 前必须有 ERROR 日志，包含：操作标识 + 失败原因 + 当前状态
+**规则**：在错误首次发现点必须有 ERROR 日志，包含：操作标识 + 失败原因 + 当前状态
+
+**判断流程**：
+
+```
+异常即将 raise
+    ↓
+问：这是错误的首次发现点吗？
+    ├─ 是 → 问：调用方能从异常消息获得足够调试信息吗？
+    │         ├─ 否 → ✅ 必须记录 ERROR + 完整上下文
+    │         └─ 是 → ❌ 不需要（简单参数错误、业务规则）
+    └─ 否 → ❌ 不需要（底层已记录，避免重复）
+              ⚠️ 建议：加注释说明底层已记录
+```
+
+**示例**：
 
 ```python
-# ✅ 正确
-logger.error("消息投递失败: call_id=%s, 接收者未注册, 已注册=%s", call_id, list(self._agents_queue.keys()))
+# ✅ 正确：首次发现点，记录完整上下文
+def _validate_message(self, message: AgentMessage):
+    if message.send_to not in self._agents_queue:
+        logger.error(
+            "消息校验失败: call_id=%s, 接收者未注册, 已注册=%s",
+            message.call_id,
+            list(self._agents_queue.keys()),  # ← 关键：当前状态
+        )
+        raise AgentNotFoundError(message.send_to)
+
+# ✅ 正确：中间层转发，不重复记录
+async def send_message(self, message: AgentMessage):
+    try:
+        self._validate_message(message)  # ← 底层已记录
+        ...
+    except (AgentNotFoundError, InvalidMessageError):
+        # 直接向上传递，_validate_message() 已在首次发现点记录了 ERROR
+        raise
+
+# ✅ 正确：简单参数校验，异常消息已足够
+def create_call(self, send_from: str, send_to: str):
+    if not send_from or not send_to:
+        raise ValueError("send_from 和 send_to 不能为空")  # 不需要 log
+
+# ❌ 错误：首次发现点但缺少上下文
+logger.debug("接收者未注册")  # 级别错误
 raise AgentNotFoundError(send_to)
 
-# ❌ 错误：级别错误 / 缺少上下文 / 没有日志
-logger.debug("接收者未注册")
-raise AgentNotFoundError(send_to)
+# ❌ 错误：中间层重复记录
+async def send_message(self, message: AgentMessage):
+    try:
+        self._validate_message(message)
+        ...
+    except AgentNotFoundError as e:
+        logger.error("发送失败: %s", str(e))  # ← 重复记录，污染日志
+        raise
 ```
+
+**记录内容要求**：
+- 操作标识：call_id、path、agent_name 等唯一标识
+- 失败原因：具体是什么错误
+- 当前状态：已注册列表、队列大小、配置值等调试关键信息
 
 ### WARN vs DEBUG
 
