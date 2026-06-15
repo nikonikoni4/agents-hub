@@ -116,9 +116,6 @@ class GroupChat:
         # 初始化新成员（首次创建时所有成员都是新的）
         await self._initialize_new_members()
 
-        # 启动清理循环
-        self.agent_call_manager.start_cleanup()
-
         # start() 特有：初始化 metadata
         if self.runtime.state.metadata is None:
             await self.runtime.initialize_metadata(
@@ -155,9 +152,6 @@ class GroupChat:
         # 确保所有 agent 都有 token
         await self._ensure_tokens()
 
-        # 启动清理循环
-        self.agent_call_manager.start_cleanup()
-
         # load() 不设置 _activated，等待 activate()
         logger.info("群聊加载完成: id=%s", self.group_chat_id)
 
@@ -187,7 +181,7 @@ class GroupChat:
         self._activated = True
 
     def _start_agent_tasks(self):
-        """启动所有 agent 的 run() 任务（内部方法）"""
+        """启动所有 agent 的 run() 任务和事件循环（内部方法）"""
         if self.manager is None:
             logger.error("Manager 未初始化，无法启动 Agent 任务")
             raise StateError("Manager 未初始化，请先调用 _init_agents()")
@@ -200,6 +194,9 @@ class GroupChat:
             task.add_done_callback(lambda t, n=name: self._on_agent_task_done(n, t))  # type: ignore[misc]
             self.worker_tasks[name] = task
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+
+        # 启动清理循环（生命周期与 agent.run() 一致）
+        self.agent_call_manager.start_cleanup()
 
     async def _init_agents(self):
         """
