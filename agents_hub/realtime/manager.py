@@ -51,7 +51,7 @@ class WebSocketManager:
             return
 
         failed_connections = []
-        for connection in connections:
+        for connection in list(connections):
             try:
                 await connection.send_json(message)
             except Exception:

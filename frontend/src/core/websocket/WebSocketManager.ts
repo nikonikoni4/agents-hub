@@ -27,6 +27,7 @@ class WebSocketManager {
   private reconnectTimer: number | null = null;
   private currentChatId: string | null = null;
   private isIntentionalClose: boolean = false;
+  private isReconnecting: boolean = false; // 标记是否正在重连
   private refreshDebounceTimer: number | null = null;
   private readonly REFRESH_DEBOUNCE_MS = 300; // 300ms 防抖
 
@@ -199,6 +200,18 @@ class WebSocketManager {
 
       // 发送队列中的消息
       this._flushMessageQueue();
+
+      // 仅在重连时触发 refresh，同步重连窗口期内的数据变更
+      if (this.isReconnecting && this.currentChatId) {
+        // eslint-disable-next-line no-console
+        console.info('[WebSocket] Reconnected, triggering refresh');
+        this._emit('refresh', {
+          type: 'refresh',
+          group_chat_id: this.currentChatId,
+          timestamp: new Date().toISOString(),
+        } as RefreshSignal);
+      }
+      this.isReconnecting = false;
     };
 
     this.ws.onmessage = (event) => {
@@ -247,6 +260,7 @@ class WebSocketManager {
 
     const delay = this.reconnectTimeouts[this.reconnectAttempts] || 16000;
     this.reconnectAttempts++;
+    this.isReconnecting = true; // 标记正在重连
 
     // eslint-disable-next-line no-console
     console.info(

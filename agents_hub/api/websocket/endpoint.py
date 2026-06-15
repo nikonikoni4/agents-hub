@@ -4,6 +4,8 @@
 处理 WebSocket 连接生命周期。
 """
 
+import asyncio
+import contextlib
 import logging
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -37,16 +39,44 @@ async def websocket_endpoint(
     """WebSocket 端点
 
     前端通过此端点连接到指定群聊房间，接收刷新信号。
+    支持 ping/pong 心跳检测，30 秒间隔。
     """
+    PING_INTERVAL = 30  # 30 秒发送一次 ping
+    PING_TIMEOUT = 10  # ping 超时时间
+
     try:
         await manager.connect(websocket, group_chat_id)
-        while True:
-            # 保持连接，接收前端消息（如心跳）
-            data = await websocket.receive_text()
-            logger.debug(f"Received from {group_chat_id}: {data}")
+
+        # 启动 ping 任务
+        async def ping_loop():
+            while True:
+                await asyncio.sleep(PING_INTERVAL)
+                try:
+                    await asyncio.wait_for(
+                        websocket.send_json({"type": "ping"}), timeout=PING_TIMEOUT
+                    )
+                    logger.debug("Ping sent to %s", group_chat_id)
+                except asyncio.TimeoutError:
+                    logger.warning("Ping timeout for %s", group_chat_id)
+                    raise WebSocketDisconnect() from None
+
+        ping_task = asyncio.create_task(ping_loop())
+
+        try:
+            while True:
+                # 保持连接，接收前端消息（如心跳）
+                data = await websocket.receive_text()
+                logger.debug(f"Received from {group_chat_id}: {data}")
+        finally:
+            # 清理 ping 任务
+            ping_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await ping_task
+
     except WebSocketDisconnect:
         pass  # Normal disconnect, cleanup below
     except WebSocketError as e:
+        logger.error("WebSocket error in room %s: %s", group_chat_id, e.message)
         try:
             await handle_websocket_error(websocket, e)
         except Exception:
