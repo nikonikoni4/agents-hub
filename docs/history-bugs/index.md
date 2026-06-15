@@ -153,3 +153,9 @@
  - path: docs/history-bugs/2026-06-14-manager-run-task-silent-death.md
  - 触发规则：stop_member 后 start_member 重启 manager，发送消息给 manager
  - 内容摘要：activate() 幂等性缺陷 Bug 的延续。manager 的 run() 任务在处理最后一条消息后静默死亡，后续消息入队但无人消费（queue_size 递增），AgentCall 停在 PENDING。_process_message 内部无 error log，排除该环节崩溃。已添加 run() 顶层异常捕获、_on_agent_task_done 回调、heartbeat 健康检查，待复现确认具体崩溃点
+
+## broadcast_group_chat_refresh 全链路问题审查
+ - updated_at : 2026-06-15
+ - path: docs/history-bugs/2026-06-15-broadcast-refresh-full-chain-issues.md
+ - 触发规则：后端发送 refresh 信号但前端有时不刷新；前端短时间内大批量重复请求
+ - 内容摘要：9 个问题，覆盖后端广播时序、前端请求风暴、WebSocket 可靠性、竞态条件。后端时序正确（先持久化后广播），问题集中在前端和通信层。最高置信度问题：双重广播 base_agent.py:600（85分，DRY 违反）、N+1 广播 group_chat_service.py:1260（85分）。前端单个 refresh 触发 10 个并发请求（6 个冗余），无任何防抖/去重/取消机制。WebSocket 无心跳、断连期间 refresh 丢失、重连后不补拉数据

@@ -27,6 +27,8 @@ class WebSocketManager {
   private reconnectTimer: number | null = null;
   private currentChatId: string | null = null;
   private isIntentionalClose: boolean = false;
+  private refreshDebounceTimer: number | null = null;
+  private readonly REFRESH_DEBOUNCE_MS = 300; // 300ms 防抖
 
   private constructor() {
     // 私有构造函数，防止外部实例化
@@ -75,6 +77,11 @@ class WebSocketManager {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+
+    if (this.refreshDebounceTimer !== null) {
+      clearTimeout(this.refreshDebounceTimer);
+      this.refreshDebounceTimer = null;
     }
 
     if (this.ws) {
@@ -269,9 +276,29 @@ class WebSocketManager {
   }
 
   /**
-   * 触发事件
+   * 触发事件（支持防抖）
    */
   private _emit(event: WebSocketEventType, data?: unknown): void {
+    // refresh 事件防抖：300ms 内多次 refresh 合并为 1 次
+    if (event === 'refresh') {
+      if (this.refreshDebounceTimer !== null) {
+        clearTimeout(this.refreshDebounceTimer);
+      }
+      this.refreshDebounceTimer = window.setTimeout(() => {
+        this._emitImmediate(event, data);
+        this.refreshDebounceTimer = null;
+      }, this.REFRESH_DEBOUNCE_MS);
+      return;
+    }
+
+    // 其他事件：立即触发
+    this._emitImmediate(event, data);
+  }
+
+  /**
+   * 立即触发事件（不防抖）
+   */
+  private _emitImmediate(event: WebSocketEventType, data?: unknown): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       callbacks.forEach((callback) => {

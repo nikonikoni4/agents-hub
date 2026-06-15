@@ -597,7 +597,7 @@ call_id: {msg.call_id}
             )
             # 只有这个地方能直接调用message_router，别的地方只能走gourp_chat.send_message_to_agent
             await self.message_router.send_message(message)
-        await self.runtime._notify_change()
+        # update_agent_session 内部已通过 _save_agent_members() → _notify_change() 触发广播，无需重复调用
         self.logger.info(
             "Agent %s 兜底闭环: call_id=%s, send_from=%s, text_len=%d",
             self.name,

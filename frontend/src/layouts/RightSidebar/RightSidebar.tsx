@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useMembers, MemberWithRole } from '@/features/chat/hooks';
+import type { MemberWithRole } from '@/features/chat/hooks';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
 import { useTasks } from '@/features/chat/hooks/useTasks';
@@ -50,6 +50,15 @@ export interface RightSidebarProps {
   onResizeEnd?: () => void;
   content?: RightSidebarContent | null;
   onContentChange?: (content: RightSidebarContent | null) => void;
+  membersData: {
+    members: MemberWithRole[];
+    loading: boolean;
+    toggleDockerMode: (name: string, enable?: boolean) => Promise<void>;
+    compressAgent: (name: string) => Promise<void>;
+    stopMember: (name: string) => Promise<void>;
+    startMember: (name: string) => Promise<void>;
+    resetMember: (name: string) => Promise<void>;
+  };
 }
 
 // SVG 图标组件
@@ -285,6 +294,7 @@ export function RightSidebar({
   onResizeEnd,
   content,
   onContentChange,
+  membersData,
 }: RightSidebarProps) {
   const {
     members,
@@ -294,7 +304,7 @@ export function RightSidebar({
     stopMember,
     startMember,
     resetMember,
-  } = useMembers();
+  } = membersData;
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const displayLocation = useSingleChatStore((s) => s.displayLocation);
@@ -337,7 +347,7 @@ export function RightSidebar({
         setDockerConfirm({ memberName, enableDocker });
       } else {
         // 关闭沙箱直接执行
-        toggleDockerMode(memberName).catch((error) => {
+        toggleDockerMode(memberName, enableDocker).catch((error) => {
           const message = error instanceof Error ? error.message : '切换 Docker 模式失败';
           toast.error(message);
         });
@@ -350,7 +360,7 @@ export function RightSidebar({
     if (!dockerConfirm) return;
 
     try {
-      await toggleDockerMode(dockerConfirm.memberName);
+      await toggleDockerMode(dockerConfirm.memberName, dockerConfirm.enableDocker);
     } catch (error) {
       const message = error instanceof Error ? error.message : '切换 Docker 模式失败';
       toast.error(message);

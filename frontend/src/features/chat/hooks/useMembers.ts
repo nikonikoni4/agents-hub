@@ -96,13 +96,13 @@ export function useMembers() {
   }, [activeSessionId, fetchMembers]);
 
   const toggleDockerMode = useCallback(
-    async (memberName: string) => {
+    async (memberName: string, enable?: boolean) => {
       if (!activeSessionId) return;
 
       const currentMember = members.find((m) => m.name === memberName);
       if (!currentMember) return;
 
-      const newValue = !currentMember.use_docker;
+      const newValue = enable ?? !currentMember.use_docker;
 
       // 乐观更新
       setMembers((prev) =>

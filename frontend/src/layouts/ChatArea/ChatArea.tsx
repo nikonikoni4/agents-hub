@@ -11,7 +11,7 @@ import {
 } from '@/shared/components';
 import { FileChangesCard } from '@/shared/components/FileChangesCard';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
-import { useMembers } from '@/features/chat/hooks/useMembers';
+import type { MemberWithRole } from '@/features/chat/hooks/useMembers';
 import { useCompressStatusStore } from '@/features/chat/store/compressStatusStore';
 import { usePinnedMessages } from '@/features/chat/hooks/usePinnedMessages';
 import { useSessionStore } from '@/features/session/store/sessionStore';
@@ -35,6 +35,15 @@ import styles from './ChatArea.module.css';
 export interface ChatAreaProps {
   onToggleRightSidebar?: () => void;
   onContentChange?: (content: RightSidebarContent | null) => void;
+  membersData: {
+    members: MemberWithRole[];
+    loading: boolean;
+    toggleDockerMode: (name: string, enable?: boolean) => Promise<void>;
+    compressAgent: (name: string) => Promise<void>;
+    stopMember: (name: string) => Promise<void>;
+    startMember: (name: string) => Promise<void>;
+    resetMember: (name: string) => Promise<void>;
+  };
 }
 
 // SVG 图标
@@ -237,7 +246,7 @@ const MessageBubble = React.memo(
   }
 );
 
-export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProps) {
+export function ChatArea({ onToggleRightSidebar, onContentChange, membersData }: ChatAreaProps) {
   const {
     messages,
     loading,
@@ -249,7 +258,7 @@ export function ChatArea({ onToggleRightSidebar, onContentChange }: ChatAreaProp
     isRestoringScroll,
     loadMoreWithRestore,
   } = useChatMessages();
-  const { members, compressAgent } = useMembers();
+  const { members, compressAgent } = membersData;
   const toast = useToast();
   const projectGroups = useSessionStore((s) => s.projectGroups);
   const { pin, unpin, isPinned } = usePinnedMessages(activeSessionId);

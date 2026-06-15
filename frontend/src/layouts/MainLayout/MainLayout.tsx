@@ -9,6 +9,7 @@ import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import { SingleChatPanel } from '@/features/single-chat/components/SingleChatPanel';
 import { ToastContainer } from '@/shared/components';
+import { useMembers } from '@/features/chat/hooks/useMembers';
 import styles from './MainLayout.module.css';
 
 type ViewMode = 'chat' | 'role' | 'skill';
@@ -36,6 +37,9 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
 
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const displayLocation = useSingleChatStore((s) => s.displayLocation);
+
+  // 提升到父组件：统一调用 useMembers，避免 ChatArea 和 RightSidebar 重复调用
+  const membersData = useMembers();
 
   // 当 session 被选中时，自动切换到 chat 视图
   useEffect(() => {
@@ -107,6 +111,7 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
               <ChatArea
                 onToggleRightSidebar={handleToggleRightSidebar}
                 onContentChange={setRightSidebarContent}
+                membersData={membersData}
               />
             )}
           </>
@@ -123,6 +128,7 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
             onResizeEnd={handleResizeEnd}
             content={rightSidebarContent}
             onContentChange={setRightSidebarContent}
+            membersData={membersData}
           />
         )}
       </div>
