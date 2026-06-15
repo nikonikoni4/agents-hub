@@ -108,19 +108,41 @@ export function RoleManagementPanel() {
                   onDeleteTeam={handleDeleteTeam}
                 />
               ))}
+              <button
+                type="button"
+                className={styles.createCard}
+                onClick={() => setShowCreateTeamDialog(true)}
+              >
+                <div className={styles.createCardIcon}>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 5v14m7-7H5" />
+                  </svg>
+                </div>
+                <span className={styles.createCardText}>创建团队</span>
+              </button>
             </div>
           </div>
         ) : (
           <div className={styles.rolesView}>
             {rolesLoading ? (
               <div className={styles.loading}>加载中...</div>
-            ) : roles.length === 0 ? (
-              <div className={styles.empty}>暂无角色</div>
             ) : (
               <div className={styles.rolesGrid}>
                 {roles.map((role) => (
                   <RoleCard key={role.name} role={role} onEdit={handleEditRole} />
                 ))}
+                <button
+                  type="button"
+                  className={styles.createCard}
+                  onClick={() => setShowCreateDialog(true)}
+                >
+                  <div className={styles.createCardIcon}>
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 5v14m7-7H5" />
+                    </svg>
+                  </div>
+                  <span className={styles.createCardText}>创建角色</span>
+                </button>
               </div>
             )}
           </div>

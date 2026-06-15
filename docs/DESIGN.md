@@ -253,6 +253,7 @@ border-right: 1px solid var(--border-color);
    - 新对话
    - 角色管理
    - 技能广场
+   - Agents Hub 助手
 
 2. **项目区** (sidebar-projects, flex: 1)
    - 项目文件夹列表
@@ -263,6 +264,7 @@ border-right: 1px solid var(--border-color);
 
 4. **设置** (sidebar-footer)
    - 设置按钮
+   - 深色模式切换
 
 ### 3. 主对话区（Chat Area）
 
@@ -295,6 +297,7 @@ border-left: 1px solid var(--border-color);
 
 **内容**：
 - 收起按钮（顶部）
+- 标签选项卡：单聊、群聊、任务、Diff、预览、网页
 - 成员列表模块
 - 预览模块
 - Diff 模块
@@ -556,7 +559,7 @@ svg {
 | **线条** | 较多分隔线 | 极少分隔线 |
 | **圆角** | 主要在组件 | 主对话区左侧圆角 |
 | **顶栏** | 有菜单栏 | 只有按钮 |
-| **左侧栏** | 4个按钮 | 3个按钮（精简） |
+| **左侧栏** | 4个按钮 | 4个按钮（含Agents Hub助手） |
 | **布局** | 平面式 | 卡片式（圆角浮起） |
 
 ---

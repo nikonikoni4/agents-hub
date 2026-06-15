@@ -113,7 +113,7 @@
 .speakerName {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .messageBubble {
@@ -148,6 +148,7 @@
   background: var(--bg-bubble);
   color: var(--text-primary);
   border-top-left-radius: 4px;
+  border: 1px solid var(--border-color);
 }
 
 .toolCalls {
