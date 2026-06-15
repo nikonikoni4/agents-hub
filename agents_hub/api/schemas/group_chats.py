@@ -259,3 +259,21 @@ class CompressAllResponse(BaseModel):
 
     message: str = Field(..., description="操作结果消息")
     results: list[dict] = Field(..., description="每个 Agent 的压缩结果")
+
+
+class MemberHistoryMessage(BaseModel):
+    """成员历史聊天记录消息"""
+
+    id: str
+    role: str
+    content: str
+    timestamp: str
+    model: str | None = None
+
+
+class MemberHistoryResponse(BaseModel):
+    """成员历史聊天记录响应"""
+
+    agent_name: str
+    main_session_id: str | None = None
+    messages: list[MemberHistoryMessage]

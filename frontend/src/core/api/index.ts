@@ -26,6 +26,7 @@ export {
   stopMember,
   startMember,
   resetMember,
+  getMemberHistory,
 } from './groupChatApi';
 
 // 角色管理 API

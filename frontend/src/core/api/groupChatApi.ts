@@ -23,6 +23,7 @@ import type {
   UploadedFileInfo,
   CompressApiResponse,
   CompressAllApiResponse,
+  MemberHistoryResponse,
 } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
@@ -840,4 +841,18 @@ export async function resetMember(
   agentName: string
 ): Promise<{ agent_name: string; status: string; new_session_id: string }> {
   return apiClient.post(`/group-chats/${chatId}/members/${agentName}/reset`);
+}
+
+/**
+ * 获取成员历史聊天记录
+ */
+export async function getMemberHistory(
+  chatId: string,
+  agentName: string
+): Promise<MemberHistoryResponse> {
+  return mockableRequest(
+    () =>
+      apiClient.get<MemberHistoryResponse>(`/group-chats/${chatId}/members/${agentName}/history`),
+    { agent_name: agentName, main_session_id: null, messages: [] }
+  );
 }

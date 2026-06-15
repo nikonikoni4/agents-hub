@@ -138,6 +138,7 @@ export function MainLayout({ theme, onToggleTheme }: MainLayoutProps) {
             onResizeStart={handleResizeStart}
             onResizeEnd={handleResizeEnd}
             content={rightSidebarContent}
+            onContentChange={setRightSidebarContent}
           />
         )}
       </div>

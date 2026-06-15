@@ -44,6 +44,8 @@ export type {
   CompressApiResponse,
   CompressAllApiResponse,
   CompressAllResultItem,
+  MemberHistoryMessage,
+  MemberHistoryResponse,
 } from './api-schemas';
 
 // API 请求类型

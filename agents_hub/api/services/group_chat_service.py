@@ -24,6 +24,8 @@ from agents_hub.api.schemas.group_chats import (
     AgentCallInfo,
     GroupChatInfo,
     GroupChatMember,
+    MemberHistoryMessage,
+    MemberHistoryResponse,
     MessageInfo,
     PinnedMessageInfo,
     TaskListInfo,
@@ -828,6 +830,86 @@ class GroupChatService:
             ) from e
 
         return result
+
+    async def get_member_history(
+        self, group_chat_id: str, agent_name: str
+    ) -> MemberHistoryResponse:
+        """获取指定成员的历史聊天记录（从 platform session 文件解析）
+
+        Args:
+            group_chat_id: 群聊 ID
+            agent_name: Agent 名称
+
+        Returns:
+            MemberHistoryResponse
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        from agents_hub.utils.session_parser import parse_session_file, resolve_session_path
+
+        # 1. 加载群聊
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 2. 获取成员 session 信息
+        agent_info = group_chat.runtime.get_or_create_agent_member_info(agent_name)
+        session_id = agent_info.main_session if agent_info else None
+
+        if not session_id:
+            return MemberHistoryResponse(
+                agent_name=agent_name,
+                main_session_id=None,
+                messages=[],
+            )
+
+        # 3. 获取角色配置（platform + work_root）
+        role = RoleManager().get_role(agent_name)
+        role_config = role.get_role_config()
+
+        # 4. 查找 session 文件
+        session_path = resolve_session_path(session_id, role_config.platform, role_config.work_root)
+
+        if not session_path:
+            return MemberHistoryResponse(
+                agent_name=agent_name,
+                main_session_id=session_id,
+                messages=[],
+            )
+
+        # 5. 解析 session 文件
+        try:
+            session_messages = parse_session_file(Path(session_path), role_config.platform)
+        except (OSError, ValueError):
+            logger.warning("Failed to parse session file for %s: %s", agent_name, session_path)
+            return MemberHistoryResponse(
+                agent_name=agent_name,
+                main_session_id=session_id,
+                messages=[],
+            )
+
+        # 6. 转换为 Schema
+        messages = [
+            MemberHistoryMessage(
+                id=m.id,
+                role=m.role,
+                content=m.content,
+                timestamp=m.timestamp,
+                model=m.model,
+            )
+            for m in session_messages
+        ]
+
+        return MemberHistoryResponse(
+            agent_name=agent_name,
+            main_session_id=session_id,
+            messages=messages,
+        )
 
     async def _build_group_chat_info_from_instance(self, group_chat: GroupChat) -> GroupChatInfo:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""

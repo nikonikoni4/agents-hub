@@ -614,3 +614,21 @@ export interface CompressAllResultItem {
   /** 跳过/失败原因 */
   reason?: string;
 }
+
+// ==================== 成员历史记录相关 ====================
+
+/** 成员历史聊天记录消息 */
+export interface MemberHistoryMessage {
+  id: string;
+  role: string;
+  content: string;
+  timestamp: string;
+  model: string | null;
+}
+
+/** 成员历史聊天记录响应 */
+export interface MemberHistoryResponse {
+  agent_name: string;
+  main_session_id: string | null;
+  messages: MemberHistoryMessage[];
+}

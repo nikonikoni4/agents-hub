@@ -15,11 +15,12 @@ import {
 } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast/useToast';
 import { RightSidebarContent } from '@/shared/types/layout';
+import { ChatHistoryPanel } from '@/features/chat-history';
 import { AgentCallsPanel } from './AgentCallsPanel';
 import { TasksPanel } from './TasksPanel';
 import styles from './RightSidebar.module.css';
 
-type SidebarTab = 'single-chat' | 'chat' | 'tasks' | 'preview' | 'diff' | 'web';
+type SidebarTab = 'single-chat' | 'chat' | 'tasks' | 'preview' | 'diff' | 'web' | 'history';
 
 /** 将 file:/// URL 转换为后端 HTTP 代理 URL */
 function toPreviewUrl(url: string): string {
@@ -37,6 +38,7 @@ const TAB_LABELS: Record<SidebarTab, string> = {
   preview: '预览',
   diff: 'Diff',
   web: '网页',
+  history: '历史',
 };
 
 export interface RightSidebarProps {
@@ -47,6 +49,7 @@ export interface RightSidebarProps {
   onResizeStart?: () => void;
   onResizeEnd?: () => void;
   content?: RightSidebarContent | null;
+  onContentChange?: (content: RightSidebarContent | null) => void;
 }
 
 // SVG 图标组件
@@ -86,6 +89,7 @@ function MemberItem({
   onStop,
   onStart,
   onReset,
+  onViewHistory,
 }: {
   member: MemberWithRole;
   onToggleDocker: (memberName: string, enableDocker: boolean) => void;
@@ -93,6 +97,7 @@ function MemberItem({
   onStop: (memberName: string) => void;
   onStart: (memberName: string) => void;
   onReset: (memberName: string) => void;
+  onViewHistory: (memberName: string) => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -174,7 +179,15 @@ function MemberItem({
         )}
       </div>
       <div className={styles.memberStatus}>
-        <span className={member.status === 'busy' ? styles.statusBusy : styles.statusIdle}>
+        <span
+          className={
+            member.status === 'busy'
+              ? styles.statusBusy
+              : member.status === 'stopped'
+                ? styles.statusStopped
+                : styles.statusIdle
+          }
+        >
           {member.compressing
             ? '压缩中'
             : member.status === 'busy'
@@ -235,6 +248,15 @@ function MemberItem({
             >
               {member.compressing ? '压缩中...' : '压缩上下文'}
             </button>
+            <button
+              className={styles.memberMenuItem}
+              onClick={() => {
+                setShowMenu(false);
+                onViewHistory(member.name);
+              }}
+            >
+              📜 查看历史
+            </button>
           </div>
         )}
       </div>
@@ -262,6 +284,7 @@ export function RightSidebar({
   onResizeStart,
   onResizeEnd,
   content,
+  onContentChange,
 }: RightSidebarProps) {
   const {
     members,
@@ -290,7 +313,12 @@ export function RightSidebar({
 
   // content 变化时自动切换到对应 tab
   useEffect(() => {
-    if (content?.type === 'preview' || content?.type === 'diff' || content?.type === 'web') {
+    if (
+      content?.type === 'preview' ||
+      content?.type === 'diff' ||
+      content?.type === 'web' ||
+      content?.type === 'history'
+    ) {
       setActiveTab(content.type);
     }
   }, [content]);
@@ -348,13 +376,20 @@ export function RightSidebar({
     [compressAgent, toast]
   );
 
+  const handleViewHistory = useCallback(
+    (memberName: string) => {
+      onContentChange?.({ type: 'history', agentName: memberName });
+    },
+    [onContentChange]
+  );
+
   return (
     <div
       className={`${styles.rightSidebar} ${collapsed ? styles.collapsed : ''}`}
       style={{
         ...(collapsed ? { width: 0 } : width !== undefined ? { width: `${width}px` } : {}),
         ...(resizing ? { transition: 'none' } : {}),
-        ...(activeTab === 'single-chat' ? { overflow: 'hidden' } : {}),
+        ...(activeTab === 'single-chat' || activeTab === 'history' ? { overflow: 'hidden' } : {}),
       }}
     >
       {!collapsed && onResize && (
@@ -367,15 +402,17 @@ export function RightSidebar({
       )}
 
       <div className={styles.tabBar}>
-        {(Object.keys(TAB_LABELS) as SidebarTab[]).map((tab) => (
-          <button
-            key={tab}
-            className={`${styles.tabButton} ${activeTab === tab ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {TAB_LABELS[tab]}
-          </button>
-        ))}
+        {(Object.keys(TAB_LABELS) as SidebarTab[])
+          .filter((tab) => tab !== 'history' || content?.type === 'history')
+          .map((tab) => (
+            <button
+              key={tab}
+              className={`${styles.tabButton} ${activeTab === tab ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {TAB_LABELS[tab]}
+            </button>
+          ))}
       </div>
 
       {activeTab === 'single-chat' && (
@@ -415,6 +452,7 @@ export function RightSidebar({
                     onStop={stopMember}
                     onStart={startMember}
                     onReset={resetMember}
+                    onViewHistory={handleViewHistory}
                   />
                 ))
               )}
@@ -524,6 +562,17 @@ export function RightSidebar({
             </div>
           )}
         </div>
+      )}
+
+      {activeTab === 'history' && content?.type === 'history' && activeSessionId && (
+        <ChatHistoryPanel
+          chatId={activeSessionId}
+          agentName={content.agentName}
+          onClose={() => {
+            onContentChange?.(null);
+            setActiveTab('chat');
+          }}
+        />
       )}
 
       {/* Docker 确认对话框 */}

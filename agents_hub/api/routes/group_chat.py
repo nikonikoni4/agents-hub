@@ -11,6 +11,7 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatCreate,
     GroupChatInfo,
     GroupChatMember,
+    MemberHistoryResponse,
     MessageCreate,
     MessageInfo,
     PermissionUpdateRequest,
@@ -410,3 +411,16 @@ async def reset_member(
 ):
     """重置成员（清空上下文并重新初始化）"""
     return await service.reset_member(group_chat_id, agent_name)
+
+
+@router.get(
+    "/{group_chat_id}/members/{agent_name}/history",
+    response_model=MemberHistoryResponse,
+)
+async def get_member_history(
+    group_chat_id: str,
+    agent_name: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取指定成员的历史聊天记录"""
+    return await service.get_member_history(group_chat_id, agent_name)

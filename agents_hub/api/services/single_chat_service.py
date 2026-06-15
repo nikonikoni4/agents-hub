@@ -88,27 +88,9 @@ class SingleChatManager:
     def _resolve_session_path(
         session_id: str, platform: AgentPlatform, work_root: str | None
     ) -> str | None:
-        """根据 session_id 和平台查找会话文件路径
+        from agents_hub.utils.session_parser import resolve_session_path
 
-        Args:
-            session_id: 会话 ID
-            platform: 平台类型
-            work_root: 角色工作根目录（RoleConfig.work_root）
-
-        Returns:
-            会话文件路径字符串，未找到返回 None
-        """
-        if not work_root:
-            return None
-        if platform == AgentPlatform.CLAUDE:
-            search_dir = Path(work_root) / "projects"
-        elif platform in (AgentPlatform.CODEX, AgentPlatform.OPENCODE):
-            search_dir = Path(work_root) / "sessions"
-        if not search_dir.exists():
-            return None
-        for f in search_dir.rglob(f"*{session_id}*.jsonl"):
-            return str(f)
-        return None
+        return resolve_session_path(session_id, platform, work_root)
 
     def _load_index(self):
         """从文件加载索引"""

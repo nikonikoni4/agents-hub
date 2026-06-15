@@ -4,4 +4,5 @@
 export type RightSidebarContent =
   | { type: 'preview'; content: string; filePath: string }
   | { type: 'diff'; content: string; filePath: string }
-  | { type: 'web'; url: string; title?: string };
+  | { type: 'web'; url: string; title?: string }
+  | { type: 'history'; agentName: string };
