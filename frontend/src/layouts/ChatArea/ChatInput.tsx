@@ -1,10 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import {
-  PlusIcon,
-  SendIcon,
-  UploadPreview,
-  ImagePreviewModal,
-} from '@/shared/components';
+import { PlusIcon, SendIcon, UploadPreview, ImagePreviewModal } from '@/shared/components';
 import { useFileUpload } from '@/shared/hooks';
 import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
 import styles from './ChatArea.module.css';
