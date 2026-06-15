@@ -36,6 +36,11 @@
   --spacing-6: 24px;
   --spacing-8: 32px;
   --spacing-10: 40px;
+
+  /* 状态色 */
+  --status-busy: #f59e0b;
+  --status-idle: #22c55e;
+  --status-stopped: #9ca3af;
 }
 
 html[data-theme='dark'] {
@@ -59,4 +64,9 @@ html[data-theme='dark'] {
   --accent-color: #96b0cc;
   --accent-color-light: rgba(150, 176, 204, 0.15);
   --bg-selected: rgb(40, 40, 40);
+
+  /* 状态色 */
+  --status-busy: #f59e0b;
+  --status-idle: #22c55e;
+  --status-stopped: #9ca3af;
 }
