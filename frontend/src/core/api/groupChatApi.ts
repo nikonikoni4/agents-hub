@@ -614,11 +614,14 @@ export async function listGroupChatsWithPagination(params: {
         },
       }),
     {
-      items: MOCK_GROUP_CHAT_INFOS.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit ?? 10)),
+      items: MOCK_GROUP_CHAT_INFOS.slice(
+        params.offset ?? 0,
+        (params.offset ?? 0) + (params.limit ?? 10)
+      ),
       total: MOCK_GROUP_CHAT_INFOS.length,
       limit: params.limit ?? 10,
       offset: params.offset ?? 0,
-      has_more: ((params.offset ?? 0) + (params.limit ?? 10)) < MOCK_GROUP_CHAT_INFOS.length,
+      has_more: (params.offset ?? 0) + (params.limit ?? 10) < MOCK_GROUP_CHAT_INFOS.length,
     }
   );
 }

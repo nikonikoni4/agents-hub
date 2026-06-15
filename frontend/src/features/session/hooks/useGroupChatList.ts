@@ -18,19 +18,21 @@ export function useGroupChatList() {
       const currentGroups = useSessionStore.getState().projectGroups;
       const groupsMap = new Map(currentGroups.map((g) => [g.projectPath, g]));
 
-      const groups: ProjectGroup[] = summaries.map((summary: { project_path: string; group_chat_count: number }) => {
-        const existing = groupsMap.get(summary.project_path);
-        return {
-          projectPath: summary.project_path,
-          projectName: extractProjectName(summary.project_path),
-          sessions: existing?.sessions || [], // 保留兼容性
-          totalCount: summary.group_chat_count,
-          loadedSessions: existing?.loadedSessions || [], // 保留已加载数据
-          loadedCount: existing?.loadedCount || 0,
-          hasMore: existing?.hasMore ?? summary.group_chat_count > 0,
-          isLoading: false,
-        };
-      });
+      const groups: ProjectGroup[] = summaries.map(
+        (summary: { project_path: string; group_chat_count: number }) => {
+          const existing = groupsMap.get(summary.project_path);
+          return {
+            projectPath: summary.project_path,
+            projectName: extractProjectName(summary.project_path),
+            sessions: existing?.sessions || [], // 保留兼容性
+            totalCount: summary.group_chat_count,
+            loadedSessions: existing?.loadedSessions || [], // 保留已加载数据
+            loadedCount: existing?.loadedCount || 0,
+            hasMore: existing?.hasMore ?? summary.group_chat_count > 0,
+            isLoading: false,
+          };
+        }
+      );
 
       setProjectGroups(groups);
     } catch (error) {
