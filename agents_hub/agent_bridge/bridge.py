@@ -226,12 +226,13 @@ class AgentBridge:
         if use_docker:
             # Docker 模式：直接使用 Docker executor（不支持 fork_from）
             executor = self._docker_executors[config.platform]
+            parser = self._create_parser(config.platform)
             async for raw_line in executor.execute(
                 prompt, config, session_id, cwd, group_chat_id, system_prompt=system_prompt
             ):
                 if raw_line.strip():
                     try:
-                        parsed_event = self._create_parser(config.platform).parse_event(raw_line)
+                        parsed_event = parser.parse_event(raw_line)
                         if parsed_event is not None:
                             if parsed_event.type == AgentEventType.TEXT_DELTA:
                                 full_text.append(parsed_event.content["text"])
