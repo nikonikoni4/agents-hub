@@ -396,14 +396,68 @@ class GroupChat:
                 prompt = f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己"
             else:
                 other_members = [name for name in self.team_members_name if name != agent.name]
-                prompt = f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己"
+                manager_name = self.manager.name if self.manager else config.default_manager_name
+                prompt = f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{manager_name},你使用一句话简单介绍一下自己"
 
             # fork 模式：尝试使用 fork_from 创建新会话
             if is_fork and self.fork_from_sessions:
                 source_session = self.fork_from_sessions.get(agent.name)
                 if source_session:
-                    # OpenCode 平台不支持 fork，降级为普通初始化
-                    if agent.role_config.platform == AgentPlatform.OPENCODE or agent.role_config.platform == AgentPlatform.CODEX:
+                    if agent.role_config.platform == AgentPlatform.CODEX:
+                        # Codex: 通过 fork_codex_session 复制会话文件，直接构造结果
+                        from datetime import datetime, timezone
+
+                        from agents_hub.agent_bridge.models import AgentResult
+                        from agents_hub.core.foundation.exceptions import ForkError
+                        from agents_hub.core.utils.session_fork import fork_codex_session
+                        from agents_hub.utils.session_parser import resolve_session_path
+
+                        session_path = resolve_session_path(
+                            source_session, agent.role_config.platform, agent.role_config.work_root
+                        )
+                        if not session_path:
+                            logger.error(
+                                "Codex fork 失败: 无法解析源会话路径, agent=%s, session=%s",
+                                agent.name,
+                                source_session,
+                            )
+                            raise ForkError(
+                                agent_name=agent.name,
+                                platform="codex",
+                                source_session=source_session,
+                                reason=f"无法解析源会话路径: session_id={source_session}",
+                            )
+                        try:
+                            new_session_id = fork_codex_session(source_session, session_path)
+                        except FileNotFoundError as e:
+                            logger.error(
+                                "Codex fork 失败: 源会话文件不存在, agent=%s, path=%s",
+                                agent.name,
+                                session_path,
+                            )
+                            raise ForkError(
+                                agent_name=agent.name,
+                                platform="codex",
+                                source_session=source_session,
+                                reason=f"源会话文件不存在: {session_path}",
+                            ) from e
+                        logger.info(
+                            "Codex fork 初始化: agent=%s, source=%s, new_session=%s, group=%s",
+                            agent.name,
+                            source_session,
+                            new_session_id,
+                            self.group_chat_id,
+                        )
+                        return AgentResult(
+                            text="fork成功",
+                            session_id=new_session_id,
+                            timestamp=datetime.now(timezone.utc).isoformat(),
+                            agent_name=agent.name,
+                            platform=AgentPlatform.CODEX,
+                            role_type=agent.role_type,
+                        )
+                    elif agent.role_config.platform == AgentPlatform.OPENCODE:
+                        # OpenCode 不支持 fork，降级为普通初始化
                         logger.warning(
                             "OpenCode 平台不支持 fork，降级为普通初始化: agent=%s, group=%s",
                             agent.name,
@@ -411,13 +465,16 @@ class GroupChat:
                         )
                         return await agent.execute(prompt)
                     else:
+                        # Claude: 使用 --fork-session --resume
                         logger.info(
                             "Fork 模式初始化: agent=%s, source_session=%s, group=%s",
                             agent.name,
                             source_session,
                             self.group_chat_id,
                         )
-                        return await agent.execute(prompt, fork_from=source_session)
+                        return await agent.execute(
+                            "你只需要回复：fork成功", fork_from=source_session
+                        )
 
             # 普通初始化
             return await agent.execute(prompt)
