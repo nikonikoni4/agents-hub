@@ -160,8 +160,8 @@
  - 触发规则：后端发送 refresh 信号但前端有时不刷新；前端短时间内大批量重复请求
  - 内容摘要：9 个问题，覆盖后端广播时序、前端请求风暴、WebSocket 可靠性、竞态条件。后端时序正确（先持久化后广播），问题集中在前端和通信层。最高置信度问题：双重广播 base_agent.py:600（85分，DRY 违反）、N+1 广播 group_chat_service.py:1260（85分）。前端单个 refresh 触发 10 个并发请求（6 个冗余），无任何防抖/去重/取消机制。WebSocket 无心跳、断连期间 refresh 丢失、重连后不补拉数据
 
-## CodexParser 并发竞态导致 session_id 串台
- - updated_at : 2026-06-15
- - path: docs/history-bugs/2026-06-15-codex-parser-thread-id-race-condition.md
+## Parser 并发竞态导致 session_id 串台（完整报告）
+ - updated_at : 2026-06-16
+ - path: docs/history-bugs/2026-06-15-parser-concurrency-race-condition.md
  - 触发规则：多个 Codex agent 并发执行（如 asyncio.gather 初始化新成员），agent_member.json 中多个 agent 的 main_session 相同，resume 时报 thread/resume failed: no rollout found
- - 内容摘要：CodexParser 共享实例的 _thread_id 被并发 agent 互相覆盖，导致不同 agent 的 session_id 串台。thread_id 只存在于最后完成的 agent 的 state_5.sqlite 中，其他 agent resume 时找不到 thread 而持续失败。修复：每次 execute_stream 创建独立 parser（消除共享可变状态）+ 添加 resume 失败 fallback
+ - 内容摘要：AgentBridge 中 Parser 共享单例在 asyncio 并发环境下导致 session_id 串台。包含：根因分析（4 个原因）、Codex vs Claude Parser 对比、asyncio.gather 顺序验证、修复方案（每次创建独立 parser）、19 个测试验证。修复：移除 `_parsers` 单例字典，添加 `_create_parser()` 方法每次创建新实例

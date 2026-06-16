@@ -30,16 +30,11 @@ class AgentBridge:
     """统一的 Agent 调用接口"""
 
     def __init__(self):
-        # 创建执行器和解析器实例（可复用）
+        # 创建执行器实例（可复用）
         self._executors: dict[AgentPlatform, ClaudeExecutor | CodexExecutor | OpenCodeExecutor] = {
             AgentPlatform.CLAUDE: ClaudeExecutor(),
             AgentPlatform.CODEX: CodexExecutor(),
             AgentPlatform.OPENCODE: OpenCodeExecutor(),
-        }
-        self._parsers: dict[AgentPlatform, ClaudeParser | CodexParser | OpenCodeParser] = {
-            AgentPlatform.CLAUDE: ClaudeParser(),
-            AgentPlatform.CODEX: CodexParser(),
-            AgentPlatform.OPENCODE: OpenCodeParser(),
         }
 
         # Docker manager 和 executors（延迟导入，避免循环依赖）
@@ -55,6 +50,30 @@ class AgentBridge:
 
         self._role_manager = RoleManager()
         self._bare_config = self._init_bare_config()
+
+    def _create_parser(
+        self, platform: AgentPlatform
+    ) -> ClaudeParser | CodexParser | OpenCodeParser:
+        """
+        创建独立的 parser 实例
+
+        每次调用创建新实例，避免并发场景下共享可变状态导致的竞态问题。
+        参考：docs/history-bugs/2026-06-15-parser-concurrency-race-condition.md
+
+        Args:
+            platform: Agent 平台
+
+        Returns:
+            对应平台的 parser 实例
+        """
+        if platform == AgentPlatform.CLAUDE:
+            return ClaudeParser()
+        elif platform == AgentPlatform.CODEX:
+            return CodexParser()
+        elif platform == AgentPlatform.OPENCODE:
+            return OpenCodeParser()
+        else:
+            raise PlatformNotSupportedError(platform=str(platform))
 
     async def execute_stream(
         self,
@@ -92,7 +111,7 @@ class AgentBridge:
             )
 
         executor = self._executors[config.platform]
-        parser = self._parsers[config.platform]
+        parser = self._create_parser(config.platform)  # 每次创建新的 parser 实例
 
         try:
             raw_stream = executor.execute(
@@ -212,7 +231,7 @@ class AgentBridge:
             ):
                 if raw_line.strip():
                     try:
-                        parsed_event = self._parsers[config.platform].parse_event(raw_line)
+                        parsed_event = self._create_parser(config.platform).parse_event(raw_line)
                         if parsed_event is not None:
                             if parsed_event.type == AgentEventType.TEXT_DELTA:
                                 full_text.append(parsed_event.content["text"])
