@@ -181,6 +181,7 @@ class AgentBridge:
         use_docker: bool = False,
         group_chat_id: str | None = None,
         system_prompt: str | None = None,
+        fork_from: str | None = None,
     ) -> AgentResult:
         """
         非流式执行，返回完整结果
@@ -194,6 +195,7 @@ class AgentBridge:
             cwd: 项目目录路径（可选）
             use_docker: 是否使用 Docker 沙箱执行
             group_chat_id: 群聊 ID（Docker 模式下必填）
+            fork_from: 源会话 ID（可选，用于 fork 会话）
 
         Returns:
             AgentResult: 完整结果
@@ -203,7 +205,7 @@ class AgentBridge:
         result_session_id = session_id or ""
 
         if use_docker:
-            # Docker 模式：直接使用 Docker executor
+            # Docker 模式：直接使用 Docker executor（不支持 fork_from）
             executor = self._docker_executors[config.platform]
             async for raw_line in executor.execute(
                 prompt, config, session_id, cwd, group_chat_id, system_prompt=system_prompt
@@ -233,7 +235,7 @@ class AgentBridge:
         else:
             # 本地模式：使用本地 executor
             async for event in self.execute_stream(
-                prompt, config, session_id, cwd, system_prompt=system_prompt
+                prompt, config, session_id, cwd, fork_from=fork_from, system_prompt=system_prompt
             ):
                 if event.type == AgentEventType.TEXT_DELTA:
                     full_text.append(event.content["text"])

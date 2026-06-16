@@ -9,6 +9,7 @@ from agents_hub.api.schemas.group_chats import (
     AddMembersRequest,
     AgentCallInfo,
     GroupChatCreate,
+    GroupChatForkRequest,
     GroupChatInfo,
     GroupChatListResponse,
     GroupChatMember,
@@ -46,6 +47,19 @@ async def create_group_chat(
         team_members=request.team_members,
         project_path=request.project_path,
         group_chat_name=request.group_chat_name,
+    )
+
+
+@router.post("/{group_chat_id}/fork", response_model=GroupChatInfo)
+async def fork_group_chat(
+    group_chat_id: str,
+    request: GroupChatForkRequest,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """从现有群聊 fork 一个新群聊"""
+    return await service.fork_group_chat(
+        source_group_chat_id=group_chat_id,
+        new_name=request.name,
     )
 
 

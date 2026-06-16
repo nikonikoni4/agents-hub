@@ -129,7 +129,9 @@ class CodexExecutor:
         fork_from: str | None = None,
         system_prompt: str | None = None,
     ) -> list:
-        """构建 Codex CLI 命令。-C 必须在子命令之前。"""
+        """构建 Codex CLI 命令。-C 必须在子命令之前。
+        codex 的CLI不支持fork
+        """
         cmd = [CODEX_COMMAND]
         if cwd:
             cmd.extend(["-C", cwd])

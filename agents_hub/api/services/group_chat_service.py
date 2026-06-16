@@ -11,6 +11,7 @@ GroupChatService 业务编排层
 
 import asyncio
 import json
+import os
 import shutil
 import threading
 import time
@@ -1002,6 +1003,162 @@ class GroupChatService:
         """从内存中的 GroupChat 实例构建 GroupChatInfo"""
         info = group_chat.runtime.get_info_dict(is_active=group_chat._activated)
         return GroupChatInfo(**info)
+
+    async def fork_group_chat(
+        self,
+        source_group_chat_id: str,
+        new_name: str,
+    ) -> GroupChatInfo:
+        """从现有群聊 fork 一个新群聊
+
+        复制消息历史，不复制 runtime 数据（agent_calls、tasks、file_snapshots、pins、compact_history）。
+        通过平台 fork 机制为每个 agent 创建新 session。
+
+        Args:
+            source_group_chat_id: 源群聊 ID
+            new_name: 新群聊名称
+
+        Returns:
+            GroupChatInfo: 新群聊信息
+
+        Raises:
+            ResourceNotFoundError: 源群聊不存在
+            StateError: fork 失败
+        """
+        logger.info("Fork 群聊: source=%s, name=%s", source_group_chat_id, new_name)
+
+        # 1. 加载源群聊
+        try:
+            source_chat = await self.group_chat_manager.load_group_chat(source_group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"源群聊不存在: {source_group_chat_id}",
+                details={"group_chat_id": source_group_chat_id},
+            ) from e
+
+        # 2. 获取源群聊信息
+        project_path = source_chat.runtime.project_path
+        team_members = list(source_chat.team_members_name)
+        source_group_type = source_chat.group_type
+
+        # 3. 读取源群聊消息历史（直接读取原始 JSONL，保留 agent_name 字段）
+        source_messages_file = group_chat_paths.messages_file(source_group_chat_id, project_path)
+        source_messages: list[dict] = []
+        if os.path.exists(source_messages_file):
+            try:
+                async with aiofiles.open(source_messages_file, encoding="utf-8") as f:
+                    async for line in f:
+                        line = line.strip()
+                        if line:
+                            data = json.loads(line)
+                            if data.get("_type") != "meta_data":
+                                source_messages.append(data)
+            except OSError as e:
+                logger.error("Fork 读取源消息失败: source=%s, error=%s", source_group_chat_id, str(e))
+                raise StateError(
+                    f"读取源消息失败: {e}",
+                    details={"source_group_chat_id": source_group_chat_id},
+                ) from e
+
+        # 4. 读取源群聊 agent session 信息（用于 fork）
+        fork_from_sessions: dict[str, str] = {}
+        source_agent_members: dict[str, dict] = {}
+        for member_dict in source_chat.runtime.get_member_dicts():
+            agent_name = member_dict["name"]
+            main_session = member_dict.get("main_session")
+            if main_session:
+                fork_from_sessions[agent_name] = main_session
+            source_agent_members[agent_name] = member_dict
+
+        # 5. 生成新群聊 ID
+        new_group_chat_id = str(uuid4())
+
+        # 6. 创建新群聊目录并复制消息历史
+        new_base_dir = group_chat_paths.base_dir(new_group_chat_id, project_path)
+        os.makedirs(new_base_dir, exist_ok=True)
+
+        # 复制消息历史（重新分配 message_id 从 1 开始）
+        new_messages_file = group_chat_paths.messages_file(new_group_chat_id, project_path)
+        try:
+            async with aiofiles.open(new_messages_file, "w", encoding="utf-8") as f:
+                # 写入 meta_data
+                meta_data = {
+                    "_type": "meta_data",
+                    "last_compact_loc": 0,
+                    "next_message_id": len(source_messages) + 1,
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat(),
+                    "name": f"session_{datetime.now().strftime('%Y%m%d')}",
+                }
+                await f.write(json.dumps(meta_data, ensure_ascii=False) + "\n")
+
+                # 写入消息（重新分配 ID，保留原始 agent_name 字段）
+                for idx, msg in enumerate(source_messages):
+                    new_msg = dict(msg)
+                    new_msg["id"] = idx + 1
+                    await f.write(json.dumps(new_msg, ensure_ascii=False) + "\n")
+        except OSError as e:
+            logger.error("Fork 消息复制失败: source=%s, error=%s", source_group_chat_id, str(e))
+            raise StateError(
+                f"消息复制失败: {e}",
+                details={"source_group_chat_id": source_group_chat_id},
+            ) from e
+
+        # 7. 创建 agent_member.json（保留源 session，重置状态）
+        new_agent_member_file = group_chat_paths.agent_member_file_path(
+            new_group_chat_id, project_path
+        )
+        new_agent_members = {}
+        for agent_name, member_dict in source_agent_members.items():
+            new_agent_members[agent_name] = {
+                "main_session": None,  # 待 fork 后更新
+                "btw_session": [],
+                "context_state": {
+                    "last_loaded_compact_index": 0,
+                    "last_loaded_message_index": 0,
+                },
+                "token": "",  # 待 _ensure_tokens 重新生成
+                "cwd": member_dict.get("cwd", ""),
+                "use_docker": member_dict.get("use_docker", False),
+                "status": "idle",
+                "context_usage": 0,
+            }
+        try:
+            async with aiofiles.open(new_agent_member_file, "w", encoding="utf-8") as f:
+                await f.write(json.dumps(new_agent_members, ensure_ascii=False, indent=2))
+        except OSError as e:
+            logger.error("Fork agent_member 写入失败: error=%s", str(e))
+            raise StateError(f"agent_member 写入失败: {e}") from e
+
+        # 8. 创建 GroupChat 实例（带 fork_from_sessions）
+        new_group_chat = GroupChat(
+            team_members_name=team_members,
+            group_type=source_group_type,
+            project_path=project_path,
+            group_chat_id=new_group_chat_id,
+            group_chat_name=new_name,
+            fork_from_sessions=fork_from_sessions,
+        )
+
+        # 9. 启动新群聊（会调用 _initialize_new_members 使用 fork 模式）
+        try:
+            await new_group_chat.start()
+        except Exception as e:
+            logger.error("Fork 群聊启动失败: id=%s, error=%s", new_group_chat_id, e)
+            raise StateError(
+                f"Fork 群聊启动失败: {e}",
+                details={"group_chat_id": new_group_chat_id},
+            ) from e
+
+        # 10. 注册到 GroupChatManager
+        self.group_chat_manager.register(new_group_chat_id, new_group_chat)
+        logger.info("Fork 群聊成功: source=%s, new=%s, name=%s", source_group_chat_id, new_group_chat_id, new_name)
+
+        # 11. 广播 WebSocket 通知
+        await broadcast_group_chat_refresh(new_group_chat_id)
+
+        # 12. 返回新群聊信息
+        return await self._build_group_chat_info_from_instance(new_group_chat)
 
     # ==================== Pin Message Methods ====================
 

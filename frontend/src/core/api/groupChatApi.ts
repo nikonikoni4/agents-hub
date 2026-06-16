@@ -530,6 +530,16 @@ export async function createGroupChat(data: CreateGroupChatRequest): Promise<Gro
 }
 
 /**
+ * Fork 群聊（从现有群聊创建副本）
+ */
+export async function forkGroupChat(chatId: string, name: string): Promise<GroupChatApiResponse> {
+  return mockableRequest(
+    () => apiClient.post<GroupChatApiResponse>(`/group-chats/${chatId}/fork`, { name }),
+    { ...MOCK_GROUP_CHAT, group_chat_name: name }
+  );
+}
+
+/**
  * 获取群聊详细信息
  */
 export async function getGroupChatInfo(chatId: string): Promise<GroupChatApiResponse> {

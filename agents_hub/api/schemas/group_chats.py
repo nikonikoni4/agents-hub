@@ -19,6 +19,12 @@ class GroupChatCreate(BaseModel):
     group_chat_name: str | None = Field(None, description="群聊名称，不提供则使用 group_chat_id")
 
 
+class GroupChatForkRequest(BaseModel):
+    """Fork 群聊请求"""
+
+    name: str = Field(..., min_length=1, description="新群聊名称")
+
+
 class ProjectSummary(BaseModel):
     """项目摘要信息"""
 

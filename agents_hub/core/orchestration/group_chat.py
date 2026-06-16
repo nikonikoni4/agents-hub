@@ -53,6 +53,7 @@ class GroupChat:
         project_path: str,
         group_chat_id: str = str(uuid4()),
         group_chat_name: str | None = None,
+        fork_from_sessions: dict[str, str] | None = None,
     ):
         self.group_chat_id = group_chat_id
         self.group_chat_name = group_chat_name or group_chat_id
@@ -62,6 +63,9 @@ class GroupChat:
         self.manager: Manager | None = None
         self.manager_task: asyncio.Task | None = None
         self.worker_tasks: dict[str, asyncio.Task] = {}
+
+        # fork 模式：agent_name → source_session_id
+        self.fork_from_sessions = fork_from_sessions
 
         # 依赖组件（按依赖顺序初始化）
 
@@ -356,7 +360,10 @@ class GroupChat:
         初始化新成员（第一次进入群聊的成员）
 
         检查哪些成员没有 session_id，对这些成员执行初始化流程（打招呼）。
+        fork 模式下，使用 fork_from 源 session 创建新会话。
         """
+        from agents_hub.config.types import AgentPlatform
+
         new_members: list[Agent] = []
 
         # 检查 manager 是否需要初始化
@@ -375,20 +382,45 @@ class GroupChat:
         if not new_members:
             return
 
+        is_fork = bool(self.fork_from_sessions)
         logger.info(
-            "初始化新成员: id=%s, new_members=%s", self.group_chat_id, [m.name for m in new_members]
+            "初始化新成员: id=%s, new_members=%s, is_fork=%s",
+            self.group_chat_id,
+            [m.name for m in new_members],
+            is_fork,
         )
 
         async def start_conversation(agent: Agent):
+            # 构建提示词
             if agent.role_type == RoleType.LEADER:
-                return await agent.execute(
-                    f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己"
-                )
+                prompt = f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己"
             else:
                 other_members = [name for name in self.team_members_name if name != agent.name]
-                return await agent.execute(
-                    f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己"  # type: ignore[union-attr]
-                )
+                prompt = f"你好，我是这个团队的boss，当前团队有成员有{other_members},你的直属领导是{self.manager.name},你使用一句话简单介绍一下自己"
+
+            # fork 模式：尝试使用 fork_from 创建新会话
+            if is_fork and self.fork_from_sessions:
+                source_session = self.fork_from_sessions.get(agent.name)
+                if source_session:
+                    # OpenCode 平台不支持 fork，降级为普通初始化
+                    if agent.role_config.platform == AgentPlatform.OPENCODE or agent.role_config.platform == AgentPlatform.CODEX:
+                        logger.warning(
+                            "OpenCode 平台不支持 fork，降级为普通初始化: agent=%s, group=%s",
+                            agent.name,
+                            self.group_chat_id,
+                        )
+                        return await agent.execute(prompt)
+                    else:
+                        logger.info(
+                            "Fork 模式初始化: agent=%s, source_session=%s, group=%s",
+                            agent.name,
+                            source_session,
+                            self.group_chat_id,
+                        )
+                        return await agent.execute(prompt, fork_from=source_session)
+
+            # 普通初始化
+            return await agent.execute(prompt)
 
         # 并发执行所有新成员的初始化
         results = await asyncio.gather(*[start_conversation(member) for member in new_members])

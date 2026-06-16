@@ -118,6 +118,7 @@ class Agent:
         use_docker: bool = False,
         group_chat_id: str | None = None,
         system_prompt: str | None = None,
+        fork_from: str | None = None,
     ) -> AgentResult:
         """执行主会话（群聊）
 
@@ -126,6 +127,7 @@ class Agent:
             use_docker: 是否使用 Docker 沙箱执行
             group_chat_id: 群聊 ID（Docker 模式下必填）
             system_prompt: 系统提示词（可选，通过 CLI 参数注入）
+            fork_from: 源会话 ID（可选，用于 fork 会话）
         """
         cwd = self.agent_cwd if self.agent_cwd else None
         return await agent_platform_client.execute(
@@ -136,6 +138,7 @@ class Agent:
             use_docker=use_docker,
             group_chat_id=group_chat_id,
             system_prompt=system_prompt,
+            fork_from=fork_from,
         )
 
     async def btw_execute(

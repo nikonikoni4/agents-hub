@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SessionItem as SessionItemType } from '@/shared/adapters/sessionAdapter';
 import { useSessionActions } from '../hooks/useSessionActions';
 import { useDeleteGroupChat } from '../hooks/useDeleteGroupChat';
+import { useForkGroupChat } from '../hooks/useForkGroupChat';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
 import { formatRelativeTime } from '@/shared/adapters/sessionAdapter';
 import './SessionItem.css';
@@ -14,8 +15,11 @@ interface SessionItemProps {
 export function SessionItem({ session, isActive = false }: SessionItemProps) {
   const { handleSelectSession } = useSessionActions();
   const { deleteChat, deleting } = useDeleteGroupChat();
+  const { forkChat, forking } = useForkGroupChat();
   const openSingleChat = useSingleChatStore((s) => s.openSingleChat);
   const [showMenu, setShowMenu] = useState(false);
+  const [showForkInput, setShowForkInput] = useState(false);
+  const [forkName, setForkName] = useState('');
 
   const isSingleChat = session.type === 'single_chat';
 
@@ -31,8 +35,33 @@ export function SessionItem({ session, isActive = false }: SessionItemProps) {
     }
   };
 
+  const handleForkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setForkName(`${session.title} (fork)`);
+    setShowForkInput(true);
+    setShowMenu(false);
+  };
+
+  const handleForkConfirm = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!forkName.trim()) return;
+    try {
+      const newId = await forkChat(session.id, forkName.trim());
+      handleSelectSession(newId);
+    } catch {
+      alert('Fork 失败，请重试');
+    } finally {
+      setShowForkInput(false);
+    }
+  };
+
+  const handleForkCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowForkInput(false);
+  };
+
   const handleItemClick = () => {
-    if (showMenu) return;
+    if (showMenu || showForkInput) return;
     if (isSingleChat) {
       openSingleChat(session.id);
     } else {
@@ -74,9 +103,31 @@ export function SessionItem({ session, isActive = false }: SessionItemProps) {
           </button>
           {showMenu && (
             <div className="context-menu">
+              <button className="menu-item" onClick={handleForkClick}>
+                Fork 群聊
+              </button>
               <button className="menu-item danger" onClick={handleDelete} disabled={deleting}>
                 {deleting ? '删除中...' : '删除群聊'}
               </button>
+            </div>
+          )}
+          {showForkInput && (
+            <div className="fork-input-container" onClick={(e) => e.stopPropagation()}>
+              <input
+                className="fork-input"
+                value={forkName}
+                onChange={(e) => setForkName(e.target.value)}
+                placeholder="输入新群聊名称"
+                autoFocus
+              />
+              <div className="fork-actions">
+                <button className="fork-confirm" onClick={handleForkConfirm} disabled={forking}>
+                  {forking ? 'Fork 中...' : '确认'}
+                </button>
+                <button className="fork-cancel" onClick={handleForkCancel}>
+                  取消
+                </button>
+              </div>
             </div>
           )}
         </div>
