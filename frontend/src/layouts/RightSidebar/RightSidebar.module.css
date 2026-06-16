@@ -187,11 +187,13 @@
 
 .statusBusy,
 .statusIdle,
-.statusStopped {
+.statusStopped,
+.statusError {
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 3px;
   font-weight: 500;
+  cursor: default;
 }
 
 .statusBusy {
@@ -207,6 +209,12 @@
 .statusStopped {
   background: rgba(156, 163, 175, 0.15);
   color: var(--status-stopped);
+}
+
+.statusError {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  cursor: help;
 }
 
 .onlineDot {

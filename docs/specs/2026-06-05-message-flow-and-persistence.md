@@ -1,14 +1,14 @@
 ---
-version: 1.1
+version: 1.2
 created_at: 2026-06-05
-updated_at: 2026-06-05
-last_updated: 修正：所有消息都保存到群聊历史，GroupChat 提供统一包装方法
-abstract: 定义 user、agent 之间的消息传递流程、MessageRouter 职责边界（纯投递层）、GroupChat.send_message_to_agent() 统一包装投递和保存、所有消息都保存到群聊历史的规则
+updated_at: 2026-06-16
+last_updated: 修正：complete_task 参数补充、Heartbeat 消息流、Agent 停止清理流程、工具注册状态标注等
+abstract: 定义 user、agent 之间的消息传递流程、MessageRouter 职责边界（纯投递层）、GroupChat.send_message_to_agent() 统一包装投递和保存、所有业务消息都保存到群聊历史的规则
 id: spec-message-flow-and-persistence
 title: 消息流转与持久化规格
 status: draft
 module: core/communication, core/orchestration, mcp
-sourc_spec: null
+source_spec: null
 related_plan: null
 code_scope:
   - agents_hub/core/communication/message_router.py
@@ -28,6 +28,7 @@ contract_refs:
 | ---- | -------- |
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | 修正：所有消息都保存到群聊历史，GroupChat 提供统一包装方法 |
+| 1.2 | 修正：complete_task 参数补充、Heartbeat 消息流、Agent 停止清理流程、工具注册状态标注、send_message_to_agent 行为契约补充 |
 
 ## Overview
 
@@ -36,7 +37,7 @@ contract_refs:
 **核心原则**：
 1. **MessageRouter 是纯投递层**，只负责将消息投递到目标 Agent 的队列，不承担业务逻辑
 2. **GroupChat 提供统一包装方法**，所有通过 MessageRouter 投递的消息都通过 `GroupChat.send_message_to_agent()` 完成投递和保存
-3. **所有消息都保存到群聊历史**，确保完整的消息记录供前端展示和上下文管理
+3. **所有业务消息都保存到群聊历史**，确保完整的消息记录供前端展示和上下文管理（Heartbeat 等系统消息不保存）
 
 ## Scope
 
@@ -110,6 +111,30 @@ agent 调用 report_progress
 
 **保存时机**：立即保存到群聊历史。
 
+#### 4. Heartbeat 系统消息（定时唤醒）
+
+```
+_heartbeat_loop 定时触发
+       → 构造 Heartbeat 消息（虚拟身份 __HEARTBEAT__）
+       → MessageRouter.send_message() (直接投递)
+       → manager.message_queue
+       → 不经过 GroupChat.send_message_to_agent()
+       → 不保存到群聊历史
+```
+
+**关键区别**：Heartbeat 消息直接调用 `MessageRouter.send_message()` 投递，不经过 `GroupChat.send_message_to_agent()`，因此不会保存到群聊历史。Heartbeat 使用虚拟身份 `__HEARTBEAT__` 作为发送方，仅用于定时唤醒 Manager 检查任务进度。
+
+### Agent 停止时的清理流程
+
+当 Agent 被停止时，`_cleanup_agent_queue` 执行以下清理：
+
+1. 获取该 Agent 的所有 PENDING/RUNNING 状态的 AgentCall
+2. 对每个未完成的 Call：标记为 FAILED，内容为"用户主动停止该 Agent 运行，调用失败"
+3. 根据调用方类型处理通知：
+   - 调用方是 Agent → 通过 `send_message_to_agent()` 发送 NOTIFICATION 通知调用方
+   - 调用方是 user → 直接保存失败消息到群聊历史（`add_message()`）
+4. 清空 Agent 的消息队列
+
 ### MessageRouter 职责边界
 
 **MessageRouter 只负责**：
@@ -159,11 +184,14 @@ async def send_message_to_agent(self, message: AgentMessage):
 | agent → agent TASK | 发送消息 | ✅ 保存 | `GroupChat.send_message_to_agent()` |
 | agent → agent NOTIFICATION | 完成通知 | ✅ 保存 | `GroupChat.send_message_to_agent()` |
 | report_progress | 公开发言 | ✅ 保存 | `report_progress` 直接调用 `add_message()` |
-| Agent 初始化打招呼 | 初始化消息 | ✅ 保存 | `GroupChat._initialize_new_members()` |
+| Agent 初始化打招呼 | 初始化消息 | ✅ 保存 | `GroupChat._initialize_new_members()` / `_initialize_single_member()` |
+| Heartbeat 系统消息 | 系统通知 | ❌ 不保存 | 直接通过 `MessageRouter.send_message()` 投递，不经过 `GroupChat.send_message_to_agent()` |
+| Agent 停止清理通知 | 失败通知 | ✅ 保存 | `_cleanup_agent_queue` 通过 `send_message_to_agent()` 或 `add_message()` 保存 |
 
 **判断原则**：
-- 所有通过 MessageRouter 投递的消息都保存（通过 `GroupChat.send_message_to_agent()` 统一处理）
+- 所有通过 `GroupChat.send_message_to_agent()` 投递的业务消息都保存
 - 公开发言直接保存（不经过 MessageRouter）
+- Heartbeat 等系统消息直接通过 `MessageRouter.send_message()` 投递，不保存到群聊历史
 - 确保完整的消息记录供前端展示和上下文管理
 
 ## Technical Contract
@@ -203,105 +231,73 @@ class MessageRouter:
 
 ### GroupChat 接口
 
-```python
-class GroupChat:
-    async def send_message_to_agent(self, message: AgentMessage):
-        """
-        发送消息到目标 Agent 并保存到群聊历史
-        
-        包装 MessageRouter.send_message() 和消息保存逻辑，
-        确保所有通过控制面投递的消息都被记录。
-        
-        流程：
-        1. 通过 MessageRouter 投递消息
-        2. 获取发送方的 platform 信息
-        3. 构造 AgentResult 并保存到群聊历史
-        
-        使用方：
-        - MCP tool call_agent
-        - MCP tool complete_task (发送 NOTIFICATION)
-        - API send_message_to_agent
-        """
-```
+`send_message_to_agent` 的完整行为契约：
+
+1. **懒加载激活检查**：调用 `activate()` 确保群聊已激活，未激活时自动触发初始化
+2. **目标 Agent 状态检查**：检查目标 Agent 的 `agent_member_info.status`，若为 `stopped` 则抛出 StateError，阻止消息投递
+3. **消息投递**：调用 `MessageRouter.send_message()` 将消息投递到目标队列
+4. **获取发送方 platform**：查找发送方 Agent 实例，获取其 `role_config.platform`；未找到时默认 `AgentPlatform.CLAUDE`
+5. **格式化消息内容**：检查内容是否已有 `@目标Agent` 前缀，没有则调用 `render_for_chat()` 格式化
+6. **处理附件**：将消息中的 `files` 字段传递到 AgentResult
+7. **保存到群聊历史**：构造 AgentResult 并调用 `runtime.add_message()` 保存
+
+**使用方**：
+- MCP tool `call_agent`：agent 调用 agent
+- MCP tool `complete_task`：发送 NOTIFICATION 给原调用方
+- `_send_agent_call_completion_notification`：创建并投递完成通知
+- `_cleanup_agent_queue`：Agent 停止时发送清理通知
+- API `send_message_to_agent`：user 发送消息给 agent
 
 ### MCP 工具接口
 
-```python
-# mcp/server.py
-async def call_agent(
-    agent_token: str,
-    send_to: str,
-    content: str,
-    need_response: bool = True,
-    timeout_seconds: float | None = None,
-) -> dict:
-    """
-    调用另一个 agent
-    
-    使用 GroupChat.send_message_to_agent() 投递并保存消息
-    """
-    message = AgentMessage(...)
-    await group_chat.send_message_to_agent(message)
+#### call_agent
 
-async def complete_task(
-    agent_token: str,
-    call_id: str,
-    content: str,
-    success: bool = True,
-) -> dict:
-    """
-    完成 AgentCall 并根据调用方类型决定如何处理
-    
-    保存规则：
-    - 调用方是 user → 保存 agent 回复到群聊历史
-    - 调用方是 agent → 发送 NOTIFICATION (通过 GroupChat.send_message_to_agent() 保存)
-    """
-    if config.is_user_name(call.send_from):
-        # user 调用：保存 agent 回复到群聊历史
-        await group_chat.group_chat_context.add_message(...)
-    else:
-        # agent 调用：发送 NOTIFICATION (会自动保存)
-        await _send_agent_call_completion_notification(...)
+**参数说明**：agent_token（身份令牌）、send_to（目标 Agent 名称）、content（消息内容）、need_response（是否需要响应，默认 True）、timeout_seconds（超时时间，整数秒，默认 300）
 
-async def _send_agent_call_completion_notification(
-    group_chat: GroupChat,
-    send_from: str,
-    send_to: str,
-    content: str,
-) -> None:
-    """
-    创建并投递 AgentCall 完成通知
-    
-    使用 GroupChat.send_message_to_agent() 确保消息被保存
-    """
-    message = AgentMessage(...)
-    await group_chat.send_message_to_agent(message)
-    """
-    完成 AgentCall 并根据调用方类型决定是否保存到群聊历史
-    
-    保存规则：
-    - 调用方是 user → 保存 agent 回复到群聊历史
-    - 调用方是 agent → 发送 NOTIFICATION（不保存）
-    """
-    if config.is_user_name(call.send_from):
-        # user 调用：保存到群聊历史
-        await group_chat.group_chat_context.add_message(...)
-    else:
-        # agent 调用：发送私有通知
-        await _send_agent_call_completion_notification(...)
+**处理流程**：
+1. 验证身份令牌，解析 agent_name 和 group_chat_id
+2. 获取 GroupChat 实例
+3. 创建 AgentCall（need_response 为 True 时类型为 TASK，为 False 时为 NOTIFICATION）
+4. 通过 `GroupChat.send_message_to_agent()` 投递并保存消息
+5. 返回 call_id
 
-async def report_progress(
-    agent_token: str,
-    content: str,
-    send_to: str | None = None,
-) -> dict:
-    """
-    在群聊中公开发言（不经过 MessageRouter）
-    
-    立即保存到群聊历史
-    """
-    await group_chat.runtime.add_message(...)
-```
+#### complete_task
+
+**基本参数**：agent_token（身份令牌）、call_id（要结束的 AgentCall ID）、content（成果汇报）、success（True 表示完成，False 表示阻塞或失败）
+
+**附加参数**：
+- modified_files：修改的文件列表（相对路径），用于文件快照和变更追踪
+- git_diff_range：Git diff 范围（格式：commit..commit），配合 modified_files 使用
+- web_preview_url：网页预览 URL，当完成 HTML 文件时传入，支持相对路径和绝对 URL
+- web_preview_title：网页预览标题
+
+**处理流程**：
+1. 验证 token、群聊、AgentCall 存在性和权限（只有接收者可以结束调用）
+2. 验证 AgentCall 类型为 TASK（NOTIFICATION 不需要回复）
+3. 验证未重复处理（`has_agent_response` 为 False）
+4. 脱敏 content 中的 token 信息
+5. 处理文件快照（modified_files 和 git_diff_range 存在时）
+6. 闭环 AgentCall（`mark_agent_response`）
+7. 根据调用方类型处理通知：
+   - 调用方是 user → 保存 agent 回复到群聊历史（含文件快照和 web_preview 信息）
+   - 调用方是 Agent → 通过 `send_message_to_agent()` 发送 NOTIFICATION 并保存
+
+#### _send_agent_call_completion_notification
+
+创建一条 NOTIFICATION 类型的 AgentCall，然后通过 `GroupChat.send_message_to_agent()` 投递并保存到群聊历史，唤醒原调用方。
+
+#### report_progress
+
+在群聊中公开发言，不经过 MessageRouter，直接调用 `GroupChatRuntime.add_message()` 保存到群聊历史。
+
+**工具注册状态**（2026-06-16）：
+
+当前 `mcp/server.py` 中以下工具已被注释掉，未注册到 FastMCP：
+- `report_progress`
+- `complete_task`
+- `request_permission`
+
+这意味着这些工具目前无法通过 MCP 协议调用，但函数定义仍然存在。
 
 ### GroupChatRuntime 接口
 
@@ -315,10 +311,12 @@ class GroupChatRuntime:
         1. complete_task（user 调用的 TASK 完成）
         2. report_progress（公开发言）
         3. GroupChat._initialize_new_members()（初始化消息）
+        4. GroupChat._initialize_single_member()（单个新成员打招呼）
+        5. GroupChat._cleanup_agent_queue()（user 调用方的失败消息）
+        6. GroupChat.send_message_to_agent()（通过包装层保存所有业务消息）
         
         不调用方：
         - MessageRouter（投递层不保存）
-        - _send_agent_call_completion_notification（私有通知）
         """
 ```
 
@@ -347,6 +345,8 @@ N/A（后端消息流转机制，无前端交互）
    - ✅ agent → agent NOTIFICATION 保存到群聊历史
    - ✅ report_progress 的消息保存到群聊历史
    - ✅ Agent 初始化打招呼消息保存到群聊历史
+   - ✅ Agent 停止清理的通知/失败消息保存到群聊历史
+   - ✅ Heartbeat 系统消息不保存到群聊历史
 
 4. **消息流转完整**
    - ✅ user 发送消息 → 保存 → agent 处理 → 回复保存 → 前端可见

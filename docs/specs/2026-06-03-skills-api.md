@@ -1,14 +1,14 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-03
-updated_at: 2026-06-03
-last_updated: 创建 skills API spec 初稿
+updated_at: 2026-06-16
+last_updated: 审查修正：说明 SkillInfo 命名冲突、补充 InvalidSkillError 400 响应、明确 skill_name 与 frontmatter name 关系、修正 frontmatter 字段名
 abstract: skills 模块的正式规格，定义全局 skill 库管理、API 契约、数据结构和安全约束
 id: spec-skills-api
 title: Skills API 模块规格
 status: unstable
 module: skills
-sourc_spec: N/A（从现有代码提炼）
+source_spec: N/A（从现有代码提炼）
 related_plan: N/A
 code_scope:
   - agents_hub/skills/
@@ -28,6 +28,7 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 skills API spec 初稿 |
+| 1.1 | 审查修正：说明 SkillInfo 命名冲突、补充 InvalidSkillError 400 响应、明确 skill_name 与 frontmatter name 关系、修正 frontmatter 字段名 |
 
 ## Overview
 
@@ -91,6 +92,11 @@ description: Skill 的功能描述
 - frontmatter 必须包含 `name` 和 `description` 字段
 - 字段值必须是字符串类型
 
+**skill_name 与 frontmatter name 的关系**：
+- API 路径中的 `skill_name` 等于 skill 目录名（如 `local_data/skills/<skill_name>/`）
+- frontmatter 中的 `name` 字段目前不用于标识，仅作为显示用途
+- `skill_name`（目录名）是 skill 的唯一标识
+
 ### API 端点行为
 
 #### 列出所有 skills
@@ -131,6 +137,8 @@ description: Skill 的功能描述
 | name | str | skill 名称 |
 | description | str | skill 描述 |
 | path | str | skill 目录绝对路径（内部使用，不暴露给 API） |
+
+> **命名冲突说明**：roles 模块（`2026-05-24-agents-role.md`）也定义了同名 `SkillInfo`，但字段为 `id`、`name`、`description`（摘要视图）。本模块的 `SkillInfo` 是 skill 详情视图，包含 `path` 字段。两处 `SkillInfo` 各自独立，不共享定义。`name` 同时作为 skill 的唯一标识（等于目录名）。
 
 #### SkillResponse（API 响应）
 
@@ -177,6 +185,12 @@ Response 404:
   "error_code": "SKILL_NOT_FOUND",
   "message": "Skill 'xxx' not found"
 }
+
+Response 400:
+{
+  "error_code": "INVALID_SKILL",
+  "message": "Skill 'xxx' 的 SKILL.md 格式错误或路径无效"
+}
 ```
 
 #### 删除 skill
@@ -193,6 +207,12 @@ Response 404:
 {
   "error_code": "SKILL_NOT_FOUND",
   "message": "Skill 'xxx' not found"
+}
+
+Response 400:
+{
+  "error_code": "INVALID_SKILL",
+  "message": "Skill 'xxx' 的 SKILL.md 格式错误或路径无效"
 }
 ```
 

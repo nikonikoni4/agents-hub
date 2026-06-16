@@ -45,3 +45,9 @@
  - path: generated/007/
  - 触发规则：GroupChatContext → GroupChatRuntime 重构期间的架构审查
  - 内容摘要：6 份审查报告 — Agent 状态生命周期、Agent 生命周期、GroupChat 生命周期、AgentCall 生命周期、并发安全性、GroupChatContext/Runtime 架构评估
+
+## Parser 隔离修复代码审查 008
+ - updated_at : 2026-06-16
+ - path: generated/008/
+ - 触发规则：bridge.py parser 单例改为每次创建的代码审查
+ - 内容摘要：8 维度并行审查（安全/性能/架构/质量/最佳实践/测试/文档/注释），无高置信度问题（>=80），2 个低置信度发现（缺少 unsupported platform 边界测试 75 分、冗余注释 50 分）

@@ -121,6 +121,7 @@ class GroupChatRuntime:
                     "use_docker": agent_member_info.use_docker,
                     "status": agent_member_info.status,
                     "context_usage": agent_member_info.context_usage,
+                    "error_info": agent_member_info.error_info,
                 }
             )
         return members

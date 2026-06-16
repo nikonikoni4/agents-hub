@@ -1,14 +1,14 @@
 ---
-version: 1.0
+version: 1.2
 created_at: 2026-06-06
-updated_at: 2026-06-08
-last_updated: AgentContext 差异化交付、ROLE_INSTRUCTIONS 重构、阻塞判定规则
+updated_at: 2026-06-16
+last_updated: Runtime 注入机制重写（移至 user message）、XML 结构修正、Task 闭环提醒标注 deprecated
 abstract: Agent 提示词系统规格，定义发送给 Agent 的所有提示词来源、注入机制、渲染规则和平台标识
 id: spec-agent-prompt-system
 title: Agent 提示词系统规格
 status: draft
 module: core/agent, core/foundation, core/orchestration
-sourc_spec: null
+source_spec: null
 related_plan: null
 code_scope:
   - agents_hub/core/agent/base_agent.py
@@ -37,19 +37,20 @@ contract_refs:
 Agent 提示词系统负责构造发送给 LLM 的所有输入。提示词有四个来源，按注入时机分为两类：
 
 - **启动时加载**：CLAUDE.md / AGENTS.md 作为 system_prompt，由 CLI 自动读取
-- **每条消息处理前动态注入**：Runtime 信息和工具使用说明写入 CLAUDE.md / AGENTS.md
-- **每次执行时构造**：入站消息渲染、上下文拼接
-- **定时/事件触发**：Heartbeat、Task 未闭环提醒
+- **每条消息处理前动态注入**：工具使用说明写入 CLAUDE.md / AGENTS.md（`<TOOL_USAGE>` 标记）
+- **每次执行时构造**：Runtime 信息、入站消息渲染、上下文拼接，三段拼接为 user message
+- **定时/事件触发**：Heartbeat、Task 未闭环提醒（Task 未闭环提醒已 deprecated）
 
 ## Scope
 
 ### 范围内
 
 - 提示词的四个来源及其触发时机
-- `<AGENT_RUNTIME>` 和 `<TOOL_USAGE>` 的注入机制和内容结构
+- `<runtime>` XML 内容结构和 `build_user_prompt()` 三段拼接逻辑
+- `<TOOL_USAGE>` 的内容结构（通过 system_prompt 加载）
 - `render_for_llm` 的输出格式和平台标识
 - AgentContext 上下文构造规则
-- Heartbeat 和 Task 未闭环提醒的提示词内容
+- Heartbeat 提示词内容
 - Manager 与 Worker 的提示词差异
 
 ### 范围外
@@ -67,39 +68,39 @@ Agent 收到的完整 prompt 由以下部分组成：
 ```
 ┌─────────────────────────────────────────────┐
 │ System Prompt（CLI 自动加载 CLAUDE.md）       │
-│  ├─ <AGENT_RUNTIME>  身份/团队/任务/调用状态/Pin消息 │
 │  └─ <TOOL_USAGE>     工具使用说明              │
 ├─────────────────────────────────────────────┤
-│ User Prompt（代码构造后传给 CLI）              │
+│ User Prompt（build_user_prompt 三段拼接）      │
+│  ├─ <runtime>        身份/团队/任务/调用状态/Pin消息 │
 │  ├─ <group_chat_history>  历史摘要            │
 │  ├─ <recent_messages>     最近群聊消息        │
 │  └─ <incoming_message>    当前入站消息         │
 └─────────────────────────────────────────────┘
 ```
 
-### 2. Runtime 注入（`<AGENT_RUNTIME>`）
+### 2. Runtime 信息构造（`<runtime>`）
 
-**触发时机**：Agent 从队列取出每条消息时，在 `run()` 循环中调用。
+**触发时机**：Agent 处理每条 MAIN 会话消息时，作为 `build_user_prompt()` 的第一段。
 
-**注入目标**：`work_root/CLAUDE.md` 和 `work_root/AGENTS.md` 的 `<AGENT_RUNTIME>` 标记。
-
-**注入机制**：使用 `markdown_injector.replace_marked_section` 替换标记之间的内容，保证幂等。
+**构造机制**：通过 `_build_runtime()` 构造 XML 字符串，作为 user message 的一部分传给 LLM。不再注入到 CLAUDE.md / AGENTS.md 文件。
 
 **内容结构**：
 
 | 区块 | 条件 | 内容 |
 |------|------|------|
-| `<identity>` | 始终 | Agent 名字、群聊 ID、身份令牌 |
-| `<team>` | 始终 | 团队成员列表（排除自己）、前端用户名、user 不可调用提示 |
+| `<type>` | 始终 | 会话类型（群聊/单聊） |
+| `<agent_token>` | 始终 | Agent 身份令牌 |
+| `<group_chat_id>` | 始终 | 当前群聊 ID |
+| `<team_members>` | 始终 | 团队成员列表（排除自己，带 description） |
+| `<agent_call>` | 始终 | 当前消息的 call 信息（call_id、from、content_head、need_response） |
 | `<team_workboard>` | 仅 Manager + task_manager 存在 | 当前任务列表及状态 |
-| `<active_agent_calls>` | 有待处理 AgentCall 时 | call_id、来源、类型、状态、请求内容 |
-| `<pinned_messages>` | 有 Pin 消息时 | 用户置顶的重要消息，按 pinned_at 升序排列 |
+| `<user_pin_message>` | 有 Pin 消息时 | 用户置顶的重要消息，按 pinned_at 升序排列 |
 
-### 3. 工具使用说明注入（`<TOOL_USAGE>`）
+**`<agent_call>` 语义说明**：该区块描述的是当前正在处理的这条消息的调用信息，而非多个待处理的调用列表。属性包含 `call_id`、`from`（调用来源）、`content_head`（请求内容前 20 字）、`need_response`（TASK 类型为 true，其余为 false）。
 
-**触发时机**：与 Runtime 注入相同，在 `run()` 循环中调用。
+### 3. 工具使用说明（`<TOOL_USAGE>`）
 
-**注入目标**：`work_root/CLAUDE.md` 和 `work_root/AGENTS.md` 的 `<TOOL_USAGE>` 标记。
+**注入机制**：`_inject_tool_usage_to_files()` 已 deprecated。`<TOOL_USAGE>` 通过 CLI 自动读取 CLAUDE.md / AGENTS.md 作为 system_prompt 的一部分传递给 LLM。
 
 **架构**：工具提示词通过子类 `ROLE_INSTRUCTIONS` 类变量定义，基类 `Agent.SHARED_RULES` 定义共享规则，`_generate_tool_usage_content()` 只做编排拼接。
 
@@ -161,11 +162,18 @@ Worker 报告阻塞时，Manager 根据情况处理：
 ```xml
 <incoming_message>
 [Agents Hub 平台消息]
+call_id: {call_id}
 来自：{send_from}
 发送给：{send_to}（你）
+类型：{message_type}
 内容：{content}
+
+[附件]
+- {file_name} ({file_type}, {file_size}B): {absolute_file_path}
 </incoming_message>
 ```
+
+**附件**：仅当消息携带附件（`msg.files` 非空）时才输出 `[附件]` 区块。
 
 **平台标识**：`[Agents Hub 平台消息]` 用于让 Agent 识别消息来源平台，与 MCP 工具对应。
 
@@ -195,7 +203,7 @@ Worker 不接收 raw messages，因为 Worker 的工作模式是「接任务 →
 - 排除自己发送的消息
 - 排除 @ 自己的消息（已在 incoming_message 中）
 
-**拼接方式**：`full_prompt = history + "\n" + render_for_llm(msg)`
+**拼接方式**：`build_user_prompt()` 按顺序拼接三段，用 `"\n\n"` 分隔：runtime（`_build_runtime()`） + context（`get_context()`） + incoming_message（`render_for_llm(msg)`）
 
 ### 6. Heartbeat 提示词
 
@@ -214,7 +222,9 @@ Worker 不接收 raw messages，因为 Worker 的工作模式是「接任务 →
 
 **消息属性**：消息类型为 `NOTIFICATION`，不触发 Task 未闭环提醒。
 
-### 7. Task 未闭环提醒
+### 7. Task 未闭环提醒（deprecated）
+
+> **已废弃**：`_needs_complete_task_reminder()` 和 `_enqueue_complete_task_reminder()` 均标记为 deprecated，相关逻辑在 `_run_loop()` 中已注释。当前由 `_fallback_close_task()` 兜底处理未闭环的 TASK。
 
 **触发条件**：Agent 处理 TASK 类型消息后未调用 `complete_task` 闭环。
 
@@ -244,41 +254,46 @@ Worker 不接收 raw messages，因为 Worker 的工作模式是「接任务 →
 
 ## Technical Contract
 
-### 注入标记
+### 提示词构造层次
 
-| 标记 | 内容 | 注入位置 |
-|------|------|---------|
-| `<AGENT_RUNTIME>` | 身份、团队、任务、调用状态 | CLAUDE.md, AGENTS.md |
-| `<TOOL_USAGE>` | 工具使用说明 | CLAUDE.md, AGENTS.md |
+| 层次 | 构造内容 | 目标 |
+|------|---------|------|
+| System Prompt | CLI 自动加载 CLAUDE.md / AGENTS.md（含 `<TOOL_USAGE>`） | LLM system message |
+| User Prompt | `build_user_prompt()` 三段拼接：`<runtime>` + 上下文 + `<incoming_message>` | LLM user message |
+
+### Runtime 构造
+
+`_build_runtime()` 输出 `<runtime>` XML，包含：`<type>`、`<agent_token>`、`<group_chat_id>`、`<team_members>`、`<agent_call>`、`<team_workboard>`（仅 Manager）、`<user_pin_message>`（有 Pin 时）。
+
+`build_user_prompt()` 按顺序拼接：runtime + context + incoming_message，用 `"\n\n"` 分隔。
 
 ### 渲染函数职责
 
-| 函数 | 输入 | 输出 | 用途 |
-|------|------|------|------|
-| `render_for_llm` | AgentMessage | `<incoming_message>` XML | 喂给 LLM 的 prompt |
-| `render_for_chat` | send_from, send_to, content | `@xxx content` | 写入群聊记录 |
+| 函数 | 输出 | 用途 |
+|------|------|------|
+| `render_for_llm` | `<incoming_message>` XML | 喂给 LLM 的 user prompt 片段 |
+| `render_for_chat` | `@xxx content` | 写入群聊记录 |
 
 ### 触发时机汇总
 
 | 提示词类型 | 触发时机 | 目标 |
 |-----------|---------|------|
-| AGENT_RUNTIME 注入 | 每条消息处理前 | CLAUDE.md / AGENTS.md |
-| TOOL_USAGE 注入 | 每条消息处理前 | CLAUDE.md / AGENTS.md |
-| render_for_llm | 每条消息处理时 | LLM prompt |
-| AgentContext | MAIN 会话消息处理时 | LLM prompt |
+| `<TOOL_USAGE>` | 启动时加载 | CLAUDE.md / AGENTS.md（system_prompt） |
+| `<runtime>` | MAIN 会话消息处理时 | LLM user message（第一段） |
+| `<incoming_message>` | 每条消息处理时 | LLM user message（末段） |
+| AgentContext | MAIN 会话消息处理时 | LLM user message（中间段） |
 | Heartbeat | 每 20 分钟 | Manager 消息队列 |
-| Task 未闭环提醒 | TASK 消息未闭环时 | Agent 自身消息队列 |
+| Task 未闭环提醒 | deprecated | — |
 
 ## Acceptance Notes
 
-- 注入函数必须幂等：多次注入不会产生重复的标记块
 - Manager 和 Worker 的 ROLE_INSTRUCTIONS 内容必须有差异
-- render_for_llm 输出必须包含 `[Agents Hub 平台消息]` 标识
-- Task 未闭环提醒必须包含 call_id 和原始请求摘要
-- Manager 的 complete_task 说明必须强调"安排后即可闭环"
+- render_for_llm 输出必须包含 `[Agents Hub 平台消息]` 标识、`call_id` 和 `类型`
 - Worker 的 AgentContext 不得包含 `<recent_messages>`
 - Worker 的 ROLE_INSTRUCTIONS 必须包含阻塞判定规则
 - Manager 的 ROLE_INSTRUCTIONS 必须包含阻塞处理流程
+- `build_user_prompt()` 必须按 runtime + context + incoming_message 顺序拼接
+- `<agent_call>` 描述的是当前消息的调用信息，不是待处理列表
 
 ## Out of Spec
 
@@ -286,3 +301,4 @@ Worker 不接收 raw messages，因为 Worker 的工作模式是「接任务 →
 - 提示词的具体措辞和 prompt engineering 技巧
 - Agent 的 LLM 调用参数和模型选择
 - 上下文压缩的具体算法（属于 core/context）
+- Task 未闭环提醒的具体实现（已 deprecated）

@@ -265,10 +265,17 @@ export interface GroupChatMemberApiItem {
   cwd: string | null;
   /** 是否使用 Docker 沙箱 */
   use_docker: boolean;
-  /** Agent 状态：idle/busy/stopped */
-  status: 'idle' | 'busy' | 'stopped';
+  /** Agent 状态：idle/busy/stopped/error */
+  status: 'idle' | 'busy' | 'stopped' | 'error';
   /** 上下文窗口大小（单位: K tokens），null 表示未知 */
   context_usage: number | null;
+  /** 错误信息 */
+  error_info?: {
+    type: string;
+    message: string;
+    exit_code?: number;
+    stderr?: string;
+  } | null;
 }
 
 // ==================== 会话相关 ====================

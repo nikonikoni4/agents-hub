@@ -205,6 +205,7 @@ class GroupChatRepository:
                 use_docker=session_data.get("use_docker", False),
                 status=session_data.get("status", "idle"),
                 context_usage=session_data.get("context_usage", 0),
+                error_info=session_data.get("error_info"),
             )
 
         logger.debug(
@@ -239,6 +240,7 @@ class GroupChatRepository:
                     "use_docker": agent_member_info.use_docker,
                     "status": agent_member_info.status,
                     "context_usage": agent_member_info.context_usage,
+                    "error_info": agent_member_info.error_info,
                 }
 
             # 写入文件

@@ -28,8 +28,9 @@ class AgentMemberInfo:
     token: str = ""  # Agent 的 token，用于 MCP 工具身份验证
     cwd: str = ""  # CLI 命令启动的工作目录路径
     use_docker: bool = False  # 是否使用 Docker 沙箱执行
-    status: str = "idle"  # Agent 状态：idle/busy/chatting/stopped
+    status: str = "idle"  # Agent 状态：idle/busy/stopped/error
     context_usage: int = 0  # 上下文使用量（input_tokens/1000 取整）
+    error_info: dict[str, Any] | None = None  # 错误信息：{"type": "...", "message": "...", "exit_code": ..., "stderr": "..."}
 
 
 @dataclass

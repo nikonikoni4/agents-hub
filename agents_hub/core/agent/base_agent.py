@@ -317,6 +317,10 @@ class Agent:
             )
             await self.agent_call_manager.update_status(msg.call_id, CallStatus.FAILED)
             await self.agent_call_manager.set_error(msg.call_id, str(e), exc=e)
+
+            # 更新 agent 状态为 error 并记录错误信息
+            await self._set_error_status(e)
+
             raise AgentExecutionError(
                 agent_name=self.name,
                 reason=str(e),
@@ -566,7 +570,7 @@ call_id: {msg.call_id}
         """
         同步 Agent 状态到 AgentMemberInfo
 
-        如果当前状态是 "stopped"，不允许改为其他状态（防止 stop 后被 finally 覆盖）
+        如果当前状态是 "stopped" 或 "error"，不允许改为其他状态（防止 stop/error 后被 finally 覆盖）
         """
         # 获取当前状态
         agent_member_info = self.runtime.get_agent_member_info(self.name)
@@ -578,16 +582,60 @@ call_id: {msg.call_id}
 
         current_status = agent_member_info.status
 
-        # 如果已经是 stopped 状态，不允许改为其他状态
-        if current_status == "stopped" and status != "stopped":
+        # 如果已经是 stopped 或 error 状态，不允许改为其他状态
+        if current_status in ("stopped", "error") and status not in ("stopped", "error"):
             self.logger.debug(
-                "Agent %s 已处于 stopped 状态，忽略状态更新请求: %s", self.name, status
+                "Agent %s 已处于 %s 状态，忽略状态更新请求: %s", self.name, current_status, status
             )
             return
 
         # 更新状态
         agent_member_info.status = status
+        # 如果切换到非 error 状态，清空错误信息
+        if status != "error":
+            agent_member_info.error_info = None
         await self.runtime.save_agent_members(context=f"Agent {self.name} status → {status}")
+
+    async def _set_error_status(self, exc: Exception):
+        """
+        设置 Agent 错误状态并记录错误信息
+
+        Args:
+            exc: 捕获的异常对象
+        """
+        agent_member_info = self.runtime.get_agent_member_info(self.name)
+        if not agent_member_info:
+            self.logger.warning("Agent %s 的 member info 不存在，无法设置错误状态", self.name)
+            return
+
+        # 构建错误信息
+        error_info = {
+            "type": exc.__class__.__name__,
+            "message": str(exc),
+        }
+
+        # 尝试提取额外的错误信息
+        if hasattr(exc, "details") and isinstance(exc.details, dict):
+            # AgentBridge 异常包含 details
+            if "exit_code" in exc.details:
+                error_info["exit_code"] = exc.details["exit_code"]
+            if "stderr" in exc.details:
+                # 截取 stderr 前 500 字符
+                stderr = exc.details["stderr"]
+                error_info["stderr"] = stderr[:500] if stderr else None
+
+        # 更新状态和错误信息
+        agent_member_info.status = "error"
+        agent_member_info.error_info = error_info
+
+        self.logger.info(
+            "Agent %s 状态更新为 error: type=%s, message=%s",
+            self.name,
+            error_info["type"],
+            error_info["message"][:100],
+        )
+
+        await self.runtime.save_agent_members(context=f"Agent {self.name} status → error")
 
     def _parse_changes_xml(self, text: str) -> dict | None:
         """解析 <changes> XML 块，提取变更信息。

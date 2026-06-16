@@ -1,14 +1,14 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-03
-updated_at: 2026-06-03
-last_updated: 初始版本
+updated_at: 2026-06-16
+last_updated: 补充 stop_session、ensure_image_ready、CLI 参数、环境变量、工作目录、异常类型和并发安全描述
 abstract: Docker 沙箱执行器的规格定义，描述容器生命周期管理、CLI 路径配置、卷挂载策略和 git worktree 路径修复机制
 id: spec-docker-executor
 title: Docker 沙箱执行器规格
 status: draft
 module: agent_bridge/docker, agent_bridge/executors
-sourc_spec: null
+source_spec: null
 related_plan: null
 code_scope:
   - agents_hub/agent_bridge/docker/
@@ -29,6 +29,7 @@ contract_refs:
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 初始版本，定义容器生命周期、CLI 路径、卷挂载和 worktree 修复机制 |
+| 1.1 | 补充 stop_session、ensure_image_ready、CLI fork/system_prompt/disabled_tools 参数、容器内环境变量和工作目录、RuntimeError 异常、并发安全精确化 |
 
 ---
 
@@ -75,6 +76,27 @@ Docker 执行器采用容器池管理架构：
 3. **释放**：执行完成后启动延迟销毁计时器
 4. **销毁**：超过配置的空闲超时时间后自动停止并删除容器
 
+### 会话进程终止
+
+DockerExecutor 维护 session_id 到容器内进程的映射。当调用 `stop_session` 时：
+
+1. 通过映射表查找目标进程
+2. 发送强制终止信号（Unix: SIGKILL, Windows: TerminateProcess）
+3. 等待进程退出后清理映射
+4. 若进程已退出则静默忽略
+
+映射表的读写通过异步锁保护，确保并发安全。
+
+### 镜像就绪检查
+
+在容器创建前，`ensure_image_ready` 执行以下前置检查流程：
+
+1. 检查 Docker Engine 是否运行（带 60 秒缓存）
+2. 检查配置的镜像是否存在
+3. 若镜像不存在且 Dockerfile 存在，则自动从 Dockerfile 构建镜像
+
+任一步骤失败将抛出对应异常（DockerNotAvailableError 或 ExternalServiceError）。
+
 ### 容器命名规则
 
 容器名称格式：`container-{agent_name}-{group_chat_id}`
@@ -104,11 +126,21 @@ Docker 容器内使用 npm 全局安装的 CLI 工具。配置常量定义在 co
 
 - 基础参数：`--dangerously-skip-permissions`, `--print`, `--verbose`, `--output-format stream-json`, `--include-partial-messages`
 - 可选参数：`--bare`（极简模式）, `--resume <session_id>`（会话恢复）
+- Fork 模式：`--fork-session --resume <fork_from>`，从指定会话派生新会话，原会话只读不写
+- 系统提示注入：`--append-system-prompt <system_prompt>`，追加系统级指令到会话
+- 工具禁用：`--disallowedTools=<comma_separated_tools>`，禁用指定工具列表（使用等号格式拼接）
 
 #### Codex CLI 容器内执行参数
 
 - 基础参数：`--dangerously-bypass-approvals-and-sandbox`, `--print`, `--output-format stream-json`
 - 可选参数：`--resume <session_id>`（会话恢复）
+- Fork 模式：`codex fork <fork_from> <prompt>`，使用 fork 子命令从指定会话派生，跳过基础参数
+- 系统提示注入：`-c instructions=<system_prompt>`，通过配置键值对注入系统级指令
+
+### 容器内执行环境
+
+- **环境变量**：每次 `docker exec` 时硬编码注入 `CLAUDE_CONFIG_DIR=/home/ai-user/.claude`，指向容器内角色配置目录
+- **工作目录**：`docker exec` 的工作目录硬编码为 `/workspace`，即卷挂载的工作目录
 
 ### git worktree 路径修复
 
@@ -135,6 +167,7 @@ Docker 容器内使用 npm 全局安装的 CLI 工具。配置常量定义在 co
 | DockerNotAvailableError | Docker Engine 未运行 |
 | DockerStartError | 容器创建失败（镜像不存在、端口冲突等） |
 | StateError | worktree 模式下 git_dir 为 None |
+| RuntimeError | 容器内命令执行失败（进程返回非零退出码），包含 stderr 信息 |
 
 ### AgentBridge 集成
 
@@ -155,7 +188,7 @@ AgentBridge 在初始化时创建 DockerManager 和 DockerExecutor 实例。调�
 
 1. **Docker 镜像构建**：镜像由 template/Dockerfile 定义，不在本 spec 维护
 2. **容器资源限制**：当前未设置 CPU/内存限制
-3. **并发安全**：同一容器的并发 exec 调用未做同步
+3. **并发安全**：DockerExecutor 的进程映射表（`_processes`）通过 `_lock` 保护，已有并发安全机制；DockerManager 的 `get_or_create_container` 在高并发下存在竞态条件（多个协程可能同时创建同一容器），未做同步保护
 4. **容器健康检查**：未实现容器健康状态检测
 
 ---

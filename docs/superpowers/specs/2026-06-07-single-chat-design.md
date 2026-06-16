@@ -159,7 +159,7 @@ class SingleChatCache:
 **关键点**：使用 `RoleConfig.work_root` 作为配置路径，按平台类型指定搜索目录。
 
 ```python
-def resolve_session_path(session_id: str, role_config: RoleConfig) -> Path:
+def resolve_session_path(session_id: str, role_config: RoleConfig) -> Path | None:
     """
     根据 session_id 和角色配置解析 session 文件路径
     
@@ -168,34 +168,31 @@ def resolve_session_path(session_id: str, role_config: RoleConfig) -> Path:
         role_config: 角色配置，包含 work_root（Claude/Codex 的配置目录）
     
     Returns:
-        session 文件路径
-    
-    Raises:
-        SessionFileNotFoundError: 文件不存在
+        session 文件路径，未找到返回 None
     """
     work_root = Path(role_config.work_root)
     
     if not work_root.exists():
-        raise SessionFileNotFoundError(session_id, role_config.platform.value, str(work_root))
+        return None
     
     # 按平台指定搜索目录
     if role_config.platform == AgentPlatform.CLAUDE:
         # Claude: 搜索 work_root/projects/ 目录
         search_dir = work_root / "projects"
-    elif role_config.platform == AgentPlatform.CODEX:
-        # Codex: 搜索 work_root/sessions/ 目录
+    elif role_config.platform in (AgentPlatform.CODEX, AgentPlatform.OPENCODE):
+        # Codex/OpenCode: 搜索 work_root/sessions/ 目录
         search_dir = work_root / "sessions"
     else:
-        raise SessionFileNotFoundError(session_id, role_config.platform.value, str(work_root))
+        return None
     
     if not search_dir.exists():
-        raise SessionFileNotFoundError(session_id, role_config.platform.value, str(search_dir))
+        return None
     
     # 递归搜索包含 session_id 的 .jsonl 文件
     for f in search_dir.rglob(f"*{session_id}*.jsonl"):
         return f
     
-    raise SessionFileNotFoundError(session_id, role_config.platform.value, str(search_dir))
+    return None
 ```
 
 **为什么使用 RoleConfig.work_root**：

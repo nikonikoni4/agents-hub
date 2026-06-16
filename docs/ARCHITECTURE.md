@@ -175,6 +175,7 @@ orchestration → agent → communication → foundation
 | 模块 | 职责 | 通信方式 | Spec |
 |------|------|---------|------|
 | API Server | 提供 REST API 和 WebSocket | HTTP + WebSocket | [group-chat-api](specs/2026-06-03-group-chat-api.md)、[roles](specs/2026-05-24-agents-role.md)、[skills-api](specs/2026-06-03-skills-api.md)、[websocket-backend](specs/2026-06-03-websocket-backend.md) |
+| Single Chat | 用户与单个 Agent 直接对话的轻量级通道，支持 SSE 流式消息 | SSE | [single-chat](specs/2026-06-08-single-chat.md) |
 | Agent Bridge | 向下调用不同 Agent 平台的 CLI，适配接口差异 | 子进程调用本地 CLI | [agent-bridge](specs/2026-05-23-agent-bridge.md) |
 | Channels | 外部渠道适配（微信等），负责消息收发和用户交互 | HTTP 轮询 | - |
 | Tools | 工具目录，硬编码所有可用工具的分组、名称和描述 | - | - |
@@ -216,6 +217,25 @@ Agent A (Claude Code)
 - agents-hub 负责消息路由、上下文管理、持久化
 - 不同平台的 Agent 可以无缝协作
 
+### 3. User 通过单聊与 Agent 对话
+
+```
+User (前端)
+  → POST /api/v1/single-chats/messages/stream
+    → API Server 接收
+      → SingleChatService 处理
+        → Agent Bridge 调用对应平台 CLI
+          → Agent 平台执行
+            → SSE 流式返回结果
+              → 前端实时显示
+```
+
+**关键点**：
+- 单聊不依赖群聊编排逻辑（MessageRouter、AgentCallManager）
+- 消息权威源为平台 session 文件（SSOT）
+- 支持三种创建模式：新建、Fork 群聊、继续群聊
+- 单聊与 Core 层的关系：fork/continue 模式会查询 Core 层群聊数据
+
 ## 持久化
 
 ### 本地数据存储
@@ -237,6 +257,9 @@ local_data/
 │               ├── group_metadata.json
 │               └── memory/
 │                   └── compact_history.jsonl
+│
+├── single_chats/                   # 单聊数据
+│   └── index.json                  # 单聊索引（LRU 缓存上限 15 个）
 │
 ├── skills/                         # 运行时动态创建
 ├── channels/                       # 渠道数据（如微信 token）

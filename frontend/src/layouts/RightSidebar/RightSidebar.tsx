@@ -190,20 +190,31 @@ function MemberItem({
       <div className={styles.memberStatus}>
         <span
           className={
-            member.status === 'busy'
-              ? styles.statusBusy
-              : member.status === 'stopped'
-                ? styles.statusStopped
-                : styles.statusIdle
+            member.status === 'error'
+              ? styles.statusError
+              : member.status === 'busy'
+                ? styles.statusBusy
+                : member.status === 'stopped'
+                  ? styles.statusStopped
+                  : styles.statusIdle
+          }
+          title={
+            member.status === 'error' && member.error_info
+              ? `错误: ${member.error_info.type}\n${member.error_info.message}${
+                  member.error_info.stderr ? `\n\nStderr:\n${member.error_info.stderr}` : ''
+                }`
+              : undefined
           }
         >
           {member.compressing
             ? '压缩中'
-            : member.status === 'busy'
-              ? '忙碌'
-              : member.status === 'stopped'
-                ? '已停止'
-                : '空闲'}
+            : member.status === 'error'
+              ? '错误'
+              : member.status === 'busy'
+                ? '忙碌'
+                : member.status === 'stopped'
+                  ? '已停止'
+                  : '空闲'}
         </span>
       </div>
       <button
