@@ -119,6 +119,7 @@ class Agent:
         group_chat_id: str | None = None,
         system_prompt: str | None = None,
         fork_from: str | None = None,
+        session_id: str | None = None,
     ) -> AgentResult:
         """执行主会话（群聊）
 
@@ -127,13 +128,14 @@ class Agent:
             use_docker: 是否使用 Docker 沙箱执行
             group_chat_id: 群聊 ID（Docker 模式下必填）
             system_prompt: 系统提示词（可选，通过 CLI 参数注入）
-            fork_from: 源会话 ID（可选，用于 fork 会话）
+            fork_from: 源会话 ID（可选，用于 Claude fork 会话）
+            session_id: 会话 ID 覆盖（可选，用于 Codex fork 后恢复新会话）
         """
         cwd = self.agent_cwd if self.agent_cwd else None
         return await agent_platform_client.execute(
             prompt,
             self.role_config,
-            self.main_session_id,
+            session_id or self.main_session_id,
             cwd,
             use_docker=use_docker,
             group_chat_id=group_chat_id,

@@ -35,6 +35,7 @@ from agents_hub.config.config import config
 from agents_hub.exceptions import (
     AgentsHubError,
     ExternalServiceError,
+    ForkNotSupportedError,
     ResourceNotFoundError,
     StateError,
     ValidationError,
@@ -47,6 +48,7 @@ _STATUS_MAP: dict[type[AgentsHubError], int] = {
     ValidationError: 400,
     ResourceNotFoundError: 404,
     StateError: 409,
+    ForkNotSupportedError: 422,
     ExternalServiceError: 502,
 }
 

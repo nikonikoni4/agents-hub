@@ -138,6 +138,20 @@ class ExternalServiceError(AgentsHubError):
     pass
 
 
+class ForkNotSupportedError(AgentsHubError):
+    """Fork 不支持错误
+
+    特征：群聊或单聊中包含非 Claude 平台的成员，无法执行 fork
+    处理策略：返回 422，提示用户哪些成员不支持 fork
+
+    示例：
+    - 群聊包含 OpenCode/Codex 平台成员时尝试 fork
+    - 单聊 fork 目标 agent 不是 Claude 平台
+    """
+
+    pass
+
+
 # ==================== 可恢复错误标记 ====================
 
 

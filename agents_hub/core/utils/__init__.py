@@ -4,8 +4,10 @@
 
 from .markdown_injector import replace_marked_section
 from .path_utils import sanitize_project_path
+from .session_fork import fork_codex_session
 
 __all__ = [
     "replace_marked_section",
     "sanitize_project_path",
+    "fork_codex_session",
 ]

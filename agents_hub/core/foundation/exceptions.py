@@ -22,6 +22,7 @@ __all__ = [
     "DockerConfigError",
     "DockerNotAvailableError",
     "DockerStartError",
+    "ForkError",
 ]
 
 
@@ -211,4 +212,24 @@ class DockerStartError(ExternalServiceError):
             message=f"容器 '{container_name}' 启动失败：{reason}",
             error_code="DOCKER_START_FAILED",
             details={"container_name": container_name, "reason": reason},
+        )
+
+
+class ForkError(AgentsHubError):
+    """Fork 执行失败
+
+    特征：fork 流程中发生错误（如源会话文件不存在、会话文件损坏等）
+    与 ForkNotSupportedError 的区别：ForkNotSupportedError 是平台不支持，ForkError 是执行失败
+    """
+
+    def __init__(self, agent_name: str, platform: str, source_session: str, reason: str):
+        super().__init__(
+            message=f"Fork 失败: agent={agent_name}, platform={platform}, reason={reason}",
+            error_code="FORK_FAILED",
+            details={
+                "agent_name": agent_name,
+                "platform": platform,
+                "source_session": source_session,
+                "reason": reason,
+            },
         )

@@ -1041,6 +1041,34 @@ class GroupChatService:
         team_members = list(source_chat.team_members_name)
         source_group_type = source_chat.group_type
 
+        # 2.5 校验所有成员是否支持 fork（Claude 和 Codex 支持）
+        from agents_hub.config.types import AgentPlatform
+        from agents_hub.exceptions import ForkNotSupportedError
+
+        _FORK_SUPPORTED_PLATFORMS = (AgentPlatform.CLAUDE, AgentPlatform.CODEX)
+        role_manager = RoleManager()
+        unsupported_members: list[str] = []
+        all_member_names = list(team_members)
+        if source_chat.manager and source_chat.manager.name not in all_member_names:
+            all_member_names.append(source_chat.manager.name)
+        for member_name in all_member_names:
+            role = role_manager.get_role(member_name)
+            if role.get_role_config().platform not in _FORK_SUPPORTED_PLATFORMS:
+                unsupported_members.append(member_name)
+        if unsupported_members:
+            logger.error(
+                "Fork 失败: 存在不支持 fork 的成员, source=%s, unsupported=%s",
+                source_group_chat_id,
+                unsupported_members,
+            )
+            raise ForkNotSupportedError(
+                f"群聊中包含不支持 fork 的成员: {', '.join(unsupported_members)}（仅 Claude 和 Codex 支持 fork）",
+                details={
+                    "source_group_chat_id": source_group_chat_id,
+                    "unsupported_members": unsupported_members,
+                },
+            )
+
         # 3. 读取源群聊消息历史（直接读取原始 JSONL，保留 agent_name 字段）
         source_messages_file = group_chat_paths.messages_file(source_group_chat_id, project_path)
         source_messages: list[dict] = []
@@ -1054,7 +1082,9 @@ class GroupChatService:
                             if data.get("_type") != "meta_data":
                                 source_messages.append(data)
             except OSError as e:
-                logger.error("Fork 读取源消息失败: source=%s, error=%s", source_group_chat_id, str(e))
+                logger.error(
+                    "Fork 读取源消息失败: source=%s, error=%s", source_group_chat_id, str(e)
+                )
                 raise StateError(
                     f"读取源消息失败: {e}",
                     details={"source_group_chat_id": source_group_chat_id},
@@ -1152,7 +1182,12 @@ class GroupChatService:
 
         # 10. 注册到 GroupChatManager
         self.group_chat_manager.register(new_group_chat_id, new_group_chat)
-        logger.info("Fork 群聊成功: source=%s, new=%s, name=%s", source_group_chat_id, new_group_chat_id, new_name)
+        logger.info(
+            "Fork 群聊成功: source=%s, new=%s, name=%s",
+            source_group_chat_id,
+            new_group_chat_id,
+            new_name,
+        )
 
         # 11. 广播 WebSocket 通知
         await broadcast_group_chat_refresh(new_group_chat_id)

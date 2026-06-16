@@ -132,6 +132,25 @@ class SingleChatManager:
         role = self._role_manager.get_role(request.agent_name)
         role_config = role.get_role_config()
 
+        # fork 类型校验：Claude 和 Codex 支持 fork
+        if request.type == SingleChatType.FORK:
+            from agents_hub.config.types import AgentPlatform
+            from agents_hub.exceptions import ForkNotSupportedError
+
+            if role_config.platform not in (AgentPlatform.CLAUDE, AgentPlatform.CODEX):
+                logger.error(
+                    "创建单聊失败: fork 不支持该平台, agent=%s, platform=%s",
+                    request.agent_name,
+                    role_config.platform.value,
+                )
+                raise ForkNotSupportedError(
+                    f"单聊 fork 不支持该平台的 agent: {request.agent_name} ({role_config.platform.value})，仅 Claude 和 Codex 支持",
+                    details={
+                        "agent_name": request.agent_name,
+                        "platform": role_config.platform.value,
+                    },
+                )
+
         session_id = None
         session_path = None
         cwd = request.cwd

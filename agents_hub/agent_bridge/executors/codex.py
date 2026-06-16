@@ -46,9 +46,10 @@ class CodexExecutor:
         Args:
             prompt: 用户输入
             config: 角色配置
-            session_id: 会话 ID（可选，用于恢复会话）
+            session_id: 会话 ID（可选，用于恢复会话。Codex fork 时传入 fork_codex_session 返回的新 ID）
             cwd: 项目目录路径（可选，通过 -C 参数指定工作目录）
-            fork_from: 源会话 ID（可选，用于从群聊 fork 会话到单聊）
+            fork_from: 已弃用。Codex 的 fork 通过 fork_codex_session 在文件层面完成，
+                       executor 通过 session_id 恢复新会话，此参数被忽略。
             system_prompt: 系统提示词（可选，通过 -c instructions 注入）
 
         Returns:
@@ -130,17 +131,13 @@ class CodexExecutor:
         system_prompt: str | None = None,
     ) -> list:
         """构建 Codex CLI 命令。-C 必须在子命令之前。
-        codex 的CLI不支持fork
+
+        Codex 的 fork 通过 fork_codex_session() 在文件层面完成（复制 JSONL 会话文件），
+        executor 通过 session_id 恢复新会话，fork_from 参数被忽略。
         """
         cmd = [CODEX_COMMAND]
         if cwd:
             cmd.extend(["-C", cwd])
-
-        if fork_from:
-            cmd.extend(["fork", fork_from, prompt])
-            if system_prompt:
-                cmd.extend(["-c", f"instructions={_sanitize_for_codex_cli(system_prompt)}"])
-            return cmd
 
         if session_id:
             cmd.extend(["exec", "resume", "--json", session_id])

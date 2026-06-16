@@ -586,7 +586,7 @@ export async function listGroupChatInfos(params: {
         params: {
           project_path: params.projectPath,
           is_active_only: params.isActiveOnly ?? false,
-          limit: 1000, // 一次性加载所有
+          limit: 100, // 后端最大允许 100
           offset: 0,
         },
       }),
@@ -597,7 +597,7 @@ export async function listGroupChatInfos(params: {
       total: params.isActiveOnly
         ? MOCK_GROUP_CHAT_INFOS.filter((c) => c.is_active).length
         : MOCK_GROUP_CHAT_INFOS.length,
-      limit: 1000,
+      limit: 100,
       offset: 0,
       has_more: false,
     }

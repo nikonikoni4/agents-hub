@@ -63,19 +63,22 @@ export function ManageMembersDialog({ isOpen, chatId, onClose }: ManageMembersDi
             <div className={styles.roleList}>
               {roles.map((role) => {
                 const isSelected = selectedMemberNames.has(role.name);
+                const isOpenCode = role.platform === 'opencode';
                 return (
-                  <div key={role.name} className={styles.roleItem}>
+                  <div key={role.name} className={`${styles.roleItem} ${isOpenCode ? styles.disabled : ''}`}>
                     <div className={styles.roleInfo}>
                       <span className={styles.roleName}>{role.name}</span>
-                      <span className={styles.roleDesc}>{role.description || '无描述'}</span>
+                      <span className={styles.roleDesc}>
+                        {isOpenCode ? 'OpenCode 平台暂不支持群聊' : (role.description || '无描述')}
+                      </span>
                     </div>
                     <button
                       type="button"
                       className={`${styles.toggleBtn} ${isSelected ? styles.selected : ''}`}
-                      onClick={() => handleToggleMember(role.name)}
-                      disabled={submitting}
+                      onClick={() => !isOpenCode && handleToggleMember(role.name)}
+                      disabled={submitting || isOpenCode}
                     >
-                      {isSelected ? '已选择' : '未选择'}
+                      {isOpenCode ? '不支持' : (isSelected ? '已选择' : '未选择')}
                     </button>
                   </div>
                 );
