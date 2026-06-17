@@ -7,8 +7,8 @@ description: 记录架构决策（ADR）。触发条件：(1) 艰难选择——
 
 1. 按 check-list 逐项确认
 2. 满足条件才创建决策文档
-3. 双写：项目级 + 全局级
-4. 更新 index.md 和 user-design-summary.md
+3. 复制决策文档到项目级 + 全局级（内容相同）
+4. 更新 index.md 和 user-design-summary.md（两个位置各自维护）
 
 ## Check-List
 
@@ -69,9 +69,9 @@ description: 记录架构决策（ADR）。触发条件：(1) 艰难选择——
 
 如果用户没有指定文档，且对话中没有足够信息推断决策依据，**必须向用户确认**，不能自行推断。
 
-## 双写规则
+## 决策文档存储
 
-每次决策写入两个位置，内容相同：
+决策文档是独立文件，复制到两个位置，内容完全相同：
 
 | 位置 | 路径 | 用途 |
 |------|------|------|
@@ -101,12 +101,15 @@ description: 记录架构决策（ADR）。触发条件：(1) 艰难选择——
 
 使用模板：[references\user-design-summary-template.md](references\user-design-summary-template.md)
 
-双写位置：
-- 项目级：`docs\ADR\user-design-summary.md`
-- 全局级：`D:\desktop\quackDocs\my_notes\my-decisions\user-design-summary.md`
+User Design Summary 是聚合文档，两个位置各自维护（链接格式不同，条目可能不同）：
+
+| 位置 | 路径 | 链接格式 |
+|------|------|----------|
+| 项目级 | `docs\ADR\user-design-summary.md` | `[决策标题](.\YYYY-MM-DD-{具体内容}.md)` |
+| 全局级 | `D:\desktop\quackDocs\my_notes\my-decisions\user-design-summary.md` | `[决策标题](YYYY-MM-DD-{具体内容}.md)` |
 
 编写原则：
 - 以批判性视角记录，不迎合用户观点
 - 记录用户决策的判断方式，而非决策内容本身
 - 如果认为决策不太可取，明确说明风险，让后续 agent 不要盲目参考
-- 关联决策文档的链接格式：`[决策标题](.\YYYY-MM-DD-{具体内容}.md)`
+- 两个位置都必须更新，注意链接格式差异
