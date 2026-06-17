@@ -55,18 +55,22 @@
 
 **事件类型：**
 
-| 事件类型 | subtype | 说明 |
-|---------|---------|------|
+| 事件类型 | subtype / delta.type | 说明 |
+|---------|----------------------|------|
 | `system` | `hook_started` | Hook 开始执行 |
 | `system` | `hook_response` | Hook 执行完成，包含输出 |
 | `system` | `init` | 会话初始化信息 |
 | `system` | `status` | 状态变更（requesting 等） |
 | `stream_event` | `message_start` | 消息开始，包含 token 使用统计 |
-| `stream_event` | `content_block_start` | 内容块开始 |
-| `stream_event` | `content_block_delta` | 内容增量（逐字输出） |
+| `stream_event` | `content_block_start` | 内容块开始（`content_block.type` 可为 `text`、`thinking`、`tool_use`） |
+| `stream_event` | `content_block_delta` / `text_delta` | 文本内容增量（逐字输出） |
+| `stream_event` | `content_block_delta` / `thinking_delta` | 思考过程增量（逐字输出，`--include-partial-messages` 时可见） |
+| `stream_event` | `content_block_delta` / `input_json_delta` | 工具调用输入增量（JSON 片段） |
+| `stream_event` | `content_block_delta` / `signature_delta` | 签名增量（thinking 块结束时的签名数据） |
 | `stream_event` | `content_block_stop` | 内容块结束 |
 | `stream_event` | `message_delta` | 消息元数据更新 |
 | `stream_event` | `message_stop` | 消息结束 |
+| `assistant` | — | 非流式完整消息，每个 `message_stop` 后输出一次，包含完整的 content 块 |
 
 **关键字段：**
 
@@ -96,11 +100,42 @@
 
 **stream_event.content_block_delta 包含：**
 - `index` - 内容块索引
-- `delta.type` - 增量类型（text_delta）
-- `delta.text` - 增量文本内容
+- `delta.type` - 增量类型（`text_delta` / `thinking_delta` / `input_json_delta` / `signature_delta`）
+- `delta.text` - 增量文本内容（仅 `text_delta`）
+- `delta.thinking` - 思考增量内容（仅 `thinking_delta`）
+- `delta.partial_json` - 工具输入 JSON 片段（仅 `input_json_delta`）
+- `delta.signature` - 签名数据（仅 `signature_delta`）
 - `session_id` - 会话 ID
 - `parent_tool_use_id` - 父工具调用 ID（如果有）
 - `uuid` - 事件唯一标识
+
+**content_block_start 的 content_block.type 可能值：**
+- `text` - 文本块
+- `thinking` - 思考块（包含 `thinking` 和 `signature` 字段）
+- `tool_use` - 工具调用块（包含 `id`、`name`、`input` 字段）
+
+**assistant 事件包含：**
+- `message.id` - 消息 ID
+- `message.content` - 完整内容块数组，每个元素包含 `type`（`text` / `thinking` / `tool_use`）及对应字段
+- `message.usage` - Token 使用统计
+- `parent_tool_use_id` - 父工具调用 ID
+- `session_id` - 会话 ID
+
+**单轮回复的典型事件流（含思考）：**
+
+```
+stream_event  content_block_start   index=0, type=thinking     ← 思考块开始
+stream_event  content_block_delta   delta.type=thinking_delta  ← 思考内容（多条）
+stream_event  content_block_delta   delta.type=signature_delta ← 思考签名
+stream_event  content_block_start   index=1, type=text         ← 文本块开始
+stream_event  content_block_delta   delta.type=text_delta      ← 文本内容（多条）
+stream_event  content_block_stop    index=1                    ← 文本块结束
+stream_event  message_delta                                    ← 消息元数据
+stream_event  message_stop                                     ← 消息结束
+assistant     (完整消息，包含 thinking + text 内容块)           ← 非流式汇总
+```
+
+若包含工具调用，文本块之后会追加 `tool_use` 类型的 content_block。
 
 ---
 
@@ -333,7 +368,7 @@
 
 ## 五、核心发现
 
-1. **思考过程不可见**：两个 CLI 都不会在输出中显示内部推理过程（`<thinking>` 标签）
+1. **思考过程部分可见**：Claude CLI 在使用 `--include-partial-messages` 时会输出 `thinking_delta` 事件，包含模型的思考过程增量内容；每轮回复以 `content_block_start`（type=`thinking`）开始，经过多个 `thinking_delta`，以 `signature_delta` 结束思考块。非流式模式（`-p`）不输出思考过程
 2. **格式差异明显**：Claude 简洁，Codex 详细
 3. **流式输出统一**：都使用 JSON Lines 格式，易于解析
 4. **非流式差异大**：Claude 纯文本，Codex 结构化文本

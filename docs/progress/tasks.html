@@ -1134,6 +1134,48 @@
     ]
   },
   {
+    "id": 35,
+    "title": "文档组织形式整理：Why + What/Where 分离",
+    "source": "用户直接输入",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-17",
+    "description": "当前单 Agent 每次开始任务都需要重新搜索相关上下文，多 Agent 场景下这个问题更加明显。需要重新整理文档组织形式，建立清晰的信息分层：",
+    "modules": [
+      "文档：docs/ 下所有文档的组织结构",
+      "Agent：上下文加载策略、system prompt 注入"
+    ],
+    "background": "Agent 缺乏持久化的上下文理解，每次会话都要重新\"认识\"项目。根因是文档没有按照 Agent 消费的模式组织，导致 Agent 需要大量探索才能理解任务背景。"
+  },
+  {
+    "id": 36,
+    "title": "Agent Loop 功能",
+    "source": "用户直接输入",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-17",
+    "description": "启动 Agent Loop 功能，使 Agent 能够自主循环执行任务，而非单次响应后停止。Agent Loop 允许 Agent 在接收到任务后，自主规划、执行、验证、迭代，直到任务完成。",
+    "modules": [
+      "后端：Agent 执行循环、任务状态管理、终止条件判断",
+      "前端：Loop 状态展示、用户中断控制"
+    ],
+    "background": "当前 Agent 采用单次调用模式，复杂任务需要用户多次手动触发。Agent Loop 是实现自主 Agent 的核心基础设施。"
+  },
+  {
+    "id": 37,
+    "title": "Agent 上下文自动压缩阈值设置",
+    "source": "用户直接指定",
+    "status": "🚧 进行中",
+    "created_at": "2026-06-17",
+    "description": "实现 Agent 上下文自动压缩功能，当对话长度超过设定阈值时自动触发上下文压缩，避免上下文无限增长导致的性能问题和 token 浪费。",
+    "modules": [
+      "后端：压缩阈值配置、自动触发逻辑、压缩策略",
+      "前端：压缩状态展示（可选）"
+    ],
+    "notes": [
+      "与任务 #30（Agent 质量提升四件套）中的上下文压缩相关",
+      "与任务 #26（群聊消息压缩机制）中的 compact_messages 机制相关"
+    ]
+  },
+  {
     "id": 12,
     "title": "单聊功能",
     "source": "idea #10",

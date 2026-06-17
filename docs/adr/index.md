@@ -91,6 +91,20 @@
 - 触发规则：当设计或修改 Agent Hook 机制、考虑在 hook 中实现大模型调用、评估 hook 适用场景时阅读
 - 内容摘要：明确 hook 适用边界——只做轻量级检查和约束，重型功能（大模型调用、上下文检索）放在显式工作流中。暂缓 hook 机制实现，等有明确轻量级需求时再评估
 
+## mcp-tools-to-direct-output
+- updated_at: 2026-06-16
+- path: `docs/ADR/2026-06-16-mcp-tools-to-direct-output.md`
+- 状态：decided
+- 触发规则：当设计或修改 MCP 工具、Agent 输出行为、成功展示策略时阅读
+- 内容摘要：暂时取消 MCP 工具 complete_task 和 report_progress，改为直接使用 agentbridge 输出作为回复；成功展示改为 XML 标签 + git status 兜底的两步策略
+
+## context-layer-removal
+- updated_at: 2026-06-16
+- path: `docs/ADR/2026-06-16-context-layer-removal.md`
+- 状态：decided
+- 触发规则：当设计或修改 GroupChat/Agent/Runtime 的依赖关系、评估中间层存在的必要性、或进行渐进式架构重构时阅读
+- 内容摘要：补记 GroupChatContext 中间层的三次演进——v1 Context 持有 Repository（状态混乱）→ v2 引入 Runtime 由 Context 持有（透传层无价值）→ v3 删除 Context（Agent 直接持有 Runtime）。核心教训：渐进式重构中"为了快速修改"保留的中间层，在新抽象稳定后应及时清理
+
 ## user-design-summary
 - updated_at: 2026-06-04
 - path: `docs/ADR/user-design-summary.md`
