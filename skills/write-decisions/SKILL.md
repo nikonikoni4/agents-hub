@@ -1,6 +1,6 @@
 ---
 name: write-decisions
-description: Use when 用户做出重大决策（架构调整、模块重构、新功能添加、旧功能删除）或用户出现决策疑问（不知道如何解决某个设计问题和非知识问答问题）时，需要记录具体决策内容
+description: 记录架构决策（ADR）。触发条件：(1) 艰难选择——在方案间纠结、选了A但B也有优势、知道有副作用 (2) 重构/重大修改后——改了3+次才定方案、每次改有新考虑 (3) 奇怪代码——被问"为什么这样写"、审查被质疑、自己回看也觉得奇怪 (4) 用户做出重大决策或出现决策疑问
 ---
 
 ## 执行流程
@@ -25,6 +25,36 @@ description: Use when 用户做出重大决策（架构调整、模块重构、�
 - 问题有唯一解，不存在替代方案
 - 用户只是询问信息，没有做决策
 
+## 触发场景
+
+以下 3 个场景满足 checklist 条件时，必须触发写入：
+
+**场景 1：艰难选择**
+
+标志：在两个方案间纠结了很久；选了 A 但 B 也有明显优势；知道选择有副作用。
+
+行动：决策完成后立即写 ADR，记录考虑了哪些方案、为什么选这个、有什么已知限制。
+
+**场景 2：重构或重大修改后**
+
+标志：改了 3+ 次才找到合适方案；每次改都有新的考虑；最终方案看起来不是"最直接的"。
+
+行动：重构完成后写 ADR，记录演进历史（为什么改了 3 次）、每次改解决了什么问题、当前方案的权衡。使用 decision-template.md 中的"演进历史"节。
+
+**场景 3：看起来奇怪的代码**
+
+标志：新人或 AI 问"为什么这样写"；代码审查时有人质疑；自己回看代码时也觉得奇怪。
+
+行动：补写 ADR，使用补写模式（见下方）。
+
+## 补写模式
+
+对于场景 3（看起来奇怪的代码），使用简化流程：
+
+- 跳过"问题界定"和"可选方案"的完整分析
+- 重点记录：为什么这样写、尝试过什么方法、为什么其他方法不行
+- frontmatter 的 abstract 直接说明"补记：解释为什么代码这样写"
+
 ## 信息来源规则（Not To Do）
 
 决策内容**必须基于**：
@@ -45,11 +75,11 @@ description: Use when 用户做出重大决策（架构调整、模块重构、�
 
 | 位置 | 路径 | 用途 |
 |------|------|------|
-| 项目级 | `docs\design-decisions\YYYY-MM-DD-{具体内容}.md` | 团队和 agent 参考 |
+| 项目级 | `docs\ADR\YYYY-MM-DD-{具体内容}.md` | 团队和 agent 参考 |
 | 全局级 | `D:\desktop\quackDocs\my_notes\my-decisions\YYYY-MM-DD-{具体内容}.md` | 跨项目积累 |
 
 写入后更新对应的 `index.md`：
-- 项目级：`docs\design-decisions\index.md`
+- 项目级：`docs\ADR\index.md`
 - 全局级：`D:\desktop\quackDocs\my_notes\my-decisions\index.md`
 
 全局级 index.md 格式：
@@ -72,7 +102,7 @@ description: Use when 用户做出重大决策（架构调整、模块重构、�
 使用模板：[references\user-design-summary-template.md](references\user-design-summary-template.md)
 
 双写位置：
-- 项目级：`docs\design-decisions\user-design-summary.md`
+- 项目级：`docs\ADR\user-design-summary.md`
 - 全局级：`D:\desktop\quackDocs\my_notes\my-decisions\user-design-summary.md`
 
 编写原则：

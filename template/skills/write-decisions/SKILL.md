@@ -65,15 +65,15 @@ status：`decided` 或 `undecided`
 
 5. 最终决策和决策原因（如果没有决策，则不写）
 
-**写入位置**：`docs/design-decisions`
+**写入位置**：`docs/ADR`
 
 **命名规则**：YYYY-MM-DD-{具体内容}.md
 
-**编写完成之后**：在`docs/design-decisions/index.md`增加导航内容
+**编写完成之后**：在`docs/ADR/index.md`增加导航内容
 
 ### 决策文档模板
 
-创建 `docs/design-decisions/YYYY-MM-DD-{具体内容}.md` 时使用下面模板。保留与当前决策有关的内容，删除无内容的占位说明。
+创建 `docs/ADR/YYYY-MM-DD-{具体内容}.md` 时使用下面模板。保留与当前决策有关的内容，删除无内容的占位说明。
 
 ```markdown
 ---
@@ -173,7 +173,7 @@ status: decided
 ## 决策总结编写
 ### user-design-summary.md 模板
 
-如果 `docs/design-decisions/user-design-summary.md` 不存在，创建该文件并使用下面模板；如果已存在，在对应章节追加观察。
+如果 `docs/ADR/user-design-summary.md` 不存在，创建该文件并使用下面模板；如果已存在，在对应章节追加观察。
 
 ```markdown
 # User Design Summary
@@ -202,6 +202,6 @@ status: decided
 ```
 
 ## 决策总结
-1. 路径：`docs/design-decisions/user-design-summary.md`
+1. 路径：`docs/ADR/user-design-summary.md`
 2. 文档说明：这个文档是用来记录用户决策的行为方式，是用来积累用户的决策行为，为agent自主决策时提供依据，以及为用户决策反思提供过程
 3. 编写原则：编写时以批判性视角进行说明，不要刻意迎合用户观点，需要产生用户决策进化，以及提供agent可参考的决策思维。如果你认为不太可取的决策，需要明确说明，让后续agent不要盲目参考该决策方式

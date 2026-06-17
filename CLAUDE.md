@@ -17,7 +17,7 @@
 | **文档规则** | `docs/docs-rules/` | 编写 docs 时必须遵守的规范、约束、触发场景 |
 | **产品规格** | `docs/specs/` | 对于正式 `spec`,承载业务意图、业务规则、领域概念,以及规范性技术契约,是了解系统某个功能的重要文档 |
 | **使用指南** | `docs/guides/` | 面向用户的使用指南，说明如何配置和使用系统功能（如 Docker 沙箱） |
-| **架构决策** | `docs/design-decisions/` | 记录对于长期具有重要的作用的修改决定 |
+| **架构决策** | `docs/ADR/` | 记录对于长期具有重要的作用的修改决定 |
 | **重要bug历史记录**  | `docs/history-bugs`      | 存放可复用的bug经验   |
 | **superpower文件夹** | `docs/superpowers/` | superpower 插件下skill专用的文件夹，包括`docs/superpower/specs` 和 `docs/superpower/plans` |
 | **文档地图** | `docs/<文件夹>/index.md` | 除temp文件夹以外，其余文件都有index.md导航文件，会存放该文件夹下所有文档的索引 |
@@ -32,7 +32,7 @@
 5. **如果你是minimax模型**：必须阅读`docs/coding-rules/other-model-rules`
 6. **修复bug时**: 可以阅读`docs\history-bugs\index.md`来获取历史bug解决方法
 7. **修改前段UI/UX时** ： 必须阅读`docs/DESIGN.md`
-8. **自主决策时**，参考`docs\design-decisions\user-design-summary.md`, 了解用户的决策习惯
+8. **自主决策时**，参考`docs\ADR\user-design-summary.md`, 了解用户的决策习惯
 </<docs-read-rules>>
 
 ## 核心编码原则

@@ -736,7 +736,7 @@ async def test_bridge_integration():
 2. **CLI 输出研究**：`docs/temp/研究报告/claude-codex-cli-output-analysis.md`
 3. **Claude CLI 配置研究**：`docs/temp/研究报告/claude-cli-config-override-research.md`
 4. **Claude CLI 最小命令集**：`docs/temp/研究报告/claude-cli-minimal-command-set.md`
-5. **Codex 配置策略**：`docs/design-decisions/2026-05-23-codex-system-prompt-strategy.md`
+5. **Codex 配置策略**：`docs/ADR/2026-05-23-codex-system-prompt-strategy.md`
 
 ---
 

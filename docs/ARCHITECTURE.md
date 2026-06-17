@@ -323,7 +323,7 @@ Feature 模块组织规范和状态管理策略详见 [frontend-features](specs/
 |---------|------|------|
 | 产品规格 | `docs/specs/` | 技术契约和行为规格，按模块组织 |
 | 使用指南 | `docs/guides/` | 面向用户的配置和使用指南 |
-| 架构决策 | `docs/design-decisions/` | 长期重要的架构决定记录 |
+| 架构决策 | `docs/ADR/` | 长期重要的架构决定记录 |
 | 编码规则 | `docs/coding-rules/` | 编写代码时必须遵守的规范 |
 
 ## 参考资料

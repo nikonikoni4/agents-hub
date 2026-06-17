@@ -3410,9 +3410,9 @@ user-design-summary.md
 ```
 1	# ADR Format
 2	
-3	ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc.
+3	ADRs live in `docs/ADR/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc.
 4	
-5	Create the `docs/adr/` directory lazily — only when the first ADR is needed.
+5	Create the `docs/ADR/` directory lazily — only when the first ADR is needed.
 6	
 7	## Template
 8	
@@ -3434,7 +3434,7 @@ user-design-summary.md
 24	
 25	## Numbering
 26	
-27	Scan `docs/adr/` for the highest existing number and increment by one.
+27	Scan `docs/ADR/` for the highest existing number and increment by one.
 28
 
 ... (truncated)

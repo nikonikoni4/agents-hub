@@ -54,7 +54,7 @@ description: 本地代码审查工具，用于审查指定范围的代码变更�
 3. 返回所有相关 CLAUDE.md 文件路径列表
 
 **2b. 搜索相关 ADR（架构决策记录）**
-1. 搜索 `docs/adr/` 目录下的 ADR 文件
+1. 搜索 `docs/ADR/` 目录下的 ADR 文件
 2. 使用变更模块/功能名作为关键词搜索 ADR 内容
 3. 检查 git 历史中的决策相关提交：
    ```bash
@@ -65,7 +65,7 @@ description: 本地代码审查工具，用于审查指定范围的代码变更�
 **2c. 搜索相关 Spec（产品规格）**
 1. 读取 `docs/specs/index.md` 获取 spec 索引
 2. 搜索与变更文件/功能相关的 spec
-3. 检查 `docs/design-decisions/` 目录下的决策文档
+3. 检查 `docs/ADR/` 目录下的决策文档
 4. 返回相关 spec 列表及关键约束
 
 **输出：ADR + Spec 上下文块**
@@ -78,7 +78,7 @@ description: 本地代码审查工具，用于审查指定范围的代码变更�
 
 ### 相关 Spec
 - docs/specs/auth-module.md: 认证模块规格
-- docs/design-decisions/user-design-summary.md: 用户决策习惯
+- docs/ADR/user-design-summary.md: 用户决策习惯
 
 ### 决策覆盖
 - 3/5 变更文件有 ADR 关联
