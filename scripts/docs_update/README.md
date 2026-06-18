@@ -93,6 +93,17 @@ chmod +x .git/hooks/pre-commit
 - 检查暂存区的函数变化
 - 如果有 flow 文档需要更新，显示警告
 - **不阻塞提交**（允许提交继续）
+- **记录检查结果到日志**：`scripts/docs_update/flow-check.log`
+
+**日志记录**：
+- 每次检查都会追加记录到 `flow-check.log`
+- 包含时间戳、检查结果、详细输出
+- 方便因任务繁忙无法立即修复时查看历史记录
+
+**Git Worktree 支持**：
+- 通过 `git rev-parse --show-toplevel` 动态获取仓库根目录
+- Worktree 中的 hook 会正确找到主仓库的脚本和日志路径
+- 日志始终写入主仓库的 `scripts/docs_update/flow-check.log`
 
 **卸载方法**：
 ```bash
