@@ -1,9 +1,9 @@
 ---
-version: 1.4
+version: 2.0
 created_at: 2026-05-31
-updated_at: 2026-06-04
-last_updated: 对齐 complete_task 的 Agent 完成通知和 user 群聊回执分支，以及现有 GroupChat 组件持有关系
-abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制、显式群聊发言、显式 AgentCall 闭环、user 回执和 MCP 工具入口
+updated_at: 2026-06-18
+last_updated: 按照新 spec 规则重构：移除执行细节，添加 key_function 标签和 Design Rationale
+abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制、MCP 工具入口
 id: spec-core-agent-orchestration
 title: Core Agent & Orchestration 层规格
 status: draft
@@ -17,7 +17,6 @@ contract_refs:
   - agents_hub/core/agent/base_agent.py
   - agents_hub/core/agent/manager.py
   - agents_hub/core/agent/worker.py
-  - agents_hub/core/orchestration/team.py
   - agents_hub/core/orchestration/group_chat.py
   - agents_hub/core/orchestration/group_chat_manager.py
   - agents_hub/core/foundation/models.py
@@ -35,11 +34,13 @@ contract_refs:
 | 1.2 | Team 语义明确（team_members 包含 manager+worker）、初始化分离机制、user 伪 Agent 注册、config.default_manager_name / default_user_name 替代硬编码 |
 | 1.3 | 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问 |
 | 1.4 | 对齐 Agent.run 显式公开发言、显式 AgentCall 闭环，以及 complete_task 的 Agent 完成通知和 user 群聊回执 |
+| 2.0 | 按照新 spec 规则重构：移除执行细节，添加 key_function 标签和 Design Rationale |
 
 ## Overview
 
-agent 和 orchestration 是 core 的**上层**，共同实现多 Agent 协作的完整流程：
+**业务问题**：如何实现多 Agent 协作的完整流程，包括 Agent 执行、团队组建、群聊编排和工具调用？
 
+**核心职责**：
 - **agent 层**：定义 Agent 的执行模型——消息循环、上下文加载、LLM 调用、显式闭环提醒
 - **orchestration 层**：定义群聊的编排机制——团队组建、群聊生命周期、成员管理、MCP 工具入口
 
@@ -54,54 +55,46 @@ agent 和 orchestration 是 core 的**上层**，共同实现多 Agent 协作的
 - Team 定义和成员验证
 - GroupChat 的启动、加载、初始化、停止、清理流程
 - GroupChatManager 的全局注册表和 MCP 工具入口
+- Agent Token 的生命周期管理
 
 ### 范围外
 
-- Agent 的具体 LLM 调用实现（属于 agent_bridge）
-- 消息路由和调用管理的底层机制（属于 communication 层）
-- 上下文和持久化的底层机制（属于 context 层）
-- Role 配置的 CRUD 管理（属于 roles 模块）
+- Agent 的具体 LLM 调用实现（参见 `docs/specs/` 下的 agent_bridge 相关 spec）
+- 消息路由和调用管理的底层机制（参见 `docs/specs/2026-05-31-core-communication.md`）
+- 上下文和持久化的底层机制（参见 `docs/specs/2026-05-31-core-context.md`）
+- 基础数据模型、枚举和异常体系（参见 `docs/specs/2026-05-31-core-foundation.md`）
+- Role 配置的 CRUD 管理（参见 `docs/specs/` 下的 roles 相关 spec）
 
-## Core Behavior
+## Technical Contract
 
-### Agent 执行模型
+### Agent 层
 
-每个 Agent 运行一个**消息循环**（run loop），从私有队列中取出消息并处理：
+<key_function last_update="2026-06-18T10:34:37+08:00">
+- agents_hub/core/agent/base_agent.py
+  - base_agent.Agent.__init__:45
+  - base_agent.Agent.run:860
+  - base_agent.Agent.stop:87
+  - base_agent.Agent.execute:115
+  - base_agent.Agent.btw_execute:146
+  - base_agent.Agent.compress_context:358
+- agents_hub/core/agent/manager.py
+  - manager.Manager.__init__:52
+- agents_hub/core/agent/worker.py
+  - worker.Worker.__init__:51
+</key_function>
 
-```
-while _run:
-    msg = await message_queue.get()     ← 从 MessageRouter 投递的队列取消息
-    if msg 是停止信号: break
-    prompt = render_for_llm(msg)         ← 渲染为 LLM prompt
-    await _process_message(msg, prompt)  ← 执行，普通 text 默认私下保留
-    如果 TASK 仍未通过 complete_task 闭环:
-        向当前 Agent 私有队列追加系统提醒
-```
+**对外接口**：
 
-**消息处理流程**（_process_message）：
-1. 注入 runtime 信息到 work_root/CLAUDE.md（见 Runtime 注入）
-2. 更新调用状态为 RUNNING
-3. 如果是 MAIN 会话：加载增量上下文 + 拼接 prompt → execute()
-4. 如果是 BTW 会话：直接 btw_execute()
-5. 对非 TASK 调用，执行完成后更新为 COMPLETED；对 TASK 调用，只有显式回复闭环后才进入终态
+| 接口 | 说明 | 约束 |
+|------|------|------|
+| Agent.__init__(role_config, message_queue, group_chat_context, agent_context, message_router, agent_call_manager, task_manager) | 初始化 Agent 实例 | 必须提供所有依赖组件 |
+| Agent.run() | 启动消息循环，从私有队列取消息并处理 | 异步执行，通过 stop() 停止 |
+| Agent.stop() | 停止消息循环（双重保险：设置 _run=False + 发送哨兵消息） | 异步操作，等待当前消息处理完成 |
+| Agent.execute(prompt, session_id) | 执行 MAIN 会话（加载增量上下文 + 拼接 prompt） | 委托给 agent_bridge |
+| Agent.btw_execute(prompt, session_id) | 执行 BTW 会话（直接执行，不加载增量上下文） | 委托给 agent_bridge |
+| Agent.compress_context() | 压缩个人上下文 | 异步操作 |
 
-**显式公开与闭环**：
-- Agent 的普通 LLM text 输出默认不进入群聊历史
-- 公开群聊发言必须通过 `report_progress`
-- 需要回复的 TASK 调用必须通过 `complete_task` 闭环
-- `report_progress` 不创建、不关闭 AgentCall
-- `complete_task` 会更新 AgentCall；原调用方是 Agent 时投递 NOTIFICATION 唤醒下一轮处理，原调用方是 user 时写入群聊历史并触发前端刷新
-
-**Runtime 注入**：每次处理消息前，通过 `markdown_injector` 将身份信息（token、团队成员、任务看板）动态注入到 work_root 下的 CLAUDE.md/AGENTS.md 的 `<AGENT_RUNTIME_START/>` 和 `<AGENT_RUNTIME_END/>` 标记之间。详见 `2026-05-31-mcp-tools-design.md` §5。
-
-**渲染分工**：
-- 入站 prompt：render_for_llm（msg.content 不被改写）
-- 群聊公开发言：显式工具写入群聊，写入前剥离 token
-- TASK 最终回复：显式工具关闭 AgentCall；Agent 调用方收到私有完成通知，user 调用方通过群聊历史和 refresh 看到结果
-
-**停止机制**：双重保险——设置 _run=False 标志 + 发送哨兵消息（call_id="__STOP__"）唤醒阻塞的 get()。
-
-### 角色模型
+**角色模型**：
 
 Agent 分为两种角色，当前行为相同，预留扩展点：
 
@@ -110,7 +103,7 @@ Agent 分为两种角色，当前行为相同，预留扩展点：
 | Manager | Manager(Agent) | 团队管理者，负责任务分配和协调 |
 | Worker | Worker(Agent) | 团队工作者，执行具体任务 |
 
-每个 Agent 持有：
+**Agent 持有的组件**：
 - `role_config`：从 Role 获取的配置（名称、平台、工作目录等）
 - `message_queue`：私有消息队列
 - `group_chat_context`：群聊上下文引用
@@ -120,7 +113,64 @@ Agent 分为两种角色，当前行为相同，预留扩展点：
 - `agent_token`：身份令牌，用于 MCP 工具调用时的身份验证
 - `task_manager`：任务管理器引用（由 GroupChat 创建并注入）
 
-### Team 定义
+### Orchestration 层
+
+<key_function last_update="2026-06-18T10:34:37+08:00">
+- agents_hub/core/orchestration/group_chat.py
+  - group_chat.GroupChat.__init__:49
+  - group_chat.GroupChat.start:88
+  - group_chat.GroupChat.load:136
+  - group_chat.GroupChat.activate:162
+  - group_chat.GroupChat.stop:1012
+  - group_chat.GroupChat.cleanup:1027
+  - group_chat.GroupChat.send_message_to_agent:563
+  - group_chat.GroupChat.add_member:278
+  - group_chat.GroupChat.stop_member:732
+  - group_chat.GroupChat.start_member:849
+  - group_chat.GroupChat.reset_member:925
+  - group_chat.GroupChat.compact_history:490
+- agents_hub/core/orchestration/group_chat_manager.py
+  - group_chat_manager.GroupChatManager.register:61
+  - group_chat_manager.GroupChatManager.unregister:153
+  - group_chat_manager.GroupChatManager.load_group_chat:100
+  - group_chat_manager.GroupChatManager.activate_group_chat:137
+  - group_chat_manager.GroupChatManager.create_group_chat:408
+  - group_chat_manager.GroupChatManager.register_token:182
+  - group_chat_manager.GroupChatManager.unregister_tokens:196
+  - group_chat_manager.GroupChatManager.resolve_token:217
+</key_function>
+
+**GroupChat 对外接口**：
+
+| 接口 | 说明 | 约束 |
+|------|------|------|
+| GroupChat.__init__(team, group_chat_id, project_path, base_path) | 初始化群聊，创建并持有 GroupChatRuntime、MessageRouter、AgentCallManager、TaskManager | 必须提供 team 和 project_path |
+| GroupChat.start() | 启动群聊（加载上下文、初始化 Agent、注册 Token、启动 run() 任务） | 异步操作，首次创建时保存群聊元数据 |
+| GroupChat.load() | 加载已有群聊（恢复上下文、重新注册 Token、启动 run() 任务） | 异步操作，群聊必须已存在 |
+| GroupChat.activate() | 激活群聊（启动所有 Agent 的 run() 任务） | 异步操作，Agent 必须已初始化 |
+| GroupChat.stop() | 停止群聊（发送停止信号给所有 Agent） | 异步操作 |
+| GroupChat.cleanup(timeout) | 清理群聊（停止 Agent、等待任务完成、注销 Token、关闭 Runtime） | 异步操作，超时后强制取消 |
+| GroupChat.send_message_to_agent(message) | 发送消息给指定 Agent | 消息必须包含 target_agent |
+| GroupChat.add_member(role_name) | 添加新成员到群聊 | 异步操作，角色必须存在 |
+| GroupChat.stop_member(agent_name) | 停止指定成员 | 异步操作，返回停止结果 |
+| GroupChat.start_member(agent_name) | 启动指定成员 | 异步操作，返回启动结果 |
+| GroupChat.reset_member(agent_name) | 重置指定成员（停止、清理、重新初始化） | 异步操作，返回重置结果 |
+| GroupChat.compact_history() | 收集所有 Agent 的职责描述，调用 context 层压缩逻辑 | 异步操作 |
+
+**GroupChatManager 对外接口**：
+
+| 接口 | 说明 | 约束 |
+|------|------|------|
+| GroupChatManager.register(group_chat_id, group_chat) | 注册群聊到全局注册表 | group_chat_id 必须唯一 |
+| GroupChatManager.unregister(group_chat_id) | 注销群聊（先 cleanup 再删除引用，幂等） | 异步操作 |
+| GroupChatManager.load_group_chat(group_chat_id) | 加载群聊（从磁盘恢复或创建新实例） | 异步操作，返回 GroupChat 实例 |
+| GroupChatManager.activate_group_chat(group_chat_id) | 激活群聊 | 异步操作，群聊必须已注册 |
+| GroupChatManager.create_group_chat(team, group_chat_id, project_path, base_path) | 创建新群聊并注册 | 异步操作，返回 GroupChat 实例 |
+| GroupChatManager.register_token(token, agent_name, group_chat_id) | 注册 Agent Token 到索引 | 线程安全（RLock） |
+| GroupChatManager.unregister_tokens(group_chat_id) | 注销群聊的所有 Token | 线程安全（RLock） |
+| GroupChatManager.resolve_token(token) | 解析 Token 获取 (agent_name, group_chat_id) | 线程安全（RLock），不存在返回 None |
+
+**Team 定义**：
 
 Team 是一个 Pydantic 模型，定义团队成员列表：
 
@@ -132,55 +182,6 @@ Team 是一个 Pydantic 模型，定义团队成员列表：
 **初始化分离**：虽然 `team_members_name` 包含所有成员，但在 `GroupChat._init_agents()` 中 Manager 和 Worker 分开初始化：
 - Manager：始终由系统默认加载（使用 `config.default_manager_name`），与 `team_members_name` 无关
 - Worker：遍历 `team_members_name`，跳过与 `default_manager_name` 同名的成员后逐一创建
-
-### GroupChat 生命周期
-
-GroupChat 是核心编排单元，协调 Agent、消息路由和上下文管理。
-
-当前实现中，GroupChat 在初始化时创建并持有 `GroupChatRuntime`、`MessageRouter`、`AgentCallManager` 和 `TaskManager`。`GroupChatRuntime` 内部持有 `GroupChatRepository`；部分编排逻辑会通过 `runtime.repository` 读取 `project_path`、保存群聊元数据或保存 Agent session 状态。
-
-**启动流程**（start / load）：
-1. 加载上下文数据（GroupChatRuntime.load()）
-2. 首次创建时保存群聊元数据
-3. 初始化 Manager 和 Workers（通过 RoleManager 获取角色配置，Worker 跳过与 `config.default_manager_name` 同名的成员）
-4. 生成或恢复 Agent Token 并注册到 GroupChatManager 索引
-5. 注册所有 Agent 到 MessageRouter，并注册 `config.default_user_name` 伪 Agent（空队列，支持用户 API 发消息）
-6. 初始化新成员（首次进入群聊的 Agent 执行打招呼）
-7. 首次创建或激活群聊时启动所有 Agent 的 run() 任务
-
-**新成员初始化**：
-- 检查哪些成员没有 session_id
-- Manager：介绍自己是团队领导，列出成员
-- Worker：介绍自己，说明直属领导
-- 并发执行所有新成员的初始化
-
-**群聊类型**：
-- `SEQUENCE_EXECUTE`：流水线顺序执行
-- `MANAGER_ORCHESTRATE`：由 Manager 动态决定安排
-
-**清理流程**（cleanup）：
-1. 停止所有 Agent（发送停止信号）
-2. 等待任务完成（超时后强制取消）
-3. 停止 AgentCallManager 清理任务
-4. 清空 MessageRouter
-5. 从 GroupChatManager 注销所有 Agent Token
-6. 关闭 GroupChatRuntime
-7. 清空所有引用
-
-**压缩历史**：compact_history() 方法收集所有 Agent 的职责描述，调用 context 层的压缩逻辑。
-
-### GroupChatManager 全局注册表
-
-GroupChatManager 是全局单例，管理所有 GroupChat 实例和 Token 索引：
-
-- `register(group_chat_id, group_chat)`：注册群聊
-- `get_group_chat(group_chat_id)`：获取群聊（不存在抛 GroupChatNotFoundError）
-- `unregister(group_chat_id)`：注销群聊（先 cleanup 再删除引用，幂等）
-
-**Token 索引**（线程安全，使用 RLock）：
-- `register_token(token, agent_name, group_chat_id)`：GroupChat.start/load 时调用
-- `unregister_tokens(group_chat_id)`：GroupChat.cleanup 时调用
-- `resolve_token(token) -> (agent_name, group_chat_id) | None`：MCP 工具调用时解析身份
 
 ### MCP 工具入口
 
@@ -201,7 +202,45 @@ MCP Server 提供 6 个工具，Agent 通过 token 身份调用：
 3. 执行业务逻辑
 4. 返回结果或统一格式的错误响应
 
-## Technical Contract
+**MCP Tool 契约**：
+- `call_agent` 返回 call_id，调用方可通过此 ID 查询调用状态
+- `complete_task` 只能用于需要回复的 TASK 调用；如果用于 notification 调用、非接收者调用或重复闭环，返回 MCP 错误响应
+- `report_progress` 不创建、不关闭 AgentCall
+
+### 状态机规则
+
+**Agent 生命周期**：
+```
+INITIALIZED → RUNNING → STOPPED
+                ↓
+            COMPLETED (正常完成)
+                ↓
+            ERROR (异常退出)
+```
+
+**GroupChat 生命周期**：
+```
+CREATED → STARTED/LOADED → ACTIVE → STOPPED → CLEANED
+                ↓
+            MEMBER_ADDED (动态添加成员)
+                ↓
+            MEMBER_REMOVED (动态移除成员)
+```
+
+**消息处理状态机**：
+```
+RECEIVED → PROCESSING → COMPLETED (普通消息)
+                ↓
+            WAITING_REPLY (TASK 调用，等待 complete_task 闭环)
+                ↓
+            COMPLETED (显式闭环后)
+```
+
+**显式公开与闭环规则**：
+- Agent 的普通 LLM text 输出默认不进入群聊历史
+- 公开群聊发言必须通过 `report_progress`
+- 需要回复的 TASK 调用必须通过 `complete_task` 闭环
+- `complete_task` 会更新 AgentCall；原调用方是 Agent 时投递 NOTIFICATION 唤醒下一轮处理，原调用方是 user 时写入群聊历史并触发前端刷新
 
 ### 跨层依赖
 
@@ -216,18 +255,39 @@ orchestration → agent → communication → foundation
 - orchestration 层的 GroupChat 是当前实现中唯一同时持有 communication、context 和 task/call 管理组件的编排单元
 - 当前实现中，GroupChat 持有 GroupChatRuntime，Runtime 持有 GroupChatRepository
 
-### MCP Tool 契约
-
-`call_agent` 返回 call_id，调用方可通过此 ID 查询调用状态。`complete_task` 只能用于需要回复的 TASK 调用；如果用于 notification 调用、非接收者调用或重复闭环，返回 MCP 错误响应。
-
 ### 与 agent_bridge 的协作
 
 Agent.execute() 和 Agent.btw_execute() 委托给 agent_bridge 的 agent_platform_client，传入渲染好的 prompt、role_config 和 session_id。Agent 不直接管理 CLI 进程。
 
-## Out of Spec
+## Design Rationale
 
-- Manager 和 Worker 的行为差异（当前无差异，未来由编排策略决定）
+**为什么这样设计？**
+- **Agent 与 Orchestration 合并**：orchestration 直接创建和管理 Agent 实例，Agent 的行为只有在群聊上下文中才有意义，两者必须一起理解
+- **显式公开与闭环**：避免 Agent 的中间思考过程污染群聊历史，只有通过工具显式声明的内容才进入公共视野
+- **Token 身份验证**：MCP 工具调用时需要身份验证，Token 机制提供轻量级的身份标识和权限控制
+- **双重停止保险**：设置 _run=False 标志 + 发送哨兵消息，确保 Agent 能从阻塞的 queue.get() 中唤醒
+- **初始化分离**：Manager 始终由系统默认加载，Worker 从 team_members_name 创建，确保 Manager 的稳定性
+
+**有哪些约束？**
+- Agent 的 LLM 调用必须委托给 agent_bridge，不直接管理 CLI 进程
+- GroupChat 是唯一同时持有 communication、context 和 task/call 管理组件的编排单元
+- Token 索引必须线程安全（使用 RLock），因为多个 Agent 可能并发调用 MCP 工具
+- Team 成员名称必须通过 RoleManager 验证，确保角色存在
+
+**有哪些已知限制？**
+- Manager 和 Worker 的行为差异当前无差异，未来由编排策略决定
 - GroupChatType 的具体编排实现（SEQUENCE_EXECUTE 和 MANAGER_ORCHESTRATE 的调度逻辑待实现）
-- Agent 的 set_run() 方法（当前占位，未来用于暂停/恢复 Agent）
-- Role 配置的详细结构（属于 roles 模块 spec）
-- agent_bridge 的执行细节（属于 agent_bridge spec）
+- Agent 的 set_run() 方法当前占位，未来用于暂停/恢复 Agent
+
+**相关 ADR**：
+- 无
+
+## Out of Scope
+
+本 spec 不覆盖以下内容，请参考相应文档：
+
+- **Agent 执行细节**：Agent 的消息循环、Runtime 注入、渲染分工等具体实现（参见 `docs/flows/` 相关 flow 文档）
+- **通信层**：消息路由和调用管理的底层机制（参见 `docs/specs/2026-05-31-core-communication.md`）
+- **上下文层**：上下文和持久化的底层机制（参见 `docs/specs/2026-05-31-core-context.md`）
+- **基础数据模型**：枚举、AgentMessage、异常体系等基础定义（参见 `docs/specs/2026-05-31-core-foundation.md`）
+- **Agent Bridge**：Agent 的具体 LLM 调用实现（参见 `docs/specs/` 下的 agent_bridge 相关 spec）

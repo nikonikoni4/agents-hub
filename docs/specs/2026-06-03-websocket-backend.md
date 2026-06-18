@@ -1,8 +1,8 @@
 ---
-version: 1.2
+version: 2.0
 created_at: 2026-06-03
-updated_at: 2026-06-16
-last_updated: 修正端点路径与广播 API 路径，精简 realtime 重叠内容，补充心跳和边界场景
+updated_at: 2026-06-18
+last_updated: 按照新 spec 规则重构，移除执行细节，添加 key_function 标签和 Design Rationale
 abstract: WebSocket 后端模块的正式规格，定义 WebSocket endpoint、HTTP broadcast route、错误消息格式等 API 侧特有内容
 id: websocket-backend
 title: WebSocket 后端模块
@@ -31,12 +31,16 @@ contract_refs:
 | 1.0 | 创建 spec 初稿 |
 | 1.1 | WebSocket 连接管理与广播能力迁移到 realtime 边界，API 保留 endpoint 和 HTTP route |
 | 1.2 | 修正端点路径和广播 API 路径，精简 realtime 重叠内容，补充心跳机制和边界场景 |
+| 2.0 | 按照新 spec 规则重构，移除执行细节，添加 key_function 标签和 Design Rationale |
 
 ## Overview
 
-WebSocket 后端模块为 Agent 与前端之间提供实时消息推送能力。当 Agent 产生新消息时，通过 WebSocket 向前端推送刷新信号，前端收到信号后主动拉取最新数据。
+**业务问题**：Agent 与前端之间需要实时消息推送能力。当 Agent 产生新消息时，需要通知前端刷新数据，而不是让前端轮询。
 
-当前实现将实时连接管理和广播能力归属到 `realtime` 边界（详见 `realtime` spec）。API 侧只负责暴露 WebSocket endpoint 与 HTTP broadcast route；MCP 等非 API 入口可以直接依赖 realtime 广播刷新信号，避免依赖 API 内部模块。
+**核心职责**：
+- 暴露 WebSocket endpoint 供前端连接，接收刷新信号
+- 暴露 HTTP broadcast route 供 API 调用方触发刷新信号
+- 连接管理、房间模型、广播机制由 realtime 模块提供（详见 `realtime` spec）
 
 **技术选择**：
 - 技术栈：FastAPI 原生 WebSocket
@@ -47,74 +51,51 @@ WebSocket 后端模块为 Agent 与前端之间提供实时消息推送能力。
 
 ## Scope
 
-**当前阶段（MVP）**：
-- 暴露 WebSocket endpoint 供前端连接
-- 暴露 HTTP broadcast route 供 API 调用方触发刷新信号
-- 连接管理、房间模型、广播机制由 realtime 模块提供（详见 `realtime` spec）
+### 范围内
 
-**不在范围内**：
-- 认证与授权机制
-- 消息确认与离线补发
-- 与 core 层的自动集成
-- 直接推送完整 message payload
+- WebSocket endpoint：前端连接入口
+- HTTP broadcast route：触发刷新信号的 API
+- 错误消息格式：WebSocket 错误的 JSON 结构
+- 异常体系：API 侧的异常兼容性导出
 
-## Core Behavior
+### 范围外
 
-### 连接生命周期
-
-1. 前端发起 WebSocket 连接到 `/api/v1/ws/group_chat/{group_chat_id}`
-2. 后端接受连接，将其加入 realtime 对应房间（房间模型详见 `realtime` spec）
-3. 连接保持活跃，服务端定期发送心跳
-4. 连接断开时（主动关闭或网络异常），从房间移除
-
-### 心跳机制（ping-pong）
-
-- 服务端每 30 秒向客户端发送 `{"type": "ping"}` JSON 消息
-- 发送后等待 10 秒超时，若超时则主动断开连接
-- 客户端无需回复 pong，服务端仅以发送是否超时作为连接存活判断
-
-### 连接错误处理
-
-- `WebSocketError`：发送错误消息到客户端，**不关闭连接**
-- 通用 `Exception`：转换为 `WebSocketError` 发送错误消息，**不关闭连接**
-- `WebSocketDisconnect`：触发断开清理（从房间移除连接）
-
-以上均在 `finally` 块中调用 `manager.disconnect` 确保清理。
-
-### 边界场景
-
-- **group_chat_id 格式校验**：endpoint 接受任意字符串，不做 UUID 等格式校验；不存在的 group_chat_id 会创建空房间
-- **同一客户端重复连接**：允许同一客户端对同一 group_chat_id 建立多个连接（多 Tab 场景），每个连接独立管理
-- **服务端重启后重连**：连接状态仅存于内存，重启后所有连接丢失，前端需自行重连
-- **连接数上限**：当前无连接数上限，未来可扩展
-
-### 刷新信号流
-
-```
-Agent/MCP/API 入口产生群聊变更
-  → 调用 realtime 广播 refresh signal
-  → realtime 广播到房间内所有连接
-  → 前端收到刷新信号
-  → 前端调用 GET /api/v1/group_chats/{group_chat_id}/messages 拉取最新消息
-```
+- 连接管理、房间模型、广播机制的内部实现（见 `realtime` spec）
+- 认证与授权机制（未来阶段）
+- 消息确认与离线补发机制（未来阶段）
+- 与 core 层的自动集成方式（未来阶段）
+- 前端 WebSocket 客户端实现细节
 
 ## Technical Contract
 
-### WebSocket 端点
+### API 端点总览
+
+<key_function last_update="2026-06-18T10:34:37+08:00">
+- agents_hub/api/websocket/endpoint.py
+  - endpoint.websocket_endpoint:34
+- agents_hub/api/routes/websocket.py
+  - websocket.broadcast_message:20
+</key_function>
+
+| 方法 | 路径 | 说明 | 路由处理函数 |
+|------|------|------|-------------|
+| WebSocket | `/api/v1/ws/group_chat/{group_chat_id}` | WebSocket 连接入口 | `websocket_endpoint` |
+| POST | `/api/v1/ws/broadcast/{group_chat_id}` | 触发刷新信号广播 | `broadcast_message` |
+
+**WebSocket 端点详情**：
 
 | 项目 | 说明 |
 |------|------|
-| 路径 | `/api/v1/ws/group_chat/{group_chat_id}` |
-| 协议 | WebSocket (ws://) |
-| 路径参数 | `group_chat_id` - 群聊 ID |
+| 路径参数 | `group_chat_id` - 群聊 ID（任意字符串，不做 UUID 格式校验） |
 | 连接成功 | 返回 101 状态码，升级为 WebSocket 协议 |
+| 心跳 | 服务端每 30 秒发送 `{"type": "ping"}`，超时 10 秒断开 |
+| 多连接 | 允许同一客户端对同一 group_chat_id 建立多个连接（多 Tab 场景） |
+| 重启影响 | 连接状态仅存于内存，重启后所有连接丢失，前端需自行重连 |
 
-### 广播 API
+**广播 API 详情**：
 
 | 项目 | 说明 |
 |------|------|
-| 方法 | POST |
-| 路径 | `/api/v1/ws/broadcast/{group_chat_id}` |
 | 路径参数 | `group_chat_id` - 群聊 ID |
 | 请求体 | `RefreshSignal` schema |
 | 响应体 | `BroadcastResponse` schema |
@@ -169,27 +150,43 @@ WebSocket 错误通过连接发送 JSON：
 | WebSocketBroadcastError | 广播发送失败 |
 | WebSocketValidationError | 消息验证错误 |
 
+## Design Rationale
+
+**为什么将连接管理和广播能力归属到 realtime 边界？**
+- API 侧只负责暴露 endpoint 和 route，保持职责单一
+- realtime 模块提供通用的实时能力，MCP 等非 API 入口可以直接依赖，避免依赖 API 内部模块
+- 便于未来扩展其他实时协议（如 SSE、gRPC streaming）
+
+**为什么推送刷新信号而不是完整消息？**
+- 前端已有 REST API 获取消息列表，WebSocket 只需通知"有新数据"
+- 避免 WebSocket 和 REST API 之间的数据一致性问题
+- 前端可以按需拉取，支持分页、过滤等已有能力
+
+**为什么允许同一客户端建立多个连接？**
+- 支持多 Tab 场景，每个 Tab 独立接收刷新信号
+- 每个连接独立管理，断开时不影响其他连接
+
+**为什么连接状态仅存于内存？**
+- MVP 阶段简化实现，避免引入外部存储依赖
+- 重启后前端自动重连即可恢复，用户体验可接受
+- 未来如需持久化，可引入 Redis 等外部存储
+
+**已知限制**：
+- 无连接数上限，高并发场景可能需要扩展
+- 无认证机制，仅适用于本地开发测试
+- 无消息确认与离线补发，断线期间的消息会丢失
+
 ## Interaction / UX Notes
 
 - 前端收到刷新信号后，应调用对应的 REST API 拉取最新数据
 - 前端负责断线重连，后端不感知重连过程
 - MVP 阶段无认证，任何客户端可连接任何房间
 
-## Acceptance Notes
+## Out of Scope
 
-1. 前端能通过 `/api/v1/ws/group_chat/{group_chat_id}` 建立 WebSocket 连接并收到刷新信号
-2. 广播 API 路径 `/api/v1/ws/broadcast/{group_chat_id}` 可正常触发刷新信号
-3. 服务端每 30 秒发送 ping，超时 10 秒后断开连接
-4. `WebSocketError` 和通用 `Exception` 发送错误消息后不关闭连接
-5. 连接断开后房间状态正确清理（由 realtime 模块保证）
+本 spec 不覆盖以下内容，请参考相应文档：
 
-## Out of Spec
-
-以下内容不在本 spec 中长期维护：
-
-1. 连接管理、房间模型、广播机制的内部实现（见 `realtime` spec）
-2. 认证与授权机制（未来阶段）
-3. 消息确认与离线补发机制（未来阶段）
-4. 与 core 层的自动集成方式（未来阶段）
-5. 前端 WebSocket 客户端实现细节
-6. 具体的重连策略参数（指数退避倍数、最大重试次数等）
+- **realtime 模块**：[2026-06-06-realtime.md](2026-06-06-realtime.md) - 连接管理、房间模型、广播机制的内部实现
+- **前端 WebSocket 客户端**：[2026-06-06-frontend-core.md](2026-06-06-frontend-core.md) - 前端连接、重连、消息处理实现
+- **认证机制**：未来阶段实现，当前 MVP 不包含
+- **消息确认与离线补发**：未来阶段实现，当前 MVP 不包含

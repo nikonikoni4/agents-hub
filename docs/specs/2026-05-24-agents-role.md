@@ -1,8 +1,8 @@
 ---
-version: 1.6
+version: 2.0
 created_at: 2026-05-24
-updated_at: 2026-06-06
-last_updated: 修正 PATCH /{name} 端点说明，明确 name 为路径参数不在 request body 中，RoleUpdateRequest 仅含 avatar/abilities/description
+updated_at: 2026-06-18
+last_updated: 按照新 spec 规则重构：移除执行细节，添加 key_function 标签和 Design Rationale
 abstract: roles 角色配置模块的正式规格，定义角色生命周期管理、配置数据结构、头像引用机制、Skill 管理和 HTTP API 契约
 id: spec-roles
 title: Roles 角色配置模块规格
@@ -35,25 +35,28 @@ contract_refs:
 | 1.4 | role.json 不再保存 skills；Skill 以 work_root/skills 为启用状态；创建角色自动初始化固定 agents-hub MCP；权限和原生配置编辑暂不落地 |
 | 1.5 | 新增 Roles API 层规格：路由端点、Request/Response Schemas、Service 层契约 |
 | 1.6 | 修正 PATCH /{name} 端点说明：name 为路径参数不在 body 中，仅支持更新 avatar/abilities/description |
+| 2.0 | 按照新 spec 规则重构：移除执行细节，添加 key_function 标签和 Design Rationale |
 
 ---
 
 ## Overview
 
-roles 模块是 agents-hub 系统的**角色管理层**，负责 AI Agent 角色的全生命周期管理，包括创建、配置、查询和删除。
+**业务问题**：agents-hub 系统需要一个统一的角色管理层，用于管理 AI Agent 角色的配置和生命周期。
 
-模块分层：
-- **领域层**（`agents_hub/roles/`）：RoleManager、Role、数据模型、异常定义
-- **API 层**（`agents_hub/api/`）：路由、Request/Response Schemas、Service 协调层
+**核心职责**：
+- 角色的创建、删除、查询、列表
+- 角色配置的持久化（role.json）
+- Skill 的引用管理
+- 头像文件的引用管理
+- 构造给 agent_bridge 的 RoleConfig
+- 通过 HTTP API 暴露上述能力
 
-模块定位：
-- **负责**：角色 CRUD、配置持久化、Skill 管理、头像引用管理、创建角色时初始化固定 agents-hub MCP、构造给 agent_bridge 的 RoleConfig、通过 HTTP API 暴露上述能力
-- **不负责**：用户自定义 MCP 管理、权限策略落地、原生平台配置编辑、消息传递、prompt 构造、多 agent 协调、群聊管理、任务调度
-
-核心设计原则：
-- **SSOT**：`role.json` 是角色数据的唯一来源
-- **配置分层**：`role.json`（业务配置，面向用户）→ `RoleConfig`（系统配置，面向 agent_bridge）
-- **角色发现**：扫描 `local_data/agents/*/role.json`，不维护额外索引
+**不负责**：
+- 用户自定义 MCP 管理
+- 权限策略落地
+- 原生平台配置编辑
+- 消息传递、prompt 构造
+- 多 agent 协调、群聊管理、任务调度
 
 ## Scope
 
@@ -63,7 +66,7 @@ roles 模块是 agents-hub 系统的**角色管理层**，负责 AI Agent 角色
 - 角色元信息管理（名称、头像、能力标签、类型、群聊范围）
 - 头像文件引用管理（头像文件统一存放在 `assets/` 目录）
 - Skill 的添加、移除、列表
-- 平台配置初始化（Claude / Codex）
+- 平台配置初始化（Claude / Codex / OpenCode）
 - 构造给 agent_bridge 的 RoleConfig
 
 ### 范围外
@@ -76,92 +79,65 @@ roles 模块是 agents-hub 系统的**角色管理层**，负责 AI Agent 角色
 - 权限配置语义化操作暂不落地，等待 Docker / 外部沙箱方案明确
 - 不提供 settings.json / config.toml 原生编辑接口
 
-## Core Behavior
-
-### 角色与平台绑定
-
-一个角色绑定一个 platform（`claude` 或 `codex`），一对一关系。需要多平台支持时，创建多个角色。
-
-### 配置分层
-
-| 层 | 用途 | 存储位置 | 消费方 |
-|---|------|----------|--------|
-| role.json | 业务配置 | `local_data/agents/<name>/role.json` | 前端、用户 |
-| RoleConfig | 系统内部配置 | 运行时由 role.json + 目录结构派生 | agent_bridge |
-
-`RoleConfig` 不包含 `system_prompt` 和 `skills`——这些由 CLI 从角色目录自动加载。
-
-### system_prompt 存储
-
-不存入 `role.json`，直接写入角色的平台配置文件：
-- Claude：`work_root/CLAUDE.md`
-- Codex：`work_root/AGENTS.md`
-
-### 头像管理机制
-
-头像采用**引用模式**：所有头像文件统一存放在 `local_data/agents/assets/` 目录，角色只在 `role.json` 中存储文件名引用。
-
-路径规则：
-- 头像文件：`local_data/agents/assets/`（预设 + 上传）
-- 角色目录：`local_data/agents/<role_name>/`，含 `role.json` 和 `work_root/`
-- 全局 Skill 库：`local_data/skills/`
-
-行为规则：
-- `avatar` 字段为 `Optional[str]`，存储文件名（如 `"avatar_01.png"`），可为 `None`
-- 更新头像只修改 `role.json` 中的文件名引用，不涉及文件复制或移动
-- 可用头像列表通过扫描 `assets/` 目录获取
-
-### Skill 管理机制
-
-Skill 采用**引用优先模式**：全局 `local_data/skills/` 是 Skill 内容的 SSOT，角色的 `work_root/skills/<skill_id>` 是平台可见的启用入口。
-
-行为规则：
-- 添加 skill 时，优先在角色 `work_root/skills/` 下创建指向全局 skill 目录的 symlink
-- 如果 symlink 创建失败，降级复制整个 skill 目录
-- `role.json` 不保存 skills 字段
-- 列出 skill 时扫描 `work_root/skills/`
-- 移除 skill 时只删除角色下的入口，不影响全局 skill
-
-### 角色创建初始化
-
-创建角色时的目录初始化顺序：
-1. 验证角色名称合法性（见下方命名规则）
-2. 检查名称与已有角色是否存在互为前缀冲突
-3. 创建 `role_dir`、`work_root`、`work_root/skills` 目录
-4. 根据 platform 复制平台配置（从 `~/.claude` 或 `~/.codex`）
-5. 写入 `role.json`
-6. 若初始化失败，自动清理已创建的目录（回滚）
-
-### 角色命名规则
-
-角色名称需同时满足以下两层校验：
-
-**基础校验**：
-- 非空
-- 不以 `.` 开头
-- 不以空格结尾
-- 不包含空格
-- 不包含 Windows 禁止字符 `\/:*?"<>|`
-- 不是 Windows 保留名（CON、PRN、AUX、NUL、COM1-9、LPT1-9）
-
-**前缀冲突校验**：
-
-新名称 A 与任意已有名称 B 不能互为前缀，即不能满足 `A.startswith(B)` 或 `B.startswith(A)`。
-
-目的：避免群聊中 `@mention` 解析歧义。例如 `nico` 与 `nico_1` 互为前缀，`@nico` 会误匹配 `@nico_1`，因此禁止。
-
-| 新名称 | 已有名称 | 结果 | 原因 |
-|--------|----------|------|------|
-| `nico_1` | `nico` | 冲突 | `nico` 是 `nico_1` 的前缀 |
-| `nico` | `nico_1` | 冲突 | 同上 |
-| `1_nico` | `nico` | 不冲突 | 互不为前缀 |
-| `alice` | `nico` | 不冲突 | 互不为前缀 |
-
-### 角色名称更新
-
-更新角色名称时，同步修改 `role.json` 中的 `name` 字段和角色目录名，保持二者一致。新名称同样需要通过基础校验和前缀冲突校验。
-
 ## Technical Contract
+
+### 领域层
+
+<key_function last_update="2026-06-18T10:00:00+08:00">
+- agents_hub/roles/role_manager.py
+  - role_manager.RoleManager.list_roles:126
+  - role_manager.RoleManager.get_role:191
+  - role_manager.RoleManager.create_role:246
+  - role_manager.RoleManager.delete_role:343
+  - role_manager.RoleManager.list_avatars:172
+</key_function>
+
+**对外接口**：
+
+| 接口 | 说明 | 约束 |
+|------|------|------|
+| `RoleManager.list_roles()` | 列出所有角色 | 返回 `List[RoleInfo]`，损坏的 role.json 被跳过 |
+| `RoleManager.get_role(name)` | 按名称获取角色实例 | 名称不合法抛 `ValueError`，不存在抛 `RoleNotFoundError` |
+| `RoleManager.create_role(...)` | 创建新角色 | 名称已存在抛 `RoleAlreadyExistsError`，平台配置不存在抛 `PlatformConfigNotFoundError` |
+| `RoleManager.delete_role(name)` | 删除角色及其目录 | 不存在抛 `RoleNotFoundError` |
+| `RoleManager.list_avatars()` | 列出可用头像文件名 | 扫描 `assets/` 目录 |
+
+### API 层
+
+<key_function last_update="2026-06-18T10:00:00+08:00">
+- agents_hub/api/routes/roles.py
+  - roles.list_roles:30
+  - roles.get_role:67
+  - roles.create_role:74
+  - roles.update_role:91
+  - roles.delete_role:81
+  - roles.list_avatars:37
+  - roles.add_role_skill:105
+  - roles.remove_role_skill:116
+</key_function>
+
+**API 端点**：
+
+所有端点挂在 `/roles` 前缀下。
+
+| 方法 | 路径 | 说明 | 成功状态码 |
+|------|------|------|-----------|
+| GET | `/roles` | 列出所有角色 | 200 |
+| GET | `/roles/{name}` | 获取单个角色 | 200 |
+| POST | `/roles` | 创建角色 | 201 |
+| PATCH | `/roles/{name}` | 更新角色信息（`name` 为路径参数，不在 request body 中；仅支持更新 avatar、abilities、description） | 200 |
+| DELETE | `/roles/{name}` | 删除角色 | 200 |
+| GET | `/roles/avatars` | 列出可用头像文件名 | 200 |
+| GET | `/roles/avatars/files/{filename}` | 获取头像文件（静态文件服务） | 200 |
+| GET | `/roles/{name}/skills` | 列出角色已启用的 skills | 200 |
+| POST | `/roles/{name}/skills` | 为角色添加 skill | 201 |
+| DELETE | `/roles/{name}/skills/{skill_id}` | 移除角色的 skill | 200 |
+
+**路由约束**：
+- 静态路径（`/avatars`）必须在动态路径（`/{name}`）之前定义，避免被抢先匹配
+- 每个端点必须声明 `response_model`
+- 所有异常由全局异常处理器统一处理，路由层禁止 try/except
+- 领域模型必须通过 schema 的 `from_domain` 转换后返回，禁止直接返回领域对象
 
 ### 数据结构
 
@@ -195,7 +171,23 @@ Skill 采用**引用优先模式**：全局 `local_data/skills/` 是 Skill 内�
 | TEAM_MEMBER | 团队成员角色 |
 | SYSTEM | 系统角色，由系统预置的特殊角色 |
 
-### role.json 字段定义
+#### RoleConfig（角色运行时配置）
+
+构造给 agent_bridge 的运行时配置，由 `RoleManager.get_role()` 返回。
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `name` | str | 是 | 角色名称，用于标识和事件填充 |
+| `platform` | AgentPlatform | 是 | 目标平台类型 |
+| `description` | str? | 否 | 角色职责描述 |
+| `work_root` | str? | 否 | 角色工作目录路径，注入 `CLAUDE_CONFIG_DIR` 或 `CODEX_HOME` 环境变量 |
+| `role_type` | RoleType | 是 | 角色类型（leader / team_member），默认 team_member |
+| `bare` | bool | 否 | Claude CLI 极简模式：跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现 |
+| `disabled_tools` | list[str]? | 否 | 禁用的工具列表（通过 CLI --disallowedTools 传递） |
+
+**注**：`system_prompt` 和 `skills` 不在 RoleConfig 中——由 CLI 从角色目录自动加载（Claude 从 `CLAUDE.md`，Codex 从 `AGENTS.md`；skills 从 `work_root/skills/`）。
+
+#### role.json 字段定义
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -208,79 +200,7 @@ Skill 采用**引用优先模式**：全局 `local_data/skills/` 是 Skill 内�
 | scope | list[str] \| null | 否 | 所属群聊列表 |
 | disabled_tools | list[str] | 否 | 禁用的工具列表 |
 
-### 异常类型
-
-| 异常 | 触发场景 |
-|------|----------|
-| RoleNotFoundError | get_role 时角色不存在 |
-| RoleAlreadyExistsError | create_role 时名称已存在 |
-| ValueError | 名称不合法（基础校验失败）或与已有角色互为前缀冲突 |
-| PlatformConfigNotFoundError | 平台源配置目录不存在（~/.claude 或 ~/.codex） |
-| SkillNotFoundError | add/remove skill 时 skill 不存在 |
-| SkillAlreadyExistsError | add_skill 时 skill 已存在于角色中 |
-
-### 领域组件职责划分
-
-| 组件 | 职责 |
-|------|------|
-| RoleManager | 角色生命周期管理（创建、删除、查询、列表）、名称验证、可用头像发现 |
-| Role | 单个角色的配置读写、Skill 管理、构造给 agent_bridge 的 RoleConfig |
-
-### 调用流程
-
-用户选择角色 → 通过 RoleManager 加载角色实例 → 构造 RoleConfig → 传入 agent_bridge 执行
-
-### API 层
-
-#### 架构分层
-
-```
-route → service → manager
-```
-
-- **route**：HTTP 入口，只做参数接收和响应转换，不写业务逻辑和 try/except
-- **service**：业务协调，编排 manager 调用，处理 schema ↔ 领域模型转换
-- **manager**：领域逻辑（RoleManager / Role）
-
-路由通过 FastAPI `Depends` 注入 Service 实例，禁止在路由中直接实例化。
-
-#### API 端点
-
-所有端点挂在 `/roles` 前缀下。
-
-**角色 CRUD**
-
-| 方法 | 路径 | 说明 | 成功状态码 |
-|------|------|------|-----------|
-| GET | `/roles` | 列出所有角色 | 200 |
-| GET | `/roles/{name}` | 获取单个角色 | 200 |
-| POST | `/roles` | 创建角色 | 201 |
-| PATCH | `/roles/{name}` | 更新角色信息（`name` 为路径参数，不在 request body 中；仅支持更新 avatar、abilities、description） | 200 |
-| DELETE | `/roles/{name}` | 删除角色 | 200 |
-
-**头像查询**
-
-| 方法 | 路径 | 说明 | 成功状态码 |
-|------|------|------|-----------|
-| GET | `/roles/avatars` | 列出可用头像文件名 | 200 |
-| GET | `/roles/avatars/{filename}` | 获取头像文件（静态文件服务），前端通过 `buildAvatarUrl(filename)` 构建此 URL | 200 |
-
-**角色 Skill 管理**
-
-| 方法 | 路径 | 说明 | 成功状态码 |
-|------|------|------|-----------|
-| GET | `/roles/{name}/skills` | 列出角色已启用的 skills | 200 |
-| POST | `/roles/{name}/skills` | 为角色添加 skill | 201 |
-| DELETE | `/roles/{name}/skills/{skill_id}` | 移除角色的 skill | 200 |
-
-#### 路由约束
-
-- 静态路径（`/avatars`）必须在动态路径（`/{name}`）之前定义，避免被抢先匹配
-- 每个端点必须声明 `response_model`
-- 所有异常由全局异常处理器统一处理，路由层禁止 try/except
-- 领域模型必须通过 schema 的 `from_domain` 转换后返回，禁止直接返回领域对象
-
-#### Request Schemas
+### Request Schemas
 
 **RoleCreateRequest**
 
@@ -311,7 +231,7 @@ route → service → manager
 |------|------|------|------|
 | skill_id | str | 是 | 要添加的 skill 标识 |
 
-#### Response Schemas
+### Response Schemas
 
 **RoleResponse**
 
@@ -343,7 +263,18 @@ route → service → manager
 
 统一返回 `{"message": "..."}` 格式的成功提示。
 
-#### API 异常映射
+### 异常类型
+
+| 异常 | 触发场景 |
+|------|----------|
+| RoleNotFoundError | get_role 时角色不存在 |
+| RoleAlreadyExistsError | create_role 时名称已存在 |
+| ValueError | 名称不合法（基础校验失败）或与已有角色互为前缀冲突 |
+| PlatformConfigNotFoundError | 平台源配置目录不存在（~/.claude 或 ~/.codex） |
+| SkillNotFoundError | add/remove skill 时 skill 不存在 |
+| SkillAlreadyExistsError | add_skill 时 skill 已存在于角色中 |
+
+### API 异常映射
 
 领域异常由全局异常处理器统一转换为 HTTP 错误响应，路由层不感知异常：
 
@@ -357,26 +288,80 @@ route → service → manager
 | SkillAlreadyExistsError | 409 | Skill 已存在于角色中 |
 | ValidationError | 422 | 通用校验失败（如 Skill 元数据无效） |
 
-## Acceptance Notes
+## Design Rationale
 
-1. 能创建角色，目录结构和 role.json 正确生成
-2. 能列出所有角色，损坏的 role.json 被跳过
-3. 能按名称加载角色并构造 RoleConfig
-4. 能添加/移除 skill，以 symlink 优先模式管理 work_root/skills/ 目录
-5. 能更新角色基本信息（名称、头像引用、能力标签）
-6. 能列出 `assets/` 目录下所有可用头像
-7. 创建角色失败时自动回滚已创建的目录
-8. API 端点返回的 RoleResponse 字段与 RoleInfo 领域模型一致
-9. POST/PATCH 请求体校验失败时返回 422
-10. 领域异常正确映射为对应的 HTTP 状态码
-11. `/roles/avatars` 静态路径不被 `/{name}` 动态路径抢先匹配
+### 为什么采用配置分层设计？
 
-## Out of Spec
+**设计**：`role.json`（业务配置）→ `RoleConfig`（系统配置）
 
-- 头像文件的实际上传、存储和图片处理
-- type 字段（leader/team_member）的调度逻辑
-- scope 字段的群聊绑定逻辑
-- abilities 的匹配调度
-- 多 agent 协调与消息传递
-- 权限配置语义化操作暂不落地，等待 Docker / 外部沙箱方案明确
-- 不提供 settings.json / config.toml 原生编辑接口
+**理由**：
+- `role.json` 面向用户和前端，存储业务可见的配置
+- `RoleConfig` 面向 agent_bridge，包含系统内部需要的配置
+- `system_prompt` 和 `skills` 不存入 `role.json`，由 CLI 从角色目录自动加载
+- 分离关注点，避免配置文件臃肿
+
+**约束**：`RoleConfig` 不包含 `system_prompt` 和 `skills`
+
+### 为什么头像采用引用模式？
+
+**设计**：所有头像文件统一存放在 `assets/` 目录，角色只存储文件名引用
+
+**理由**：
+- 避免头像文件重复存储
+- 便于头像文件的统一管理
+- 角色配置文件保持轻量
+
+**约束**：MVP 阶段仅支持从 `assets/` 选择预设头像，不支持上传
+
+### 为什么 Skill 采用引用优先模式？
+
+**设计**：全局 `local_data/skills/` 是 SSOT，角色的 `work_root/skills/<skill_id>` 是启用入口
+
+**理由**：
+- Skill 内容集中管理，避免重复
+- 角色通过 symlink 或复制引用全局 Skill
+- 移除角色 Skill 不影响全局 Skill 库
+
+**约束**：优先使用 symlink，失败时降级复制
+
+### 为什么需要名称前缀冲突校验？
+
+**设计**：新名称 A 与已有名称 B 不能互为前缀
+
+**理由**：
+- 避免群聊中 `@mention` 解析歧义
+- 例如 `nico` 与 `nico_1` 互为前缀，`@nico` 会误匹配 `@nico_1`
+
+**约束**：创建和更新角色时都必须校验
+
+### 为什么创建角色时自动初始化 agents-hub MCP？
+
+**设计**：创建角色时自动配置 agents-hub MCP 服务
+
+**理由**：
+- 每个角色需要通过 MCP 与 agents-hub 交互
+- 自动初始化减少手动配置步骤
+- 确保所有角色都有统一的 MCP 配置
+
+**约束**：MCP URL 由 `config.mcp_port` 决定
+
+### 相关 ADR
+
+- 暂无
+
+## Out of Scope
+
+本 spec 不覆盖以下内容，请参考相应文档：
+
+- **消息传递与会话管理**：见 `docs/specs/2026-05-31-core-communication.md`
+- **群聊管理**：见 `docs/specs/2026-06-03-group-chat-api.md`
+- **多 agent 协调与任务调度**：待定义
+
+---
+
+**以下内容已移至 Flow 文档**（如需要了解实现细节，请参考相应的 Flow 文档）：
+- 角色创建的详细初始化步骤
+- Skill 管理的具体实现（symlink/复制逻辑）
+- 头像管理的详细路径规则
+- system_prompt 的存储位置
+- 角色命名规则的详细校验逻辑

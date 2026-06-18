@@ -17,10 +17,10 @@
  - 内容摘要：core/foundation 层规格，定义系统共享的基础枚举、AgentMessage 结构、渲染契约、异常体系、Token 工具函数和 GroupChatPaths 路径集中管理（含 metadata、session 状态字段）
 
 ## core-communication
- - updated_at : 2026-06-03
+ - updated_at : 2026-06-18
  - path: `docs/specs/2026-05-31-core-communication.md`
  - 触发规则：当设计、修改或扩展消息路由、AgentCall 生命周期、调用清理策略或任务管理时阅读
- - 内容摘要：core/communication 层规格，定义消息路由机制、AgentCall 状态机、显式回复闭环、超时检测、自动清理策略、持久化机制和 TaskManager 任务管理
+ - 内容摘要：core/communication 层规格，定义消息路由机制（MessageRouter）、AgentCall 生命周期管理（状态机、显式回复闭环、清理策略）、TaskManager 任务管理和跨层依赖关系
 
 ## core-context
  - updated_at : 2026-06-04
@@ -83,10 +83,10 @@
  - 内容摘要：config 模块规格，定义系统配置管理（三级路径优先级策略）、配置持久化到 YAML、AgentPlatform/RoleType 枚举、CLI 路径映射（宿主机与 Docker）、User 名称后缀处理规则
 
 ## message-flow-and-persistence
- - updated_at : 2026-06-05
+ - updated_at : 2026-06-18
  - path: `docs/specs/2026-06-05-message-flow-and-persistence.md`
  - 触发规则：当设计、修改消息传递流程、MessageRouter 职责、GroupChat.send_message_to_agent() 方法或消息持久化策略时阅读
- - 内容摘要：消息流转与持久化规格，定义 user/agent 之间的消息传递路径、MessageRouter 职责边界（纯投递层，不保存消息）、GroupChat.send_message_to_agent() 统一包装投递和保存、所有消息都保存到群聊历史的规则
+ - 内容摘要：消息流转与持久化规格，定义 MessageRouter 职责边界（纯投递层，不保存消息）、GroupChat.send_message_to_agent() 统一包装投递和保存的行为契约、群聊历史保存规则、MCP 工具消息流转契约
 
 ## frontend-core
  - updated_at : 2026-06-06
@@ -101,10 +101,10 @@
  - 内容摘要：Agent 提示词系统规格，定义发送给 Agent 的所有提示词来源、注入机制、渲染规则和平台标识
 
 ## frontend-features
- - updated_at : 2026-06-06
+ - updated_at : 2026-06-18
  - path: `docs/specs/2026-06-06-frontend-features.md`
- - 触发规则：当设计、修改或扩展前端 features 层（chat/session/roles/skills）时阅读，包括模块职责划分、状态管理模式、模块间通信规则或 shared 层定位
- - 内容摘要：前端功能层规格，定义 chat/session/roles/skills 四个业务模块的职责边界、Zustand 独立 store 状态管理模式、跨 feature 通信规则（store 订阅/props/core 中转）、shared 层分层职责（types 定义契约、adapters 转换数据、components 提供复用）
+ - 触发规则：当设计、修改或扩展前端 features 层（chat/session/roles/skills/single-chat/chat-history）时阅读，包括模块职责划分、状态管理模式、模块间通信规则或 shared 层定位
+ - 内容摘要：前端功能层规格，定义六个业务模块（chat/session/roles/skills/single-chat/chat-history）的职责边界、Zustand 独立 store 状态管理模式、跨 feature 通信规则（store 订阅/props/core 中转）、shared 层分层职责（types 定义契约、adapters 转换数据、components 提供复用）、adapter 层纯函数约束和类型转发机制
 
 ## pinned-messages
  - updated_at : 2026-06-07

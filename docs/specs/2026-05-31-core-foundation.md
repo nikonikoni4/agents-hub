@@ -1,25 +1,9 @@
 ---
-version: 1.3
+version: 1.4
 created_at: 2026-05-31
-updated_at: 2026-06-04
-last_updated: 对齐现有路径集中管理中的 metadata 文件和 session 状态字段
+updated_at: 2026-06-18
+last_updated: 重构 spec 结构，添加 Design Rationale，更新 Technical Contract
 abstract: core/foundation 层的正式规格，定义系统共享的基础数据模型、消息格式、渲染契约和异常体系
-id: spec-core-foundation
-title: Core Foundation 层规格
-status: draft
-module: core/foundation
-sourc_spec: null
-related_plan: null
-code_scope:
-  - agents_hub/core/foundation/
-contract_refs:
-  - agents_hub/core/foundation/models.py
-  - agents_hub/core/foundation/message.py
-  - agents_hub/core/foundation/renderer.py
-  - agents_hub/core/foundation/exceptions.py
-  - agents_hub/core/foundation/constants.py
-  - agents_hub/core/foundation/token.py
-  - agents_hub/core/foundation/paths.py
 ---
 
 # Core Foundation 层规格
@@ -32,36 +16,45 @@ contract_refs:
 | 1.1 | 新增 TaskStatus/TaskListStatus 枚举、token.py 工具函数 |
 | 1.2 | 新增 paths.py 路径集中管理模块 |
 | 1.3 | 对齐现有路径集中管理中的 metadata 文件和 session 状态字段 |
+| 1.4 | 重构 spec 结构，添加 Design Rationale，更新 Technical Contract |
 
 ## Overview
 
-foundation 是 core 的**最底层**，零外部依赖。它定义了整个 core 层共享的基础数据模型、消息格式、渲染契约和异常体系。其他所有层（communication、context、agent、orchestration）都依赖 foundation，但 foundation 不依赖任何其他层。
+**业务问题**：在多 Agent 协作系统中，不同层级的模块需要共享一套统一的"公共语言"——包括数据结构、枚举、常量、异常体系。如果每个模块自行定义这些基础元素，会导致类型不一致、数据转换复杂、异常处理混乱。
 
-**定位**：foundation 是 core 层的"公共语言"——所有跨层传递的数据结构、枚举、常量都在此定义。
+**核心职责**：foundation 层是 core 的最底层，零外部依赖，提供：
+1. **统一的数据词汇表**：定义所有跨层传递的枚举类型（会话类型、消息类型、调用状态、群聊类型、任务状态）
+2. **消息格式契约**：定义 Agent 间消息的标准数据结构（AgentMessage）
+3. **渲染边界契约**：定义消息在三个边界（入口、LLM 出口、UI 出口）的渲染规则
+4. **统一异常体系**：提供统一的异常基类和各模块专属异常
+5. **系统常量和工具函数**：提供路径管理、Token 生成等基础设施
 
 ## Scope
 
 ### 范围内
 
-- 基础枚举类型（会话类型、消息类型、调用状态、群聊类型）
-- Agent 间消息的数据结构定义
-- 消息渲染的三个边界契约（入口、LLM 出口、UI 出口）
-- 异常体系（统一基类 + 模块专属异常）
-- 系统常量和持久化格式定义
+- 基础枚举类型（SessionType、MessageType、CallStatus、GroupChatType、TaskStatus、TaskListStatus）
+- Agent 间消息的数据结构定义（AgentMessage）
+- 消息渲染的三个边界契约（parse_chat_input、render_for_llm、render_for_chat）
+- 异常体系（统一基类 AgentsHubError + 模块专属异常）
+- 系统常量（MAX_TOKEN、LOCAL_DATA_PATH）
+- 路径集中管理（GroupChatPaths 单例）
+- Token 工具函数（generate_token、redact_token）
+- XML 标签常量（Tag 类）
 
 ### 范围外
 
-- 具体的持久化实现（属于 context 层）
-- 消息路由逻辑（属于 communication 层）
-- Agent 执行逻辑（属于 agent 层）
-- AgentCall 数据模型和生命周期管理（属于 communication 层，定义在 `communication/agent_call.py`）
-- GroupChatRuntime / GroupChatRepository 等 context 层内部持有关系（属于 context 层）
+- 具体的持久化实现 → 参见 `docs/specs/2026-05-31-core-context.md`（context 层的 GroupChatRepository）
+- 消息路由逻辑 → 参见 `docs/specs/2026-05-31-core-communication.md`（communication 层的 MessageRouter）
+- Agent 执行逻辑 → 参见 `docs/specs/2026-05-31-core-agent-orchestration.md`（agent 层的 Agent 和 agent_bridge）
+- AgentCall 数据模型和生命周期管理 → 参见 `docs/specs/2026-05-31-core-communication.md`（communication 层的 AgentCall）
+- GroupChatRuntime / GroupChatRepository 等 context 层内部持有关系 → 参见 `docs/specs/2026-05-31-core-context.md`
 
-## Core Behavior
+## Technical Contract
 
 ### 枚举模型
 
-foundation 定义四个核心枚举，构成系统的状态词汇表：
+foundation 定义六个核心枚举，构成系统的状态词汇表：
 
 | 枚举 | 用途 | 值域 |
 |------|------|------|
@@ -77,7 +70,7 @@ foundation 定义四个核心枚举，构成系统的状态词汇表：
 - 终态不可逆：到达 COMPLETED / FAILED / TIMEOUT 后不再变更
 - 超时判断基于 elapsed > timeout_seconds，仅对非终态生效
 
-### 消息格式（AgentMessage）
+### 消息数据模型（AgentMessage）
 
 Agent 间传递的消息结构，核心字段：
 
@@ -94,7 +87,14 @@ Agent 间传递的消息结构，核心字段：
 
 **关键约束**：`content` 在 Agent 之间投递时始终是原始内容，渲染只发生在边界处（见渲染契约）。
 
-### 渲染契约
+### 消息渲染契约
+
+<key_function last_update="2026-06-18T14:23:00+08:00">
+- agents_hub/core/foundation/renderer.py
+  - renderer.parse_chat_input:15
+  - renderer.render_for_llm:42
+  - renderer.render_for_chat:68
+</key_function>
 
 渲染只发生在三个边界，不在中间环节改写 content：
 
@@ -104,7 +104,7 @@ Agent 间传递的消息结构，核心字段：
 | LLM 出口 | render_for_llm | AgentMessage → LLM prompt | 用 `<incoming_message>` 标签包裹 |
 | UI 出口 | render_for_chat | Agent 输出 → 群聊记录 | 生成 `@xxx content` 格式 |
 
-**XML 标签常量**（Tag 类）：预定义的 prompt 结构标签，用于 LLM 上下文的结构化输入。常量名使用 UPPER_SNAKE_CASE，值为小写下划线：
+**XML 标签常量**（Tag 类）：预定义的 prompt 结构标签，用于 LLM 上下文的结构化输入：
 
 | 常量名 | 值 | 用途 |
 |--------|-----|------|
@@ -141,27 +141,33 @@ Agent 间传递的消息结构，核心字段：
 | 系统错误 | StateError | STATE_ERROR |
 | 系统错误 | RecoverableError | RECOVERABLE_ERROR |
 
-### 常量与持久化格式
+**MCP 响应契约**：所有 foundation 异常都支持 `to_mcp_response()` 转换，返回格式：
 
-- `MAX_TOKEN`：压缩阈值（当前 1000 token），用于判断是否需要压缩群聊历史
-- `LOCAL_DATA_PATH`：本地数据存储根路径（保留用于向后兼容，新代码应使用 group_chat_paths）
+```json
+{
+  "success": false,
+  "error_code": "<ERROR_CODE>",
+  "message": "<人类可读错误信息>",
+  "details": {}
+}
+```
 
 ### 路径集中管理（GroupChatPaths）
 
-`paths.py` 提供群聊相关路径的集中管理，采用单例模式：
+<key_function last_update="2026-06-18T14:23:00+08:00">
+- agents_hub/core/foundation/paths.py
+  - paths.GroupChatPaths.base_dir:34
+  - paths.GroupChatPaths.messages_file:45
+  - paths.GroupChatPaths.agent_member_file_path:56
+  - paths.GroupChatPaths.compact_history_file:67
+  - paths.GroupChatPaths.metadata_file:78
+  - paths.GroupChatPaths.agent_calls_log:89
+  - paths.GroupChatPaths.agent_calls_data:100
+  - paths.GroupChatPaths.tasks_log:111
+  - paths.GroupChatPaths.tasks_data:122
+</key_function>
 
-**设计目的**：
-- 统一路径构建规则，避免各模块自行拼接导致不一致
-- 集中管理所有群聊相关文件的路径定义
-- 提供清晰的路径结构文档，便于理解和维护
-
-**使用方式**：
-```python
-from agents_hub.core.foundation.paths import group_chat_paths
-
-msg_file = group_chat_paths.messages_file("gc123", "D:/projects/agents-hub")
-# → local_data/teams/D-projects-agents-hub/gc123/gc123.jsonl
-```
+`paths.py` 提供群聊相关路径的集中管理，采用单例模式。
 
 **路径方法**：
 
@@ -183,45 +189,74 @@ msg_file = group_chat_paths.messages_file("gc123", "D:/projects/agents-hub")
 
 ### Token 工具函数
 
+<key_function last_update="2026-06-18T14:23:00+08:00">
+- agents_hub/core/foundation/token.py
+  - token.generate_token:12
+  - token.redact_token:23
+</key_function>
+
 `token.py` 提供 Agent Token 的生成和安全处理（详见 `2026-05-31-mcp-tools-design.md`）：
 
-- `generate_token()` → `tok_<32位hex>`（`secrets.token_hex(16)`）
-- `redact_token(text)` → 替换所有 token 为 `[REDACTED]`
-- `TOKEN_PATTERN`：编译正则 `r"tok_[a-f0-9]{32}"`
+| 函数 | 说明 |
+|------|------|
+| `generate_token()` | 生成 `tok_<32位hex>` 格式的唯一 Token |
+| `redact_token(text)` | 替换文本中所有 token 为 `[REDACTED]` |
 
-持久化文件格式定义（详见 constants.py 注释）：
-- `<group_chat_id>.jsonl`：群聊消息历史，首行为 meta_data
-- `agent_member.json`：Agent session 映射、上下文加载状态、token、cwd、Docker 开关
-- `compact_history.jsonl`：压缩历史，每条包含 summary 和 per-agent 关键信息
-- `group_metadata.json`：群聊元数据，包含群聊 ID、名称、项目路径、创建时间和群聊类型
+### 系统常量
 
-## Technical Contract
+- `MAX_TOKEN`：压缩阈值，用于判断是否需要压缩群聊历史
+- `LOCAL_DATA_PATH`：本地数据存储根路径
 
-### 跨层依赖契约
+### 持久化文件格式定义
 
-foundation 的数据结构是所有 core 层的共享契约：
+| 文件 | 格式 | 说明 |
+|------|------|------|
+| `<group_chat_id>.jsonl` | JSONL | 群聊消息历史，首行为 meta_data |
+| `agent_member.json` | JSON | Agent session 映射、上下文加载状态、token、cwd、Docker 开关 |
+| `compact_history.jsonl` | JSONL | 压缩历史，每条包含 summary 和 per-agent 关键信息 |
+| `group_metadata.json` | JSON | 群聊元数据，包含群聊 ID、名称、项目路径、创建时间和群聊类型 |
 
-- `AgentMessage`：communication 层的消息路由、agent 层的消息处理、orchestration 层的群聊管理都依赖此结构
-- `CallStatus`：communication 层的 AgentCall 状态管理依赖此枚举
-- `SessionType` / `MessageType`：agent 层的消息处理逻辑依赖这两个枚举做分支判断
-- `render_for_llm` / `render_for_chat`：agent 层的 run() 循环使用这两个函数做渲染
+## Design Rationale
 
-### MCP 响应契约
+**为什么采用零依赖设计？**
+- foundation 是所有 core 层的基础，如果它依赖其他层会形成循环依赖
+- 零依赖保证 foundation 可以被任意层安全导入
+- 降低模块间耦合，提高系统可维护性
 
-所有 foundation 异常都支持 `to_mcp_response()` 转换，返回格式：
+**为什么消息渲染只在三个边界发生？**
+- 保证消息内容在传递过程中的不可变性，避免中间环节篡改导致调试困难
+- 清晰的边界契约让每个层级职责明确：入口负责解析、LLM 出口负责格式化、UI 出口负责展示
+- 避免渲染逻辑散落在各个模块，降低维护成本
 
-```json
-{
-  "success": false,
-  "error_code": "<ERROR_CODE>",
-  "message": "<人类可读错误信息>",
-  "details": {}
-}
-```
+**为什么采用统一异常体系？**
+- 统一的 error_code 和 to_mcp_response() 方法让 API 层可以统一处理所有异常
+- 模块专属异常让错误分类清晰，便于定位问题
+- 统一的 details 字段支持附加上下文信息，便于调试
 
-## Out of Spec
+**为什么路径管理采用单例模式？**
+- 避免重复创建路径管理对象，节省内存
+- 保证所有模块使用同一套路径规则，避免路径不一致
+- 集中管理路径规则，便于统一修改
 
-- foundation 不涉及任何业务逻辑实现
-- 不涉及持久化的具体读写操作（属于 context/group_chat_repository）
-- 不涉及消息路由和投递机制（属于 communication/message_router）
-- 不涉及 LLM 调用和 Agent 执行（属于 agent_bridge）
+**有哪些约束？**
+- foundation 层不能依赖其他 core 层（零依赖原则）
+- 所有数据结构必须支持序列化（用于持久化和跨进程传递）
+- 所有枚举值必须是字符串类型（便于持久化和 API 传递）
+
+**有哪些已知限制？**
+- 当前 MAX_TOKEN 阈值为固定值，未来可能需要支持动态配置
+- 路径管理只支持群聊相关路径，不支持其他类型的路径
+- Token 生成格式固定，未来可能需要支持自定义 Token 格式
+
+**相关 ADR**：
+- 暂无（foundation 层是系统基础，暂无重大架构决策）
+
+## Out of Scope
+
+本 spec 不覆盖以下内容，请参考相应文档：
+
+- **持久化实现**：`docs/specs/2026-05-31-core-context.md` - GroupChatRepository 的读写逻辑
+- **消息路由**：`docs/specs/2026-05-31-core-communication.md` - MessageRouter 的路由规则
+- **Agent 执行**：`docs/specs/2026-05-31-core-agent-orchestration.md` - Agent 的 run() 循环和 LLM 调用
+- **AgentCall 管理**：`docs/specs/2026-05-31-core-communication.md` - AgentCall 的生命周期管理
+- **群聊编排**：`docs/specs/2026-05-31-core-agent-orchestration.md` - GroupChat 的编排逻辑

@@ -1,26 +1,9 @@
 ---
-version: 1.3
+version: 2.0
 created_at: 2026-05-31
-updated_at: 2026-06-03
-last_updated: AgentCall 增加显式回复闭环语义
-abstract: core/communication 层的正式规格，定义消息路由机制、Agent 调用生命周期管理和显式回复闭环语义
-id: spec-core-communication
-title: Core Communication 层规格
-status: draft
-module: core/communication
-sourc_spec: null
-related_plan: null
-code_scope:
-  - agents_hub/core/communication/
-contract_refs:
-  - agents_hub/core/communication/message_router.py
-  - agents_hub/core/communication/agent_call.py
-  - agents_hub/core/communication/agent_call_manager.py
-  - agents_hub/core/communication/task.py
-  - agents_hub/core/communication/task_manager.py
-  - agents_hub/core/foundation/models.py
-  - agents_hub/core/foundation/message.py
-  - agents_hub/core/foundation/paths.py
+updated_at: 2026-06-18
+last_updated: 重构为新 spec 规则：移除执行细节，新增 Design Rationale，添加 key_function 标签
+abstract: core/communication 层的正式规格，定义消息路由机制、Agent 调用生命周期管理和任务管理的技术契约
 ---
 
 # Core Communication 层规格
@@ -33,15 +16,16 @@ contract_refs:
 | 1.1 | 新增 Task/TaskList 数据模型和 TaskManager |
 | 1.2 | 路径管理改用 group_chat_paths 集中管理 |
 | 1.3 | AgentCall 增加显式回复闭环语义 |
+| 2.0 | 重构为新 spec 规则：移除执行细节，整合 Technical Contract，新增 Design Rationale，添加 key_function 标签 |
 
 ## Overview
 
-communication 层是 core 的**消息基础设施**，负责两件事：
+**业务问题**：Agent 之间需要可靠的点对点通信机制，以及对异步调用生命周期的全流程追踪能力。系统需要知道"谁在等谁的回复""调用是否超时""任务是否已完成"。
 
-1. **消息路由**（MessageRouter）：Agent 之间的消息投递，基于私有队列的点对点通信
-2. **调用管理**（AgentCallManager）：跟踪每次跨 Agent 调用的完整生命周期，支持超时检测、自动清理和持久化
-
-communication 只依赖 foundation 层，不依赖 context、agent 或 orchestration。
+**核心职责**：
+1. **消息路由**：提供基于私有队列的点对点消息投递机制
+2. **调用追踪**：管理跨 Agent 调用的完整生命周期（PENDING → RUNNING → 终态）
+3. **任务协作**：管理团队任务的 CRUD 和持久化
 
 ## Scope
 
@@ -55,43 +39,91 @@ communication 只依赖 foundation 层，不依赖 context、agent 或 orchestra
 
 ### 范围外
 
-- Agent 的执行逻辑（属于 agent 层）
-- 群聊会话和上下文管理（属于 context 层）
-- 群聊编排和团队管理（属于 orchestration 层）
+- Agent 的执行逻辑（参考 `docs/specs/2026-05-31-core-agent-orchestration.md`）
+- 群聊会话和上下文管理（参考 `docs/specs/2026-05-31-core-context.md`）
+- 群聊编排和团队管理（参考 `docs/specs/2026-05-31-core-agent-orchestration.md`）
+- 消息持久化（由 context 层的 GroupChatRuntime 负责）
 
-## Core Behavior
+## Technical Contract
 
-### 消息路由模型
+### MessageRouter
 
-MessageRouter 实现基于**私有 asyncio.Queue** 的点对点消息投递：
+<key_function last_update="2026-06-18T16:30:00+08:00">
+- agents_hub/core/communication/message_router.py
+  - message_router.MessageRouter.register:26
+  - message_router.MessageRouter.unregister:43
+  - message_router.MessageRouter.send_message:66
+  - message_router.MessageRouter.clear:151
+</key_function>
 
-- 每个 Agent 启动时注册自己的消息队列（register）
-- Agent 退出时注销队列（unregister）
-- 发送消息时，路由器将消息放入目标 Agent 的队列（send_message）
+**对外接口**：
+
+| 接口 | 说明 | 约束 |
+|------|------|------|
+| register(name, queue) | 注册 Agent 的消息队列 | name 唯一，队列为 asyncio.Queue |
+| unregister(name) | 注销 Agent 的消息队列 | 幂等，未注册时不报错 |
+| send_message(message) | 投递消息到目标队列 | message 必须有效，send_to 必须已注册 |
+| clear() | 清空所有队列并注销所有 Agent | 幂等，可重复调用 |
 
 **消息验证规则**：
 - 消息内容不能为空
 - 发送者和接收者都必须已注册
-- 验证失败抛出对应的 foundation 异常（InvalidMessageError / AgentNotFoundError）
+- 验证失败抛出 `InvalidMessageError` 或 `AgentNotFoundError`
 
 **投递失败处理**：
-- 队列满 → MessageDeliveryError
-- 目标不存在 → AgentNotFoundError
-- 其他异常 → MessageDeliveryError（包装原始错误）
+- 队列满 → `MessageDeliveryError`
+- 目标不存在 → `AgentNotFoundError`
+- 其他异常 → `MessageDeliveryError`（包装原始错误）
 
-**资源清理**：clear() 方法清空所有队列中的消息并注销所有 Agent，幂等可重复调用。
+### AgentCallManager
 
-### AgentCall 生命周期
+<key_function last_update="2026-06-18T16:30:00+08:00">
+- agents_hub/core/communication/agent_call_manager.py
+  - agent_call_manager.AgentCallManager.create_call:62
+  - agent_call_manager.AgentCallManager.get_call:108
+  - agent_call_manager.AgentCallManager.list_all_calls:128
+  - agent_call_manager.AgentCallManager.get_runtime_calls_for_agent:138
+  - agent_call_manager.AgentCallManager.update_status:157
+  - agent_call_manager.AgentCallManager.set_result:188
+  - agent_call_manager.AgentCallManager.set_error:210
+  - agent_call_manager.AgentCallManager.mark_agent_response:233
+</key_function>
 
-每次跨 Agent 调用（无论是 MCP Tool 调用还是群聊中 @Agent）都会创建一个 AgentCall 记录，跟踪完整生命周期。
+**对外接口**：
 
-AgentCall 同时记录"调用是否已被接收方显式回复闭环"。该闭环标志与状态不同：
-- 状态表示调用生命周期（PENDING / RUNNING / COMPLETED / FAILED / TIMEOUT）
-- 闭环标志表示接收方是否已经通过显式工具给出最终回复
-- TASK 调用只有显式回复闭环后，才应进入 COMPLETED 或 FAILED 终态
-- NOTIFICATION 调用不需要显式回复闭环
+| 接口 | 说明 | 约束 |
+|------|------|------|
+| create_call(...) | 创建新调用记录 | 返回 AgentCall，立即持久化 |
+| get_call(call_id) | 获取调用详情 | 不存在时返回 None |
+| list_all_calls() | 获取所有调用记录 | 用于 API 查询 |
+| get_runtime_calls_for_agent(name) | 获取需要注入到指定 Agent runtime 的调用列表 | TASK 调用在回复闭环前持续暴露 |
+| update_status(call_id, status) | 更新调用状态 | 状态不变时跳过 |
+| set_result(call_id, result) | 设置调用结果，状态 → COMPLETED | result 不持久化 |
+| set_error(call_id, error, exc) | 设置调用错误，状态 → FAILED | 记录完整 traceback |
+| mark_agent_response(call_id, content, success) | 标记接收方已显式回复闭环 | success=True → COMPLETED, False → FAILED |
 
-**状态转换**：
+**AgentCall 数据模型**：
+
+```python
+@dataclass
+class AgentCall:
+    call_id: str              # 唯一标识
+    send_from: str            # 发送者名称
+    send_to: str              # 接收者名称
+    content: str              # 消息内容
+    message_type: MessageType # TASK / NOTIFICATION
+    status: CallStatus        # PENDING / RUNNING / COMPLETED / FAILED / TIMEOUT
+    has_agent_response: bool  # 是否已显式回复闭环
+    created_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    timeout_seconds: int | None
+    business_task_id: str | None
+    result: object | None     # 不持久化
+    error: str | None
+```
+
+**状态机规则**：
 
 ```
 创建 → PENDING
@@ -103,19 +135,12 @@ AgentCall 同时记录"调用是否已被接收方显式回复闭环"。该闭�
     └── TIMEOUT（超时）
 ```
 
-**触发场景**：
-- MCP Tool `call_agent` 调用时创建
-- User 在群聊中 @Agent 时创建
-- MessageType 为 TASK 时，接收方需要通过显式回复工具结束调用
+- **状态**：表示调用生命周期
+- **闭环标志**（has_agent_response）：表示接收方是否已通过显式工具给出最终回复
+- **TASK 调用**：只有显式回复闭环后，才应进入 COMPLETED 或 FAILED 终态
+- **NOTIFICATION 调用**：不需要显式回复闭环
 
-**超时判断**：
-- 基于 elapsed > timeout_seconds
-- 仅对非终态（PENDING / RUNNING）生效
-- timeout_seconds 为 None 表示无超时限制
-
-### 清理策略
-
-AgentCallManager 后台定期清理过期调用记录，释放内存：
+**清理策略**：
 
 | 条件 | 保留时间 | 说明 |
 |------|----------|------|
@@ -125,84 +150,107 @@ AgentCallManager 后台定期清理过期调用记录，释放内存：
 | TASK + COMPLETED | 1 小时 | 任务类调用，保留更久供查询 |
 | FAILED / TIMEOUT | 24 小时 | 失败调用保留较久，便于调试 |
 
-清理间隔默认 60 秒，保留时间可通过 retention_config 自定义。
+**持久化设计**：
+- **文件格式**：append-only JSONL（`agent_calls.jsonl`）
+- **容错设计**：同一 call_id 的多条记录取最新一条
+- **result 不持久化**：执行结果可能很大且重启后无法恢复
 
-### 持久化机制
+### TaskManager
 
-AgentCallManager 在每个群聊的数据目录下维护 `agent_calls.jsonl` 持久化文件：
+<key_function last_update="2026-06-18T16:30:00+08:00">
+- agents_hub/core/communication/task_manager.py
+  - task_manager.TaskManager.get_active_task_list:58
+  - task_manager.TaskManager.assign_tasks:81
+  - task_manager.TaskManager.archive_task_list:113
+</key_function>
 
-- **写入时机**：创建调用、状态变更、设置结果/错误时立即追加写入
-- **加载时机**：AgentCallManager 初始化时自动加载历史记录
-- **压缩时机**：清理过期调用后重写文件，只保留内存中的有效记录
-- **容错设计**：同一条 call_id 的多条记录取最新一条（后写覆盖前写）
-- **result 不持久化**：执行结果可能很大且重启后无法恢复，不写入文件
+**对外接口**：
 
-**路径管理**：
-- 使用 foundation 层的 `group_chat_paths` 单例集中管理路径
-- 日志路径：`group_chat_paths.base_dir(group_chat_id, project_path)`
-- 数据路径：`group_chat_paths.agent_calls_data(group_chat_id, project_path)`
-
-### 任务管理（TaskManager）
-
-TaskManager 管理团队任务的 CRUD 和持久化（设计详见 `2026-05-31-mcp-tools-design.md` §4）。
+| 接口 | 说明 | 约束 |
+|------|------|------|
+| get_active_task_list(group_chat_id) | 获取当前活跃任务列表 | 不存在时返回 None |
+| assign_tasks(group_chat_id, tasks, created_by) | 覆盖式更新任务 | 返回 {created, updated, unchanged} |
+| archive_task_list(group_chat_id) | 归档当前任务列表 | 状态 ACTIVE → ARCHIVED，返回 {archived_count, archived_at} |
 
 **数据模型**：
 
-- `Task`：单个任务，字段包括 `task_id`、`owner`、`content`、`status`（TaskStatus）、`group_chat_id`、`created_by`、时间戳
-- `TaskList`：任务列表，状态机 ACTIVE → ARCHIVED，包含 `tasks: list[Task]`
-
-**核心接口**：
-
 ```python
-class TaskManager:
-    def __init__(self, group_chat_id: str, project_path: str): ...
-    def get_active_task_list(self, group_chat_id: str) -> TaskList | None: ...
-    def assign_tasks(self, group_chat_id: str, tasks: list[dict], created_by: str) -> dict: ...
-    def archive_task_list(self, group_chat_id: str) -> dict: ...
+@dataclass
+class Task:
+    task_id: str
+    owner: str
+    content: str
+    status: TaskStatus  # PENDING / IN_PROGRESS / COMPLETED / DELETED
+    group_chat_id: str
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+
+@dataclass
+class TaskList:
+    list_id: str
+    group_chat_id: str
+    status: str  # ACTIVE / ARCHIVED
+    tasks: list[Task]
+    created_at: datetime
+    updated_at: datetime
 ```
 
-- `assign_tasks`：覆盖式更新语义（参照 Claude Code TodoWrite），返回 `{created, updated, unchanged}`
-- `archive_task_list`：ACTIVE → ARCHIVED，返回 `{archived_count, archived_at}`
-
-**持久化**：append-only JSONL（`tasks.jsonl`），同 `list_id` 取最新记录。
-
-**路径管理**：
-- 使用 foundation 层的 `group_chat_paths` 单例集中管理路径
-- 日志路径：`group_chat_paths.base_dir(group_chat_id, project_path)`
-- 数据路径：`group_chat_paths.tasks_data(group_chat_id, project_path)`
-
-## Technical Contract
+**持久化设计**：
+- **文件格式**：append-only JSONL（`tasks.jsonl`）
+- **容错设计**：同 list_id 取最新记录
 
 ### 跨层依赖
 
-- communication 依赖 foundation 的 `AgentMessage`、`CallStatus`、`MessageType`、异常类
-- agent 层通过 `MessageRouter.send_message()` 投递消息
-- agent 层通过 `AgentCallManager` 跟踪调用状态
-- orchestration 层的 GroupChat 创建并持有 MessageRouter 和 AgentCallManager 实例
+**依赖方向**：
+- communication 依赖 foundation 层（`AgentMessage`、`CallStatus`、`MessageType`、异常类、`group_chat_paths`）
+- agent 层通过 `GroupChat.send_message_to_agent()` 间接使用 `MessageRouter`
+- orchestration 层的 GroupChat 创建并持有 MessageRouter、AgentCallManager、TaskManager 实例
 
-### 与 Agent 的协作模式
+## Design Rationale
 
-```
-Agent.run() 循环：
-  1. await message_queue.get()  ← 从 MessageRouter 投递的队列取消息
-  2. render_for_llm(msg)        ← 渲染为 LLM prompt
-  3. agent_call_manager.update_status(RUNNING)
-  4. execute(prompt)             ← 调用 agent_bridge
-  5. 非 TASK 调用执行完成后可进入 COMPLETED
-  6. TASK 调用等待显式回复闭环后进入 COMPLETED / FAILED
-```
+**为什么选择私有队列而非共享队列？**
+- **隔离性**：每个 Agent 有独立的消息队列，避免相互干扰
+- **背压控制**：队列满时可以阻塞发送方，防止消息积压导致 OOM
+- **清理简单**：Agent 退出时只需清理自己的队列，不影响其他 Agent
 
-### TASK 调用终态的跨层协作
+**为什么需要 AgentCall 独立于消息？**
+- **生命周期追踪**：消息投递是瞬时的，但调用是有生命周期的（可能跨多轮对话）
+- **超时检测**：需要在后台定期检查哪些调用超时，消息本身没有这个能力
+- **持久化需求**：调用记录需要持久化以支持系统重启恢复，而消息队列是内存的
 
-当 TASK 调用通过 `complete_task` 进入终态（COMPLETED / FAILED）时，需要通知 orchestration 层执行后续动作：
+**为什么 TASK 调用需要显式回复闭环？**
+- **明确的任务完成语义**：Agent 执行完成 ≠ 任务完成，需要 Agent 显式告知调用方"我已经完成你交给我的任务"
+- **支持多轮协作**：Agent 可能需要多轮思考才能完成任务，不能在第一轮就进入终态
+- **区分执行完成和任务完成**：执行完成是技术概念，任务完成是业务概念
 
-- **原调用方是 Agent**：通过 MessageRouter 投递 NOTIFICATION 唤醒调用方的下一轮处理
-- **原调用方是 user**：写入群聊历史并触发前端 WebSocket refresh
+**为什么 result 不持久化？**
+- **体积问题**：执行结果可能包含大量 LLM 输出、工具调用结果，持久化会占用大量磁盘空间
+- **恢复无意义**：系统重启后，Agent 状态已经丢失，result 无法被使用
+- **查询场景少**：result 主要在运行时使用，很少需要从磁盘读取历史 result
 
-此协作由 orchestration 层的 `complete_task` MCP 工具实现，communication 层只负责状态变更，不直接处理后续动作。
+**为什么使用覆盖式更新任务？**
+- **对齐 Claude Code TodoWrite 语义**：用户习惯"给一个新列表覆盖旧列表"而非增量更新
+- **避免冲突**：多个 Agent 同时更新任务时，增量更新容易产生冲突，覆盖式更简单
 
-## Out of Spec
+**有哪些约束？**
+- **单群聊单 AgentCallManager**：每个群聊有独立的 AgentCallManager，不能跨群聊查询调用记录
+- **清理策略不可配置**：保留时间目前是硬编码的，未来可能支持配置
+- **无事务保证**：持久化是 append-only，没有事务保证，依赖"后写覆盖前写"的容错机制
 
-- MessageRouter 不负责消息持久化（持久化由 context 层的 GroupChatRuntime 负责）
-- AgentCallManager 不负责 Agent 执行（执行由 agent_bridge 负责）
-- 清理策略的具体实现细节（保留时间配置等）可能随版本调整
+**有哪些已知限制？**
+- **内存占用**：所有调用记录都在内存中，长时间运行的群聊可能占用较多内存（通过清理策略缓解）
+- **无分布式支持**：当前设计是单机的，无法支持分布式部署（多个进程共享同一个群聊）
+- **持久化延迟**：持久化是同步 IO，在高频调用场景下可能成为瓶颈（未来可考虑异步写入）
+
+**相关 ADR**：
+- 暂无（未来如果有重大架构决策，在此链接）
+
+## Out of Scope
+
+本 spec 不覆盖以下内容，请参考相应文档：
+
+- **消息持久化**：`docs/specs/2026-05-31-core-context.md` - 由 GroupChatRuntime 负责
+- **Agent 执行逻辑**：`docs/specs/2026-05-31-core-agent-orchestration.md` - 由 agent 层和 agent_bridge 负责
+- **群聊编排**：`docs/specs/2026-05-31-core-agent-orchestration.md` - 由 GroupChat 和 GroupChatManager 负责
+- **MCP 工具设计**：`docs/specs/2026-05-31-mcp-tools-design.md` - 定义如何通过 MCP 工具操作 communication 层

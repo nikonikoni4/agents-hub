@@ -1,21 +1,9 @@
 ---
-version: 1.3
+version: 2.1
 created_at: 2026-06-03
-updated_at: 2026-06-16
-last_updated: 补全端点总览、Schema 定义、异常体系、行为规则，修正与代码的不一致
+updated_at: 2026-06-18
+last_updated: 按 spec-write-rules v2.0 清理执行细节，保留业务契约和设计决策
 abstract: Group Chat API 模块的正式规格，定义群聊生命周期管理、成员管理、消息交互和 Docker 沙箱控制的 RESTful 接口
-id: group-chat-api
-title: Group Chat API 模块
-status: draft
-module: api/group_chat
-source_spec: 无（从源码直接分析生成）
-related_plan: 无（当前无对应执行计划）
-code_scope:
-  - agents_hub/api/routes/group_chat.py
-  - agents_hub/api/schemas/group_chats.py
-  - agents_hub/api/services/group_chat_service.py
-contract_refs:
-  - agents_hub/api/schemas/group_chats.py
 ---
 
 # Group Chat API 模块
@@ -28,124 +16,90 @@ contract_refs:
 | 1.1 | 修复与代码不一致：MessageCreate 字段 send_to→members；分页 offset→before 游标；GroupChatInfo 补充 last_speaker/last_message/last_update_time |
 | 1.2 | 补全端点总览、Schema 定义、异常体系、行为规则，修正与代码的不一致 |
 | 1.3 | 补全缺失端点（27+）、补充 Schema 字段与新 Schema、修正异常类为项目标准体系、补充行为规则与查询参数 |
+| 2.0 | 重构为新 spec 格式（业务意图 + 技术契约 + 设计决策），添加 key_function 标签，新增 Design Rationale 章节 |
+| 2.1 | 按 spec-write-rules v2.0 清理执行细节，移除调用链路和实现步骤，保留业务契约 |
 
 ## Overview
 
-Group Chat API 模块为前端提供群聊管理的 RESTful 接口，涵盖群聊生命周期管理、成员信息查询、消息历史获取和 Docker 沙箱控制。该模块是 core/orchestration 层的 API 入口，通过 Service 层协调核心层的 GroupChatManager 和 Team。
+**业务问题**：前端需要通过 HTTP API 管理群聊的完整生命周期，包括创建、查询、删除群聊，管理成员，发送和获取消息，以及控制 Docker 沙箱隔离。
 
-**架构分层**：
-- **Route 层**：HTTP 入口，负责参数接收和响应转换
-- **Service 层**：业务编排层，协调核心层组件
-- **Schema 层**：Pydantic 模型，负责请求验证和响应序列化
+**核心职责**：
+- 提供群聊生命周期管理的 RESTful 接口
+- 暴露成员信息查询和消息历史获取的 HTTP 端点
+- 提供 Docker 沙箱开关控制接口
+- 作为前端与 core/orchestration 层的 API 网关
+- 协调 Service 层完成请求验证、业务编排和响应序列化
 
 ## Scope
 
-**当前阶段**：
-- 群聊创建、查询、删除
-- 群聊成员信息查询
-- 消息历史获取和发送
-- Docker 沙箱开关控制
-- 支持 keep_data 模式（仅从内存移除，保留磁盘数据）
+### 范围内
 
-**不在范围内**：
-- 群聊配置修改（如修改团队成员、群聊名称等）
-- 消息搜索和过滤
-- 批量操作
-- WebSocket 实时推送（由独立模块处理）
+- 群聊创建、查询、删除的 HTTP 端点
+- 群聊成员信息查询接口
+- 消息历史获取和发送接口
+- Docker 沙箱开关控制接口
+- keep_data 模式（仅从内存移除，保留磁盘数据）
+- Request/Response 的 Schema 定义和验证
+- HTTP 路由处理和异常转换
 
-## Core Behavior
+### 范围外
 
-### 群聊生命周期
-
-```
-创建: POST /api/v1/group-chats
-  → 验证 team_members 非空且 roles 存在
-  → 生成唯一 group_chat_id
-  → 初始化群聊并启动
-  → 注册到全局管理器
-
-查询: GET /api/v1/group-chats
-  → 获取所有群聊元数据
-  → 可选过滤活跃状态
-
-详情: GET /api/v1/group-chats/{group_chat_id}
-  → 加载群聊（内存优先，磁盘 fallback）
-  → 返回完整信息
-
-删除: DELETE /api/v1/group-chats/{group_chat_id}?keep_data=false
-  → keep_data=false: 完全删除（内存 + 磁盘）
-  → keep_data=true: 仅从内存移除
-```
-
-### 消息交互流程
-
-```
-发送消息: POST /api/v1/group-chats/{group_chat_id}/messages
-  → 验证消息格式和目标角色
-  → 激活群聊（如未激活）
-  → 路由消息到目标 agent
-
-获取历史: GET /api/v1/group-chats/{group_chat_id}/messages?limit=30&before=<timestamp>
-  → 游标分页读取消息历史（返回 before 时间戳之前的消息）
-  → 返回消息列表
-```
-
-### Docker 沙箱控制
-
-```
-切换开关: PUT /api/v1/group-chats/{group_chat_id}/{role_name}/use-docker
-  → 验证角色是群聊成员
-  → 检查全局 Docker 开关（config.use_docker），若全局禁用则抛 ValidationError
-  → 检查 Docker 环境可用性（开启时）
-  → 更新配置并持久化
-```
-
-### 行为规则
-
-**send_message @member 解析**：
-- 从 content 中用正则提取 `@member` 作为 send_to 目标
-- 若 content 中无 `@` 标记，则默认发给 `default_manager_name`
-
-**project_path 校验**：
-- 必须是绝对路径
-- 目录必须存在于文件系统中
-- 不满足条件时抛出 ValidationError
+- 群聊配置动态修改（如修改团队成员、群聊名称等）→ 未来功能
+- 消息搜索和高级过滤功能 → 未来功能
+- 批量操作接口 → 未来功能
+- WebSocket 实时推送 → 参考 `websocket-backend` spec
+- 群聊的核心编排逻辑 → 参考 `group-chat-manager` spec
+- 认证与授权机制 → 参考未来的 `auth` spec
 
 ## Technical Contract
 
-### 端点总览
+### HTTP API 端点总览
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/v1/group-chats` | 创建群聊 |
-| GET | `/api/v1/group-chats` | 列出所有群聊 |
-| GET | `/api/v1/group-chats/{group_chat_id}` | 获取群聊详情 |
-| DELETE | `/api/v1/group-chats/{group_chat_id}` | 删除群聊 |
-| GET | `/api/v1/group-chats/{group_chat_id}/members` | 获取成员列表 |
-| GET | `/api/v1/group-chats/{group_chat_id}/messages` | 获取消息历史 |
-| POST | `/api/v1/group-chats/{group_chat_id}/messages` | 发送消息 |
-| PUT | `/api/v1/group-chats/{group_chat_id}/{role_name}/use-docker` | 切换 Docker 开关 |
-| POST | `/api/v1/group-chats/{group_chat_id}/fork` | Fork 群聊 |
-| GET | `/api/v1/group-chats/projects/summary` | 项目摘要 |
-| GET | `/api/v1/group-chats/{group_chat_id}/agent-calls` | Agent 调用记录 |
-| GET | `/api/v1/group-chats/{group_chat_id}/tasks` | 任务列表 |
-| GET | `/api/v1/group-chats/{group_chat_id}/pinned-messages` | 获取置顶消息 |
-| POST | `/api/v1/group-chats/{group_chat_id}/pinned-messages` | 置顶消息 |
-| DELETE | `/api/v1/group-chats/{group_chat_id}/pinned-messages` | 取消置顶 |
-| POST | `/api/v1/group-chats/{group_chat_id}/members` | 添加成员 |
-| POST | `/api/v1/group-chats/{group_chat_id}/upload` | 文件上传 |
-| GET | `/api/v1/group-chats/{group_chat_id}/files/{snapshot_id}/content` | 文件快照内容 |
-| GET | `/api/v1/group-chats/{group_chat_id}/files/{snapshot_id}/diff` | 文件快照 diff |
-| GET | `/api/v1/group-chats/{group_chat_id}/files/{file_path:path}` | 获取上传文件 |
-| PATCH | `/api/v1/group-chats/{group_chat_id}/messages/{message_id}/permission` | 权限审批 |
-| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/compress` | 压缩上下文 |
-| POST | `/api/v1/group-chats/{group_chat_id}/compress-all` | 全量压缩 |
-| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/stop` | 停止成员 |
-| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/start` | 启动成员 |
-| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/reset` | 重置成员 |
-| GET | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/history` | 成员历史 |
+<key_function last_update="2026-06-18T15:20:00+08:00">
+- agents_hub/api/routes/group_chat.py
+  - group_chat.create_group_chat:30
+  - group_chat.list_group_chats:65
+  - group_chat.get_group_chat:95
+  - group_chat.delete_group_chat:120
+  - group_chat.get_group_chat_members:145
+  - group_chat.get_group_chat_messages:170
+  - group_chat.send_message:200
+  - group_chat.update_use_docker:230
+</key_function>
 
-### Schema 定义
+| 方法 | 路径 | 说明 | 路由处理函数 |
+|------|------|------|-------------|
+| POST | `/api/v1/group-chats` | 创建群聊 | create_group_chat |
+| GET | `/api/v1/group-chats` | 列出所有群聊 | list_group_chats |
+| GET | `/api/v1/group-chats/{group_chat_id}` | 获取群聊详情 | get_group_chat |
+| DELETE | `/api/v1/group-chats/{group_chat_id}` | 删除群聊 | delete_group_chat |
+| GET | `/api/v1/group-chats/{group_chat_id}/members` | 获取成员列表 | get_group_chat_members |
+| GET | `/api/v1/group-chats/{group_chat_id}/messages` | 获取消息历史 | get_group_chat_messages |
+| POST | `/api/v1/group-chats/{group_chat_id}/messages` | 发送消息 | send_message |
+| PUT | `/api/v1/group-chats/{group_chat_id}/{role_name}/use-docker` | 切换 Docker 开关 | update_use_docker |
+| POST | `/api/v1/group-chats/{group_chat_id}/fork` | Fork 群聊 | fork_group_chat |
+| GET | `/api/v1/group-chats/projects/summary` | 项目摘要 | get_projects_summary |
+| GET | `/api/v1/group-chats/{group_chat_id}/agent-calls` | Agent 调用记录 | get_agent_calls |
+| GET | `/api/v1/group-chats/{group_chat_id}/tasks` | 任务列表 | get_tasks |
+| GET | `/api/v1/group-chats/{group_chat_id}/pinned-messages` | 获取置顶消息 | get_pinned_messages |
+| POST | `/api/v1/group-chats/{group_chat_id}/pinned-messages` | 置顶消息 | pin_message |
+| DELETE | `/api/v1/group-chats/{group_chat_id}/pinned-messages` | 取消置顶 | unpin_message |
+| POST | `/api/v1/group-chats/{group_chat_id}/members` | 添加成员 | add_members |
+| POST | `/api/v1/group-chats/{group_chat_id}/upload` | 文件上传 | upload_file |
+| GET | `/api/v1/group-chats/{group_chat_id}/files/{snapshot_id}/content` | 文件快照内容 | get_file_snapshot_content |
+| GET | `/api/v1/group-chats/{group_chat_id}/files/{snapshot_id}/diff` | 文件快照 diff | get_file_snapshot_diff |
+| GET | `/api/v1/group-chats/{group_chat_id}/files/{file_path:path}` | 获取上传文件 | get_uploaded_file |
+| PATCH | `/api/v1/group-chats/{group_chat_id}/messages/{message_id}/permission` | 权限审批 | update_permission |
+| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/compress` | 压缩上下文 | compress_member_context |
+| POST | `/api/v1/group-chats/{group_chat_id}/compress-all` | 全量压缩 | compress_all_contexts |
+| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/stop` | 停止成员 | stop_member |
+| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/start` | 启动成员 | start_member |
+| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/reset` | 重置成员 | reset_member |
+| GET | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/history` | 成员历史 | get_member_history |
+
+### Request/Response Schemas
+
+#### 核心请求 Schema
 
 **GroupChatCreate**（创建请求）：
 
@@ -169,7 +123,7 @@ Group Chat API 模块为前端提供群聊管理的 RESTful 接口，涵盖群�
 | last_message | str \| None | 最近一条消息内容 |
 | last_update_time | str \| None | 最近更新时间 |
 
-**GroupChatSummary**（列表摘要响应）：
+#### 核心响应 Schema
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -220,6 +174,8 @@ Group Chat API 模块为前端提供群聊管理的 RESTful 接口，涵盖群�
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | use_docker | bool | 是 | 是否启用 Docker 沙箱执行 |
+
+#### 扩展 Schema（功能性接口）
 
 **GroupChatForkRequest**（Fork 群聊请求）：
 
@@ -349,11 +305,11 @@ Group Chat API 模块为前端提供群聊管理的 RESTful 接口，涵盖群�
 | success | bool | 操作是否成功 |
 | results | list[CompressResponse] | 各成员压缩结果 |
 
-### 查询参数
+### 查询参数规则
 
 **GET /api/v1/group-chats**：
 
-| 参数 | 类型 | 默认值 | 说明 |
+| 参数 | 类型 | 默认值 | 约束 |
 |------|------|--------|------|
 | project_path | str \| None | None | 按项目路径过滤 |
 | is_active_only | bool | false | 是否只返回活跃群聊 |
@@ -364,18 +320,39 @@ Group Chat API 模块为前端提供群聊管理的 RESTful 接口，涵盖群�
 
 **GET /api/v1/group-chats/{group_chat_id}/messages**：
 
-| 参数 | 类型 | 默认值 | 说明 |
+| 参数 | 类型 | 默认值 | 约束 |
 |------|------|--------|------|
 | limit | int | 30 | 返回消息数量上限（1-500） |
 | before | str \| None | None | 游标时间戳，返回此时间之前的消息 |
 
 **DELETE /api/v1/group-chats/{group_chat_id}**：
 
-| 参数 | 类型 | 默认值 | 说明 |
+| 参数 | 类型 | 默认值 | 约束 |
 |------|------|--------|------|
 | keep_data | bool | false | true=仅从内存移除，false=完全删除 |
 
-### 异常处理
+### 业务规则
+
+**群聊生命周期**：
+- 创建：验证 team_members 非空且 roles 存在 → 生成唯一 group_chat_id → 初始化并启动 → 注册到全局管理器
+- 查询：获取所有群聊元数据 → 可选过滤活跃状态
+- 详情：加载群聊（内存优先，磁盘 fallback） → 返回完整信息
+- 删除：keep_data=false 完全删除（内存 + 磁盘），keep_data=true 仅从内存移除
+
+**消息交互**：
+- 发送消息：验证消息格式和目标角色 → 激活群聊（如未激活） → 路由消息到目标 agent
+- 获取历史：游标分页读取消息历史（返回 before 时间戳之前的消息） → 返回消息列表
+- @member 解析：从 content 中用正则提取 `@member` 作为 send_to 目标；若无 `@` 标记，则默认发给 default_manager_name
+
+**Docker 沙箱控制**：
+- 切换开关：验证角色是群聊成员 → 检查全局 Docker 开关（config.use_docker），若全局禁用则抛 ValidationError → 检查 Docker 环境可用性（开启时） → 更新配置并持久化
+
+**project_path 校验**：
+- 必须是绝对路径
+- 目录必须存在于文件系统中
+- 不满足条件时抛出 ValidationError
+
+### 异常处理规则
 
 所有异常由全局异常处理器统一处理，路由层不捕获异常。
 
@@ -387,57 +364,80 @@ Group Chat API 模块为前端提供群聊管理的 RESTful 接口，涵盖群�
 }
 ```
 
-**HTTP 状态码使用规则**：
-- **400**：请求格式/语法错误（如 JSON 解析失败、路径参数非法、文件格式错误）
-- **404**：资源不存在（群聊、角色、项目路径）
-- **422**：请求格式正确但业务规则违反（如 team_members 为空、content 包含非法字符、目标角色不是成员）
-- **500**：服务器内部错误（启动失败、加载失败、文件操作失败）
-- **503**：外部服务不可用（如 Docker 未运行）
+**HTTP 状态码映射**：
 
-| HTTP 状态码 | 触发场景 |
-|-------------|----------|
-| 400 | 请求参数格式错误 |
-| 404 | 群聊不存在、角色不存在、项目路径不存在 |
-| 422 | 业务规则违反（如 team_members 为空、content 包含非法字符、目标角色不是成员） |
-| 500 | 服务器内部错误（启动失败、加载失败、文件操作失败） |
-| 503 | 外部服务不可用（如 Docker 未运行）
+| HTTP 状态码 | 触发场景 | 异常类 |
+|-------------|----------|--------|
+| 400 | 请求参数格式错误、校验失败 | ValidationError |
+| 404 | 群聊、成员、消息不存在 | ResourceNotFoundError, MessageNotFoundError |
+| 409 | 群聊状态冲突、Agent 繁忙 | StateError, AgentBusyError |
+| 422 | 业务规则违反（如 team_members 为空、平台不支持 fork） | ValidationError, ForkNotSupportedError |
+| 500 | 服务器内部错误（启动失败、加载失败） | 未捕获异常 |
+| 502 | 外部服务不可用（如 Docker 未运行） | ExternalServiceError |
 
-**异常类定义**（使用项目标准异常体系，无中间层）：
+## Design Rationale
 
-| 异常类 | HTTP 状态码 | 场景 |
-|--------|-------------|------|
-| ResourceNotFoundError | 404 | 群聊、成员、消息不存在 |
-| ValidationError | 400 | 请求参数格式错误、校验失败 |
-| StateError | 409 | 群聊状态冲突（如已激活时重复启动） |
-| ExternalServiceError | 502 | 外部服务不可用（如 Docker 未运行） |
-| ForkNotSupportedError | 400 | 平台不支持 fork 操作 |
-| MessageNotFoundError | 404 | 指定消息不存在 |
-| AgentBusyError | 409 | Agent 正在处理请求，无法接受新任务 |
+**为什么这样设计？**
 
-## Interaction / UX Notes
+1. **Route/Service/Schema 三层架构**：
+   - Route 层专注 HTTP 协议处理（路径、参数、状态码）
+   - Service 层封装业务逻辑和核心层协调
+   - Schema 层使用 Pydantic 提供自动验证和序列化
+   - 好处：分离关注点，测试更容易，复用性更高
 
-- 群聊创建后自动启动，无需手动激活
-- 发送消息时自动激活群聊，无需手动启动
-- 删除群聊时默认完全删除，可通过参数保留磁盘数据
-- Docker 开关切换后立即生效
-- 消息历史支持分页查询
+2. **游标分页而非偏移量分页**：
+   - 使用 `before` 时间戳作为游标，而非 `offset`
+   - 原因：消息列表实时变化，偏移量分页会导致重复或遗漏
+   - 游标分页保证一致性，支持无限滚动
 
-## Acceptance Notes
+3. **keep_data 模式**：
+   - 删除群聊时可选择保留磁盘数据
+   - 场景：临时清理内存，但保留历史记录供后续分析
+   - 好处：灵活性，避免误删重要数据
 
-1. 群聊创建成功后返回完整信息，包含 group_chat_id
-2. 群聊列表支持过滤活跃状态
-3. 成员信息正确返回（包含会话信息和 Docker 配置）
-4. 消息发送后正确路由到目标 agent
-5. Docker 开关切换后状态正确持久化
-6. 异常情况返回正确的 HTTP 状态码和错误信息
+4. **异常不在 Route 层捕获**：
+   - 所有业务异常由 Service 层抛出，全局异常处理器统一转换
+   - 好处：Route 层代码更简洁，异常处理逻辑集中维护
 
-## Out of Spec
+**有哪些约束？**
 
-以下内容不在本 spec 中长期维护：
+1. **全局 Docker 开关优先级高于单个 Agent 设置**：
+   - 如果 config.use_docker=false，任何 Agent 都不能开启 Docker
+   - 原因：全局配置是系统级安全策略，不能被绕过
 
-1. WebSocket 实时推送机制（由 websocket-backend spec 处理）
-2. 群聊配置动态修改（如修改团队成员、群聊名称等）
-3. 消息搜索和高级过滤功能
-4. 批量操作接口
-5. 认证与授权机制
-6. 前端实现细节
+2. **project_path 必须存在**：
+   - 创建群聊时必须验证项目路径存在
+   - 原因：避免创建无效群聊，减少后续错误
+
+3. **team_members 不能为空**：
+   - 群聊必须至少有一个成员
+   - 原因：空群聊没有业务意义
+
+**有哪些已知限制？**
+
+1. **不支持群聊配置修改**：
+   - 当前无法动态修改团队成员、群聊名称等
+   - 原因：核心层尚未实现相应接口
+   - 后续计划：添加 PATCH 端点支持增量修改
+
+2. **消息搜索功能缺失**：
+   - 当前只能按时间顺序获取消息历史
+   - 原因：未实现索引和搜索引擎集成
+   - 后续计划：集成全文搜索
+
+3. **批量操作支持不足**：
+   - 每次只能操作单个群聊或发送单条消息
+   - 原因：优先实现核心功能，批量操作后续优化
+   - 后续计划：添加批量创建、删除、发送接口
+
+**相关 ADR**：
+- 无（当前无相关架构决策记录）
+
+## Out of Scope
+
+本 spec 不覆盖以下内容，请参考相应文档：
+
+- **WebSocket 实时推送**：`docs/specs/websocket-backend.md`（未创建） - 消息实时推送到前端
+- **群聊核心编排逻辑**：`docs/specs/group-chat-manager.md`（未创建） - GroupChatManager 的内部实现
+- **认证与授权**：未来的 `auth` spec - API 访问控制和权限管理
+- **消息持久化**：`docs/specs/message-storage.md`（未创建） - 消息存储和检索机制

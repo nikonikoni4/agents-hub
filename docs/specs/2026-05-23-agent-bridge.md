@@ -1,17 +1,17 @@
 ---
-version: 1.3
+version: 2.0
 created_at: 2026-05-23
-updated_at: 2026-05-31
-last_updated: AgentBridge 初始化时创建 bare 角色并缓存配置，新增 bare_claude_call() 快速调用接口
-abstract: agent_bridge 模块的正式规格定义，描述其作为纯执行层的核心职责、统一事件契约和双接口设计
+updated_at: 2026-06-18
+last_updated: 按照新 spec 规则重构，移除执行细节，添加 Design Rationale 和 key_function 标签
+abstract: agent_bridge 模块的规格定义，描述其作为纯执行层的核心职责、统一事件契约和多接口设计
 id: spec-agent-bridge
 title: Agent Bridge 模块规格
 status: draft
 module: agent_bridge
-sourc_spec: docs/superpowers/specs/2026-05-23-agent-bridge-design.md
-related_plan: null
+source_spec: docs/superpowers/specs/2026-05-23-agent-bridge-design.md
 code_scope:
   - agents_hub/agent_bridge/
+  - agents_hub/roles/
 contract_refs:
   - agents_hub/agent_bridge/models.py
   - agents_hub/agent_bridge/protocols.py
@@ -30,88 +30,63 @@ contract_refs:
 | 1.1 | RoleConfig 增加 claude_config_dir，移除留白字段（permissions、tools） |
 | 1.2 | RoleConfig 统一为 work_root，新增 description/role_type/bare；StreamEvent 增加 agent_name/platform/role_type；execute() 返回 AgentResult |
 | 1.3 | AgentBridge 初始化时通过 RoleManager 创建 bare 角色并缓存 RoleConfig；新增 bare_claude_call() 接口 |
+| 2.0 | 按照新 spec 规则重构，移除执行细节，添加 Design Rationale 和 key_function 标签 |
 
 ---
 
 ## Overview
 
-agent_bridge 是 agents-hub 系统的**纯执行层模块**，负责调用不同 AI 平台的 CLI 工具（Claude Code、Codex），并将各平台的原始输出解析为统一格式。
+**业务问题**：agents-hub 系统需要调用不同 AI 平台的 CLI 工具（Claude Code、Codex），各平台的命令格式、输出格式、会话管理方式各不相同，上层模块需要一个统一的调用接口。
 
-模块定位：
-- **负责**：启动 CLI 进程、解析原始输出、提供统一调用接口
-- **不负责**：业务逻辑、会话持久化、自动错误重试（异常已定义，重试机制留白）
+**核心职责**：agent_bridge 是系统的**纯执行层模块**，负责：
+- 封装多平台 CLI 调用的差异，提供统一的调用接口
+- 将各平台的原始输出解析为统一事件格式
+- 管理角色配置，支持 bare 模式的快速调用
+
+**不负责**：业务逻辑、会话持久化、自动错误重试（异常已定义，重试机制留白）
 
 ## Scope
 
 ### 范围内
 
 - 多平台 CLI 调用的统一抽象
-- 流式/非流式/bare 三种接口
+- 流式/非流式/bare 三种调用接口
 - 统一事件格式定义与解析
-- 角色配置管理（platform、work_root、role_type）
-- bare 角色的初始化与配置缓存
-- 会话 ID 的传递与返回
+- 角色配置管理（platform、work_root、role_type、bare）
+- 异常类型定义
 
 ### 范围外
 
-- 会话持久化存储
-- 错误重试与恢复机制
-- 动态配置变更
-- 业务层逻辑（任务管理、权限控制）
-
-## Core Behavior
-
-### 架构模式：扁平化组合
-
-模块采用**执行器-解析器分离**的扁平化架构，通过组合而非继承实现功能复用：
-
-- **Executor（执行器）**：构建 CLI 命令、启动子进程、返回原始输出流
-- **Parser（解析器）**：解析原始 JSON 输出、转换为统一事件格式
-- **Bridge（桥接器）**：根据平台类型选择对应的 Executor 和 Parser，组装完整流程
-
-每个平台各有一个 Executor 和一个 Parser，新增平台只需添加这两个组件并注册到 Bridge。
-
-### 数据流
-
-```
-用户调用 → Bridge.execute_stream()
-  → 根据 platform 选择 Executor + Parser
-  → Executor 启动 CLI 子进程，返回原始 JSON 流
-  → Parser 逐行解析为统一 StreamEvent
-  → yield 给调用方
-```
-
-### 初始化
-
-`AgentBridge` 在 `__init__` 时完成以下初始化：
-
-1. 创建 Claude/Codex 的 Executor 和 Parser 实例（可复用）
-2. 创建 `RoleManager` 实例
-3. 通过 `_init_bare_config()` 获取或创建 `bare_claude` 角色，读取其 `RoleConfig` 并设置 `bare=True`，缓存到 `self._bare_config`
-
-bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续初始化直接复用已有角色（`RoleManager.get_role()`）。配置缓存在实例中，`bare_claude_call()` 直接使用缓存，无文件 I/O。
-
-### 接口设计
-
-模块提供三种调用接口，底层共享同一套流式解析逻辑：
-
-| 接口 | 用途 | 返回方式 |
-|------|------|---------|
-| `execute_stream()` | 人机交互场景（实时显示） | 逐事件 yield StreamEvent |
-| `execute()` | A2A 调用场景（主 Agent 调用子 Agent） | 返回 AgentResult 数据对象 |
-| `bare_claude_call()` | 内部快速 LLM 调用（不涉及角色业务） | 返回 AgentResult 数据对象 |
-
-`execute()` 是 `execute_stream()` 的薄包装，内部拼接所有 `text_delta` 事件文本，收集 `usage` 统计，最终返回一个 `AgentResult` 对象。
-
-`bare_claude_call()` 是 `execute()` 的薄包装，使用初始化时缓存的 bare 角色配置（`bare=True`），适用于一次性快速 LLM 调用场景。角色在 `__init__` 时通过 `RoleManager` 创建或获取，配置缓存在实例中，避免每次调用的文件 I/O。
-
-### 会话管理
-
-- **新建会话**：不传 `session_id`，CLI 工具自动生成
-- **恢复会话**：传入已有 `session_id`，CLI 工具恢复对应会话
-- **session_id 获取**：从返回事件中读取，调用方在首次调用完成后记录
+- 会话持久化存储 → 参考会话管理相关 spec
+- 错误重试与恢复机制 → 异常类型已定义，重试策略留白
+- 动态配置变更 → 配置作为参数传入
+- 业务层逻辑（任务管理、权限控制） → 参考业务层 spec
 
 ## Technical Contract
+
+### 对外接口
+
+<key_function last_update="2026-06-18T18:00:00+08:00">
+- agents_hub/agent_bridge/bridge.py
+  - bridge.AgentBridge.execute_stream:78
+  - bridge.AgentBridge.execute:194
+  - bridge.AgentBridge.bare_claude_call:282
+- agents_hub/roles/role_manager.py
+  - role_manager.RoleManager.create_role:246
+  - role_manager.RoleManager.get_role:191
+</key_function>
+
+**接口说明**：
+
+| 接口 | 用途 | 返回方式 | 参数 |
+|------|------|---------|------|
+| `execute_stream()` | 人机交互场景（实时显示） | 逐事件 yield StreamEvent | prompt, config: RoleConfig, session_id? |
+| `execute()` | A2A 调用场景（主 Agent 调用子 Agent） | 返回 AgentResult | prompt, config: RoleConfig, session_id? |
+| `bare_claude_call()` | 内部快速 LLM 调用（不涉及角色业务） | 返回 AgentResult | prompt, session_id? |
+
+**接口关系**：
+- `execute()` 是 `execute_stream()` 的包装，内部拼接所有 `text_delta` 事件文本，收集 `usage` 统计
+- `bare_claude_call()` 是 `execute()` 的包装，使用初始化时缓存的 bare 角色配置
 
 ### 平台枚举
 
@@ -121,18 +96,7 @@ bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续
 
 ### 角色配置（RoleConfig）
 
-调用时需传入的角色配置包含以下字段：
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `name` | str | 是 | 角色名称，用于标识和事件填充 |
-| `platform` | AgentPlatform | 是 | 目标平台类型 |
-| `description` | str? | 否 | 角色职责描述 |
-| `work_root` | str? | 否 | 角色工作目录路径，注入 `CLAUDE_CONFIG_DIR` 或 `CODEX_HOME` 环境变量 |
-| `role_type` | RoleType | 是 | 角色类型（leader / team_member），默认 team_member |
-| `bare` | bool | 否 | Claude CLI 极简模式：跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现 |
-
-**注**：`system_prompt` 和 `skills` 不在 RoleConfig 中——由 CLI 从角色目录自动加载（Claude 从 `CLAUDE.md`，Codex 从 `AGENTS.md`；skills 从 `work_root/skills/`）。`work_root` 同时作为环境变量注入源（Claude → `CLAUDE_CONFIG_DIR`，Codex → `CODEX_HOME`）。
+调用时需传入的角色配置，完整定义见 `docs/specs/2026-05-24-agents-role.md` 的 RoleConfig 章节。
 
 ### 统一事件格式（StreamEvent）
 
@@ -158,11 +122,9 @@ bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续
 | `TURN_COMPLETE` | 回合完成 | `usage`（token 统计） |
 | `RESULT` | 完整结果（非流式输出） | 完整结果数据 |
 
-**注**：`execute()` 不使用 `RESULT` 事件类型，而是直接返回 `AgentResult` 数据对象。
-
 ### 完整结果格式（AgentResult）
 
-`execute()` 的返回值结构：
+`execute()` 和 `bare_claude_call()` 的返回值结构：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -182,8 +144,6 @@ bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续
 
 #### FileMetadata 类型
 
-`modified_files` 数组中每个元素的结构：
-
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `path` | str | 文件路径 |
@@ -195,8 +155,6 @@ bare 角色仅在首次调用时创建（`RoleManager.create_role()`），后续
 | `diff_error` | str? | diff 获取错误信息 |
 
 #### Usage 类型
-
-Token 使用统计结构：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -211,26 +169,6 @@ Token 使用统计结构：
 - **Executor 协议**：接收 prompt、config（RoleConfig）、session_id，返回原始 JSON 字符串的异步迭代器
 - **Parser 协议**：接收单行原始 JSON 字符串，返回可选的统一 StreamEvent
 
-### CLI 命令参数
-
-#### Claude CLI
-
-核心参数：`--print`（非交互）、`--verbose`（详细输出）、`--output-format stream-json`（流式 JSON）、`--include-partial-messages`（逐字输出）
-
-极简模式：`--bare`（跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现）
-
-会话恢复：`--resume <session_id>`
-
-环境变量：通过 `CLAUDE_CONFIG_DIR`（取自 `RoleConfig.work_root`）指定角色配置目录。system_prompt 由 CLI 从 `CLAUDE.md` 自动加载，无需通过参数传递。
-
-#### Codex CLI
-
-核心参数：`exec`（执行命令）、`--json`（JSON 输出）
-
-会话恢复：`exec resume --json <session_id>`
-
-环境变量：通过 `CODEX_HOME`（取自 `RoleConfig.work_root`）指定角色配置目录。system_prompt 由 CLI 从 `AGENTS.md` 自动加载。
-
 ### 异常类型
 
 | 异常 | 触发场景 | 继承关系 |
@@ -243,25 +181,41 @@ Token 使用统计结构：
 
 所有 `AgentBridgeError` 继承自 `ExternalServiceError`。
 
-## Acceptance Notes
+## Design Rationale
 
-1. 支持 Claude 和 Codex 两个平台的 CLI 调用
-2. 流式输出能逐事件返回给调用方
-3. 非流式输出能正确拼接完整文本
-4. session_id 能从返回事件中正确提取
-5. 恢复会话时能正确传递 session_id 给 CLI
-6. Parser 无法解析时抛出 ParseError，由 Bridge 捕获并跳过该行继续处理
-7. Executor 和 Parser 均可独立测试
-8. execute() 返回的 AgentResult 包含拼接文本、session_id 和 usage 统计
-9. AgentBridge 初始化时自动创建或获取 bare_claude 角色，配置缓存在实例中
-10. bare_claude_call() 使用缓存的 bare 配置调用 execute()，无额外文件 I/O
+**为什么采用执行器-解析器分离的架构？**
+- 各平台 CLI 的命令格式和输出格式差异大，但都需要转换为统一事件
+- 分离后每个平台只需实现 Executor（构建命令）和 Parser（解析输出），新增平台成本低
+- Bridge 根据 platform 类型选择对应的 Executor 和 Parser，组装完整流程
 
-## Out of Spec
+**为什么需要 bare 模式？**
+- 内部快速 LLM 调用场景不需要 hooks/LSP/plugin sync 等功能
+- bare 模式跳过这些初始化，减少开销，提高响应速度
+- 通过 `RoleConfig.bare` 字段控制，与角色配置统一管理
 
-以下内容不在本 spec 中长期维护：
+**为什么角色配置不在 RoleConfig 中包含 system_prompt 和 skills？**
+- system_prompt 和 skills 由 CLI 从角色目录自动加载（Claude 从 `CLAUDE.md`，Codex 从 `AGENTS.md`）
+- 这样配置文件与角色目录绑定，便于版本控制和独立管理
+- `work_root` 同时作为环境变量注入源，统一了配置路径
 
-1. **CLI 命令的完整参数列表**：仅记录核心参数，具体参数随 CLI 版本变化
-2. **错误重试策略**：异常类型已定义，但自动重试机制留白
-3. **性能优化方案**：连接池、缓存、并发控制等
-4. **动态配置变更机制**：配置当前固定，作为参数传入
-5. **具体的代码实现**：函数签名、类名、变量名、目录结构等
+**有哪些约束？**
+- CLI 工具必须在 PATH 中可用，否则抛出 CLINotFoundError
+- 会话恢复依赖 CLI 工具的 session_id 机制
+- bare 模式仅适用于 Claude CLI
+
+**有哪些已知限制？**
+- 错误重试机制留白，当前异常类型已定义但未实现自动重试
+- 性能优化（连接池、缓存、并发控制）未涉及
+- 动态配置变更未支持，配置作为参数传入
+
+**相关 ADR**：
+- 参考 `docs/superpowers/specs/2026-05-23-agent-bridge-design.md` 获取原始设计文档
+
+## Out of Scope
+
+本 spec 不覆盖以下内容，请参考相应文档：
+
+- **会话持久化**：会话管理相关 spec
+- **业务层逻辑**：任务管理、权限控制等业务层 spec
+- **CLI 命令完整参数**：仅记录核心参数，具体参数随 CLI 版本变化
+- **具体实现细节**：函数签名、类名、变量名、目录结构等 → 参考 Flow 文档
