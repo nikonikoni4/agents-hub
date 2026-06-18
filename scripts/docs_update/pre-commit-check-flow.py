@@ -23,7 +23,29 @@ from pathlib import Path
 
 
 def get_repo_root() -> Path | None:
-    """获取仓库根目录（支持 git worktree）"""
+    """获取主仓库根目录（支持 git worktree）
+
+    在 worktree 中，通过 --git-common-dir 找到主仓库的 .git 目录
+    """
+    # 获取 git 公共目录（worktree 中指向主仓库 .git）
+    result = subprocess.run(
+        ["git", "rev-parse", "--git-common-dir"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if result.returncode != 0:
+        return None
+
+    # 转换为绝对路径（可能返回 ".git" 相对路径）
+    git_common_dir = Path(result.stdout.strip()).resolve()
+
+    # 主仓库：.git 是目录，父目录就是仓库根
+    # Worktree：--git-common-dir 返回主仓库的 .git 绝对路径
+    if git_common_dir.name == ".git":
+        return git_common_dir.parent
+
+    # 如果返回的不是 .git 目录（异常情况），回退到 --show-toplevel
     result = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"],
         capture_output=True,
@@ -32,6 +54,7 @@ def get_repo_root() -> Path | None:
     )
     if result.returncode == 0:
         return Path(result.stdout.strip())
+
     return None
 
 
