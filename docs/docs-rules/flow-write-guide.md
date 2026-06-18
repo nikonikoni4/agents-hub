@@ -138,8 +138,8 @@ status: type  # 说明
 - frontend/src/layouts/ChatArea/ChatArea.tsx
   - ChatArea.handleSend:377
 - agents_hub/api/services/group_chat_service.py
-  - GroupChatService.send_message:479
-  - Agent._process_message:202
+  - group_chat_service.GroupChatService.send_message:479
+  - group_chat_service.module_level_function:202
 </key_function>
 ```
 
@@ -147,7 +147,7 @@ status: type  # 说明
 - 标签格式：`<key_function last_update="ISO时间戳">` 和 `</key_function>`
 - 文件路径：从仓库根目录开始，使用 `-` 开头
 - 函数列表：使用 `  -` 开头（2个空格 + `-`）
-- 函数签名格式（重要）：
+- 函数签名格式（重要）：[file_name].[class_name(如果有)].[func_name]
   - 类方法：`FileName.ClassName.method_name`
   - 模块函数：`FileName.function_name`
   - **错误示例**：`stop_member`（缺少文件名）
@@ -160,6 +160,12 @@ status: type  # 说明
 - 脚本解析此标签格式，从 `ast_scan_result.json` 查找函数行号
 - 自动更新行号和 `last_update` 时间戳
 - **警告**：格式错误会导致自动同步失败
+
+**函数一致性原则**（重要，减少维护成本）：
+- 链路描述中明确调用的函数（如 `ClassName.method()`）必须在 key_function 中声明
+- 这样可以通过自动工具监控函数行号变化，判断 flow 是否需要更新
+- 简单的逻辑操作用文字描述替代（如"构建 prompt"、"格式化消息"），不引用具体函数
+- **例外情况**：外部库函数（如 `bare_claude_call`）、前端函数、模糊描述不需要在 key_function 中
 
 ### 2. 节点描述格式
 
@@ -185,6 +191,11 @@ status: type  # 说明
 5. **数据结构必须完整**（所有字段 + 关键字段说明，规则文档中不含语言特定语法，但具体 flow 文档中可以使用实际的代码语法）
 6. **耦合关系必须说明**（表格 + 说明）
 7. **反常设计必须记录**（只记录真正的反常：字段名与行为不符、Spec 与实现有差异、未完成的设计。不记录：正确的防御性设计、合理的边界检查。不使用"可能"、"不明显"等模糊表述，必须基于代码事实）
+8. **只记录关键函数**（重要原则，减少维护成本）：
+   - **链路中明确调用的函数必须在 key_function 中声明**
+   - 简单的逻辑操作可以用文字描述（如"构建 prompt"、"格式化消息"、"校验参数"）
+   - 只记录对 Flow 对象有直接影响的函数（状态变化、持久化、跨模块、分支、集合点）
+   - 工具函数、辅助函数、格式化函数通常不需要记录
 
 ---
 
@@ -218,9 +229,11 @@ status: type  # 说明
 - [ ] 不使用"可能"、"不明显"等模糊表述，必须基于代码事实给出明确结论
 
 ### 完成后
-- [ ] key_function 包含所有关键函数、Mermaid 图只画核心状态转换
+- [ ] key_function 包含所有关键函数（链路中明确调用的函数）
+- [ ] Mermaid 图只画核心状态转换
 - [ ] 按业务场景分链路、分支节点明确标注
 - [ ] 反常设计已记录、链接到相关文档
+- [ ] 链路描述使用文字描述简单逻辑，减少函数引用
 
 ---
 

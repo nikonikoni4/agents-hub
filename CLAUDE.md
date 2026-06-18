@@ -16,6 +16,7 @@
 | **编码规则** | `docs/coding-rules/` | 编写代码时必须遵守的规范、约束、触发场景 |
 | **文档规则** | `docs/docs-rules/` | 编写 docs 时必须遵守的规范、约束、触发场景 |
 | **产品规格** | `docs/specs/` | 对于正式 `spec`,承载业务意图、业务规则、领域概念,以及规范性技术契约,是了解系统某个功能的重要文档 |
+| **数据状态流** | `docs/flow/` | 重要的数据流，状态变化流文档，对于快速了解某个对象在程序中的流向有帮助 |
 | **使用指南** | `docs/guides/` | 面向用户的使用指南，说明如何配置和使用系统功能（如 Docker 沙箱） |
 | **架构决策** | `docs/ADR/` | 记录对于长期具有重要的作用的修改决定 |
 | **重要bug历史记录**  | `docs/history-bugs`      | 存放可复用的bug经验   |
@@ -28,8 +29,8 @@
 1. **按需加载**：在你决定阅读某个具体文件夹内容之前**必须阅读导航文件index.md**按需加载具体文件
 2. **任务涉及代码修改时**：必须阅读`docs/coding-rules/index.md`，按需加载当前任务所涉及到的规则
 3. **需要编写文档进入docs时**：必须阅读`docs/docs-rules/index.md`和`docs/docs-rules/docs-write-rules.md`
-4. **修改或为某个模块增加功能前**：需要阅读`docs/specs/index.md`，查看当前是否已经存在spec，按需加载具体的spec来了解该功能情况
-5. **如果你是minimax模型**：必须阅读`docs/coding-rules/other-model-rules`
+4. **修改或为某个模块增加功能前**：需要阅读`docs/specs/index.md`以及`docs/flow/index.md`，查看当前是否已经存在spec，按需加载具体的spec来了解该功能情况，flow文档同理
+5. **修改bug时**：必须阅读`docs/flow/index.md`，查找与之相关的数据流
 6. **修复bug时**: 可以阅读`docs\history-bugs\index.md`来获取历史bug解决方法
 7. **修改前段UI/UX时** ： 必须阅读`docs/DESIGN.md`
 8. **自主决策时**，参考`docs\ADR\user-design-summary.md`, 了解用户的决策习惯

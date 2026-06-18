@@ -622,7 +622,8 @@ call_id: {msg.call_id}
             if "stderr" in exc.details:
                 # 截取 stderr 前 500 字符
                 stderr = exc.details["stderr"]
-                error_info["stderr"] = stderr[:500] if stderr else None
+                if stderr:
+                    error_info["stderr"] = str(stderr)[:500]
 
         # 更新状态和错误信息
         agent_member_info.status = "error"
@@ -855,7 +856,7 @@ call_id: {msg.call_id}
             len(safe_content),
         )
 
-    async def run(self):
+    async def run(self) -> None:  # 测试：flow 文档更新检查
         """持续监听私有队列，处理收到的消息"""
         self.logger.info("Agent run() 启动: %s, 队列剩余=%d", self.name, self.message_queue.qsize())
         try:
@@ -913,7 +914,9 @@ call_id: {msg.call_id}
 
             # 4. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
-            status = "chatting" if msg.session_type == SessionType.BTW else "busy"
+            status = (
+                "chatting" if msg.session_type == SessionType.BTW else "busy"
+            )  # chatting字段未实装，可以暂时忽略
             await self._sync_status(status)
             self.logger.debug(
                 "Agent %s 开始处理消息: call_id=%s, send_from=%s, message_type=%s",
