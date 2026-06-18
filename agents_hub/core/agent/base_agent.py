@@ -856,7 +856,8 @@ call_id: {msg.call_id}
             len(safe_content),
         )
 
-    async def run(self) -> None:  # 测试：flow 文档更新检查
+    # 测试：添加空行，改变 run() 的行号
+    async def run(self) -> None:
         """持续监听私有队列，处理收到的消息"""
         self.logger.info("Agent run() 启动: %s, 队列剩余=%d", self.name, self.message_queue.qsize())
         try:
