@@ -2,7 +2,7 @@
 version: 1.0
 created_at: 2026-06-18
 updated_at: 2026-06-18
-last_updated: 创建文档初稿
+last_updated: 修正触发场景表（移除不存在的方法、修正 add_message 触发路径）、修正链路 1 描述、补充 MCP 链路、修正前端行号、补充 useGroupChatMembers
 abstract: WebSocket RefreshSignal 从后端触发到前端刷新的完整数据流
 ---
 
@@ -35,19 +35,19 @@ class RefreshSignal:
 
 | 状态变更 | 触发位置 | 说明 |
 |---------|---------|------|
-| 消息保存到群聊历史 | GroupChatRuntime._notify_change() | 任何调用 add_message() 的场景 |
-| 成员状态变更 | GroupChatRuntime._notify_change() | 调用 update_agent_status() 更新成员状态 |
-| 成员注册/注销 | GroupChatRuntime._notify_change() | 调用 update_member() 更新成员信息 |
+| 消息保存到群聊历史 | MCP/API 层显式调用 | add_message() 后由调用方显式调用 broadcast_group_chat_refresh() |
+| 成员信息变更 | GroupChatRuntime._notify_change() | set_agent_use_docker() / save_agent_members() → _save_agent_members() → _notify_change() |
 | Pin 消息变更 | GroupChatService 各 pin 操作 | pin/unpin/delete_pinned_message 后显式调用 |
 | 权限请求状态变更 | GroupChatService.update_permission_status() | 用户审批/拒绝权限请求 |
 | Fork 群聊创建 | GroupChatService.fork_group_chat() | 新群聊创建完成 |
+| 添加群成员 | GroupChatService.add_members() | 成员添加后显式调用 |
 
 **耦合关系**：
 - RefreshSignal 不依赖具体业务数据，只携带 group_chat_id
 - 前端收到信号后自行决定刷新哪些数据（消息列表、成员列表、任务列表等）
 - 采用"推送信号 + 拉取数据"模式，不直接推送完整数据
 
-<key_function last_update="2026-06-18T16:43:56+08:00">
+<key_function last_update="2026-06-18T17:38:30+08:00">
 - agents_hub/realtime/dependencies.py
   - broadcast_group_chat_refresh:25
 - agents_hub/realtime/events.py
@@ -66,7 +66,8 @@ class RefreshSignal:
   - GroupChatService.update_permission_status:1521
 - agents_hub/mcp/server.py
   - call_agent:182
-  - chat:552
+  - report_progress:501 ⚠️ 已弃用（见 ADR 2026-06-16-mcp-tools-to-direct-output）
+  - complete_task:569 ⚠️ 已弃用（见 ADR 2026-06-16-mcp-tools-to-direct-output）
   - request_permission:773
 - frontend/src/core/websocket/WebSocketManager.ts
   - WebSocketManager.connect:18
@@ -109,8 +110,8 @@ stateDiagram-v2
     
     note right of 触发点
         两类触发源：
-        1. Runtime 自动触发（消息保存、状态变更）
-        2. 业务层显式调用（MCP/API）
+        1. Runtime 自动触发（成员信息变更 → _notify_change）
+        2. 业务层显式调用（MCP/API 直接调用 broadcast_group_chat_refresh）
     end note
     
     note right of 广播
@@ -126,24 +127,27 @@ stateDiagram-v2
         - useTasks（任务列表）
         - useAgentCalls（调用记录）
         - usePinnedMessages（置顶消息）
+        - useGroupChatMembers（群成员管理）
     end note
 ```
 
 ## 数据流节点
 
-**两条主链路**：
+**三条主链路**：
 ```
-链路 1: Runtime 自动触发 → Core → Realtime → WebSocket → Frontend
-链路 2: 业务层显式调用 → Realtime → WebSocket → Frontend
+链路 1: Runtime 自动触发（成员信息变更）→ Core._notify_change → Realtime → WebSocket → Frontend
+链路 2: MCP 显式调用（call_agent / report_progress⚠️ / complete_task⚠️ / request_permission）→ Realtime → WebSocket → Frontend
+链路 3: API 显式调用（pin/permission/fork/add_members）→ Realtime → WebSocket → Frontend
 ```
 
-## 链路 1：Runtime 自动触发（消息保存场景）
+## 链路 1：Runtime 自动触发（成员信息变更场景）
 
 ```
-1. GroupChatRuntime.add_message()
-   保存消息到群聊历史（内存 + JSONL 文件）
-   状态: 消息添加到 session | 持久化: ✅ | 跨模块: ❌ core 内
-   步骤: 追加消息到内存 → 写入 JSONL → 调用 _notify_change()
+1. GroupChatRuntime._save_agent_members()
+   持久化 agent 成员信息（agent_member.json）
+   状态: 更新成员信息 | 持久化: ✅ | 跨模块: ❌ core 内
+   触发方: set_agent_use_docker() / save_agent_members()
+   步骤: 调用 repository.save_agent_member() → 调用 _notify_change()
 
 2. GroupChatRuntime._notify_change()
    触发 on_change 回调，通知外部状态变更
@@ -171,19 +175,58 @@ stateDiagram-v2
    步骤: 清除旧防抖定时器 → 300ms 后调用 _emitImmediate() → 遍历 listeners
 
 7. useChatMessages / useMembers / useTasks 等 hook
-   各业务 hook 收到 refresh 事件，调用 React Query 的 refetch()
+   各业务 hook 收到 refresh 事件，调用对应 API 拉取最新数据
    状态: 触发 API 请求 | 持久化: ❌ | 跨模块: ❌ 前端 features 内
-   步骤: 检查 group_chat_id 匹配 → 调用 queryClient.refetchQueries() → 拉取最新数据
+   步骤: 检查 group_chat_id 匹配 → 调用对应 API → 更新组件状态
 ```
 
-## 链路 2：MCP 显式调用（Agent 间通信场景）
+## 链路 2：MCP 显式调用
+
+MCP server 中有 4 个工具在操作完成后显式调用 `broadcast_group_chat_refresh()`：
+
+### 链路 2a：call_agent（Agent 间通信）
 
 ```
 1. mcp.server.call_agent()
    MCP 工具调用另一个 Agent，创建 AgentCall 并投递消息
    状态: 创建 PENDING AgentCall | 持久化: ✅ | 跨模块: ✅ mcp → core
    步骤: 加载群聊 → 创建 AgentCall → 投递消息 → 显式调用 broadcast_group_chat_refresh()
+```
 
+### 链路 2b：report_progress（进度汇报）⚠️ 已弃用
+
+> ⚠️ **已弃用**：见 [ADR 2026-06-16-mcp-tools-to-direct-output](../ADR/2026-06-16-mcp-tools-to-direct-output.md)，该工具已计划移除，Agent 输出改为直接回复。
+
+```
+1. mcp.server.report_progress()
+   MCP 工具汇报 Agent 执行进度
+   状态: 消息保存到历史 | 持久化: ✅ | 跨模块: ✅ mcp → core
+   步骤: 加载群聊 → add_message() → 显式调用 broadcast_group_chat_refresh()
+```
+
+### 链路 2c：complete_task（任务完成）⚠️ 已弃用
+
+> ⚠️ **已弃用**：见 [ADR 2026-06-16-mcp-tools-to-direct-output](../ADR/2026-06-16-mcp-tools-to-direct-output.md)，该工具已计划移除，Agent 输出改为直接回复。
+
+```
+1. mcp.server.complete_task()
+   MCP 工具结束 AgentCall 并返回结果
+   状态: 消息保存到历史 | 持久化: ✅ | 跨模块: ✅ mcp → core
+   步骤: 加载群聊 → add_message() → 显式调用 broadcast_group_chat_refresh()
+```
+
+### 链路 2d：request_permission（权限请求）
+
+```
+1. mcp.server.request_permission()
+   MCP 工具创建权限请求消息
+   状态: 权限请求消息写入历史 | 持久化: ✅ | 跨模块: ✅ mcp → core
+   步骤: 加载群聊 → 构建权限请求 → add_message() → 显式调用 broadcast_group_chat_refresh()
+```
+
+### 共同后续步骤
+
+```
 2. broadcast_group_chat_refresh()
    构造 RefreshSignal 并调用 WebSocketManager 广播
    状态: 创建 RefreshSignal | 持久化: ❌ | 跨模块: ✅ mcp → realtime

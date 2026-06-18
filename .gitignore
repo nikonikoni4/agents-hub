@@ -217,14 +217,12 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 other
-settings.json
 settings1.json
 settings2.json
 settings copy.json
 auth.json
 claude_home
 tests\explore\test_cli_error\codex_home
-.claude
 local_data
 .pytest_tmp
 927e0e2c-2c69-40d4-9e6a-f494a92efe4a.jsonl
@@ -238,3 +236,4 @@ prompts
 视频
 *.mp4
 start_branch.ps1
+worktrees

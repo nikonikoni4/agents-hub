@@ -67,7 +67,9 @@ class GroupChatMember(BaseModel):
     use_docker: bool = False
     status: str = "idle"  # Agent 状态：idle/busy/stopped/error
     context_usage: int | None = None
-    error_info: dict | None = None  # 错误信息：{"type": "...", "message": "...", "exit_code": ..., "stderr": "..."}
+    error_info: dict | None = (
+        None  # 错误信息：{"type": "...", "message": "...", "exit_code": ..., "stderr": "..."}
+    )
 
 
 class UseDockerUpdate(BaseModel):

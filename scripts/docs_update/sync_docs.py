@@ -13,9 +13,15 @@ import json
 import re
 import subprocess
 import sys
+import io
 import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+# 设置 stdout 为 UTF-8 编码（解决 Windows 控制台问题）
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # 配置
 MIN_INTERVAL = 600  # 10 分钟（秒）

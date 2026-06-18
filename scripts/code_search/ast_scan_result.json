@@ -1,7 +1,7 @@
 {
   "total_files": 87,
   "total_definitions": 661,
-  "total_calls": 1449,
+  "total_calls": 1450,
   "definitions": {
     "bootstrap.initialize_resources": {
       "line": 17,
@@ -1004,32 +1004,32 @@
       "name": "Agent._set_error_status"
     },
     "core.agent.base_agent.Agent._parse_changes_xml": {
-      "line": 640,
+      "line": 641,
       "module": "core.agent.base_agent",
       "name": "Agent._parse_changes_xml"
     },
     "core.agent.base_agent.Agent._strip_changes_xml": {
-      "line": 676,
+      "line": 677,
       "module": "core.agent.base_agent",
       "name": "Agent._strip_changes_xml"
     },
     "core.agent.base_agent.Agent._process_file_changes": {
-      "line": 680,
+      "line": 681,
       "module": "core.agent.base_agent",
       "name": "Agent._process_file_changes"
     },
     "core.agent.base_agent.Agent._fallback_close_task": {
-      "line": 728,
+      "line": 729,
       "module": "core.agent.base_agent",
       "name": "Agent._fallback_close_task"
     },
     "core.agent.base_agent.Agent.run": {
-      "line": 858,
+      "line": 860,
       "module": "core.agent.base_agent",
       "name": "Agent.run"
     },
     "core.agent.base_agent.Agent._run_loop": {
-      "line": 883,
+      "line": 885,
       "module": "core.agent.base_agent",
       "name": "Agent._run_loop"
     },
@@ -2359,102 +2359,102 @@
       "name": "GroupChatMember"
     },
     "api.schemas.group_chats.UseDockerUpdate": {
-      "line": 73,
+      "line": 75,
       "module": "api.schemas.group_chats",
       "name": "UseDockerUpdate"
     },
     "api.schemas.group_chats.UploadedFileInfo": {
-      "line": 79,
+      "line": 81,
       "module": "api.schemas.group_chats",
       "name": "UploadedFileInfo"
     },
     "api.schemas.group_chats.MessageCreate": {
-      "line": 88,
+      "line": 90,
       "module": "api.schemas.group_chats",
       "name": "MessageCreate"
     },
     "api.schemas.group_chats.PermissionRequestInfo": {
-      "line": 96,
+      "line": 98,
       "module": "api.schemas.group_chats",
       "name": "PermissionRequestInfo"
     },
     "api.schemas.group_chats.WebPreviewInfo": {
-      "line": 106,
+      "line": 108,
       "module": "api.schemas.group_chats",
       "name": "WebPreviewInfo"
     },
     "api.schemas.group_chats.MessageInfo": {
-      "line": 113,
+      "line": 115,
       "module": "api.schemas.group_chats",
       "name": "MessageInfo"
     },
     "api.schemas.group_chats.PermissionUpdateRequest": {
-      "line": 132,
+      "line": 134,
       "module": "api.schemas.group_chats",
       "name": "PermissionUpdateRequest"
     },
     "api.schemas.group_chats.PermissionUpdateResponse": {
-      "line": 138,
+      "line": 140,
       "module": "api.schemas.group_chats",
       "name": "PermissionUpdateResponse"
     },
     "api.schemas.group_chats.PinMessageRequest": {
-      "line": 149,
+      "line": 151,
       "module": "api.schemas.group_chats",
       "name": "PinMessageRequest"
     },
     "api.schemas.group_chats.PinnedMessageInfo": {
-      "line": 155,
+      "line": 157,
       "module": "api.schemas.group_chats",
       "name": "PinnedMessageInfo"
     },
     "api.schemas.group_chats.PinOperationResponse": {
-      "line": 166,
+      "line": 168,
       "module": "api.schemas.group_chats",
       "name": "PinOperationResponse"
     },
     "api.schemas.group_chats.PinErrorResponse": {
-      "line": 172,
+      "line": 174,
       "module": "api.schemas.group_chats",
       "name": "PinErrorResponse"
     },
     "api.schemas.group_chats.AddMembersRequest": {
-      "line": 182,
+      "line": 184,
       "module": "api.schemas.group_chats",
       "name": "AddMembersRequest"
     },
     "api.schemas.group_chats.AgentCallInfo": {
-      "line": 191,
+      "line": 193,
       "module": "api.schemas.group_chats",
       "name": "AgentCallInfo"
     },
     "api.schemas.group_chats.TaskInfo": {
-      "line": 225,
+      "line": 227,
       "module": "api.schemas.group_chats",
       "name": "TaskInfo"
     },
     "api.schemas.group_chats.TaskListInfo": {
-      "line": 248,
+      "line": 250,
       "module": "api.schemas.group_chats",
       "name": "TaskListInfo"
     },
     "api.schemas.group_chats.CompressResponse": {
-      "line": 272,
+      "line": 274,
       "module": "api.schemas.group_chats",
       "name": "CompressResponse"
     },
     "api.schemas.group_chats.CompressAllResponse": {
-      "line": 282,
+      "line": 284,
       "module": "api.schemas.group_chats",
       "name": "CompressAllResponse"
     },
     "api.schemas.group_chats.MemberHistoryMessage": {
-      "line": 289,
+      "line": 291,
       "module": "api.schemas.group_chats",
       "name": "MemberHistoryMessage"
     },
     "api.schemas.group_chats.MemberHistoryResponse": {
-      "line": 299,
+      "line": 301,
       "module": "api.schemas.group_chats",
       "name": "MemberHistoryResponse"
     },
@@ -4999,11 +4999,11 @@
       },
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 656
+        "line": 657
       },
       {
         "from": "core.agent.base_agent.extract_tag",
-        "line": 663
+        "line": 664
       }
     ],
     "roles.role_manager.RoleType": [
@@ -5735,7 +5735,7 @@
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 830
+        "line": 831
       }
     ],
     "core.agent.base_agent.getattr": [
@@ -5749,7 +5749,7 @@
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 778
+        "line": 779
       }
     ],
     "core.agent.base_agent.DockerConfigError": [
@@ -5777,11 +5777,11 @@
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 761
+        "line": 762
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 799
+        "line": 800
       }
     ],
     "core.agent.base_agent.len": [
@@ -5803,15 +5803,11 @@
       },
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 721
+        "line": 722
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 794
-      },
-      {
-        "from": "core.agent.base_agent._fallback_close_task",
-        "line": 800
+        "line": 795
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
@@ -5819,7 +5815,11 @@
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 855
+        "line": 802
+      },
+      {
+        "from": "core.agent.base_agent._fallback_close_task",
+        "line": 856
       }
     ],
     "core.agent.base_agent.get_git_head": [
@@ -5864,20 +5864,24 @@
         "line": 614
       },
       {
+        "from": "core.agent.base_agent._set_error_status",
+        "line": 626
+      },
+      {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 716
+        "line": 717
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 806
+        "line": 807
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 847
+        "line": 848
       },
       {
         "from": "core.agent.base_agent.run",
-        "line": 870
+        "line": 872
       }
     ],
     "core.agent.base_agent.AgentExecutionError": [
@@ -5907,11 +5911,7 @@
     "core.agent.base_agent.extract_tag": [
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 666
-      },
-      {
-        "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 671
+        "line": 667
       },
       {
         "from": "core.agent.base_agent._parse_changes_xml",
@@ -5920,12 +5920,16 @@
       {
         "from": "core.agent.base_agent._parse_changes_xml",
         "line": 673
+      },
+      {
+        "from": "core.agent.base_agent._parse_changes_xml",
+        "line": 674
       }
     ],
     "re.sub": [
       {
         "from": "core.agent.base_agent._strip_changes_xml",
-        "line": 678
+        "line": 679
       },
       {
         "from": "core.utils.path_utils.sanitize_project_path",
@@ -5939,41 +5943,41 @@
     "core.agent.base_agent.enumerate": [
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 704
+        "line": 705
       }
     ],
     "core.agent.base_agent.create_file_snapshot": [
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 706
+        "line": 707
       }
     ],
     "core.agent.base_agent.redact_token": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 742
+        "line": 743
       }
     ],
     "core.agent.base_agent.get_git_changed_files": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 781
+        "line": 782
       }
     ],
     "core.agent.base_agent.render_for_chat": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 815
+        "line": 816
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 820
+        "line": 821
       }
     ],
     "core.agent.base_agent.render_for_llm": [
       {
         "from": "core.agent.base_agent._run_loop",
-        "line": 915
+        "line": 917
       }
     ],
     "core.agent.manager.super": [
@@ -7009,14 +7013,6 @@
       },
       {
         "from": "core.context.group_chat_session.<module>",
-        "line": 45
-      },
-      {
-        "from": "core.context.group_chat_session.<module>",
-        "line": 46
-      },
-      {
-        "from": "core.context.group_chat_session.<module>",
         "line": 47
       },
       {
@@ -7026,18 +7022,26 @@
       {
         "from": "core.context.group_chat_session.<module>",
         "line": 49
+      },
+      {
+        "from": "core.context.group_chat_session.<module>",
+        "line": 50
+      },
+      {
+        "from": "core.context.group_chat_session.<module>",
+        "line": 51
       }
     ],
     "core.context.group_chat_session.str": [
       {
         "from": "core.context.group_chat_session.<module>",
-        "line": 45
+        "line": 47
       }
     ],
     "core.context.group_chat_session.uuid4": [
       {
         "from": "core.context.group_chat_session.<module>",
-        "line": 45
+        "line": 47
       }
     ],
     "core.context.group_metadata.cls": [
@@ -8601,15 +8605,7 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 76
-      },
-      {
-        "from": "api.schemas.group_chats.<module>",
-        "line": 82
-      },
-      {
-        "from": "api.schemas.group_chats.<module>",
-        "line": 83
+        "line": 78
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8621,11 +8617,11 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 91
+        "line": 86
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 92
+        "line": 87
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8633,11 +8629,11 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 99
+        "line": 94
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 100
+        "line": 95
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8653,19 +8649,19 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 109
+        "line": 104
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 110
+        "line": 105
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 116
+        "line": 111
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 117
+        "line": 112
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8705,15 +8701,15 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 135
+        "line": 127
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 141
+        "line": 128
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 142
+        "line": 137
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8721,15 +8717,15 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 152
+        "line": 144
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 158
+        "line": 145
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 159
+        "line": 154
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8749,27 +8745,27 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 169
+        "line": 164
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 175
+        "line": 165
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 176
+        "line": 171
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 185
+        "line": 177
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 194
+        "line": 178
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 195
+        "line": 187
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8805,11 +8801,11 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 228
+        "line": 204
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 229
+        "line": 205
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8829,11 +8825,11 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 251
+        "line": 234
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 252
+        "line": 235
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8849,11 +8845,11 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 275
+        "line": 256
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 276
+        "line": 257
       },
       {
         "from": "api.schemas.group_chats.<module>",
@@ -8869,25 +8865,33 @@
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 285
+        "line": 280
       },
       {
         "from": "api.schemas.group_chats.<module>",
-        "line": 286
+        "line": 281
+      },
+      {
+        "from": "api.schemas.group_chats.<module>",
+        "line": 287
+      },
+      {
+        "from": "api.schemas.group_chats.<module>",
+        "line": 288
       }
     ],
     "api.schemas.group_chats.cls": [
       {
         "from": "api.schemas.group_chats.from_agent_call",
-        "line": 208
+        "line": 210
       },
       {
         "from": "api.schemas.group_chats.from_task",
-        "line": 238
+        "line": 240
       },
       {
         "from": "api.schemas.group_chats.from_task_list",
-        "line": 260
+        "line": 262
       }
     ],
     "api.schemas.roles.cls": [
@@ -12250,20 +12254,20 @@
       {
         "to": "core.agent.base_agent.isinstance",
         "line": 618
+      },
+      {
+        "to": "core.agent.base_agent.str",
+        "line": 626
       }
     ],
     "core.agent.base_agent._parse_changes_xml": [
       {
         "to": "re.search",
-        "line": 656
+        "line": 657
       },
       {
         "to": "core.agent.base_agent.extract_tag",
-        "line": 666
-      },
-      {
-        "to": "core.agent.base_agent.extract_tag",
-        "line": 671
+        "line": 667
       },
       {
         "to": "core.agent.base_agent.extract_tag",
@@ -12272,65 +12276,65 @@
       {
         "to": "core.agent.base_agent.extract_tag",
         "line": 673
+      },
+      {
+        "to": "core.agent.base_agent.extract_tag",
+        "line": 674
       }
     ],
     "core.agent.base_agent.extract_tag": [
       {
         "to": "re.search",
-        "line": 663
+        "line": 664
       }
     ],
     "core.agent.base_agent._strip_changes_xml": [
       {
         "to": "re.sub",
-        "line": 678
+        "line": 679
       }
     ],
     "core.agent.base_agent._process_file_changes": [
       {
         "to": "core.agent.base_agent.enumerate",
-        "line": 704
+        "line": 705
       },
       {
         "to": "core.agent.base_agent.create_file_snapshot",
-        "line": 706
+        "line": 707
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 716
+        "line": 717
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 721
+        "line": 722
       }
     ],
     "core.agent.base_agent._fallback_close_task": [
       {
         "to": "core.agent.base_agent.redact_token",
-        "line": 742
+        "line": 743
       },
       {
         "to": "core.agent.base_agent.Path",
-        "line": 761
+        "line": 762
       },
       {
         "to": "core.agent.base_agent.getattr",
-        "line": 778
+        "line": 779
       },
       {
         "to": "core.agent.base_agent.get_git_changed_files",
-        "line": 781
+        "line": 782
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 794
+        "line": 795
       },
       {
         "to": "core.agent.base_agent.Path",
-        "line": 799
-      },
-      {
-        "to": "core.agent.base_agent.len",
         "line": 800
       },
       {
@@ -12338,40 +12342,44 @@
         "line": 801
       },
       {
+        "to": "core.agent.base_agent.len",
+        "line": 802
+      },
+      {
         "to": "core.agent.base_agent.str",
-        "line": 806
+        "line": 807
       },
       {
         "to": "core.agent.base_agent.render_for_chat",
-        "line": 815
+        "line": 816
       },
       {
         "to": "core.agent.base_agent.render_for_chat",
-        "line": 820
+        "line": 821
       },
       {
         "to": "core.agent.base_agent.AgentMessage",
-        "line": 830
+        "line": 831
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 847
+        "line": 848
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 855
+        "line": 856
       }
     ],
     "core.agent.base_agent.run": [
       {
         "to": "core.agent.base_agent.str",
-        "line": 870
+        "line": 872
       }
     ],
     "core.agent.base_agent._run_loop": [
       {
         "to": "core.agent.base_agent.render_for_llm",
-        "line": 915
+        "line": 917
       }
     ],
     "core.agent.manager.__init__": [
@@ -13337,22 +13345,14 @@
       },
       {
         "to": "core.context.group_chat_session.field",
-        "line": 45
+        "line": 47
       },
       {
         "to": "core.context.group_chat_session.str",
-        "line": 45
+        "line": 47
       },
       {
         "to": "core.context.group_chat_session.uuid4",
-        "line": 45
-      },
-      {
-        "to": "core.context.group_chat_session.field",
-        "line": 46
-      },
-      {
-        "to": "core.context.group_chat_session.field",
         "line": 47
       },
       {
@@ -13362,6 +13362,14 @@
       {
         "to": "core.context.group_chat_session.field",
         "line": 49
+      },
+      {
+        "to": "core.context.group_chat_session.field",
+        "line": 50
+      },
+      {
+        "to": "core.context.group_chat_session.field",
+        "line": 51
       }
     ],
     "core.context.group_metadata.from_dict": [
@@ -15145,15 +15153,7 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 76
-      },
-      {
-        "to": "api.schemas.group_chats.Field",
-        "line": 82
-      },
-      {
-        "to": "api.schemas.group_chats.Field",
-        "line": 83
+        "line": 78
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15165,11 +15165,11 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 91
+        "line": 86
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 92
+        "line": 87
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15177,11 +15177,11 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 99
+        "line": 94
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 100
+        "line": 95
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15197,19 +15197,19 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 109
+        "line": 104
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 110
+        "line": 105
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 116
+        "line": 111
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 117
+        "line": 112
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15249,15 +15249,15 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 135
+        "line": 127
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 141
+        "line": 128
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 142
+        "line": 137
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15265,15 +15265,15 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 152
+        "line": 144
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 158
+        "line": 145
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 159
+        "line": 154
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15293,27 +15293,27 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 169
+        "line": 164
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 175
+        "line": 165
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 176
+        "line": 171
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 185
+        "line": 177
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 194
+        "line": 178
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 195
+        "line": 187
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15349,11 +15349,11 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 228
+        "line": 204
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 229
+        "line": 205
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15373,11 +15373,11 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 251
+        "line": 234
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 252
+        "line": 235
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15393,11 +15393,11 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 275
+        "line": 256
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 276
+        "line": 257
       },
       {
         "to": "api.schemas.group_chats.Field",
@@ -15413,29 +15413,37 @@
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 285
+        "line": 280
       },
       {
         "to": "api.schemas.group_chats.Field",
-        "line": 286
+        "line": 281
+      },
+      {
+        "to": "api.schemas.group_chats.Field",
+        "line": 287
+      },
+      {
+        "to": "api.schemas.group_chats.Field",
+        "line": 288
       }
     ],
     "api.schemas.group_chats.from_agent_call": [
       {
         "to": "api.schemas.group_chats.cls",
-        "line": 208
+        "line": 210
       }
     ],
     "api.schemas.group_chats.from_task": [
       {
         "to": "api.schemas.group_chats.cls",
-        "line": 238
+        "line": 240
       }
     ],
     "api.schemas.group_chats.from_task_list": [
       {
         "to": "api.schemas.group_chats.cls",
-        "line": 260
+        "line": 262
       }
     ],
     "api.schemas.roles.from_domain": [

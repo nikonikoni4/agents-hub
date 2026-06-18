@@ -30,7 +30,9 @@ class AgentMemberInfo:
     use_docker: bool = False  # 是否使用 Docker 沙箱执行
     status: str = "idle"  # Agent 状态：idle/busy/stopped/error
     context_usage: int = 0  # 上下文使用量（input_tokens/1000 取整）
-    error_info: dict[str, Any] | None = None  # 错误信息：{"type": "...", "message": "...", "exit_code": ..., "stderr": "..."}
+    error_info: dict[str, Any] | None = (
+        None  # 错误信息：{"type": "...", "message": "...", "exit_code": ..., "stderr": "..."}
+    )
 
 
 @dataclass
