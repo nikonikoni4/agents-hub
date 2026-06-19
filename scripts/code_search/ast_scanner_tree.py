@@ -340,23 +340,82 @@ class TreeSitterScanner:
 
 
 def main():
-    root = Path(__file__).parent.parent.parent / "agents_hub"
-    scanner = TreeSitterScanner(root)
-    result = scanner.scan()
+    project_root = Path(__file__).parent.parent.parent
+    scan_dirs = [
+        project_root / "agents_hub",
+        project_root / "frontend" / "src",
+    ]
+
+    # 合并扫描结果
+    all_definitions = {}
+    all_calls_raw = []  # 原始元组格式: (caller_mod, caller_func, callee_mod, callee_func, line)
+
+    for scan_dir in scan_dirs:
+        if not scan_dir.exists():
+            print(f"跳过不存在的目录: {scan_dir}")
+            continue
+
+        scanner = TreeSitterScanner(scan_dir)
+        result = scanner.scan()
+
+        # 合并定义
+        all_definitions.update(result["definitions"])
+
+        # 从 called_by 反向构建原始调用关系
+        for callee_key, callers in result["called_by"].items():
+            for call in callers:
+                caller_key = call["from"]
+                line = call["line"]
+                # 拆分 key: "module.func" -> (module, func)
+                caller_parts = caller_key.rsplit(".", 1)
+                callee_parts = callee_key.rsplit(".", 1)
+                if len(caller_parts) == 2 and len(callee_parts) == 2:
+                    all_calls_raw.append((caller_parts[0], caller_parts[1],
+                                         callee_parts[0], callee_parts[1], line))
+
+        label = "backend" if "agents_hub" in str(scan_dir) else "frontend"
+        print(f"\n[{label}] 扫描完成:")
+        print(f"  模块数: {result['total_files']}")
+        print(f"  定义数: {result['total_definitions']}")
+        print(f"  调用关系数: {result['total_calls']}")
+
+    # 构建合并输出
+    called_by = defaultdict(list)
+    calls_to = defaultdict(list)
+    for caller_mod, caller_func, callee_mod, callee_func, line in all_calls_raw:
+        caller_key = f"{caller_mod}.{caller_func}"
+        callee_key = f"{callee_mod}.{callee_func}"
+        called_by[callee_key].append({"from": caller_key, "line": line})
+        calls_to[caller_key].append({"to": callee_key, "line": line})
+
+    # 计算唯一模块数
+    unique_modules = set()
+    for key in all_definitions.keys():
+        module = all_definitions[key]["module"]
+        unique_modules.add(module)
+
+    merged_result = {
+        "total_files": len(unique_modules),
+        "total_definitions": len(all_definitions),
+        "total_calls": len(all_calls_raw),
+        "definitions": all_definitions,
+        "called_by": {k: v for k, v in called_by.items()},
+        "calls_to": {k: v for k, v in calls_to.items()},
+    }
 
     output_path = Path(__file__).parent / "ast_scan_result.json"
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, indent=2, ensure_ascii=False)
+        json.dump(merged_result, f, indent=2, ensure_ascii=False)
 
-    print(f"Tree-sitter 扫描完成:")
-    print(f"  模块数: {result['total_files']}")
-    print(f"  定义数: {result['total_definitions']}")
-    print(f"  调用关系数: {result['total_calls']}")
+    print(f"\n总计:")
+    print(f"  模块数: {merged_result['total_files']}")
+    print(f"  定义数: {merged_result['total_definitions']}")
+    print(f"  调用关系数: {merged_result['total_calls']}")
     print(f"\n结果已保存到: {output_path}")
 
     # 打印被调用最多的
     print("\n=== 被调用最多的函数 (Top 10) ===")
-    top = sorted(result["called_by"].items(), key=lambda x: len(x[1]), reverse=True)[:10]
+    top = sorted(merged_result["called_by"].items(), key=lambda x: len(x[1]), reverse=True)[:10]
     for func, callers in top:
         print(f"  {func}  (被调用 {len(callers)} 次)")
 
