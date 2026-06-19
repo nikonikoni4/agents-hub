@@ -85,7 +85,7 @@ contract_refs:
 
 ### 群聊聚合消息
 
-<key_function last_update="2026-06-19T09:48:52+08:00">
+<key_function last_update="2026-06-19T11:19:09+08:00">
 - agents_hub/core/context/group_chat_runtime.py
   - group_chat_runtime.GroupChatRuntime.get_message_dicts:129
 - agents_hub/core/context/group_chat_session.py
@@ -156,10 +156,10 @@ contract_refs:
 
 **Session 文件解析规则**：
 
-| 平台 | 搜索目录 | 文件匹配 |
-|------|---------|---------|
-| Claude | `{work_root}/projects/` | `*{session_id}*.jsonl`（递归搜索） |
-| Codex/OpenCode | `{work_root}/sessions/` | `*{session_id}*.jsonl`（递归搜索） |
+| 平台 | 搜索目录 | 文件匹配 | 工具调用提取方式 |
+|------|---------|---------|-----------------|
+| Claude | `{work_root}/projects/` | `*{session_id}*.jsonl`（递归搜索） | 从 assistant message 的 content block 中提取 `tool_use` 块 |
+| Codex/OpenCode | `{work_root}/sessions/` | `*{session_id}*.jsonl`（递归搜索） | 从顶层 `function_call` response_item 提取，通过 `call_id` 关联 |
 
 **检索流程**：
 1. 通过 `agent_member.json` 获取 Agent 的 `main_session` ID

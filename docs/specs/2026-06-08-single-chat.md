@@ -65,7 +65,7 @@ contract_refs:
 
 ### API 端点
 
-<key_function last_update="2026-06-19T09:48:52+08:00">
+<key_function last_update="2026-06-19T11:19:09+08:00">
 - agents_hub/api/routes/single_chat.py
   - single_chat.list_single_chats:25
   - single_chat.get_single_chat:33
@@ -193,8 +193,14 @@ contract_refs:
 
 | 平台 | 支持角色 | 内容提取方式 | 工具调用提取 |
 |------|---------|-------------|-------------|
-| Claude | user, assistant | 字符串或内容块数组（提取 text 块） | 提取 `tool_use` 块的 id、name、input |
-| Codex | user, assistant, system, tool | 内容块数组（提取 input_text/output_text 块），未知角色跳过 | 提取 `tool_use` 块的 id、name、input |
+| Claude | user, assistant | 字符串或内容块数组（提取 text 块） | 从 assistant message 的 content block 中提取 `tool_use` 块（id、name、input） |
+| Codex | user, assistant, system, tool | 内容块数组（提取 input_text/output_text 块），未知角色跳过 | 从顶层 `function_call` response_item 提取（call_id、name、arguments），通过 `call_id` 关联 `function_call_output` |
+
+**Codex 工具调用特殊格式**：
+- 工具调用是独立的顶层 `response_item`（`payload.type = "function_call"`），不是 assistant message 的 content block
+- 参数是 JSON string（`payload.arguments`），需要 `json.loads()` 反序列化
+- 通过 `call_id` 关联 `function_call` 和 `function_call_output`
+- 一个 assistant 消息可能对应多个 `function_call`（并行调用多个工具）
 
 ### 缓存策略
 
