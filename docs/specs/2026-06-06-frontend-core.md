@@ -71,7 +71,7 @@ Core 层禁止反向依赖 features 或 shared 中的业务模块。
 
 ### WebSocketManager
 
-<key_function last_update="2026-06-19T08:25:17+08:00">
+<key_function last_update="2026-06-19T09:08:01+08:00">
 - frontend/src/core/websocket/WebSocketManager.ts
   - WebSocketManager.getInstance:41
   - WebSocketManager.connect:18

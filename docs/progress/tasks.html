@@ -1160,6 +1160,22 @@
     "background": "当前 Agent 采用单次调用模式，复杂任务需要用户多次手动触发。Agent Loop 是实现自主 Agent 的核心基础设施。"
   },
   {
+    "id": 38,
+    "title": "AgentBridge 分批输出优化",
+    "source": "用户直接指定",
+    "status": "🚧 进行中",
+    "created_at": "2026-06-19",
+    "description": "优化 AgentBridge 的输出机制，将 Agent 的完整输出分批返回给前端，而非等待全部完成后再一次性返回。目标是提升前端用户体验，让用户能实时看到 Agent 的工作进度，避免长时间等待无反馈。",
+    "modules": [
+      "后端：AgentBridge 输出流式处理、WebSocket 消息分批发送",
+      "前端：消息流式渲染、进度状态展示"
+    ],
+    "notes": [
+      "与任务 #29（Agent Bridge System Prompt 注入模式）相关",
+      "需要考虑输出完整性与实时性的平衡"
+    ]
+  },
+  {
     "id": 37,
     "title": "Agent 上下文自动压缩阈值设置",
     "source": "用户直接指定",

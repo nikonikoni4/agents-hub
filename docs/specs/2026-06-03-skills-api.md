@@ -64,7 +64,7 @@ contract_refs:
 
 ### API 端点
 
-<key_function last_update="2026-06-19T08:25:17+08:00">
+<key_function last_update="2026-06-19T09:08:01+08:00">
 - agents_hub/api/routes/skills.py
   - skills.list_skills:16
   - skills.get_skill:23

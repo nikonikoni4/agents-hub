@@ -129,3 +129,9 @@
  - path: `docs/specs/2026-06-08-single-chat.md`
  - 触发规则：当设计、修改或扩展单聊通道时阅读，包括单聊 CRUD、三种创建模式、流式消息发送、Session 文件解析和 LRU 消息缓存
  - 内容摘要：单聊通道模块规格，定义用户与单个 Agent 直接对话的轻量级通道（不依赖群聊编排逻辑）、三种创建模式（new/fork/continue_group_chat）、SSE 流式消息发送、平台 session 文件解析（Claude/Codex）、LRU 消息缓存（15 个上限）和 session 路径解析规则
+
+## chat-history
+ - updated_at : 2026-06-19
+ - path: `docs/specs/2026-06-19-chat-history.md`
+ - 触发规则：当设计、修改或扩展聊天历史记录功能时阅读，包括群聊聚合消息存储、成员个人历史解析、消息检索接口和分页策略
+ - 内容摘要：聊天历史记录模块规格，定义群聊聚合消息（JSONL 文件）和成员个人历史（平台 session 文件）的存储模型、检索接口、数据结构（MessageInfo/MemberHistoryMessage/SessionMessage）、游标分页策略和单聊 LRU 缓存机制
