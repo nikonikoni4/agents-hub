@@ -41,6 +41,8 @@ interface SessionState {
   clearActive: () => void;
   /** 触发群聊列表刷新（供删除/创建后使用） */
   refreshGroupChats: () => void;
+  /** 重置指定项目的已加载 sessions（供刷新后重新加载） */
+  resetProjectSessions: (projectPath: string) => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -87,4 +89,18 @@ export const useSessionStore = create<SessionState>((set) => ({
   clearActive: () => set({ activeSessionId: null }),
 
   refreshGroupChats: () => set({ lastRefreshTrigger: Date.now() }),
+
+  resetProjectSessions: (projectPath) =>
+    set((state) => ({
+      projectGroups: state.projectGroups.map((group) =>
+        group.projectPath === projectPath
+          ? {
+              ...group,
+              loadedSessions: [],
+              loadedCount: 0,
+              hasMore: true,
+            }
+          : group
+      ),
+    })),
 }));

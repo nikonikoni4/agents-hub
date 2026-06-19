@@ -7,38 +7,40 @@ import type { ProjectGroup } from '@/shared/adapters/sessionAdapter';
 import { extractProjectName } from '@/shared/adapters/sessionAdapter';
 
 export function useGroupChatList() {
-  const { projectGroups, setProjectGroups, lastRefreshTrigger } = useSessionStore();
+  const { projectGroups, setProjectGroups, lastRefreshTrigger, resetProjectSessions } =
+    useSessionStore();
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
 
   const refreshProjectsSummary = useCallback(async () => {
     try {
       const summaries = await getProjectsSummary();
 
-      // 保留已加载的 sessions 数据
+      // 重置所有项目的已加载 sessions，触发重新加载
       const currentGroups = useSessionStore.getState().projectGroups;
-      const groupsMap = new Map(currentGroups.map((g) => [g.projectPath, g]));
+      for (const group of currentGroups) {
+        if (group.loadedSessions && group.loadedSessions.length > 0) {
+          resetProjectSessions(group.projectPath);
+        }
+      }
 
       const groups: ProjectGroup[] = summaries.map(
-        (summary: { project_path: string; group_chat_count: number }) => {
-          const existing = groupsMap.get(summary.project_path);
-          return {
-            projectPath: summary.project_path,
-            projectName: extractProjectName(summary.project_path),
-            sessions: existing?.sessions || [], // 保留兼容性
-            totalCount: summary.group_chat_count,
-            loadedSessions: existing?.loadedSessions || [], // 保留已加载数据
-            loadedCount: existing?.loadedCount || 0,
-            hasMore: existing?.hasMore ?? summary.group_chat_count > 0,
-            isLoading: false,
-          };
-        }
+        (summary: { project_path: string; group_chat_count: number }) => ({
+          projectPath: summary.project_path,
+          projectName: extractProjectName(summary.project_path),
+          sessions: [],
+          totalCount: summary.group_chat_count,
+          loadedSessions: [],
+          loadedCount: 0,
+          hasMore: summary.group_chat_count > 0,
+          isLoading: false,
+        })
       );
 
       setProjectGroups(groups);
     } catch (error) {
       console.error('Failed to fetch projects summary:', error);
     }
-  }, [setProjectGroups]);
+  }, [setProjectGroups, resetProjectSessions]);
 
   // 初始加载
   useEffect(() => {
