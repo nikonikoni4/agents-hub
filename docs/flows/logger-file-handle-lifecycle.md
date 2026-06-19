@@ -47,7 +47,7 @@ logger: logging.Logger
 
 | Logger FileHandler 状态变化 | GroupChat 影响 | 触发位置 |
 |---------------------------|---------------|---------|
-| 创建（logger 初始化） | GroupChat 持有 AgentCallManager 和 TaskManager，两者各持有专用 logger | AgentCallManager.__init__:47, TaskManager.__init__:40 |
+| 创建（logger 初始化） | GroupChat 持有 AgentCallManager 和 TaskManager，两者各持有专用 logger | AgentCallManager.__init__:48, TaskManager.__init__:40 |
 | 释放（handler.close()） | 释放文件句柄，允许删除群聊目录 | AgentCallManager.close(), TaskManager.close() |
 | 未释放（遗漏） | Windows 上 shutil.rmtree() 失败，返回 502 错误 | group_chat_service.py:259 |
 
@@ -57,15 +57,19 @@ logger: logging.Logger
 - agents_hub/utils/logger.py
   - logger.get_specialized_logger:136
 - agents_hub/core/communication/agent_call_manager.py
-  - agent_call_manager.AgentCallManager.__init__:21
+  - agent_call_manager.AgentCallManager.__init__:22
+  - agent_call_manager.AgentCallManager.stop_cleanup:493
   - agent_call_manager.AgentCallManager.close:506
 - agents_hub/core/communication/task_manager.py
-  - task_manager.TaskManager.__init__:28
+  - task_manager.TaskManager.__init__:29
   - task_manager.TaskManager.close:323
 - agents_hub/core/orchestration/group_chat.py
+  - group_chat.GroupChat.__init__:49
   - group_chat.GroupChat.cleanup:1027
+- agents_hub/core/orchestration/group_chat_manager.py
+  - group_chat_manager.GroupChatManager.unregister:153
 - agents_hub/api/services/group_chat_service.py
-  - group_chat_service.GroupChatService.delete_group_chat:230
+  - group_chat_service.GroupChatService.delete_group_chat:223
 </key_function>
 
 ## 流程概览
@@ -98,7 +102,8 @@ stateDiagram-v2
 **业务场景说明**：
 1. **链路 1**：Logger 创建（GroupChat 初始化时）
 2. **链路 2**：Logger 释放（GroupChat 正常清理时）
-3. **链路 3**：Logger 释放遗漏（导致文件删除失败）
+
+**历史问题**：修复前曾因遗漏 close() 导致 Windows 文件删除失败，详见 `docs/history-bugs/2026-06-19-group-chat-delete-file-lock.md`
 
 ## 链路 1：Logger 创建
 
@@ -137,7 +142,7 @@ stateDiagram-v2
 3. GroupChat.cleanup()
    协调所有组件清理资源，包括关闭 logger
    状态: active→cleaned | 持久化: ❌ | 跨模块: orchestration→communication
-   步骤: 停止 Agent → 停止 heartbeat → 等待任务完成 → 关闭 AgentCallManager → 关闭 TaskManager → 清空 MessageRouter → 关闭 Runtime
+   步骤: 停止 Agent → 停止 heartbeat → 等待任务完成 → 停止 AgentCallManager 清理任务 → 关闭 AgentCallManager → 关闭 TaskManager → 清空 MessageRouter → 关闭 Runtime
 
 4. AgentCallManager.close()
    关闭 logger 所有 handler，释放文件句柄
@@ -148,18 +153,6 @@ stateDiagram-v2
    关闭 logger 所有 handler，释放文件句柄
    状态: held→released | 持久化: ✅（关闭文件） | 跨模块: ❌
    步骤: 遍历 logger.handlers → 调用 handler.close() → 移除 handler
-
-## 链路 3：Logger 释放遗漏（已修复）
-
-1. GroupChat.cleanup()（修复前）
-   未关闭 AgentCallManager 和 TaskManager 的 logger
-   状态: active→incomplete | 持久化: ❌ | 跨模块: ❌
-   步骤: 停止 Agent → 等待任务完成 → 清空引用（遗漏 logger 关闭）
-
-2. shutil.rmtree()（失败）
-   尝试删除群聊目录，因文件被占用而失败
-   状态: 删除中→失败 | 持久化: ❌ | 跨模块: ❌
-   步骤: 遍历目录 → 删除文件 → [WinError 32] 文件被占用
 
 ## 异常与清理
 
@@ -178,21 +171,7 @@ stateDiagram-v2
 
 ## 反常设计说明
 
-### Logger 文件句柄管理
-
-**设计意图**：Logger 应在 GroupChat 生命周期结束时自动关闭，释放文件句柄
-**当前实现**：需要显式调用 close() 方法关闭 logger handler
-**为什么是反常的**：Python 的 logging 模块不提供自动关闭机制，必须手动管理。这与大多数资源管理的 RAII 模式不同
-**影响范围**：在 Windows 上导致文件删除失败，返回 502 错误
-**相关位置**：`agents_hub/utils/logger.py:190`（RotatingFileHandler 创建）
-
-### get_specialized_logger 幂等性
-
-**设计意图**：相同名称的 logger 应返回同一实例，避免重复创建 handler
-**当前实现**：检查 `if logger.handlers: return logger`，但不检查 handler 是否指向正确文件
-**为什么是反常的**：如果 logger 名称冲突但日志文件不同，会返回错误的 logger 实例
-**影响范围**：理论上可能导致日志写入错误文件，但当前命名规则（含 group_chat_id）避免了冲突
-**相关位置**：`agents_hub/utils/logger.py:181`
+无
 
 ## 相关文档
 

@@ -319,3 +319,17 @@ class TaskManager:
                 path=str(self._persistence_path),
                 reason=str(e),
             ) from e
+
+    def close(self):
+        """
+        关闭 TaskManager，释放所有资源
+
+        此方法关闭 logger 的所有 handler，释放文件句柄。
+        在删除群聊目录前必须调用，避免 Windows 上文件被占用的问题。
+
+        可以多次调用（幂等性）。
+        """
+        # 关闭 logger 的所有 handler，释放文件句柄
+        for handler in self.logger.handlers[:]:
+            handler.close()
+            self.logger.removeHandler(handler)

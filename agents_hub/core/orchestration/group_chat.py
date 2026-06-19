@@ -1082,6 +1082,12 @@ class GroupChat:
         # 3. 停止 AgentCallManager 清理任务
         await self.agent_call_manager.stop_cleanup()
 
+        # 3.5 关闭 AgentCallManager，释放文件句柄
+        self.agent_call_manager.close()
+
+        # 3.6 关闭 TaskManager，释放文件句柄
+        self.task_manager.close()
+
         # 4. 清空 MessageRouter
         self.message_router.clear()
 

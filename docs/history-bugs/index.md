@@ -165,3 +165,9 @@
  - path: docs/history-bugs/2026-06-15-parser-concurrency-race-condition.md
  - 触发规则：多个 Codex agent 并发执行（如 asyncio.gather 初始化新成员），agent_member.json 中多个 agent 的 main_session 相同，resume 时报 thread/resume failed: no rollout found
  - 内容摘要：AgentBridge 中 Parser 共享单例在 asyncio 并发环境下导致 session_id 串台。包含：根因分析（4 个原因）、Codex vs Claude Parser 对比、asyncio.gather 顺序验证、修复方案（每次创建独立 parser）、19 个测试验证。修复：移除 `_parsers` 单例字典，添加 `_create_parser()` 方法每次创建新实例
+
+## 群聊删除时文件被占用导致 502 错误
+ - updated_at : 2026-06-19
+ - path: docs/history-bugs/2026-06-19-group-chat-delete-file-lock.md
+ - 触发规则：Windows 环境下删除群聊时 API 返回 502 Bad Gateway，日志显示 [WinError 32] 文件被占用
+ - 内容摘要：AgentCallManager 和 TaskManager 的 RotatingFileHandler 未在 cleanup 时关闭，导致 Windows 上 shutil.rmtree 失败。修复：在 AgentCallManager 和 TaskManager 中添加 close() 方法，在 GroupChat.cleanup() 中调用
