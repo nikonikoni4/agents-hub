@@ -177,3 +177,9 @@
  - path: docs/history-bugs/2026-06-19-single-chat-session-id-not-saved.md
  - 触发规则：用户在单聊 AI 回复未完成时切换聊天，切回来后历史记录为空
  - 内容摘要：两个问题叠加：(1) Codex 解析器的 thread.started 事件不生成 StreamEvent，session_id 获取延迟；(2) session_id 保存延迟到流结束，流中断导致保存操作永远不执行。修复：Codex 生成 INIT 事件 + 获取 session_id 后立即保存到磁盘
+
+## NOTIFICATION 消息在接收方不保存到群聊历史
+ - updated_at : 2026-06-19
+ - path: docs/history-bugs/2026-06-19-notification-message-not-saved.md
+ - 触发规则：所有 Agent 间通过 NOTIFICATION 通信的场景
+ - 内容摘要：设计漏洞。_fallback_close_task 只处理 TASK 类型消息，NOTIFICATION 被直接跳过。完整流程：Manager → TASK → Worker → complete_task/兜底保存 + NOTIFICATION → Manager → _fallback_close_task 检查 msg.type != TASK → return，消息不保存。不管 complete_task 是否存在，都没有正式的对于 NOTIFICATION 的回应机制

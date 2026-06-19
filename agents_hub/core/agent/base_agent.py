@@ -934,6 +934,14 @@ call_id: {msg.call_id}
             # 5. 兜底闭环（避免 MCP 断连导致群聊无消息）
             await self._fallback_close_task(msg, result)
 
+            # 6. NOTIFICATION 消息保存到群聊历史
+            # _fallback_close_task 只处理 TASK 消息，NOTIFICATION 需要单独保存
+            if msg.message_type == MessageType.NOTIFICATION and result and result.text:
+                call = await self.agent_call_manager.get_call(msg.call_id)
+                if call and not call.has_agent_response:
+                    result.text = render_for_chat(self.name, msg.send_from, result.text)
+                    await self.runtime.add_message(result)
+
             # 6. TASK 闭环提醒（暂时注释，测试阶段）
             # if self._needs_complete_task_reminder(msg):
             #     self._enqueue_complete_task_reminder(msg)

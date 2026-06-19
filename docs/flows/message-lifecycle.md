@@ -118,15 +118,15 @@ class AgentResult:
 | Message 操作 | GroupChatSession 影响 | 触发位置 |
 |-------------|---------------------|---------|
 | 保存发送方消息 | messages 追加一条 | `GroupChat.send_message_to_agent()` → `GroupChatRuntime.add_message()` |
-| 保存 Agent 回复 | messages 追加一条 | `Agent._fallback_close_task()` → `GroupChatRuntime.add_message()` |
-| 保存 NOTIFICATION | messages 追加一条 | `Agent._fallback_close_task()` → `GroupChat.send_message_to_agent()` → `add_message()` |
+| 保存 Agent 回复（TASK） | messages 追加一条 | `Agent._fallback_close_task()` → `GroupChatRuntime.add_message()` |
+| 保存 NOTIFICATION（兜底策略） | messages 追加一条 | `Agent._run_loop()` → `GroupChatRuntime.add_message()` |
 
 **说明**：
 - 所有保存到群聊历史的消息都会追加到 `GroupChatSession.messages`
 - `GroupChatRuntime.add_message()` 是唯一写入入口
 - 前端通过 `getMessages` API 读取 `messages` 列表
 
-<key_function last_update="2026-06-19T09:08:01+08:00">
+<key_function last_update="2026-06-19T11:19:08+08:00">
 - frontend/src/layouts/ChatArea/ChatArea.tsx
   - ChatArea.handleSend:377
 - frontend/src/core/api/groupChatApi.ts
@@ -142,6 +142,7 @@ class AgentResult:
 - agents_hub/core/agent/base_agent.py
   - Agent._process_message:202
   - Agent._fallback_close_task:729
+  - Agent._run_loop:885
 - agents_hub/core/context/group_chat_runtime.py
   - GroupChatRuntime.add_message:319
 - agents_hub/mcp/server.py
@@ -259,19 +260,19 @@ stateDiagram-v2
    步骤: 记录 Git 状态（兜底捕获文件变更）→ 更新状态为 RUNNING → 调用 AgentBridge 执行
 
 5. Agent._fallback_close_task()
-   完成任务，调用方是 agent → 创建 NOTIFICATION 通知调用方（异步唤醒机制）
+   完成任务，调用方是 agent → 保存执行结果到群聊历史 + 创建 NOTIFICATION 通知调用方
    状态: RUNNING→COMPLETED | 持久化: ✅ | 跨模块: ❌ core 内
-   步骤: 处理文件快照（XML 或 Git 兜底）→ mark_agent_response 闭环 → 判断调用方是 agent → 创建 NOTIFICATION AgentCall → 调用 send_message_to_agent 投递并保存
+   步骤: 处理文件快照（XML 或 Git 兜底）→ mark_agent_response 闭环 → 判断调用方是 agent → add_message() 保存执行结果 → 创建 NOTIFICATION AgentCall → 调用 message_router.send_message() 投递
 
-6. GroupChat.send_message_to_agent()
-   投递 NOTIFICATION 到调用方队列，保存 NOTIFICATION 到群聊历史（@调用方 格式）
-   状态: 创建新 NOTIFICATION AgentCall | 持久化: ✅ | 跨模块: ❌ core 内
-   步骤: 懒加载激活 → 检查目标 Agent 状态 → MessageRouter.send_message() 投递 → 获取发送方 platform → 格式化消息内容（render_for_chat）→ 构造 AgentResult → add_message() 保存
-
-7. MessageRouter.send_message()
+6. MessageRouter.send_message()
    纯投递层，验证消息格式并投递到目标队列（不保存到群聊历史）
    状态: NOTIFICATION PENDING | 持久化: ❌ | 跨模块: ❌ core 内
    步骤: 验证消息格式（_validate_message）→ 投递到调用方队列（put_nowait）
+
+7. Agent._run_loop()（接收方处理 NOTIFICATION）
+   接收方收到 NOTIFICATION，处理消息并保存到群聊历史
+   状态: PENDING→RUNNING→COMPLETED | 持久化: ✅ | 跨模块: ❌ core 内
+   步骤: _process_message() 处理 → _fallback_close_task() 跳过（msg.type != TASK）→ 判断 NOTIFICATION 且 has_agent_response=False → add_message() 保存到群聊历史
 ```
 
 ## 异常与清理

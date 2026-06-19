@@ -62,7 +62,7 @@ contract_refs:
 
 ### GroupChat 统一包装方法
 
-<key_function last_update="2026-06-19T09:08:01+08:00">
+<key_function last_update="2026-06-19T11:19:09+08:00">
 - agents_hub/core/orchestration/group_chat.py
   - group_chat.GroupChat.send_message_to_agent:563
 </key_function>
@@ -147,7 +147,8 @@ contract_refs:
 | user → agent TASK（发送消息） | 保存 | `GroupChat.send_message_to_agent()` |
 | user → agent TASK 完成（回复内容） | 保存 | `complete_task` 中判断 `is_user_name()` |
 | agent → agent TASK（发送消息） | 保存 | `GroupChat.send_message_to_agent()` |
-| agent → agent NOTIFICATION（完成通知） | 保存 | `GroupChat.send_message_to_agent()` |
+| agent → agent NOTIFICATION（发送方保存） | 保存 | `Agent._fallback_close_task()` → `add_message()` |
+| agent → agent NOTIFICATION（接收方保存） | 保存 | `Agent._run_loop()` → `add_message()`（兜底策略） |
 | report_progress（公开发言） | 保存 | 直接调用 `add_message()` |
 | Agent 初始化打招呼 | 保存 | `_initialize_new_members()` / `_initialize_single_member()` |
 | Agent 停止清理通知 | 保存 | `_cleanup_agent_queue` 通过 `send_message_to_agent()` 或 `add_message()` |
@@ -156,6 +157,7 @@ contract_refs:
 **判断原则**：
 - 所有通过 `GroupChat.send_message_to_agent()` 投递的业务消息都保存
 - 公开发言直接保存（不经过 MessageRouter）
+- NOTIFICATION 消息在发送方和接收方都会保存（发送方通过 `_fallback_close_task`，接收方通过 `_run_loop`）
 - Heartbeat 等系统消息直接调用 `MessageRouter.send_message()` 投递，不保存
 
 ### Agent 停止清理契约

@@ -72,7 +72,7 @@ class AgentCall:
 - 当 Agent 从队列取出消息开始处理时，Agent 状态变为 busy，AgentCall 状态变为 RUNNING
 - 处理完成后，Agent 状态回到 idle，AgentCall 状态进入终态（COMPLETED/FAILED）
 
-<key_function last_update="2026-06-19T09:08:01+08:00">
+<key_function last_update="2026-06-19T11:19:08+08:00">
 - frontend/src/layouts/ChatArea/ChatArea.tsx
   - ChatArea.handleSend:377
 - frontend/src/core/api/groupChatApi.ts
@@ -84,6 +84,7 @@ class AgentCall:
 - agents_hub/core/agent/base_agent.py
   - Agent._process_message:202
   - Agent._fallback_close_task:729
+  - Agent._run_loop:885
 - agents_hub/core/orchestration/group_chat.py
   - GroupChat.send_message_to_agent:563
   - GroupChat._cleanup_agent_queue:638
@@ -176,14 +177,15 @@ stateDiagram-v2
    状态: PENDING→RUNNING | 持久化: ✅ | 跨模块: ❌ core 内
    步骤: 更新状态为 RUNNING → 调用 LLM 执行
 
-4. Agent._process_message()
-   完成任务，调用方是 agent → 创建 NOTIFICATION 通知调用方
+4. Agent._fallback_close_task()
+   完成任务，调用方是 agent → 保存执行结果到群聊历史 + 创建 NOTIFICATION 通知调用方
    状态: RUNNING→COMPLETED | 持久化: ✅ | 跨模块: ❌ core 内
-   步骤: 更新状态为 COMPLETED → _fallback_close_task() 通知调用方
+   步骤: 处理文件快照（XML 或 Git 兜底）→ mark_agent_response 闭环 → 判断调用方是 agent → add_message() 保存执行结果 → 创建 NOTIFICATION AgentCall → 调用 message_router.send_message() 投递
 
-5. Agent._fallback_close_task()
-   创建 NOTIFICATION 类型 AgentCall 通知调用方任务完成（异步唤醒机制）
-   状态: 创建新 NOTIFICATION AgentCall | 持久化: ✅ | 跨模块: ❌ core 内
+5. Agent._run_loop()（接收方处理 NOTIFICATION）
+   接收方收到 NOTIFICATION，处理消息并保存到群聊历史
+   状态: PENDING→RUNNING→COMPLETED | 持久化: ✅ | 跨模块: ❌ core 内
+   步骤: _process_message() 处理 → _fallback_close_task() 跳过（msg.type != TASK）→ 判断 NOTIFICATION 且 has_agent_response=False → add_message() 保存到群聊历史
 ```
 
 
