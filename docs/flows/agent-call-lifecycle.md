@@ -1,8 +1,9 @@
 ---
-version:
-created_at:updated_at:
-last_updated:
-abstract:
+version: 1.0
+created_at: 2026-06-18
+updated_at: 2026-06-18
+last_updated: 初始版本
+abstract: AgentCall 从创建到完成/失败的完整生命周期，包括用户发消息和 MCP Agent 发消息两条链路
 ---
 
 #  数据流：AgentCall 生命周期
@@ -71,7 +72,7 @@ class AgentCall:
 - 当 Agent 从队列取出消息开始处理时，Agent 状态变为 busy，AgentCall 状态变为 RUNNING
 - 处理完成后，Agent 状态回到 idle，AgentCall 状态进入终态（COMPLETED/FAILED）
 
-<key_function last_update="2026-06-19T08:25:17+08:00">
+<key_function last_update="2026-06-19T09:08:01+08:00">
 - frontend/src/layouts/ChatArea/ChatArea.tsx
   - ChatArea.handleSend:377
 - frontend/src/core/api/groupChatApi.ts
