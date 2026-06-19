@@ -9,13 +9,13 @@
     python scripts/docs_update/sync_flow.py
 """
 
+import io
 import json
 import re
 import subprocess
 import sys
-import io
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 设置 stdout 为 UTF-8 编码（解决 Windows 控制台问题）
@@ -29,6 +29,7 @@ STATE_FILE = Path(__file__).parent / ".last_sync_time"
 AST_SCANNER = Path(__file__).parent.parent / "code_search" / "ast_scanner_tree.py"
 AST_JSON = Path(__file__).parent.parent / "code_search" / "ast_scan_result.json"
 FLOWS_DIR = Path(__file__).parent.parent.parent / "docs" / "flows"
+SPECS_DIR = Path(__file__).parent.parent.parent / "docs" / "specs"
 
 
 def should_run() -> bool:
@@ -68,7 +69,7 @@ def load_definitions() -> dict:
     if not AST_JSON.exists():
         print(f"AST 结果文件不存在: {AST_JSON}")
         return {}
-    with open(AST_JSON, "r", encoding="utf-8") as f:
+    with open(AST_JSON, encoding="utf-8") as f:
         data = json.load(f)
     return data.get("definitions", {})
 
@@ -218,22 +219,29 @@ def main():
         return
     print(f"加载 {len(definitions)} 个函数定义")
 
-    # 4. 扫描 flow 文件
-    if not FLOWS_DIR.exists():
-        print(f"flows 目录不存在: {FLOWS_DIR}")
-        return
-
+    # 4. 扫描 flow 和 spec 文件
     modified_files = []
-    for md_file in FLOWS_DIR.glob("*.md"):
-        if sync_flow_file(md_file, definitions):
-            modified_files.append(md_file.name)
+    total_scanned = 0
+
+    for docs_dir in [FLOWS_DIR, SPECS_DIR]:
+        if not docs_dir.exists():
+            print(f"目录不存在: {docs_dir}")
+            continue
+
+        dir_label = "flows" if docs_dir == FLOWS_DIR else "specs"
+        scanned = 0
+        for md_file in docs_dir.glob("*.md"):
+            scanned += 1
+            if sync_flow_file(md_file, definitions):
+                modified_files.append(f"{dir_label}/{md_file.name}")
+        total_scanned += scanned
 
     # 5. 记录完成时间
     mark_done()
 
     # 6. 输出结果
-    print(f"\n同步完成:")
-    print(f"  扫描文件数: {len(list(FLOWS_DIR.glob('*.md')))}")
+    print("\n同步完成:")
+    print(f"  扫描文件数: {total_scanned}")
     print(f"  修改文件数: {len(modified_files)}")
     if modified_files:
         for f in modified_files:

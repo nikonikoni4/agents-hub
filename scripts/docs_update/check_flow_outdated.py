@@ -18,12 +18,12 @@
 """
 
 import argparse
+import io
 import re
 import subprocess
 import sys
-import io
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
 # 设置 stdout 为 UTF-8 编码（解决 Windows 控制台问题）
 if sys.platform == "win32":
@@ -32,6 +32,7 @@ if sys.platform == "win32":
 
 
 FLOWS_DIR = Path(__file__).parent.parent.parent / "docs" / "flows"
+SPECS_DIR = Path(__file__).parent.parent.parent / "docs" / "specs"
 
 
 def run_git_command(cmd: list[str]) -> str:
@@ -110,7 +111,7 @@ def get_changed_functions(file_path: str, mode: str, value: str = "") -> set[str
 
 
 def parse_flow_key_functions() -> dict[str, dict[str, list[str]]]:
-    """解析所有 flow 文档的 key_function 标签
+    """解析所有 flow 和 spec 文档的 key_function 标签
 
     返回格式：
     {
@@ -124,39 +125,44 @@ def parse_flow_key_functions() -> dict[str, dict[str, list[str]]]:
     """
     result = {}
 
-    for md_file in FLOWS_DIR.glob("*.md"):
-        content = md_file.read_text(encoding="utf-8")
-
-        # 匹配 <key_function> 标签
-        pattern = r'<key_function[^>]*>(.*?)</key_function>'
-        match = re.search(pattern, content, re.DOTALL)
-        if not match:
+    for docs_dir in [FLOWS_DIR, SPECS_DIR]:
+        if not docs_dir.exists():
             continue
 
-        tag_content = match.group(1)
-        lines = tag_content.strip().split("\n")
+        for md_file in docs_dir.glob("*.md"):
+            content = md_file.read_text(encoding="utf-8")
 
-        file_functions = defaultdict(list)
-        current_file = None
-
-        for line in lines:
-            stripped = line.strip()
-            if not stripped:
+            # 匹配 <key_function> 标签
+            pattern = r'<key_function[^>]*>(.*?)</key_function>'
+            match = re.search(pattern, content, re.DOTALL)
+            if not match:
                 continue
 
-            # 文件路径行：`- agents_hub/xxx.py`
-            if re.match(r'^- [\w/]+\.py$', stripped):
-                current_file = stripped[2:]  # 去掉 "- "
-                continue
+            tag_content = match.group(1)
+            lines = tag_content.strip().split("\n")
 
-            # 函数行：`  - file.Class.method:line`
-            func_match = re.match(r'^\s+- (.+?)(?::(\d+))?$', line)
-            if func_match and current_file:
-                func_name = func_match.group(1).strip()
-                file_functions[current_file].append(func_name)
+            file_functions = defaultdict(list)
+            current_file = None
 
-        if file_functions:
-            result[md_file.name] = dict(file_functions)
+            for line in lines:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+
+                # 文件路径行：`- agents_hub/xxx.py`
+                if re.match(r'^- [\w/]+\.py$', stripped):
+                    current_file = stripped[2:]  # 去掉 "- "
+                    continue
+
+                # 函数行：`  - file.Class.method:line`
+                func_match = re.match(r'^\s+- (.+?)(?::(\d+))?$', line)
+                if func_match and current_file:
+                    func_name = func_match.group(1).strip()
+                    file_functions[current_file].append(func_name)
+
+            if file_functions:
+                dir_label = "flows" if docs_dir == FLOWS_DIR else "specs"
+                result[f"{dir_label}/{md_file.name}"] = dict(file_functions)
 
     return result
 
@@ -224,7 +230,7 @@ def main():
         mode, value = "range", args.range
 
     print("=" * 60)
-    print("Flow 文档更新检查")
+    print("文档更新检查（flows + specs）")
     print("=" * 60)
 
     # 1. 获取变化的文件
@@ -247,20 +253,20 @@ def main():
         print("\n✅ 没有函数定义变化")
         return 0
 
-    # 3. 解析 flow 文档
+    # 3. 解析 flow 和 spec 文档
     flow_functions = parse_flow_key_functions()
-    print(f"\n扫描 flow 文档数：{len(flow_functions)}")
+    print(f"\n扫描文档数：{len(flow_functions)}")
 
     # 4. 检查匹配
     needs_update = check_flows_need_update(changed_files, changed_functions_map, flow_functions)
 
     if not needs_update:
-        print("\n✅ 没有 flow 文档需要更新")
+        print("\n✅ 没有文档需要更新")
         return 0
 
     # 5. 输出报告
     print("\n" + "=" * 60)
-    print("⚠️  以下 flow 文档可能需要更新：")
+    print("⚠️  以下文档可能需要更新：")
     print("=" * 60)
 
     for flow_name, matched_funcs in needs_update:
@@ -269,7 +275,7 @@ def main():
             print(f"   - {func}")
 
     print("\n" + "=" * 60)
-    print(f"提示：共 {len(needs_update)} 个 flow 文档可能需要检查")
+    print(f"提示：共 {len(needs_update)} 个文档可能需要检查")
     print("=" * 60)
 
     # 返回非零退出码，表示有 flow 需要更新（但不阻塞提交）

@@ -64,7 +64,7 @@ def write_log(repo_root: Path, output: str, returncode: int):
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    status = "✅ 无需更新" if "没有 flow 文档需要更新" in output else "⚠️  需要更新"
+    status = "✅ 无需更新" if "没有文档需要更新" in output else "⚠️  需要更新"
 
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(f"\n{'=' * 60}\n")
@@ -88,7 +88,7 @@ def main():
         sys.exit(0)  # 不阻塞提交
 
     # 3. 运行检查（捕获输出）
-    print("\n🔍 检查 flow 文档是否需要更新...\n")
+    print("\n🔍 检查文档（flows + specs）是否需要更新...\n")
     result = subprocess.run(
         [sys.executable, str(check_script), "--staged"],
         capture_output=True,
@@ -113,7 +113,7 @@ def main():
     # 6. 始终允许提交
     print("\n💡 提示：检查结果已记录到 scripts/docs_update/flow-check.log")
     if result.returncode != 0 or "需要更新" in result.stdout:
-        print("💡 如果有 flow 文档需要更新，请在提交后尽快更新\n")
+        print("💡 如果有文档需要更新，请在提交后尽快更新\n")
     sys.exit(0)
 
 

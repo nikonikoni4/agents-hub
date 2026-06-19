@@ -89,11 +89,11 @@ Agent 间传递的消息结构，核心字段：
 
 ### 消息渲染契约
 
-<key_function last_update="2026-06-18T14:23:00+08:00">
+<key_function last_update="2026-06-19T08:25:17+08:00">
 - agents_hub/core/foundation/renderer.py
-  - renderer.parse_chat_input:15
-  - renderer.render_for_llm:42
-  - renderer.render_for_chat:68
+  - renderer.parse_chat_input:76
+  - renderer.render_for_llm:45
+  - renderer.render_for_chat:65
 </key_function>
 
 渲染只发生在三个边界，不在中间环节改写 content：

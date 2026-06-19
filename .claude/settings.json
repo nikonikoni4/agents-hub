@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);const p=j.tool_input?.file_path||'';if(p.includes('docs')&&p.includes('flows')&&p.endsWith('.md')){const{execSync}=require('child_process');try{execSync('python scripts/docs_update/sync_docs.py',{cwd:'D:/desktop/软件开发/agents-hub',stdio:'pipe'});}catch(e){}}});\""
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);const p=j.tool_input?.file_path||'';if(p.includes('docs')&&(p.includes('flows')||p.includes('specs'))&&p.endsWith('.md')){const{execSync}=require('child_process');try{execSync('python scripts/docs_update/sync_docs.py',{cwd:'D:/desktop/软件开发/agents-hub',stdio:'pipe'});}catch(e){}}});\""
           }
         ]
       }

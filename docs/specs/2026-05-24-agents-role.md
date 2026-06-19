@@ -83,7 +83,7 @@ contract_refs:
 
 ### 领域层
 
-<key_function last_update="2026-06-18T10:00:00+08:00">
+<key_function last_update="2026-06-19T08:25:17+08:00">
 - agents_hub/roles/role_manager.py
   - role_manager.RoleManager.list_roles:126
   - role_manager.RoleManager.get_role:191
