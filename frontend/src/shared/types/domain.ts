@@ -26,8 +26,8 @@
  * 在 adapter 层统一处理，前端组件只需渲染，无需判断 null
  */
 export type AvatarData =
-  | { type: 'svg'; filename: string }  // SVG 文件名
-  | { type: 'char'; char: string };    // 字符 fallback（取第一个字符）
+  | { type: 'svg'; filename: string } // SVG 文件名
+  | { type: 'char'; char: string }; // 字符 fallback（取第一个字符）
 
 /**
  * 构建字符 fallback 的 AvatarData

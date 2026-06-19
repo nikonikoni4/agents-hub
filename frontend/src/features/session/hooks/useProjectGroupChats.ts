@@ -47,7 +47,9 @@ export function useProjectGroupChats(projectPath: string) {
           isUnread: false,
           memberCount: members.length,
           projectPath: chat.project_path,
-          memberAvatars: members.slice(0, 4).map((m) => roleAvatarMap.get(m.name) ?? buildCharAvatar(m.name)),
+          memberAvatars: members
+            .slice(0, 4)
+            .map((m) => roleAvatarMap.get(m.name) ?? buildCharAvatar(m.name)),
           type: 'group_chat',
         });
       }

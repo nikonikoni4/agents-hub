@@ -21,9 +21,6 @@ import { buildCharAvatar, buildSvgAvatar } from '@/shared/types/domain';
 export async function buildRoleAvatarMap(): Promise<Map<string, AvatarData>> {
   const roles = await listRoles();
   return new Map(
-    roles.map((r) => [
-      r.name,
-      r.avatar ? buildSvgAvatar(r.avatar) : buildCharAvatar(r.name),
-    ])
+    roles.map((r) => [r.name, r.avatar ? buildSvgAvatar(r.avatar) : buildCharAvatar(r.name)])
   );
 }

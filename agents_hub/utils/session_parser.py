@@ -104,44 +104,69 @@ def parse_claude_session(messages: list[dict]) -> list[SessionMessage]:
 
 
 def parse_codex_session(messages: list[dict]) -> list[SessionMessage]:
-    """解析 Codex session 文件"""
-    result = []
+    """解析 Codex session 文件
+
+    Codex session 格式与 Claude 不同：
+    - 工具调用是顶层 response_item（payload.type = "function_call"）
+    - 参数是 JSON string（payload.arguments）
+    - 通过 call_id 关联 function_call 和 function_call_output
+    """
+    result: list[SessionMessage] = []
+    pending_tool_calls: dict[str, ToolCallInfo] = {}  # call_id -> ToolCallInfo
 
     for msg in messages:
-        msg_type = msg.get("type")
+        if msg.get("type") != "response_item":
+            continue
+
+        payload = msg.get("payload", {})
+        payload_type = payload.get("type", "")
         timestamp = msg.get("timestamp", "")
 
-        if msg_type == "response_item":
-            payload = msg.get("payload", {})
+        if payload_type == "message":
             role = payload.get("role", "")
             if role not in _VALID_ROLES:
                 logger.debug("Skipping codex message with unknown role: %s", role)
                 continue
             texts = []
-            tool_calls = []
             for block in payload.get("content", []):
                 bt = block.get("type", "")
                 if bt in ("input_text", "output_text"):
                     texts.append(block.get("text", ""))
-                elif bt == "tool_use":
-                    tool_calls.append(
-                        ToolCallInfo(
-                            id=block.get("id", ""),
-                            name=block.get("name", ""),
-                            input=block.get("input", {}),
-                        )
-                    )
 
-            if texts or tool_calls:
+            if texts:
                 result.append(
                     SessionMessage(
                         id=payload.get("id", ""),
                         role=role,
                         content="\n".join(texts),
                         timestamp=timestamp,
-                        tool_calls=tool_calls if tool_calls else None,
                     )
                 )
+
+        elif payload_type == "function_call":
+            call_id = payload.get("call_id", "")
+            name = payload.get("name", "")
+            try:
+                args = json.loads(payload.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+            pending_tool_calls[call_id] = ToolCallInfo(
+                id=call_id,
+                name=name,
+                input=args,
+            )
+
+        elif payload_type == "function_call_output":
+            call_id = payload.get("call_id", "")
+            if call_id in pending_tool_calls:
+                tc = pending_tool_calls.pop(call_id)
+                # 关联到最近的 assistant 消息
+                for msg_item in reversed(result):
+                    if msg_item.role == "assistant":
+                        if msg_item.tool_calls is None:
+                            msg_item.tool_calls = []
+                        msg_item.tool_calls.append(tc)
+                        break
 
     return result
 

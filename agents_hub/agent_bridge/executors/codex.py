@@ -80,8 +80,22 @@ class CodexExecutor:
 
         try:
             assert process.stdout is not None
-            async for line in process.stdout:
-                decoded = line.decode("utf-8").strip()
+
+            # 使用 readuntil 按换行切分，避免 asyncio 默认 readline
+            # 在遇到超长单行输出时抛出 LimitOverrunError（Separator is not found）。
+            # Codex 的单行 JSON 可能非常长（如 command_execution 的 aggregated_output）。
+
+            while True:
+                try:
+                    raw = await process.stdout.readuntil(separator=b"\n")
+                except asyncio.IncompleteReadError as e:
+                    # 流结束但没有换行符的最后片段
+                    tail = (e.partial or b"").decode("utf-8", errors="ignore").strip()
+                    if tail:
+                        yield tail
+                    break
+
+                decoded = raw.decode("utf-8", errors="ignore").strip()
                 if decoded:
                     yield decoded
 
