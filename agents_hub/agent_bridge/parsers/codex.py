@@ -37,10 +37,18 @@ class CodexParser:
 
         event_type = event.get("type")
 
-        # 线程开始事件：记录 thread_id
+        # 线程开始事件：记录 thread_id 并生成 INIT 事件
         if event_type == "thread.started":
             self._thread_id = event.get("thread_id", "")
-            return None
+            return StreamEvent(
+                type=AgentEventType.INIT,
+                content={},
+                session_id=self._thread_id,
+                timestamp=datetime.now().isoformat(),
+                agent_name="",
+                platform=AgentPlatform.CODEX,
+                role_type=RoleType.TEAM_MEMBER,
+            )
 
         # 项目完成事件
         if event_type == "item.completed":

@@ -171,3 +171,9 @@
  - path: docs/history-bugs/2026-06-19-group-chat-delete-file-lock.md
  - 触发规则：Windows 环境下删除群聊时 API 返回 502 Bad Gateway，日志显示 [WinError 32] 文件被占用
  - 内容摘要：AgentCallManager 和 TaskManager 的 RotatingFileHandler 未在 cleanup 时关闭，导致 Windows 上 shutil.rmtree 失败。修复：在 AgentCallManager 和 TaskManager 中添加 close() 方法，在 GroupChat.cleanup() 中调用
+
+## 单聊历史记录加载失败 - session_id 未保存
+ - updated_at : 2026-06-19
+ - path: docs/history-bugs/2026-06-19-single-chat-session-id-not-saved.md
+ - 触发规则：用户在单聊 AI 回复未完成时切换聊天，切回来后历史记录为空
+ - 内容摘要：两个问题叠加：(1) Codex 解析器的 thread.started 事件不生成 StreamEvent，session_id 获取延迟；(2) session_id 保存延迟到流结束，流中断导致保存操作永远不执行。修复：Codex 生成 INIT 事件 + 获取 session_id 后立即保存到磁盘

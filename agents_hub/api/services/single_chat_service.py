@@ -317,7 +317,6 @@ class SingleChatManager:
             if agent_info:
                 fork_from = agent_info.main_session
 
-        session_updated = False
         async for event in agent_platform_client.execute_stream(
             prompt=content,
             config=role_config,
@@ -327,20 +326,39 @@ class SingleChatManager:
         ):
             yield self._serialize_event(event)
 
-            # 首次获取 session_id 时更新索引
+            # 首次获取 session_id 时更新索引并立即保存
             if event.session_id and not index.session_id:
+                logger.info(
+                    "单聊首次获取 session_id: single_chat_id=%s, session_id=%s",
+                    single_chat_id,
+                    event.session_id,
+                )
                 index.session_id = event.session_id
-                session_updated = True
 
-        # 首次获取 session_id 时解析并设置 session_path
-        if session_updated and index.session_id:
-            index.session_path = self._resolve_session_path(
-                index.session_id, index.platform, role_config.work_root
-            )
+                # 立即解析并设置 session_path
+                index.session_path = self._resolve_session_path(
+                    index.session_id, index.platform, role_config.work_root
+                )
+                logger.info(
+                    "单聊 session_path 已更新: single_chat_id=%s, session_path=%s",
+                    single_chat_id,
+                    index.session_path,
+                )
 
-        # 流结束后更新活跃时间和索引
+                # 立即保存到磁盘，防止流中断导致丢失
+                self._save_index()
+                logger.info(
+                    "单聊 session_id 已立即保存: single_chat_id=%s",
+                    single_chat_id,
+                )
+
+        # 流结束后更新活跃时间（session_id 已在获取时立即保存）
         index.last_active_at = datetime.now().isoformat()
         self._save_index()
+        logger.info(
+            "单聊流结束，活跃时间已更新: single_chat_id=%s",
+            single_chat_id,
+        )
 
         # 清除 LRU 缓存，下次 get_messages 重新加载
         self._cache.pop(single_chat_id, None)
