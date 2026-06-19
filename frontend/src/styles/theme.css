@@ -3,6 +3,9 @@
   --bg-sidebar: #f7f7f8;
   --bg-shadow: rgb(240, 240, 240);
   --bg-main: #fcfcfc;
+  --bg-primary: rgb(255, 255, 255);
+  --bg-secondary: rgb(245, 245, 245);
+  --bg-tertiary: rgb(240, 240, 240);
   --bg-bubble: rgb(248, 248, 248);
   --bg-right-base: rgb(255, 255, 255);
   --bg-right-module: rgb(248, 248, 248);
@@ -15,9 +18,11 @@
   --text-primary: rgb(30, 30, 30);
   --text-secondary: #666666;
   --text-tertiary: rgb(150, 150, 150);
+  --text-disabled: rgb(180, 180, 180);
   --border-color: rgb(220, 220, 220);
   --accent-color: #8ba5bf;
   --accent-color-light: rgba(139, 165, 191, 0.15);
+  --accent-hover: rgb(58, 140, 230);
   --bg-selected: rgb(232, 232, 232);
   --text-placeholder: #999999;
 
@@ -48,6 +53,9 @@ html[data-theme='dark'] {
   --bg-sidebar: rgb(20, 20, 20);
   --bg-shadow: rgb(38, 38, 38);
   --bg-main: rgb(24, 24, 24);
+  --bg-primary: rgb(30, 30, 30);
+  --bg-secondary: rgb(35, 35, 35);
+  --bg-tertiary: rgb(40, 40, 40);
   --bg-bubble: rgb(20, 20, 20);
   --bg-right-base: rgb(24, 24, 24);
   --bg-right-module: rgb(20, 20, 20);
@@ -60,9 +68,11 @@ html[data-theme='dark'] {
   --text-primary: rgb(230, 230, 230);
   --text-secondary: rgb(180, 180, 180);
   --text-tertiary: rgb(120, 120, 120);
+  --text-disabled: rgb(80, 80, 80);
   --border-color: rgb(60, 60, 60);
   --accent-color: #96b0cc;
   --accent-color-light: rgba(150, 176, 204, 0.15);
+  --accent-hover: rgb(90, 170, 255);
   --bg-selected: rgb(40, 40, 40);
 
   /* 状态色 */
