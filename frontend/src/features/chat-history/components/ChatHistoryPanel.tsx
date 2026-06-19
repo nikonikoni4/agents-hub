@@ -25,7 +25,7 @@ function formatTime(timestamp: string): string {
 }
 
 export function ChatHistoryPanel({ chatId, agentName, onClose }: ChatHistoryPanelProps) {
-  const { messages, loading } = useChatHistory(chatId, agentName);
+  const { messages, loading, refresh } = useChatHistory(chatId, agentName);
   const listRef = useRef<HTMLDivElement>(null);
 
   // 自动滚动到底部
@@ -41,9 +41,19 @@ export function ChatHistoryPanel({ chatId, agentName, onClose }: ChatHistoryPane
         <div>
           <div className={styles.headerTitle}>{agentName} 历史记录</div>
         </div>
-        <button className={styles.closeBtn} onClick={onClose} title="关闭">
-          ×
-        </button>
+        <div className={styles.headerActions}>
+          <button className={styles.refreshBtn} onClick={refresh} disabled={loading} title="刷新">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 2v6h-6" />
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M3 22v-6h6" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+            </svg>
+          </button>
+          <button className={styles.closeBtn} onClick={onClose} title="关闭">
+            ×
+          </button>
+        </div>
       </div>
 
       {loading ? (
