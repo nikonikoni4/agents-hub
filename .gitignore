@@ -237,3 +237,4 @@ prompts
 *.mp4
 start_branch.ps1
 worktrees
+.last_sync_time

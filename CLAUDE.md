@@ -15,26 +15,33 @@
 | **设计文档** | `docs/DESIGN.md` | 前段设计风格和规范文档，修改前段UI/UX内容时必读 |
 | **编码规则** | `docs/coding-rules/` | 编写代码时必须遵守的规范、约束、触发场景 |
 | **文档规则** | `docs/docs-rules/` | 编写 docs 时必须遵守的规范、约束、触发场景 |
-| **产品规格** | `docs/specs/` | 对于正式 `spec`,承载业务意图、业务规则、领域概念,以及规范性技术契约,是了解系统某个功能的重要文档 |
-| **数据状态流** | `docs/flow/` | 重要的数据流，状态变化流文档，对于快速了解某个对象在程序中的流向有帮助 |
+| **产品规格（Spec）** | `docs/specs/` | 技术契约文档，定义模块的业务意图、对外接口、状态机规则、设计决策 |
+| **数据状态流（Flow）** | `docs/flows/` | 数据流转与状态变化文档，提供完整的调用链路和函数位置导航 |
 | **使用指南** | `docs/guides/` | 面向用户的使用指南，说明如何配置和使用系统功能（如 Docker 沙箱） |
-| **架构决策** | `docs/ADR/` | 记录对于长期具有重要的作用的修改决定 |
+| **架构决策（ADR）** | `docs/adr/` | 记录对于长期具有重要的作用的修改决定 |
 | **重要bug历史记录**  | `docs/history-bugs`      | 存放可复用的bug经验   |
 | **superpower文件夹** | `docs/superpowers/` | superpower 插件下skill专用的文件夹，包括`docs/superpower/specs` 和 `docs/superpower/plans` |
 | **文档地图** | `docs/<文件夹>/index.md` | 除temp文件夹以外，其余文件都有index.md导航文件，会存放该文件夹下所有文档的索引 |
 ### 了解项目
-通过阅读docs/下的文件了解系统，并遵守一下规则：
+通过阅读docs/下的文件了解系统，并遵守以下规则：
 <docs-read-rules>
 
 1. **按需加载**：在你决定阅读某个具体文件夹内容之前**必须阅读导航文件index.md**按需加载具体文件
 2. **任务涉及代码修改时**：必须阅读`docs/coding-rules/index.md`，按需加载当前任务所涉及到的规则
 3. **需要编写文档进入docs时**：必须阅读`docs/docs-rules/index.md`和`docs/docs-rules/docs-write-rules.md`
-4. **修改或为某个模块增加功能前**：需要阅读`docs/specs/index.md`以及`docs/flow/index.md`，查看当前是否已经存在spec，按需加载具体的spec来了解该功能情况，flow文档同理
-5. **修改bug时**：必须阅读`docs/flow/index.md`，查找与之相关的数据流
-6. **修复bug时**: 可以阅读`docs\history-bugs\index.md`来获取历史bug解决方法
-7. **修改前段UI/UX时** ： 必须阅读`docs/DESIGN.md`
-8. **自主决策时**，参考`docs\ADR\user-design-summary.md`, 了解用户的决策习惯
-</<docs-read-rules>>
+4. **修改或为某个模块增加功能前**：
+   - 先读 `docs/specs/index.md`，查看当前是否已经存在该模块的 spec
+   - 读取对应的 spec，了解模块的业务意图、技术契约、设计决策
+   - 如果需要了解具体实现路径，再读 `docs/flows/index.md`，查看是否有相关的 flow 文档
+5. **修改bug时**：
+   - 先读 `docs/flows/index.md`，查找与之相关的数据流文档
+   - flow 文档提供完整的调用链路和函数位置，帮助快速定位问题
+6. **修复bug时**: 可以阅读`docs/history-bugs/index.md`来获取历史bug解决方法
+7. **修改前端UI/UX时** ： 必须阅读`docs/DESIGN.md`
+8. **自主决策时**，参考`docs/adr/user-design-summary.md`, 了解用户的决策习惯
+
+
+</docs-read-rules>
 
 ## 核心编码原则
 在编码时必须遵守的规则：
