@@ -518,7 +518,7 @@ export function RightSidebar({
       )}
 
       {activeTab === 'preview' && (
-        <div className={styles.rightModule}>
+        <div className={`${styles.rightModule} ${styles.fillHeight}`}>
           <div className={styles.moduleTitle}>
             <EyeIcon />
             预览
@@ -537,7 +537,7 @@ export function RightSidebar({
       )}
 
       {activeTab === 'diff' && (
-        <div className={styles.rightModule}>
+        <div className={`${styles.rightModule} ${styles.fillHeight}`}>
           <div className={styles.moduleTitle}>
             <MaximizeIcon />
             Diff

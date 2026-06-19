@@ -79,6 +79,13 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
+.rightModule.fillHeight {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .moduleTitle {
   font-size: 12px;
   font-weight: 600;
@@ -677,7 +684,8 @@
 
 /* Preview and Diff content */
 .moduleContent {
-  max-height: 600px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -729,7 +737,8 @@
 
 /* 预览内容区 */
 .previewContent {
-  max-height: 600px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   font-size: 13px;
   line-height: 1.65;

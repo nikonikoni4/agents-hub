@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize from 'rehype-sanitize';
 import './highlight-theme.css';
@@ -12,7 +13,9 @@ interface MarkdownRendererProps {
 export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) => {
   return (
     <div className={styles.markdown}>
-      <ReactMarkdown rehypePlugins={[rehypeSanitize, rehypeHighlight]}>{content}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize, rehypeHighlight]}>
+        {content}
+      </ReactMarkdown>
     </div>
   );
 });
