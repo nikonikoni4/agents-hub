@@ -18,6 +18,31 @@
  * - 每个 Domain 类型应该在对应的 Adapter 中有转换函数
  */
 
+// ==================== 头像相关 ====================
+
+/**
+ * 头像数据（统一格式）
+ *
+ * 在 adapter 层统一处理，前端组件只需渲染，无需判断 null
+ */
+export type AvatarData =
+  | { type: 'svg'; filename: string }  // SVG 文件名
+  | { type: 'char'; char: string };    // 字符 fallback（取第一个字符）
+
+/**
+ * 构建字符 fallback 的 AvatarData
+ */
+export function buildCharAvatar(name: string): AvatarData {
+  return { type: 'char', char: name.charAt(0).toUpperCase() };
+}
+
+/**
+ * 构建 SVG 的 AvatarData
+ */
+export function buildSvgAvatar(filename: string): AvatarData {
+  return { type: 'svg', filename };
+}
+
 // ==================== 示例类型定义 ====================
 
 /**

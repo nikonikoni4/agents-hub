@@ -28,6 +28,7 @@ import {
 import { ApiError } from '@/core/api';
 import { useToast } from '@/shared/components';
 import type { MessageApiItem, UploadedFileInfo } from '@/shared/types';
+import type { AvatarData } from '@/shared/types/domain';
 import { RightSidebarContent } from '@/shared/types/layout';
 import { ChatInput } from './ChatInput';
 import styles from './ChatArea.module.css';
@@ -101,7 +102,7 @@ const MessageBubble = React.memo(
     activeWebUrl,
   }: {
     msg: MessageApiItem;
-    avatar?: string | null;
+    avatar?: AvatarData;
     pinned: boolean;
     groupChatId: string;
     onPin: () => void;

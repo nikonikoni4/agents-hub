@@ -17,6 +17,7 @@ import { wsManager } from '@/core/websocket/WebSocketManager';
 import { getMessages } from '@/core/api/groupChatApi';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
 import type { MessageApiItem } from '@/shared/types';
+import type { AvatarData } from '@/shared/types/domain';
 
 // 与后端 API 默认 limit 保持一致 (routes/group_chat.py)
 const PAGE_SIZE = 30;
@@ -28,7 +29,7 @@ export function useChatMessages() {
   const projectGroups = useSessionStore((s) => s.projectGroups);
 
   const [messages, setMessages] = useState<MessageApiItem[]>([]);
-  const [roleAvatarMap, setRoleAvatarMap] = useState<Map<string, string | null>>(new Map());
+  const [roleAvatarMap, setRoleAvatarMap] = useState<Map<string, AvatarData>>(new Map());
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);

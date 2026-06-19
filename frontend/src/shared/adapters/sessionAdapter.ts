@@ -13,6 +13,7 @@
  */
 
 import { GroupChatInfoApiResponse, SingleChatApiResponse } from '../types/api-schemas';
+import type { AvatarData } from '../types/domain';
 
 // ==================== 导出类型 ====================
 
@@ -36,8 +37,8 @@ export interface SessionItem {
   memberCount: number;
   /** 项目路径 */
   projectPath: string;
-  /** 成员头像列表（最多 4 个 SVG 字符串） */
-  memberAvatars: (string | null)[];
+  /** 成员头像列表（最多 4 个） */
+  memberAvatars: AvatarData[];
   /** 会话类型 */
   type: 'group_chat' | 'single_chat';
   /** 单聊的 agent 名称（仅 single_chat 类型） */

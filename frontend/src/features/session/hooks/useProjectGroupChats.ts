@@ -3,6 +3,7 @@ import { useSessionStore } from '../store/sessionStore';
 import { listGroupChatsWithPagination, getMembers } from '@/core/api';
 import { buildRoleAvatarMap } from '@/shared/adapters/roleAvatarAdapter';
 import type { SessionItem } from '@/shared/adapters/sessionAdapter';
+import { buildCharAvatar } from '@/shared/types/domain';
 
 /**
  * 管理单个项目的群聊加载
@@ -46,7 +47,7 @@ export function useProjectGroupChats(projectPath: string) {
           isUnread: false,
           memberCount: members.length,
           projectPath: chat.project_path,
-          memberAvatars: members.slice(0, 4).map((m) => roleAvatarMap.get(m.name) ?? null),
+          memberAvatars: members.slice(0, 4).map((m) => roleAvatarMap.get(m.name) ?? buildCharAvatar(m.name)),
           type: 'group_chat',
         });
       }
