@@ -6,6 +6,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 from agents_hub.config.types import AgentPlatform
+from agents_hub.utils.session_parser import ToolCallInfo
 
 
 class SingleChatType(str, Enum):
@@ -94,6 +95,7 @@ class SessionMessageResponse(BaseModel):
     content: str
     timestamp: str
     model: str | None = None
+    tool_calls: list[ToolCallInfo] | None = None
 
 
 class MessageHistoryResponse(BaseModel):

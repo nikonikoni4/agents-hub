@@ -99,7 +99,7 @@
 }
 
 .messageAssistant .messageBubble {
-  background: var(--bg-secondary);
+  background: var(--bg-bubble);
   color: var(--text-primary);
   border-bottom-left-radius: 4px;
 }
@@ -112,6 +112,10 @@
 
 .messageUser .messageTimestamp {
   text-align: right;
+}
+
+.toolCalls {
+  margin-bottom: 8px;
 }
 
 .empty {

@@ -402,6 +402,7 @@ class SingleChatManager:
                     content=m.content,
                     timestamp=m.timestamp,
                     model=m.model,
+                    tool_calls=m.tool_calls,
                 )
                 for m in messages
             ]

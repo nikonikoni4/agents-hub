@@ -65,7 +65,7 @@ contract_refs:
 
 ### API 端点
 
-<key_function last_update="2026-06-19T09:08:01+08:00">
+<key_function last_update="2026-06-19T09:48:52+08:00">
 - agents_hub/api/routes/single_chat.py
   - single_chat.list_single_chats:25
   - single_chat.get_single_chat:33
@@ -120,6 +120,15 @@ contract_refs:
 | `timestamp` | `str` | 时间戳 |
 | `model` | `str \| None` | 使用的模型（可选） |
 | `token_usage` | `object \| None` | Token 使用情况（可选） |
+| `tool_calls` | `list[ToolCallInfo] \| None` | AI 工具调用记录（可选） |
+
+**ToolCallInfo 结构**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `str` | 工具调用 ID |
+| `name` | `str` | 工具名称 |
+| `input` | `dict` | 输入参数 |
 
 ### API Request/Response Schema
 
@@ -176,15 +185,16 @@ contract_refs:
 | `content` | `str` | 内容 |
 | `timestamp` | `str` | 时间戳 |
 | `model` | `str \| None` | 模型名 |
+| `tool_calls` | `list[ToolCallInfo] \| None` | AI 工具调用记录（可选） |
 
 ### Session 文件解析规则
 
 解析器从平台 session 文件（JSONL 格式）提取消息，输出 `SessionMessage` 列表。各平台解析差异如下：
 
-| 平台 | 支持角色 | 内容提取方式 |
-|------|---------|-------------|
-| Claude | user, assistant | 字符串或内容块数组（提取 text 块） |
-| Codex | user, assistant, system, tool | 内容块数组（提取 input_text/output_text 块），未知角色跳过 |
+| 平台 | 支持角色 | 内容提取方式 | 工具调用提取 |
+|------|---------|-------------|-------------|
+| Claude | user, assistant | 字符串或内容块数组（提取 text 块） | 提取 `tool_use` 块的 id、name、input |
+| Codex | user, assistant, system, tool | 内容块数组（提取 input_text/output_text 块），未知角色跳过 | 提取 `tool_use` 块的 id、name、input |
 
 ### 缓存策略
 

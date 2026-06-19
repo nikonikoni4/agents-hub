@@ -17,7 +17,7 @@ import { useSingleChatStore } from '../store/singleChatStore';
 import { useSingleChatMessages } from '../hooks/useSingleChatMessages';
 import { useSingleChatMembers } from '../hooks/useSingleChatMembers';
 import { useNavigationHandler } from '../hooks/useNavigationHandler';
-import { ToolCallCard } from './ToolCallCard';
+import { ToolCallCard } from '@/shared/components';
 import type { SingleChatMessageApiItem } from '@/shared/types';
 import styles from './SingleChatPanel.module.css';
 

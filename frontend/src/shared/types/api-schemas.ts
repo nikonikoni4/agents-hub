@@ -631,6 +631,7 @@ export interface MemberHistoryMessage {
   content: string;
   timestamp: string;
   model: string | null;
+  tool_calls?: ToolCall[];
 }
 
 /** 成员历史聊天记录响应 */

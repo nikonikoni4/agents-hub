@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agents_hub.config.types import AgentPlatform
 from agents_hub.utils.logger import get_logger
@@ -15,6 +15,14 @@ from agents_hub.utils.logger import get_logger
 logger = get_logger(__name__)
 
 _VALID_ROLES = frozenset({"user", "assistant", "system", "tool"})
+
+
+class ToolCallInfo(BaseModel):
+    """工具调用信息"""
+
+    id: str
+    name: str
+    input: dict = Field(default_factory=dict)
 
 
 class SessionMessage(BaseModel):
@@ -26,6 +34,7 @@ class SessionMessage(BaseModel):
     timestamp: str
     model: str | None = None
     token_usage: dict | None = None
+    tool_calls: list[ToolCallInfo] | None = None
 
 
 def load_jsonl(file_path: Path) -> list[dict]:
@@ -66,11 +75,20 @@ def parse_claude_session(messages: list[dict]) -> list[SessionMessage]:
             inner = msg.get("message", {})
             content_blocks = inner.get("content", [])
             text_parts = []
+            tool_calls = []
             for block in content_blocks:
                 if block.get("type") == "text":
                     text_parts.append(block.get("text", ""))
+                elif block.get("type") == "tool_use":
+                    tool_calls.append(
+                        ToolCallInfo(
+                            id=block.get("id", ""),
+                            name=block.get("name", ""),
+                            input=block.get("input", {}),
+                        )
+                    )
 
-            if text_parts:
+            if text_parts or tool_calls:
                 result.append(
                     SessionMessage(
                         id=inner.get("id", msg.get("uuid", "")),
@@ -78,6 +96,7 @@ def parse_claude_session(messages: list[dict]) -> list[SessionMessage]:
                         content="\n".join(text_parts),
                         timestamp=timestamp,
                         model=inner.get("model"),
+                        tool_calls=tool_calls if tool_calls else None,
                     )
                 )
 
@@ -99,18 +118,28 @@ def parse_codex_session(messages: list[dict]) -> list[SessionMessage]:
                 logger.debug("Skipping codex message with unknown role: %s", role)
                 continue
             texts = []
+            tool_calls = []
             for block in payload.get("content", []):
                 bt = block.get("type", "")
                 if bt in ("input_text", "output_text"):
                     texts.append(block.get("text", ""))
+                elif bt == "tool_use":
+                    tool_calls.append(
+                        ToolCallInfo(
+                            id=block.get("id", ""),
+                            name=block.get("name", ""),
+                            input=block.get("input", {}),
+                        )
+                    )
 
-            if texts:
+            if texts or tool_calls:
                 result.append(
                     SessionMessage(
                         id=payload.get("id", ""),
                         role=role,
                         content="\n".join(texts),
                         timestamp=timestamp,
+                        tool_calls=tool_calls if tool_calls else None,
                     )
                 )
 

@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { MarkdownRenderer } from '@/shared/components';
+import { MarkdownRenderer, ToolCallCard } from '@/shared/components';
 import { useChatHistory } from '../hooks/useChatHistory';
 import styles from './ChatHistoryPanel.module.css';
 
@@ -59,6 +59,13 @@ export function ChatHistoryPanel({ chatId, agentName, onClose }: ChatHistoryPane
             >
               <div className={styles.messageRole}>{msg.role === 'user' ? 'User' : 'Assistant'}</div>
               <div className={styles.messageBubble}>
+                {msg.tool_calls && msg.tool_calls.length > 0 && (
+                  <div className={styles.toolCalls}>
+                    {msg.tool_calls.map((tc) => (
+                      <ToolCallCard key={tc.id} toolCall={tc} />
+                    ))}
+                  </div>
+                )}
                 {msg.role === 'assistant' ? (
                   <MarkdownRenderer content={msg.content} />
                 ) : (

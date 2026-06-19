@@ -9,6 +9,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from agents_hub.core.foundation.models import GroupChatType
+from agents_hub.utils.session_parser import ToolCallInfo
 
 
 class GroupChatCreate(BaseModel):
@@ -296,6 +297,7 @@ class MemberHistoryMessage(BaseModel):
     content: str
     timestamp: str
     model: str | None = None
+    tool_calls: list[ToolCallInfo] | None = None
 
 
 class MemberHistoryResponse(BaseModel):

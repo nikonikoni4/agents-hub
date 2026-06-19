@@ -85,7 +85,7 @@ contract_refs:
 
 ### 群聊聚合消息
 
-<key_function last_update="2026-06-19T09:08:01+08:00">
+<key_function last_update="2026-06-19T09:48:52+08:00">
 - agents_hub/core/context/group_chat_runtime.py
   - group_chat_runtime.GroupChatRuntime.get_message_dicts:129
 - agents_hub/core/context/group_chat_session.py
@@ -144,6 +144,15 @@ contract_refs:
 | timestamp | str | 是 | 时间戳 |
 | model | str | 否 | 使用的模型名称 |
 | token_usage | dict | 否 | Token 使用量 |
+| tool_calls | list[ToolCallInfo] | 否 | AI 工具调用记录 |
+
+**ToolCallInfo 结构**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | str | 工具调用 ID |
+| name | str | 工具名称 |
+| input | dict | 输入参数 |
 
 **Session 文件解析规则**：
 
@@ -175,6 +184,7 @@ contract_refs:
 | content | str | 消息内容 |
 | timestamp | str | 时间戳 |
 | model | str | 使用的模型名称 |
+| tool_calls | list[ToolCallInfo] | AI 工具调用记录 |
 
 **缓存策略**：
 - 使用 LRU 缓存，上限 15 个单聊
@@ -229,6 +239,7 @@ contract_refs:
 | content | str | 消息内容 |
 | timestamp | str | 时间戳 |
 | model | str | 模型名称 |
+| tool_calls | list[ToolCallInfo] | AI 工具调用记录 |
 
 ## Design Rationale
 
