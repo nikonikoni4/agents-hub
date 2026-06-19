@@ -48,9 +48,10 @@ def test_no_exclude_untracked(temp_git_repo_with_untracked):
     repo = temp_git_repo_with_untracked
 
     # 不传 exclude_untracked 参数
-    changed_files = get_git_changed_files(str(repo), None)
+    changed_files, diff_range = get_git_changed_files(str(repo), None)
 
     # 应该捕获所有 untracked 文件
     assert len(changed_files) == 2
     assert str(repo / "old_screenshot.png") in changed_files
     assert str(repo / "temp_notes.txt") in changed_files
+    assert diff_range is None  # 没有新提交

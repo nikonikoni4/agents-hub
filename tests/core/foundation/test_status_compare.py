@@ -43,11 +43,12 @@ def test_status_compare_new_untracked_file(temp_git_repo):
     (repo / "new_file.py").write_text("def hello(): pass", encoding="utf-8")
 
     # 执行后
-    changed_files = get_git_changed_files(str(repo), head_before, status_before=status_before)
+    changed_files, diff_range = get_git_changed_files(str(repo), head_before, status_before=status_before)
 
     # 验证
     assert len(changed_files) == 1
     assert str(repo / "new_file.py") in changed_files
+    assert diff_range is None  # 没有新提交
 
 
 def test_status_compare_modify_tracked_file(temp_git_repo):
@@ -62,11 +63,12 @@ def test_status_compare_modify_tracked_file(temp_git_repo):
     (repo / "README.md").write_text("# Modified", encoding="utf-8")
 
     # 执行后
-    changed_files = get_git_changed_files(str(repo), head_before, status_before=status_before)
+    changed_files, diff_range = get_git_changed_files(str(repo), head_before, status_before=status_before)
 
     # 验证
     assert len(changed_files) == 1
     assert str(repo / "README.md") in changed_files
+    assert diff_range is None  # 没有新提交
 
 
 def test_status_compare_stage_file(temp_git_repo):
@@ -85,11 +87,12 @@ def test_status_compare_stage_file(temp_git_repo):
     subprocess.run(["git", "add", "new.py"], cwd=repo, check=True)
 
     # 执行后
-    changed_files = get_git_changed_files(str(repo), head_before, status_before=status_before)
+    changed_files, diff_range = get_git_changed_files(str(repo), head_before, status_before=status_before)
 
     # 验证：状态从 ?? → A
     assert len(changed_files) == 1
     assert str(repo / "new.py") in changed_files
+    assert diff_range is None  # 没有新提交
 
 
 def test_status_compare_commit_file(temp_git_repo):
@@ -106,11 +109,13 @@ def test_status_compare_commit_file(temp_git_repo):
     subprocess.run(["git", "commit", "-m", "Add file"], cwd=repo, check=True)
 
     # 执行后
-    changed_files = get_git_changed_files(str(repo), head_before, status_before=status_before)
+    changed_files, diff_range = get_git_changed_files(str(repo), head_before, status_before=status_before)
 
-    # 验证：捕获已提交的文件
+    # 验证：捕获已提交的文件，并返回正确的 diff_range
     assert len(changed_files) == 1
     assert str(repo / "committed.py") in changed_files
+    assert diff_range is not None  # 关键：应该返回 commit range
+    assert ".." in diff_range  # 格式：base_ref..head_after
 
 
 def test_status_compare_ignore_existing_untracked(temp_git_repo):
@@ -128,12 +133,13 @@ def test_status_compare_ignore_existing_untracked(temp_git_repo):
     (repo / "new_feature.py").write_text("code", encoding="utf-8")
 
     # 执行后
-    changed_files = get_git_changed_files(str(repo), head_before, status_before=status_before)
+    changed_files, diff_range = get_git_changed_files(str(repo), head_before, status_before=status_before)
 
     # 验证：只捕获新文件，不误报旧 untracked
     assert len(changed_files) == 1
     assert str(repo / "new_feature.py") in changed_files
     assert str(repo / "old_screenshot.png") not in changed_files
+    assert diff_range is None  # 没有新提交
 
 
 def test_status_compare_multiple_agents(temp_git_repo):
@@ -146,9 +152,10 @@ def test_status_compare_multiple_agents(temp_git_repo):
 
     (repo / "file_a.py").write_text("code A", encoding="utf-8")
 
-    changed_a = get_git_changed_files(str(repo), head_a_before, status_before=status_a_before)
+    changed_a, diff_range_a = get_git_changed_files(str(repo), head_a_before, status_before=status_a_before)
     assert len(changed_a) == 1
     assert str(repo / "file_a.py") in changed_a
+    assert diff_range_a is None  # 没有新提交
 
     # === Agent B 执行 ===
     head_b_before = get_git_head(str(repo))
@@ -156,12 +163,13 @@ def test_status_compare_multiple_agents(temp_git_repo):
 
     (repo / "file_b.py").write_text("code B", encoding="utf-8")
 
-    changed_b = get_git_changed_files(str(repo), head_b_before, status_before=status_b_before)
+    changed_b, diff_range_b = get_git_changed_files(str(repo), head_b_before, status_before=status_b_before)
 
     # 验证：只捕获 Agent B 的变更，不包含 Agent A 的
     assert len(changed_b) == 1
     assert str(repo / "file_b.py") in changed_b
     assert str(repo / "file_a.py") not in changed_b  # 关键：不会误报 Agent A 的文件
+    assert diff_range_b is None  # 没有新提交
 
 
 def test_status_compare_error_handling(temp_git_repo):
@@ -171,6 +179,7 @@ def test_status_compare_error_handling(temp_git_repo):
     # 使用无效的 cwd（非 Git 仓库）
     invalid_cwd = str(repo.parent / "non_existent")
 
-    # 应该返回空列表，不抛出异常
-    result = get_git_changed_files(invalid_cwd, "abc123", status_before={})
-    assert result == []
+    # 应该返回空列表和 None，不抛出异常
+    result_files, result_diff_range = get_git_changed_files(invalid_cwd, "abc123", status_before={})
+    assert result_files == []
+    assert result_diff_range is None

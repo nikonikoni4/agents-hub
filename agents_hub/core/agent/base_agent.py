@@ -779,7 +779,7 @@ call_id: {msg.call_id}
                 status_before = getattr(result, "status_before", None)
                 if status_before is not None:
                     self.logger.info("[Git 兜底] 使用状态对比模式")
-                    git_files = get_git_changed_files(
+                    git_files, git_diff_range = get_git_changed_files(
                         self.agent_cwd,
                         base_ref=result.git_head_before,
                         status_before=status_before,
@@ -788,19 +788,21 @@ call_id: {msg.call_id}
                     # 降级：如果 status_before 不存在（旧数据或异常），跳过兜底
                     self.logger.warning("[Git 兜底] status_before 不存在，跳过 Git 兜底")
                     git_files = []
+                    git_diff_range = None
 
                 if git_files:
                     self.logger.info(
-                        "[Git 兜底] 捕获到 %d 个文件变更 (agent=%s, call_id=%s)",
+                        "[Git 兜底] 捕获到 %d 个文件变更 (agent=%s, call_id=%s, diff_range=%s)",
                         len(git_files),
                         self.name,
                         msg.call_id,
+                        git_diff_range or "None (工作区变更)",
                     )
                     for f in git_files[:10]:
                         self.logger.info("[Git 兜底]   - %s", Path(f).name)
                     if len(git_files) > 10:
                         self.logger.info("[Git 兜底]   ... 还有 %d 个文件", len(git_files) - 10)
-                    await self._process_file_changes(result, msg.call_id, git_files, None)
+                    await self._process_file_changes(result, msg.call_id, git_files, git_diff_range)
                 else:
                     self.logger.info("[Git 兜底] 未检测到文件变更")
             except Exception as e:

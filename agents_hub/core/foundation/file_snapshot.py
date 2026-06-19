@@ -429,7 +429,7 @@ def get_git_changed_files(
     base_ref: str | None = None,
     exclude_untracked: set[str] | None = None,
     status_before: dict[str, str] | None = None,
-) -> list[str]:
+) -> tuple[list[str], str | None]:
     """获取 Git 仓库中变更的文件列表
 
     Args:
@@ -439,7 +439,10 @@ def get_git_changed_files(
         status_before: 执行前的工作区状态（推荐使用）
 
     Returns:
-        变更文件的绝对路径列表（失败时返回空列表，不抛出异常）
+        (变更文件的绝对路径列表, 推荐的 git_diff_range)
+        - 如果检测到新提交，返回 "base_ref..head_after"
+        - 如果只有工作区变更，返回 None
+        - 失败时返回 ([], None)
     """
     try:
         logger.debug(
@@ -456,6 +459,7 @@ def get_git_changed_files(
             # 1. 检测工作区变更（未提交的）
             status_after = get_working_tree_status(cwd)
             changed_files = []
+            git_diff_range = None
 
             for file_path, status_after_code in status_after.items():
                 status_before_code = status_before.get(file_path)
@@ -473,6 +477,14 @@ def get_git_changed_files(
                 head_after = get_git_head(cwd)
                 if head_after and head_after != base_ref:
                     logger.debug("get_git_changed_files: HEAD 变化，检测已提交文件")
+                    # 构造 diff range
+                    git_diff_range = f"{base_ref}..{head_after}"
+                    logger.info(
+                        "get_git_changed_files: 检测到新提交 %s -> %s，返回 diff_range=%s",
+                        base_ref[:8],
+                        head_after[:8],
+                        git_diff_range,
+                    )
                     committed_files = _get_committed_files(cwd, base_ref, head_after)
                     if committed_files:
                         cwd_path = Path(cwd).resolve()
@@ -485,17 +497,18 @@ def get_git_changed_files(
             logger.info(
                 "get_git_changed_files: 找到 %d 个变更文件（状态对比模式）", len(changed_files)
             )
-            return changed_files
+            return changed_files, git_diff_range
 
     except Exception as e:
         logger.error("get_git_changed_files: 执行失败，返回空列表: %s", str(e), exc_info=True)
-        return []
+        return [], None
 
     # 向后兼容：旧的 base_ref + exclude_untracked 模式（已废弃）
     try:
         logger.debug("get_git_changed_files: 使用旧的兼容模式（已废弃）")
         cwd_path = Path(cwd).resolve()
         exclude_set = exclude_untracked or set()
+        git_diff_range = None
 
         if base_ref:
             # 使用 git diff --name-only 获取相对于 base_ref 的变更
@@ -517,6 +530,15 @@ def get_git_changed_files(
                 logger.debug(
                     "get_git_changed_files: committed_files=%d", len(committed_files_legacy)
                 )
+
+                # 检测 HEAD 是否变化（兼容模式也支持 diff_range）
+                head_after = get_git_head(cwd)
+                if head_after and head_after != base_ref and committed_files_legacy:
+                    git_diff_range = f"{base_ref}..{head_after}"
+                    logger.info(
+                        "get_git_changed_files: 兼容模式检测到新提交，返回 diff_range=%s",
+                        git_diff_range,
+                    )
 
                 # 获取工作区变更（包括未暂存和已暂存）
                 status_result = subprocess.run(
@@ -561,7 +583,7 @@ def get_git_changed_files(
                         len(result_list),
                         filtered_count,
                     )
-                    return result_list
+                    return result_list, git_diff_range
         else:
             # 使用 git status --porcelain 获取当前所有变更（包括 untracked）
             logger.debug("get_git_changed_files: 使用 git status 模式")
@@ -575,7 +597,7 @@ def get_git_changed_files(
 
         if result.returncode != 0:
             logger.debug("get_git_changed_files: git 命令失败: %s", result.stderr)
-            return []
+            return [], None
 
         # 解析输出，转换为绝对路径并过滤
         files = []
@@ -605,10 +627,10 @@ def get_git_changed_files(
         logger.info(
             "get_git_changed_files: 找到 %d 个变更文件，过滤 %d 个", len(files), filtered_count
         )
-        return files
+        return files, None
 
     except (subprocess.TimeoutExpired, Exception) as e:
         logger.error(
             "get_git_changed_files: 旧兼容模式执行失败，返回空列表: %s", str(e), exc_info=True
         )
-        return []
+        return [], None

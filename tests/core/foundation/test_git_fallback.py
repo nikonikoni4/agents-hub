@@ -56,12 +56,13 @@ def test_get_git_changed_files_with_base_ref(temp_git_repo):
     (temp_git_repo / "file2.py").write_text("print('world')", encoding="utf-8")
 
     # 获取变更文件（相对于 base_head）
-    changed_files = get_git_changed_files(str(temp_git_repo), base_head)
+    changed_files, diff_range = get_git_changed_files(str(temp_git_repo), base_head)
 
     assert len(changed_files) == 2
     # 现在返回绝对路径
     assert str(temp_git_repo / "file1.py") in changed_files
     assert str(temp_git_repo / "file2.py") in changed_files
+    assert diff_range is None  # 没有新提交（工作区变更）
 
 
 def test_get_git_changed_files_without_base_ref(temp_git_repo):
@@ -73,12 +74,13 @@ def test_get_git_changed_files_without_base_ref(temp_git_repo):
     (temp_git_repo / "new_file.py").write_text("print('new')", encoding="utf-8")
 
     # 获取变更文件
-    changed_files = get_git_changed_files(str(temp_git_repo), None)
+    changed_files, diff_range = get_git_changed_files(str(temp_git_repo), None)
 
     assert len(changed_files) == 2
     # 现在返回绝对路径
     assert str(temp_git_repo / "README.md") in changed_files
     assert str(temp_git_repo / "new_file.py") in changed_files
+    assert diff_range is None  # 没有 base_ref
 
 
 def test_get_git_changed_files_with_renamed_file(temp_git_repo):
@@ -92,21 +94,23 @@ def test_get_git_changed_files_with_renamed_file(temp_git_repo):
     subprocess.run(["git", "mv", "old_name.py", "new_name.py"], cwd=temp_git_repo, check=True)
 
     # 获取变更文件（应该只显示新文件名）
-    changed_files = get_git_changed_files(str(temp_git_repo), None)
+    changed_files, diff_range = get_git_changed_files(str(temp_git_repo), None)
 
     assert len(changed_files) == 1
     # 现在返回绝对路径
     assert str(temp_git_repo / "new_name.py") in changed_files
     assert str(temp_git_repo / "old_name.py") not in changed_files
+    assert diff_range is None  # 没有新提交（staged 变更）
 
 
 def test_get_git_changed_files_empty_repo(temp_git_repo):
     """测试没有变更时返回空列表"""
     base_head = get_git_head(str(temp_git_repo))
 
-    changed_files = get_git_changed_files(str(temp_git_repo), base_head)
+    changed_files, diff_range = get_git_changed_files(str(temp_git_repo), base_head)
 
     assert changed_files == []
+    assert diff_range is None
 
 
 def test_get_git_changed_files_non_git_repo(tmp_path):
@@ -114,8 +118,9 @@ def test_get_git_changed_files_non_git_repo(tmp_path):
     non_git_dir = tmp_path / "not_a_repo"
     non_git_dir.mkdir()
 
-    changed_files = get_git_changed_files(str(non_git_dir), None)
+    changed_files, diff_range = get_git_changed_files(str(non_git_dir), None)
     assert changed_files == []
+    assert diff_range is None
 
 
 def test_git_fallback_workflow(temp_git_repo):
@@ -130,10 +135,11 @@ def test_git_fallback_workflow(temp_git_repo):
     (temp_git_repo / "test.py").write_text("def test(): pass", encoding="utf-8")
 
     # 3. 执行后获取变更文件
-    changed_files = get_git_changed_files(str(temp_git_repo), head_before)
+    changed_files, diff_range = get_git_changed_files(str(temp_git_repo), head_before)
 
     # 4. 验证捕获到所有变更（现在是绝对路径）
     assert len(changed_files) == 3
     assert str(temp_git_repo / "feature1.py") in changed_files
     assert str(temp_git_repo / "feature2.py") in changed_files
     assert str(temp_git_repo / "test.py") in changed_files
+    assert diff_range is None  # 没有新提交（工作区变更）
