@@ -61,6 +61,11 @@ from agents_hub.core.foundation import (  # noqa: E402
     MessageType,
     render_for_chat,
 )
+from agents_hub.core.foundation.exceptions import (  # noqa: E402
+    LoopNotFoundError,
+    LoopStateError,
+    LoopValidationError,
+)
 from agents_hub.core.foundation.file_snapshot import create_file_snapshot  # noqa: E402
 from agents_hub.core.foundation.paths import group_chat_paths  # noqa: E402
 from agents_hub.core.foundation.token import redact_token  # noqa: E402
@@ -174,6 +179,40 @@ async def _send_agent_call_completion_notification(
     await broadcast_group_chat_refresh(group_chat.group_chat_id)
 
 
+async def _resolve_group_chat(agent_token: str) -> tuple[str, str, GroupChat] | dict:
+    identity = group_chat_manager.resolve_token(agent_token)
+    if identity is None:
+        return make_error_response(
+            INVALID_TOKEN,
+            "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
+        )
+
+    agent_name, group_chat_id = identity
+    try:
+        group_chat = await group_chat_manager.load_group_chat(group_chat_id)
+    except GroupChatNotFoundError:
+        logger.warning("Loop 工具群聊不存在: group_chat_id=%s", group_chat_id)
+        return make_error_response(
+            GROUP_CHAT_NOT_FOUND,
+            f"群聊 {group_chat_id} 不存在",
+            details={"group_chat_id": group_chat_id},
+        )
+
+    return agent_name, group_chat_id, group_chat
+
+
+def _is_leader(group_chat: GroupChat, agent_name: str) -> bool:
+    return group_chat.manager is not None and agent_name == group_chat.manager.name
+
+
+def _permission_denied(agent_name: str, action: str) -> dict:
+    return make_error_response(
+        PERMISSION_DENIED,
+        f"权限不足：只有 Leader 可以{action}，当前 Agent {agent_name} 不是 Leader",
+        details={"agent_name": agent_name, "required_role": "Leader"},
+    )
+
+
 # ============================================================================
 # Tool 1: call_agent
 # ============================================================================
@@ -184,6 +223,7 @@ async def call_agent(
     send_to: str,
     content: str,
     need_response: bool = True,
+    timeout_seconds: int | None = None,
 ) -> dict:
     """
     派活给团队成员
@@ -230,7 +270,7 @@ async def call_agent(
             send_to=send_to,
             content=content,
             message_type=message_type,
-            timeout_seconds=None,
+            timeout_seconds=timeout_seconds,
         )
         logger.info(
             "AgentCall 创建: call_id=%s, sender=%s, receiver=%s",
@@ -568,10 +608,10 @@ async def complete_task(
     agent_token: str,
     call_id: str,
     content: str,
-    modified_files: list[str] | None,
-    git_diff_range: str | None,
-    web_preview_url: str | None,
-    web_preview_title: str | None,
+    modified_files: list[str] | None = None,
+    git_diff_range: str | None = None,
+    web_preview_url: str | None = None,
+    web_preview_title: str | None = None,
     success: bool = True,
 ) -> dict:
     """
@@ -998,6 +1038,159 @@ async def create_agent(
 
 
 # ============================================================================
+# Loop Tools
+# ============================================================================
+
+
+async def create_loop(
+    agent_token: str,
+    nodes: list[dict],
+    max_iterations: int,
+    initial_task: str,
+) -> dict:
+    """创建循环定义（Leader-only）。"""
+    logger.info(
+        "MCP 调用: create_loop, nodes=%d, max_iterations=%d",
+        len(nodes) if nodes else 0,
+        max_iterations,
+    )
+    try:
+        resolved = await _resolve_group_chat(agent_token)
+        if isinstance(resolved, dict):
+            return resolved
+
+        agent_name, _group_chat_id, group_chat = resolved
+        if not _is_leader(group_chat, agent_name):
+            return _permission_denied(agent_name, "创建循环")
+
+        loop = await group_chat.create_loop(
+            nodes=nodes,
+            max_iterations=max_iterations,
+            initial_task=initial_task,
+        )
+        return {"loop_id": loop.loop_id, "status": loop.status}
+
+    except (LoopValidationError, ValueError) as e:
+        logger.warning("create_loop 参数校验失败: %s", str(e))
+        details = getattr(e, "details", None)
+        return make_error_response(VALIDATION_ERROR, str(e), details=details)
+    except AgentNotFoundError as e:
+        logger.warning("create_loop Agent 不存在: %s", str(e))
+        return make_error_response(AGENT_NOT_FOUND, str(e), details=e.details)
+    except Exception as e:
+        logger.error("create_loop 失败: %s", str(e), exc_info=True)
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+async def start_loop(agent_token: str, loop_id: str) -> dict:
+    """启动 CREATED 状态的循环（Leader-only）。"""
+    logger.info("MCP 调用: start_loop, loop_id=%s", loop_id)
+    try:
+        resolved = await _resolve_group_chat(agent_token)
+        if isinstance(resolved, dict):
+            return resolved
+
+        agent_name, _group_chat_id, group_chat = resolved
+        if not _is_leader(group_chat, agent_name):
+            return _permission_denied(agent_name, "启动循环")
+
+        loop = await group_chat.create_and_start_loop(loop_id)
+        return {"loop_id": loop.loop_id, "status": loop.status}
+
+    except LoopStateError as e:
+        logger.warning("start_loop 状态错误: %s", str(e))
+        return make_error_response(VALIDATION_ERROR, str(e), details=e.details)
+    except Exception as e:
+        logger.error("start_loop 失败: %s", str(e), exc_info=True)
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+async def stop_loop(agent_token: str, loop_id: str) -> dict:
+    """停止 RUNNING 状态的循环（Leader-only）。"""
+    logger.info("MCP 调用: stop_loop, loop_id=%s", loop_id)
+    try:
+        resolved = await _resolve_group_chat(agent_token)
+        if isinstance(resolved, dict):
+            return resolved
+
+        agent_name, _group_chat_id, group_chat = resolved
+        if not _is_leader(group_chat, agent_name):
+            return _permission_denied(agent_name, "停止循环")
+
+        loop = await group_chat.stop_loop(loop_id)
+        return {"loop_id": loop.loop_id, "status": loop.status}
+
+    except (LoopNotFoundError, LoopStateError) as e:
+        logger.warning("stop_loop 状态错误: %s", str(e))
+        return make_error_response(VALIDATION_ERROR, str(e), details=e.details)
+    except Exception as e:
+        logger.error("stop_loop 失败: %s", str(e), exc_info=True)
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+async def delete_loop(agent_token: str, loop_id: str) -> dict:
+    """删除非 RUNNING 状态的循环（Leader-only）。"""
+    logger.info("MCP 调用: delete_loop, loop_id=%s", loop_id)
+    try:
+        resolved = await _resolve_group_chat(agent_token)
+        if isinstance(resolved, dict):
+            return resolved
+
+        agent_name, _group_chat_id, group_chat = resolved
+        if not _is_leader(group_chat, agent_name):
+            return _permission_denied(agent_name, "删除循环")
+
+        await group_chat.delete_loop(loop_id)
+        return {"success": True}
+
+    except (LoopNotFoundError, LoopStateError) as e:
+        logger.warning("delete_loop 状态错误: %s", str(e))
+        return make_error_response(VALIDATION_ERROR, str(e), details=e.details)
+    except Exception as e:
+        logger.error("delete_loop 失败: %s", str(e), exc_info=True)
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+async def get_loop_status(agent_token: str, loop_id: str) -> dict:
+    """查询循环状态，任意 Agent 可调用。"""
+    logger.info("MCP 调用: get_loop_status, loop_id=%s", loop_id)
+    try:
+        resolved = await _resolve_group_chat(agent_token)
+        if isinstance(resolved, dict):
+            return resolved
+
+        _agent_name, _group_chat_id, group_chat = resolved
+        return group_chat.get_loop_status(loop_id)
+
+    except LoopNotFoundError as e:
+        logger.warning("get_loop_status Loop 不存在: %s", str(e))
+        return make_error_response(VALIDATION_ERROR, str(e), details=e.details)
+    except Exception as e:
+        logger.error("get_loop_status 失败: %s", str(e), exc_info=True)
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+# ============================================================================
 # Tool 10: health_check
 # ============================================================================
 
@@ -1029,4 +1222,9 @@ mcp.tool()(check_agent_call)
 # mcp.tool()(request_permission)
 mcp.tool()(create_group_chat)
 mcp.tool()(create_agent)
+mcp.tool()(create_loop)
+mcp.tool()(start_loop)
+mcp.tool()(stop_loop)
+mcp.tool()(delete_loop)
+mcp.tool()(get_loop_status)
 mcp.tool()(health_check)

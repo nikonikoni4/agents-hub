@@ -25,6 +25,7 @@ __all__ = [
     "DockerNotAvailableError",
     "DockerStartError",
     "ForkError",
+    "LoopExecutionError",
 ]
 
 
@@ -188,7 +189,11 @@ class DockerConfigError(ValidationError):
         super().__init__(
             message=message,
             error_code="DOCKER_CONFIG_ERROR",
-            details={"agent_name": agent_name, "group_chat_id": group_chat_id, "reason": reason},
+            details={
+                "agent_name": agent_name,
+                "group_chat_id": group_chat_id,
+                "reason": reason,
+            },
         )
 
 
@@ -270,5 +275,27 @@ class LoopStateError(AgentsHubError):
                 "loop_id": loop_id,
                 "current_status": current_status,
                 "attempted_action": attempted_action,
+            },
+        )
+
+
+class LoopExecutionError(AgentsHubError):
+    """Loop 执行失败"""
+
+    def __init__(
+        self,
+        loop_id: str,
+        node_id: str,
+        agent_name: str,
+        reason: str,
+    ):
+        super().__init__(
+            message=f"Loop '{loop_id}' 节点 '{agent_name}' 执行失败: {reason}",
+            error_code="LOOP_EXECUTION_ERROR",
+            details={
+                "loop_id": loop_id,
+                "node_id": node_id,
+                "agent_name": agent_name,
+                "reason": reason,
             },
         )

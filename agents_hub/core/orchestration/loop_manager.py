@@ -99,7 +99,7 @@ class LoopManager:
             loop_nodes = [LoopNode.from_dict(node) for node in nodes]
 
             # 校验
-            self._validate_create_request(loop_nodes)
+            self._validate_create_request(loop_nodes, max_iterations)
 
             # 创建 Loop
             loop = Loop(
@@ -191,9 +191,9 @@ class LoopManager:
         """
         loop = self.get_loop(loop_id)
 
-        # 状态机校验
+        # 状态机校验。同状态更新用于持久化迭代/节点等字段，视为幂等操作。
         allowed = self._VALID_TRANSITIONS.get(loop.status, set())
-        if status not in allowed:
+        if status != loop.status and status not in allowed:
             self.logger.error(
                 "Loop 状态转换非法: loop_id=%s, %s -> %s, 允许=%s",
                 loop_id,
@@ -258,7 +258,7 @@ class LoopManager:
 
         self.logger.info("删除 Loop: loop_id=%s", loop_id)
 
-    def _validate_create_request(self, nodes: list[LoopNode]) -> None:
+    def _validate_create_request(self, nodes: list[LoopNode], max_iterations: int) -> None:
         """校验创建 Loop 的请求
 
         Args:
@@ -268,7 +268,18 @@ class LoopManager:
             LoopValidationError: 校验失败
             AgentNotFoundError: Agent 不存在
         """
-        # 1. 节点数量至少 2 个
+        # 1. 最大循环次数必须大于 0
+        if max_iterations <= 0:
+            self.logger.error(
+                "Loop 校验失败: max_iterations 必须大于 0, 实际=%d",
+                max_iterations,
+            )
+            raise LoopValidationError(
+                reason="max_iterations 必须大于 0",
+                details={"max_iterations": max_iterations},
+            )
+
+        # 2. 节点数量至少 2 个
         if len(nodes) < 2:
             self.logger.error(
                 "Loop 校验失败: 节点数量不足, 需要至少 2 个节点, 实际=%d",
@@ -279,7 +290,7 @@ class LoopManager:
                 details={"node_count": len(nodes)},
             )
 
-        # 2. 有且仅有 1 个 TERMINATOR 节点
+        # 3. 有且仅有 1 个 TERMINATOR 节点
         terminator_count = sum(
             1 for node in nodes if node.node_type == LoopNodeType.TERMINATOR.value
         )
@@ -301,7 +312,7 @@ class LoopManager:
                 details={"terminator_count": terminator_count},
             )
 
-        # 3. 所有 agent_name 必须存在
+        # 4. 所有 agent_name 必须存在
         available_agents = self.role_manager.list_role_names()
         for node in nodes:
             if node.agent_name not in available_agents:
@@ -312,7 +323,7 @@ class LoopManager:
                 )
                 raise AgentNotFoundError(node.agent_name)
 
-        # 4. 该 group_chat 没有其他 RUNNING 的 Loop
+        # 5. 该 group_chat 没有其他 RUNNING 的 Loop
         running_loops = [
             loop for loop in self._loops.values() if loop.status == LoopStatus.RUNNING.value
         ]

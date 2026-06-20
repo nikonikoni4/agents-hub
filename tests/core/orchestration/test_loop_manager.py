@@ -107,6 +107,20 @@ class TestLoopManagerCreate:
         assert "节点数量不足" in str(exc_info.value)
 
     @pytest.mark.asyncio
+    async def test_create_loop_rejects_non_positive_max_iterations(
+        self, loop_manager, valid_nodes
+    ):
+        """max_iterations 必须大于 0"""
+        with pytest.raises(LoopValidationError) as exc_info:
+            await loop_manager.create_loop(
+                nodes=valid_nodes,
+                max_iterations=0,
+                initial_task="测试任务",
+            )
+
+        assert "max_iterations 必须大于 0" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_create_loop_no_terminator(self, loop_manager):
         """缺少 TERMINATOR 节点"""
         nodes = [
@@ -654,6 +668,29 @@ class TestLoopStateMachine:
             loop.loop_id, LoopStatus.COMPLETED.value
         )
         assert updated.status == LoopStatus.COMPLETED.value
+
+    @pytest.mark.asyncio
+    async def test_same_status_update_is_idempotent_persistence(
+        self, loop_manager, valid_nodes
+    ):
+        """同状态更新用于持久化当前字段，不视为非法状态转换"""
+        loop = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+            initial_task="测试任务",
+        )
+        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
+
+        updated = await loop_manager.update_loop_status(
+            loop.loop_id,
+            LoopStatus.RUNNING.value,
+            current_iteration=2,
+            current_node_index=1,
+        )
+
+        assert updated.status == LoopStatus.RUNNING.value
+        assert updated.current_iteration == 2
+        assert updated.current_node_index == 1
 
     @pytest.mark.asyncio
     async def test_valid_transition_running_to_failed(self, loop_manager, valid_nodes):

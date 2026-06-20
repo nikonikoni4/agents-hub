@@ -66,6 +66,7 @@ class Agent:
         self._message_completion_handlers: list[
             Callable[[AgentMessage, AgentResult | None], Awaitable[None]]
         ] = []
+        self._loop_completion_queue: asyncio.Queue | None = None
         self.logger = get_logger(f"agent.{self.name}")
 
     @property
@@ -94,6 +95,10 @@ class Agent:
     ) -> None:
         """注册消息处理完成后的通用回调。"""
         self._message_completion_handlers.append(handler)
+
+    def set_loop_completion_queue(self, queue: asyncio.Queue | None) -> None:
+        """注入或清除 LoopExecutor 使用的节点完成通知队列。"""
+        self._loop_completion_queue = queue
 
     def _should_accept_message(self, msg: AgentMessage) -> bool:
         """判断当前状态下是否应该接收该消息
@@ -964,6 +969,21 @@ call_id: {msg.call_id}
         result: AgentResult | None,
     ) -> None:
         """通知消息处理完成事件。"""
+        loop_id = msg.metadata.get("loop_id") if msg.metadata else None
+        if (
+            msg.message_type == MessageType.LOOP_MESSAGE
+            and loop_id
+            and self._loop_completion_queue is not None
+            and result is not None
+        ):
+            await self._loop_completion_queue.put(
+                {
+                    "loop_id": loop_id,
+                    "agent_result": result,
+                    "call_id": msg.call_id,
+                }
+            )
+
         for handler in self._message_completion_handlers:
             await handler(msg, result)
 

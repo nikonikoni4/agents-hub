@@ -29,7 +29,12 @@ from agents_hub.mcp.server import (
     complete_task,
     create_agent,
     create_group_chat,
+    create_loop,
+    delete_loop,
+    get_loop_status,
     report_progress,
+    start_loop,
+    stop_loop,
 )
 
 __all__ = [
@@ -57,4 +62,9 @@ __all__ = [
     "report_progress",
     "create_group_chat",
     "create_agent",
+    "create_loop",
+    "start_loop",
+    "stop_loop",
+    "delete_loop",
+    "get_loop_status",
 ]

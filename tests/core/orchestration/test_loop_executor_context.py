@@ -136,7 +136,46 @@ async def test_notify_loop_completion_ignores_missing_loop_id():
 
 
 @pytest.mark.asyncio
-async def test_group_chat_registers_loop_completion_handler_on_agents(monkeypatch):
+async def test_loop_executor_receives_notification_and_handles_fields():
+    queue = __import__("asyncio").Queue()
+    result = _make_agent_result()
+    await queue.put(
+        {
+            "loop_id": "loop-1",
+            "agent_result": result,
+            "call_id": "call-1",
+        }
+    )
+    executor = LoopExecutor(
+        loop=_make_loop(
+            [
+                LoopNode(
+                    node_type=LoopNodeType.NORMAL.value,
+                    agent_name="worker",
+                    role_description="执行节点任务",
+                )
+            ]
+        ),
+        completion_queue=queue,
+    )
+
+    handled = []
+
+    async def handle(notification):
+        handled.append(notification)
+
+    executor._handle_node_completion = handle
+
+    notification = await executor.receive_node_completion()
+
+    assert notification["loop_id"] == "loop-1"
+    assert notification["agent_result"] is result
+    assert notification["call_id"] == "call-1"
+    assert handled == [notification]
+
+
+@pytest.mark.asyncio
+async def test_group_chat_injects_loop_completion_queue_on_agents(monkeypatch):
     created_agents = []
 
     class FakeRole:
@@ -156,11 +195,14 @@ async def test_group_chat_registers_loop_completion_handler_on_agents(monkeypatc
         def __init__(self, role, *args):
             self.name = role.name
             self.message_queue = __import__("asyncio").Queue()
-            self.handlers = []
+            self.loop_completion_queue = None
             created_agents.append(self)
 
         def add_message_completion_handler(self, handler):
-            self.handlers.append(handler)
+            pass
+
+        def set_loop_completion_queue(self, queue):
+            self.loop_completion_queue = queue
 
     class FakeRuntime:
         def __init__(self, group_chat_id, project_path, on_change=None):
@@ -196,7 +238,118 @@ async def test_group_chat_registers_loop_completion_handler_on_agents(monkeypatc
     await group_chat._init_agents()
 
     assert created_agents
-    assert all(len(agent.handlers) == 1 for agent in created_agents)
+    assert all(
+        agent.loop_completion_queue is group_chat._loop_completion_queue
+        for agent in created_agents
+    )
+
+
+@pytest.mark.asyncio
+async def test_group_chat_injects_and_clears_loop_completion_queue(monkeypatch):
+    created_agents = []
+
+    class FakeRole:
+        def __init__(self, name):
+            self.name = name
+
+        def get_role_config(self):
+            return type(
+                "RoleConfig", (), {"name": self.name, "role_type": RoleType.TEAM_MEMBER}
+            )()
+
+    class FakeRoleManager:
+        def get_role(self, name):
+            return FakeRole(name)
+
+    class FakeAgent:
+        def __init__(self, role, *args):
+            self.name = role.name
+            self.message_queue = __import__("asyncio").Queue()
+            self.loop_completion_queue = "unset"
+            created_agents.append(self)
+
+        def add_message_completion_handler(self, handler):
+            pass
+
+        def set_loop_completion_queue(self, queue):
+            self.loop_completion_queue = queue
+
+        async def stop(self):
+            pass
+
+    class FakeRuntime:
+        def __init__(self, group_chat_id, project_path, on_change=None):
+            self.group_chat_id = group_chat_id
+            self.project_path = project_path
+
+        def close(self):
+            pass
+
+    class FakeClosable:
+        def __init__(self, *args):
+            pass
+
+        async def stop_cleanup(self):
+            pass
+
+        def close(self):
+            pass
+
+    class FakeRouter:
+        def __init__(self):
+            self._agents_queue = {}
+
+        def register(self, name, queue):
+            self._agents_queue[name] = queue
+
+        def clear(self):
+            pass
+
+    class FakeGroupChatManager:
+        def unregister_tokens(self, group_chat_id):
+            pass
+
+    monkeypatch.setattr(
+        "agents_hub.core.orchestration.group_chat.RoleManager", FakeRoleManager
+    )
+    monkeypatch.setattr("agents_hub.core.orchestration.group_chat.Manager", FakeAgent)
+    monkeypatch.setattr("agents_hub.core.orchestration.group_chat.Worker", FakeAgent)
+    monkeypatch.setattr(
+        "agents_hub.core.orchestration.group_chat.GroupChatRuntime", FakeRuntime
+    )
+    monkeypatch.setattr(
+        "agents_hub.core.orchestration.group_chat.AgentCallManager", FakeClosable
+    )
+    monkeypatch.setattr(
+        "agents_hub.core.orchestration.group_chat.TaskManager", FakeClosable
+    )
+    monkeypatch.setattr(
+        "agents_hub.core.orchestration.group_chat.MessageRouter", FakeRouter
+    )
+    monkeypatch.setattr(
+        "agents_hub.core.orchestration.group_chat.group_chat_manager",
+        FakeGroupChatManager(),
+        raising=False,
+    )
+
+    group_chat = GroupChat(
+        team_members_name=["worker"],
+        group_type=GroupChatType.SEQUENCE_EXECUTE,
+        project_path="D:/tmp/agents-hub-loop-test",
+        group_chat_id="group-1",
+    )
+
+    await group_chat._init_agents()
+
+    assert created_agents
+    assert all(
+        agent.loop_completion_queue is group_chat._loop_completion_queue
+        for agent in created_agents
+    )
+
+    await group_chat.cleanup()
+
+    assert all(agent.loop_completion_queue is None for agent in created_agents)
 
 
 def _make_loop(

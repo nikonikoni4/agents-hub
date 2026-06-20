@@ -23,12 +23,13 @@ from agents_hub.core.foundation import (
     SessionType,
     StateError,
 )
+from agents_hub.core.foundation.models import LoopStatus
 from agents_hub.core.foundation.token import generate_token
+from agents_hub.core.orchestration.loop_executor import LoopExecutor
+from agents_hub.core.orchestration.loop_manager import LoopManager
 from agents_hub.realtime import broadcast_group_chat_refresh
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_logger
-
-from .loop_executor import notify_loop_completion
 
 logger = get_logger(__name__)
 
@@ -79,6 +80,10 @@ class GroupChat:
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
         self.task_manager = TaskManager(self.group_chat_id, project_path)
+        self.loop_manager: LoopManager | None = None
+        self.active_loops: dict[str, LoopExecutor] = {}
+        self._loop_tasks: dict[str, asyncio.Task] = {}
+        self._loop_queues: dict[str, asyncio.Queue] = {}
         self._loop_completion_queue: asyncio.Queue | None = asyncio.Queue()
 
         # Heartbeat 定时任务
@@ -87,6 +92,11 @@ class GroupChat:
 
         # 懒加载标记
         self._activated = False
+
+    def _get_loop_manager(self) -> LoopManager:
+        if self.loop_manager is None:
+            self.loop_manager = LoopManager(self.group_chat_id, self.runtime.project_path)
+        return self.loop_manager
 
     async def start(self):
         """
@@ -228,9 +238,7 @@ class GroupChat:
             self.message_router,
             self.task_manager,
         )
-        self.manager.add_message_completion_handler(
-            lambda msg, result: notify_loop_completion(self._loop_completion_queue, msg, result)
-        )
+        self.manager.set_loop_completion_queue(self._loop_completion_queue)
 
         # 初始化 workers
         if not self.team_members_name:
@@ -248,9 +256,7 @@ class GroupChat:
                 self.message_router,
                 self.task_manager,
             )
-            self.workers[role_name].add_message_completion_handler(
-                lambda msg, result: notify_loop_completion(self._loop_completion_queue, msg, result)
-            )
+            self.workers[role_name].set_loop_completion_queue(self._loop_completion_queue)
 
         # 注册所有 agent 到 message_router
         self._register_agents_to_router()
@@ -313,9 +319,7 @@ class GroupChat:
             self.message_router,
             self.task_manager,
         )
-        new_worker.add_message_completion_handler(
-            lambda msg, result: notify_loop_completion(self._loop_completion_queue, msg, result)
-        )
+        new_worker.set_loop_completion_queue(self._loop_completion_queue)
 
         # 4. 注册到 MessageRouter
         self.message_router.register(role_name, new_worker.message_queue)
@@ -349,6 +353,147 @@ class GroupChat:
         await self._initialize_single_member(new_worker)
 
         logger.info("成员添加成功: group=%s, member=%s", self.group_chat_id, role_name)
+
+    async def create_loop(
+        self,
+        nodes: list[dict],
+        max_iterations: int,
+        initial_task: str,
+    ):
+        """创建 Loop 定义，暂不启动执行。"""
+        return await self._get_loop_manager().create_loop(
+            nodes=nodes,
+            max_iterations=max_iterations,
+            initial_task=initial_task,
+        )
+
+    async def create_and_start_loop(self, loop_id: str):
+        """启动已创建的 Loop，并在后台运行执行器。"""
+        loop_manager = self._get_loop_manager()
+        loop = loop_manager.get_loop(loop_id)
+        if loop.status != LoopStatus.CREATED.value:
+            from agents_hub.core.foundation.exceptions import LoopStateError
+
+            raise LoopStateError(loop_id, loop.status, "start")
+
+        completion_queue: asyncio.Queue = asyncio.Queue()
+        agents = self._loop_agents(loop)
+        for node in loop.nodes:
+            agent_info = self.runtime.get_or_create_agent_member_info(node.agent_name)
+            agent_info.status = "in_loop"
+            agent_info.current_loop_id = loop.loop_id
+            agent = agents.get(node.agent_name)
+            if agent is not None:
+                agent.set_loop_completion_queue(completion_queue)
+        await self.runtime.save_agent_members(context=f"Start loop {loop.loop_id}")
+
+        await loop_manager.update_loop_status(loop_id, LoopStatus.RUNNING.value)
+        executor = LoopExecutor(
+            loop=loop,
+            runtime=self.runtime,
+            completion_queue=completion_queue,
+            send_message_callback=self.send_message_to_agent,
+            agent_call_manager=self.agent_call_manager,
+            loop_manager=loop_manager,
+            agents=agents,
+        )
+        task = asyncio.create_task(executor.run())
+
+        def _on_done(t: asyncio.Task, lid: str = loop_id) -> None:
+            self._on_loop_task_done(lid, t)
+
+        task.add_done_callback(_on_done)
+        self.active_loops[loop_id] = executor
+        self._loop_tasks[loop_id] = task
+        self._loop_queues[loop_id] = completion_queue
+        return loop
+
+    def _on_loop_task_done(self, loop_id: str, task: asyncio.Task) -> None:
+        """LoopExecutor 后台任务结束后清理运行时索引。"""
+        if self._loop_tasks.get(loop_id) is task:
+            self._loop_tasks.pop(loop_id, None)
+            self.active_loops.pop(loop_id, None)
+            self._loop_queues.pop(loop_id, None)
+
+    def _loop_agents(self, loop) -> dict[str, Agent]:
+        agents: dict[str, Agent] = {}
+        for node in loop.nodes:
+            agent = self._find_agent(node.agent_name)
+            if agent is not None:
+                agents[node.agent_name] = agent
+        return agents
+
+    async def stop_loop(self, loop_id: str):
+        """停止 RUNNING Loop，并恢复参与 Agent。"""
+        loop_manager = self._get_loop_manager()
+        loop = loop_manager.get_loop(loop_id)
+        if loop.status != LoopStatus.RUNNING.value:
+            from agents_hub.core.foundation.exceptions import LoopStateError
+
+            raise LoopStateError(loop_id, loop.status, "stop")
+
+        queue = self._loop_queues.get(loop_id)
+        if queue is not None:
+            await queue.put({"loop_id": loop_id, "is_termination_signal": True})
+
+        task = self._loop_tasks.pop(loop_id, None)
+        if task is not None and not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+        seen_agents: set[str] = set()
+        for node in loop.nodes:
+            if node.agent_name in seen_agents:
+                continue
+            seen_agents.add(node.agent_name)
+            agent = self._find_agent(node.agent_name)
+            if agent is not None:
+                agent.set_loop_completion_queue(None)
+            agent_info = self.runtime.get_agent_member_info(node.agent_name)
+            if agent_info is not None:
+                if agent_info.status != "stopped":
+                    await self.stop_member(node.agent_name)
+                await self.start_member(node.agent_name)
+                agent_info = self.runtime.get_agent_member_info(node.agent_name)
+                if agent_info is not None:
+                    agent_info.status = "idle"
+                    agent_info.current_loop_id = None
+
+        await self.runtime.save_agent_members(context=f"Stop loop {loop_id}")
+        self.active_loops.pop(loop_id, None)
+        self._loop_queues.pop(loop_id, None)
+        return await loop_manager.update_loop_status(loop_id, LoopStatus.PAUSED.value)
+
+    async def cleanup_loop(self, loop_id: str) -> None:
+        """清理已结束 Loop 的运行时引用。"""
+        self.active_loops.pop(loop_id, None)
+        self._loop_queues.pop(loop_id, None)
+        task = self._loop_tasks.pop(loop_id, None)
+        if task is not None and not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+    async def delete_loop(self, loop_id: str) -> None:
+        """删除非 RUNNING Loop。"""
+        await self.cleanup_loop(loop_id)
+        await self._get_loop_manager().delete_loop(loop_id)
+
+    def get_loop_status(self, loop_id: str) -> dict:
+        """查询 Loop 状态。"""
+        loop = self._get_loop_manager().get_loop(loop_id)
+        current_node = None
+        if 0 <= loop.current_node_index < len(loop.nodes):
+            current_node = loop.nodes[loop.current_node_index].agent_name
+        return {
+            "loop_id": loop.loop_id,
+            "status": loop.status,
+            "current_iteration": loop.current_iteration,
+            "max_iterations": loop.max_iterations,
+            "current_node": current_node,
+            "error": loop.error_message,
+        }
 
     async def _initialize_single_member(self, agent: Agent) -> None:
         """初始化单个新成员（打招呼）
@@ -1066,6 +1211,11 @@ class GroupChat:
         - 清理过程中的异常不会阻止其他资源清理
         """
         logger.info("清理群聊资源: id=%s", self.group_chat_id)
+
+        if self.manager:
+            self.manager.set_loop_completion_queue(None)
+        for worker in self.workers.values():
+            worker.set_loop_completion_queue(None)
 
         # 1. 停止所有 Agent（发送停止信号）
         if self.manager:

@@ -346,6 +346,90 @@ class TestAgentLoopMessageProcessing:
     """测试 Agent 对 LOOP_MESSAGE 的处理差异"""
 
     @pytest.mark.asyncio
+    async def test_run_loop_sends_loop_completion_notification_to_injected_queue(self):
+        """LOOP_MESSAGE 完成后向注入的循环完成队列发送完整结果"""
+        from datetime import datetime
+        from types import SimpleNamespace
+
+        from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
+
+        role = Mock()
+        role.get_role_config.return_value = SimpleNamespace(
+            name="test_agent",
+            role_type=RoleType.TEAM_MEMBER,
+            platform=AgentPlatform.CLAUDE,
+            work_root=None,
+        )
+        runtime = Mock()
+        runtime.group_chat_id = "group-1"
+        agent_info = AgentMemberInfo(main_session="session-1", token="tok_test")
+        runtime.state.agent_member_infos = {"test_agent": agent_info}
+        runtime.get_agent_member_info.side_effect = runtime.state.agent_member_infos.get
+        runtime.repository.group_chat_session_path = "__missing_group_chat_session__"
+        runtime.add_message = AsyncMock()
+        runtime.save_agent_members = AsyncMock()
+        agent_call_manager = Mock()
+        agent_call_manager.update_status = AsyncMock()
+        agent_call_manager.set_error = AsyncMock()
+        message_router = Mock()
+        agent = Agent(
+            role=role,
+            runtime=runtime,
+            agent_call_manager=agent_call_manager,
+            message_router=message_router,
+        )
+        completion_queue = asyncio.Queue()
+        agent.set_loop_completion_queue(completion_queue)
+
+        result = AgentResult(
+            text="loop result",
+            session_id="session-1",
+            timestamp=datetime.now().isoformat(),
+            agent_name="test_agent",
+            platform=AgentPlatform.CLAUDE,
+            role_type=RoleType.TEAM_MEMBER,
+        )
+
+        async def fake_process_message(*args, **kwargs):
+            return result
+
+        agent._process_message = fake_process_message
+        agent._update_context_usage = AsyncMock()
+        agent._auto_compact_if_needed = AsyncMock()
+
+        await agent.message_queue.put(
+            AgentMessage(
+                call_id="loop-call",
+                send_from="loop",
+                send_to="test_agent",
+                content="loop context",
+                session_type=SessionType.MAIN,
+                message_type=MessageType.LOOP_MESSAGE,
+                metadata={"loop_id": "loop-1"},
+            )
+        )
+        await agent.message_queue.put(
+            AgentMessage(
+                call_id="__STOP__",
+                send_from="__SYSTEM__",
+                send_to="test_agent",
+                content="__STOP__",
+                session_type=SessionType.MAIN,
+                message_type=MessageType.NOTIFICATION,
+            )
+        )
+
+        await agent._run_loop()
+
+        notification = completion_queue.get_nowait()
+        assert notification == {
+            "loop_id": "loop-1",
+            "agent_result": result,
+            "call_id": "loop-call",
+        }
+        runtime.add_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_loop_message_completes_without_group_chat_save(self):
         """LOOP_MESSAGE 完成后不自动保存到群聊历史"""
         from datetime import datetime

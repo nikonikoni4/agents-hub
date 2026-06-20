@@ -17,6 +17,7 @@ from .exceptions import (
     FileSystemError,
     GroupChatNotFoundError,
     InvalidMessageError,
+    LoopExecutionError,
     MessageDeliveryError,
 )
 from .message import AgentMessage
@@ -42,6 +43,7 @@ __all__ = [
     "AgentExecutionError",
     "AgentTimeoutError",
     "InvalidMessageError",
+    "LoopExecutionError",
     "FileSystemError",
     "CompactionError",
     "StateError",
