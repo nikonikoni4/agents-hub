@@ -89,7 +89,7 @@ contract_refs:
 
 ### 对外接口
 
-<key_function last_update="2026-06-20T14:08:10+08:00">
+<key_function last_update="2026-06-20T19:01:20+08:00">
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent.SHARED_RULES:38
 - agents_hub/core/agent/manager.py

@@ -108,3 +108,17 @@
   - 前端修改：必须检查父容器/祖先容器的样式约束，不能只看当前组件
   - 不知道代码该写在哪：先读架构文档，不要凭感觉找个地方就写
   - 调试卡住 2 轮以上：停下来，画全局数据流，定位断点，不要继续在局部死磕
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as local markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical labels: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.

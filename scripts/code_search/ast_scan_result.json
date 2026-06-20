@@ -1,7 +1,7 @@
 {
-  "total_files": 106,
-  "total_definitions": 775,
-  "total_calls": 3493,
+  "total_files": 107,
+  "total_definitions": 811,
+  "total_calls": 3596,
   "definitions": {
     "bootstrap.initialize_resources": {
       "line": 17,
@@ -314,72 +314,112 @@
       "name": "_model_dump_json_utf8"
     },
     "mcp.server._verify_system_token": {
-      "line": 101,
+      "line": 107,
       "module": "mcp.server",
       "name": "_verify_system_token"
     },
     "mcp.server._find_agent": {
-      "line": 106,
+      "line": 112,
       "module": "mcp.server",
       "name": "_find_agent"
     },
     "mcp.server._make_chat_result": {
-      "line": 118,
+      "line": 124,
       "module": "mcp.server",
       "name": "_make_chat_result"
     },
     "mcp.server._send_agent_call_completion_notification": {
-      "line": 145,
+      "line": 151,
       "module": "mcp.server",
       "name": "_send_agent_call_completion_notification"
     },
+    "mcp.server._resolve_group_chat": {
+      "line": 183,
+      "module": "mcp.server",
+      "name": "_resolve_group_chat"
+    },
+    "mcp.server._is_leader": {
+      "line": 205,
+      "module": "mcp.server",
+      "name": "_is_leader"
+    },
+    "mcp.server._permission_denied": {
+      "line": 209,
+      "module": "mcp.server",
+      "name": "_permission_denied"
+    },
     "mcp.server.call_agent": {
-      "line": 182,
+      "line": 222,
       "module": "mcp.server",
       "name": "call_agent"
     },
     "mcp.server.assign_tasks_to_team": {
-      "line": 285,
+      "line": 324,
       "module": "mcp.server",
       "name": "assign_tasks_to_team"
     },
     "mcp.server.archive_task_list": {
-      "line": 352,
+      "line": 391,
       "module": "mcp.server",
       "name": "archive_task_list"
     },
     "mcp.server.check_agent_call": {
-      "line": 416,
+      "line": 455,
       "module": "mcp.server",
       "name": "check_agent_call"
     },
     "mcp.server.report_progress": {
-      "line": 501,
+      "line": 540,
       "module": "mcp.server",
       "name": "report_progress"
     },
     "mcp.server.complete_task": {
-      "line": 569,
+      "line": 608,
       "module": "mcp.server",
       "name": "complete_task"
     },
     "mcp.server.request_permission": {
-      "line": 773,
+      "line": 812,
       "module": "mcp.server",
       "name": "request_permission"
     },
     "mcp.server.create_group_chat": {
-      "line": 856,
+      "line": 895,
       "module": "mcp.server",
       "name": "create_group_chat"
     },
     "mcp.server.create_agent": {
-      "line": 938,
+      "line": 977,
       "module": "mcp.server",
       "name": "create_agent"
     },
+    "mcp.server.create_loop": {
+      "line": 1046,
+      "module": "mcp.server",
+      "name": "create_loop"
+    },
+    "mcp.server.start_loop": {
+      "line": 1090,
+      "module": "mcp.server",
+      "name": "start_loop"
+    },
+    "mcp.server.stop_loop": {
+      "line": 1117,
+      "module": "mcp.server",
+      "name": "stop_loop"
+    },
+    "mcp.server.delete_loop": {
+      "line": 1144,
+      "module": "mcp.server",
+      "name": "delete_loop"
+    },
+    "mcp.server.get_loop_status": {
+      "line": 1171,
+      "module": "mcp.server",
+      "name": "get_loop_status"
+    },
     "mcp.server.health_check": {
-      "line": 1007,
+      "line": 1199,
       "module": "mcp.server",
       "name": "health_check"
     },
@@ -934,137 +974,142 @@
       "name": "resolve_session_path"
     },
     "core.agent.base_agent.Agent": {
-      "line": 35,
+      "line": 36,
       "module": "core.agent.base_agent",
       "name": "Agent"
     },
     "core.agent.base_agent.Agent.__init__": {
-      "line": 45,
+      "line": 46,
       "module": "core.agent.base_agent",
       "name": "Agent.__init__"
     },
     "core.agent.base_agent.Agent.set_run": {
-      "line": 83,
+      "line": 87,
       "module": "core.agent.base_agent",
       "name": "Agent.set_run"
     },
+    "core.agent.base_agent.Agent.add_message_completion_handler": {
+      "line": 92,
+      "module": "core.agent.base_agent",
+      "name": "Agent.add_message_completion_handler"
+    },
     "core.agent.base_agent.Agent.set_loop_completion_queue": {
-      "line": 88,
+      "line": 99,
       "module": "core.agent.base_agent",
       "name": "Agent.set_loop_completion_queue"
     },
     "core.agent.base_agent.Agent._should_accept_message": {
-      "line": 96,
+      "line": 103,
       "module": "core.agent.base_agent",
       "name": "Agent._should_accept_message"
     },
     "core.agent.base_agent.Agent.stop": {
-      "line": 142,
+      "line": 149,
       "module": "core.agent.base_agent",
       "name": "Agent.stop"
     },
     "core.agent.base_agent.Agent.execute": {
-      "line": 170,
+      "line": 177,
       "module": "core.agent.base_agent",
       "name": "Agent.execute"
     },
     "core.agent.base_agent.Agent.btw_execute": {
-      "line": 201,
+      "line": 208,
       "module": "core.agent.base_agent",
       "name": "Agent.btw_execute"
     },
     "core.agent.base_agent.Agent._validate_docker_config": {
-      "line": 225,
+      "line": 232,
       "module": "core.agent.base_agent",
       "name": "Agent._validate_docker_config"
     },
     "core.agent.base_agent.Agent._is_same_path": {
-      "line": 250,
+      "line": 257,
       "module": "core.agent.base_agent",
       "name": "Agent._is_same_path"
     },
     "core.agent.base_agent.Agent._process_message": {
-      "line": 257,
+      "line": 264,
       "module": "core.agent.base_agent",
       "name": "Agent._process_message"
     },
     "core.agent.base_agent.Agent._update_context_usage": {
-      "line": 386,
+      "line": 393,
       "module": "core.agent.base_agent",
       "name": "Agent._update_context_usage"
     },
     "core.agent.base_agent.Agent._auto_compact_if_needed": {
-      "line": 413,
+      "line": 420,
       "module": "core.agent.base_agent",
       "name": "Agent._auto_compact_if_needed"
     },
     "core.agent.base_agent.Agent.compress_context": {
-      "line": 432,
+      "line": 439,
       "module": "core.agent.base_agent",
       "name": "Agent.compress_context"
     },
     "core.agent.base_agent.Agent._build_system_prompt": {
-      "line": 555,
+      "line": 562,
       "module": "core.agent.base_agent",
       "name": "Agent._build_system_prompt"
     },
     "core.agent.base_agent.Agent._build_opencode_system_prompt": {
-      "line": 573,
+      "line": 580,
       "module": "core.agent.base_agent",
       "name": "Agent._build_opencode_system_prompt"
     },
     "core.agent.base_agent.Agent._enqueue_complete_task_reminder": {
-      "line": 594,
+      "line": 601,
       "module": "core.agent.base_agent",
       "name": "Agent._enqueue_complete_task_reminder"
     },
     "core.agent.base_agent.Agent._needs_complete_task_reminder": {
-      "line": 633,
+      "line": 640,
       "module": "core.agent.base_agent",
       "name": "Agent._needs_complete_task_reminder"
     },
     "core.agent.base_agent.Agent._sync_status": {
-      "line": 643,
+      "line": 650,
       "module": "core.agent.base_agent",
       "name": "Agent._sync_status"
     },
     "core.agent.base_agent.Agent._set_error_status": {
-      "line": 673,
+      "line": 680,
       "module": "core.agent.base_agent",
       "name": "Agent._set_error_status"
     },
     "core.agent.base_agent.Agent._parse_changes_xml": {
-      "line": 715,
+      "line": 722,
       "module": "core.agent.base_agent",
       "name": "Agent._parse_changes_xml"
     },
     "core.agent.base_agent.Agent._strip_changes_xml": {
-      "line": 751,
+      "line": 758,
       "module": "core.agent.base_agent",
       "name": "Agent._strip_changes_xml"
     },
     "core.agent.base_agent.Agent._process_file_changes": {
-      "line": 755,
+      "line": 762,
       "module": "core.agent.base_agent",
       "name": "Agent._process_file_changes"
     },
     "core.agent.base_agent.Agent._fallback_close_task": {
-      "line": 803,
+      "line": 810,
       "module": "core.agent.base_agent",
       "name": "Agent._fallback_close_task"
     },
-    "core.agent.base_agent.Agent._notify_loop_completion": {
-      "line": 959,
+    "core.agent.base_agent.Agent._notify_message_completion": {
+      "line": 966,
       "module": "core.agent.base_agent",
-      "name": "Agent._notify_loop_completion"
+      "name": "Agent._notify_message_completion"
     },
     "core.agent.base_agent.Agent.run": {
-      "line": 984,
+      "line": 991,
       "module": "core.agent.base_agent",
       "name": "Agent.run"
     },
     "core.agent.base_agent.Agent._run_loop": {
-      "line": 1009,
+      "line": 1016,
       "module": "core.agent.base_agent",
       "name": "Agent._run_loop"
     },
@@ -1538,190 +1583,205 @@
       "module": "core.context.group_chat_runtime",
       "name": "GroupChatRuntime.close"
     },
+    "core.context.loop_models.LoopNodeType": {
+      "line": 12,
+      "module": "core.context.loop_models",
+      "name": "LoopNodeType"
+    },
     "core.foundation.exceptions.AgentsHubError": {
-      "line": 31,
+      "line": 32,
       "module": "core.foundation.exceptions",
       "name": "AgentsHubError"
     },
     "core.foundation.exceptions.AgentsHubError.__init__": {
-      "line": 34,
+      "line": 35,
       "module": "core.foundation.exceptions",
       "name": "AgentsHubError.__init__"
     },
     "core.foundation.exceptions.AgentsHubError.to_mcp_response": {
-      "line": 41,
+      "line": 42,
       "module": "core.foundation.exceptions",
       "name": "AgentsHubError.to_mcp_response"
     },
     "core.foundation.exceptions.AgentNotFoundError": {
-      "line": 54,
+      "line": 55,
       "module": "core.foundation.exceptions",
       "name": "AgentNotFoundError"
     },
     "core.foundation.exceptions.AgentNotFoundError.__init__": {
-      "line": 57,
+      "line": 58,
       "module": "core.foundation.exceptions",
       "name": "AgentNotFoundError.__init__"
     },
     "core.foundation.exceptions.GroupChatNotFoundError": {
-      "line": 65,
+      "line": 66,
       "module": "core.foundation.exceptions",
       "name": "GroupChatNotFoundError"
     },
     "core.foundation.exceptions.GroupChatNotFoundError.__init__": {
-      "line": 68,
+      "line": 69,
       "module": "core.foundation.exceptions",
       "name": "GroupChatNotFoundError.__init__"
     },
     "core.foundation.exceptions.MessageDeliveryError": {
-      "line": 76,
+      "line": 77,
       "module": "core.foundation.exceptions",
       "name": "MessageDeliveryError"
     },
     "core.foundation.exceptions.MessageDeliveryError.__init__": {
-      "line": 79,
+      "line": 80,
       "module": "core.foundation.exceptions",
       "name": "MessageDeliveryError.__init__"
     },
     "core.foundation.exceptions.AgentExecutionError": {
-      "line": 87,
+      "line": 88,
       "module": "core.foundation.exceptions",
       "name": "AgentExecutionError"
     },
     "core.foundation.exceptions.AgentExecutionError.__init__": {
-      "line": 90,
+      "line": 91,
       "module": "core.foundation.exceptions",
       "name": "AgentExecutionError.__init__"
     },
     "core.foundation.exceptions.AgentTimeoutError": {
-      "line": 98,
+      "line": 99,
       "module": "core.foundation.exceptions",
       "name": "AgentTimeoutError"
     },
     "core.foundation.exceptions.AgentTimeoutError.__init__": {
-      "line": 101,
+      "line": 102,
       "module": "core.foundation.exceptions",
       "name": "AgentTimeoutError.__init__"
     },
     "core.foundation.exceptions.ValidationError": {
-      "line": 112,
+      "line": 113,
       "module": "core.foundation.exceptions",
       "name": "ValidationError"
     },
     "core.foundation.exceptions.ExternalServiceError": {
-      "line": 118,
+      "line": 119,
       "module": "core.foundation.exceptions",
       "name": "ExternalServiceError"
     },
     "core.foundation.exceptions.InvalidMessageError": {
-      "line": 127,
+      "line": 128,
       "module": "core.foundation.exceptions",
       "name": "InvalidMessageError"
     },
     "core.foundation.exceptions.InvalidMessageError.__init__": {
-      "line": 130,
+      "line": 131,
       "module": "core.foundation.exceptions",
       "name": "InvalidMessageError.__init__"
     },
     "core.foundation.exceptions.FileSystemError": {
-      "line": 141,
+      "line": 142,
       "module": "core.foundation.exceptions",
       "name": "FileSystemError"
     },
     "core.foundation.exceptions.FileSystemError.__init__": {
-      "line": 144,
+      "line": 145,
       "module": "core.foundation.exceptions",
       "name": "FileSystemError.__init__"
     },
     "core.foundation.exceptions.CompactionError": {
-      "line": 152,
+      "line": 153,
       "module": "core.foundation.exceptions",
       "name": "CompactionError"
     },
     "core.foundation.exceptions.CompactionError.__init__": {
-      "line": 155,
+      "line": 156,
       "module": "core.foundation.exceptions",
       "name": "CompactionError.__init__"
     },
     "core.foundation.exceptions.AgentBusyError": {
-      "line": 163,
+      "line": 164,
       "module": "core.foundation.exceptions",
       "name": "AgentBusyError"
     },
     "core.foundation.exceptions.AgentBusyError.__init__": {
-      "line": 166,
+      "line": 167,
       "module": "core.foundation.exceptions",
       "name": "AgentBusyError.__init__"
     },
     "core.foundation.exceptions.DockerConfigError": {
-      "line": 178,
+      "line": 179,
       "module": "core.foundation.exceptions",
       "name": "DockerConfigError"
     },
     "core.foundation.exceptions.DockerConfigError.__init__": {
-      "line": 181,
+      "line": 182,
       "module": "core.foundation.exceptions",
       "name": "DockerConfigError.__init__"
     },
     "core.foundation.exceptions.DockerNotAvailableError": {
-      "line": 195,
+      "line": 198,
       "module": "core.foundation.exceptions",
       "name": "DockerNotAvailableError"
     },
     "core.foundation.exceptions.DockerNotAvailableError.__init__": {
-      "line": 198,
+      "line": 201,
       "module": "core.foundation.exceptions",
       "name": "DockerNotAvailableError.__init__"
     },
     "core.foundation.exceptions.DockerStartError": {
-      "line": 208,
+      "line": 211,
       "module": "core.foundation.exceptions",
       "name": "DockerStartError"
     },
     "core.foundation.exceptions.DockerStartError.__init__": {
-      "line": 211,
+      "line": 214,
       "module": "core.foundation.exceptions",
       "name": "DockerStartError.__init__"
     },
     "core.foundation.exceptions.ForkError": {
-      "line": 220,
+      "line": 223,
       "module": "core.foundation.exceptions",
       "name": "ForkError"
     },
     "core.foundation.exceptions.ForkError.__init__": {
-      "line": 227,
+      "line": 230,
       "module": "core.foundation.exceptions",
       "name": "ForkError.__init__"
     },
     "core.foundation.exceptions.LoopNotFoundError": {
-      "line": 240,
+      "line": 245,
       "module": "core.foundation.exceptions",
       "name": "LoopNotFoundError"
     },
     "core.foundation.exceptions.LoopNotFoundError.__init__": {
-      "line": 243,
+      "line": 248,
       "module": "core.foundation.exceptions",
       "name": "LoopNotFoundError.__init__"
     },
     "core.foundation.exceptions.LoopValidationError": {
-      "line": 251,
+      "line": 256,
       "module": "core.foundation.exceptions",
       "name": "LoopValidationError"
     },
     "core.foundation.exceptions.LoopValidationError.__init__": {
-      "line": 254,
+      "line": 259,
       "module": "core.foundation.exceptions",
       "name": "LoopValidationError.__init__"
     },
     "core.foundation.exceptions.LoopStateError": {
-      "line": 262,
+      "line": 267,
       "module": "core.foundation.exceptions",
       "name": "LoopStateError"
     },
     "core.foundation.exceptions.LoopStateError.__init__": {
-      "line": 265,
+      "line": 270,
       "module": "core.foundation.exceptions",
       "name": "LoopStateError.__init__"
+    },
+    "core.foundation.exceptions.LoopExecutionError": {
+      "line": 282,
+      "module": "core.foundation.exceptions",
+      "name": "LoopExecutionError"
+    },
+    "core.foundation.exceptions.LoopExecutionError.__init__": {
+      "line": 285,
+      "module": "core.foundation.exceptions",
+      "name": "LoopExecutionError.__init__"
     },
     "core.foundation.file_snapshot.create_file_snapshot": {
       "line": 16,
@@ -1823,11 +1883,6 @@
       "module": "core.foundation.models",
       "name": "LoopStatus"
     },
-    "core.foundation.models.LoopNodeType": {
-      "line": 85,
-      "module": "core.foundation.models",
-      "name": "LoopNodeType"
-    },
     "core.foundation.paths.GroupChatPaths": {
       "line": 14,
       "module": "core.foundation.paths",
@@ -1924,7 +1979,7 @@
       "name": "render_for_chat"
     },
     "core.foundation.renderer.parse_chat_input": {
-      "line": 90,
+      "line": 92,
       "module": "core.foundation.renderer",
       "name": "parse_chat_input"
     },
@@ -1944,127 +1999,172 @@
       "name": "FileMetadata"
     },
     "core.orchestration.group_chat.GroupChat": {
-      "line": 34,
+      "line": 37,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat"
     },
     "core.orchestration.group_chat.GroupChat.__init__": {
-      "line": 49,
+      "line": 52,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.__init__"
     },
+    "core.orchestration.group_chat.GroupChat._get_loop_manager": {
+      "line": 96,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat._get_loop_manager"
+    },
     "core.orchestration.group_chat.GroupChat.start": {
-      "line": 88,
+      "line": 101,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.start"
     },
     "core.orchestration.group_chat.GroupChat.load": {
-      "line": 136,
+      "line": 149,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.load"
     },
     "core.orchestration.group_chat.GroupChat.activate": {
-      "line": 162,
+      "line": 175,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.activate"
     },
     "core.orchestration.group_chat.GroupChat._start_agent_tasks": {
-      "line": 187,
+      "line": 200,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._start_agent_tasks"
     },
     "core.orchestration.group_chat.GroupChat._init_agents": {
-      "line": 205,
+      "line": 218,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._init_agents"
     },
     "core.orchestration.group_chat.GroupChat._register_agents_to_router": {
-      "line": 249,
+      "line": 264,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._register_agents_to_router"
     },
     "core.orchestration.group_chat.GroupChat.add_member": {
-      "line": 278,
+      "line": 293,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.add_member"
     },
+    "core.orchestration.group_chat.GroupChat.create_loop": {
+      "line": 357,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat.create_loop"
+    },
+    "core.orchestration.group_chat.GroupChat.create_and_start_loop": {
+      "line": 370,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat.create_and_start_loop"
+    },
+    "core.orchestration.group_chat.GroupChat._on_loop_task_done": {
+      "line": 407,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat._on_loop_task_done"
+    },
+    "core.orchestration.group_chat.GroupChat._loop_agents": {
+      "line": 414,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat._loop_agents"
+    },
+    "core.orchestration.group_chat.GroupChat.stop_loop": {
+      "line": 422,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat.stop_loop"
+    },
+    "core.orchestration.group_chat.GroupChat.cleanup_loop": {
+      "line": 464,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat.cleanup_loop"
+    },
+    "core.orchestration.group_chat.GroupChat.delete_loop": {
+      "line": 474,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat.delete_loop"
+    },
+    "core.orchestration.group_chat.GroupChat.get_loop_status": {
+      "line": 479,
+      "module": "core.orchestration.group_chat",
+      "name": "GroupChat.get_loop_status"
+    },
     "core.orchestration.group_chat.GroupChat._initialize_single_member": {
-      "line": 341,
+      "line": 494,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._initialize_single_member"
     },
     "core.orchestration.group_chat.GroupChat._initialize_new_members": {
-      "line": 358,
+      "line": 511,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._initialize_new_members"
     },
     "core.orchestration.group_chat.GroupChat.compact_history": {
-      "line": 490,
+      "line": 643,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.compact_history"
     },
     "core.orchestration.group_chat.GroupChat.compress_all": {
-      "line": 512,
+      "line": 665,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.compress_all"
     },
     "core.orchestration.group_chat.GroupChat.send_message_to_agent": {
-      "line": 563,
+      "line": 716,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.send_message_to_agent"
     },
     "core.orchestration.group_chat.GroupChat._find_agent": {
-      "line": 641,
+      "line": 794,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._find_agent"
     },
     "core.orchestration.group_chat.GroupChat._cleanup_agent_queue": {
-      "line": 647,
+      "line": 800,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._cleanup_agent_queue"
     },
     "core.orchestration.group_chat.GroupChat.stop_member": {
-      "line": 741,
+      "line": 894,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.stop_member"
     },
     "core.orchestration.group_chat.GroupChat._on_agent_task_done": {
-      "line": 815,
+      "line": 968,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._on_agent_task_done"
     },
     "core.orchestration.group_chat.GroupChat._stop_agent_process": {
-      "line": 831,
+      "line": 984,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._stop_agent_process"
     },
     "core.orchestration.group_chat.GroupChat.start_member": {
-      "line": 858,
+      "line": 1011,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.start_member"
     },
     "core.orchestration.group_chat.GroupChat.reset_member": {
-      "line": 934,
+      "line": 1087,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.reset_member"
     },
     "core.orchestration.group_chat.GroupChat.stop": {
-      "line": 1021,
+      "line": 1174,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.stop"
     },
     "core.orchestration.group_chat.GroupChat.cleanup": {
-      "line": 1036,
+      "line": 1189,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.cleanup"
     },
     "core.orchestration.group_chat.GroupChat._ensure_tokens": {
-      "line": 1118,
+      "line": 1276,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._ensure_tokens"
     },
     "core.orchestration.group_chat.GroupChat._heartbeat_loop": {
-      "line": 1157,
+      "line": 1315,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._heartbeat_loop"
     },
@@ -2143,28 +2243,108 @@
       "module": "core.orchestration.group_chat_manager",
       "name": "GroupChatManager.create_group_chat"
     },
+    "core.orchestration.loop_executor.notify_loop_completion": {
+      "line": 24,
+      "module": "core.orchestration.loop_executor",
+      "name": "notify_loop_completion"
+    },
     "core.orchestration.loop_executor.LoopExecutor": {
-      "line": 12,
+      "line": 48,
       "module": "core.orchestration.loop_executor",
       "name": "LoopExecutor"
     },
     "core.orchestration.loop_executor.LoopExecutor.__init__": {
-      "line": 25,
+      "line": 61,
       "module": "core.orchestration.loop_executor",
       "name": "LoopExecutor.__init__"
     },
     "core.orchestration.loop_executor.LoopExecutor._build_loop_context": {
-      "line": 29,
+      "line": 84,
       "module": "core.orchestration.loop_executor",
       "name": "LoopExecutor._build_loop_context"
     },
     "core.orchestration.loop_executor.LoopExecutor._build_loop_message": {
-      "line": 40,
+      "line": 97,
       "module": "core.orchestration.loop_executor",
       "name": "LoopExecutor._build_loop_message"
     },
+    "core.orchestration.loop_executor.LoopExecutor._build_retry_loop_message": {
+      "line": 113,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._build_retry_loop_message"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._validate_schema_fields": {
+      "line": 129,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._validate_schema_fields"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._validate_terminator_output": {
+      "line": 147,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._validate_terminator_output"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._validate_node_output": {
+      "line": 196,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._validate_node_output"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._wait_for_node_result": {
+      "line": 210,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._wait_for_node_result"
+    },
+    "core.orchestration.loop_executor.LoopExecutor.receive_node_completion": {
+      "line": 230,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor.receive_node_completion"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._handle_node_completion": {
+      "line": 242,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._handle_node_completion"
+    },
+    "core.orchestration.loop_executor.LoopExecutor.run": {
+      "line": 301,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor.run"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._send_to_node": {
+      "line": 322,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._send_to_node"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._advance_to_next_node": {
+      "line": 343,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._advance_to_next_node"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._check_exit_condition": {
+      "line": 351,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._check_exit_condition"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._handle_node_timeout": {
+      "line": 374,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._handle_node_timeout"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._emergency_stop": {
+      "line": 384,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._emergency_stop"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._cleanup": {
+      "line": 392,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._cleanup"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._execute_node_with_retry": {
+      "line": 427,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._execute_node_with_retry"
+    },
     "core.orchestration.loop_executor.LoopExecutor._save_loop_result": {
-      "line": 58,
+      "line": 491,
       "module": "core.orchestration.loop_executor",
       "name": "LoopExecutor._save_loop_result"
     },
@@ -2209,17 +2389,17 @@
       "name": "LoopManager._validate_create_request"
     },
     "core.orchestration.loop_manager.LoopManager._load_from_persistence": {
-      "line": 330,
+      "line": 341,
       "module": "core.orchestration.loop_manager",
       "name": "LoopManager._load_from_persistence"
     },
     "core.orchestration.loop_manager.LoopManager._persist_loop": {
-      "line": 391,
+      "line": 402,
       "module": "core.orchestration.loop_manager",
       "name": "LoopManager._persist_loop"
     },
     "core.orchestration.loop_manager.LoopManager._persist_deletion": {
-      "line": 412,
+      "line": 423,
       "module": "core.orchestration.loop_manager",
       "name": "LoopManager._persist_deletion"
     },
@@ -3259,67 +3439,67 @@
       "name": "DockerManager.release_container"
     },
     "agent_bridge.executors.claude.ClaudeExecutor": {
-      "line": 15,
+      "line": 16,
       "module": "agent_bridge.executors.claude",
       "name": "ClaudeExecutor"
     },
     "agent_bridge.executors.claude.ClaudeExecutor.__init__": {
-      "line": 18,
+      "line": 19,
       "module": "agent_bridge.executors.claude",
       "name": "ClaudeExecutor.__init__"
     },
     "agent_bridge.executors.claude.ClaudeExecutor.execute": {
-      "line": 23,
+      "line": 24,
       "module": "agent_bridge.executors.claude",
       "name": "ClaudeExecutor.execute"
     },
     "agent_bridge.executors.claude.ClaudeExecutor._build_command": {
-      "line": 101,
+      "line": 139,
       "module": "agent_bridge.executors.claude",
       "name": "ClaudeExecutor._build_command"
     },
     "agent_bridge.executors.claude.ClaudeExecutor.stop_session": {
-      "line": 139,
+      "line": 177,
       "module": "agent_bridge.executors.claude",
       "name": "ClaudeExecutor.stop_session"
     },
     "agent_bridge.executors.claude.ClaudeExecutor._build_env": {
-      "line": 159,
+      "line": 197,
       "module": "agent_bridge.executors.claude",
       "name": "ClaudeExecutor._build_env"
     },
     "agent_bridge.executors.codex._sanitize_for_codex_cli": {
-      "line": 14,
+      "line": 15,
       "module": "agent_bridge.executors.codex",
       "name": "_sanitize_for_codex_cli"
     },
     "agent_bridge.executors.codex.CodexExecutor": {
-      "line": 26,
+      "line": 27,
       "module": "agent_bridge.executors.codex",
       "name": "CodexExecutor"
     },
     "agent_bridge.executors.codex.CodexExecutor.__init__": {
-      "line": 29,
+      "line": 30,
       "module": "agent_bridge.executors.codex",
       "name": "CodexExecutor.__init__"
     },
     "agent_bridge.executors.codex.CodexExecutor.execute": {
-      "line": 34,
+      "line": 35,
       "module": "agent_bridge.executors.codex",
       "name": "CodexExecutor.execute"
     },
     "agent_bridge.executors.codex.CodexExecutor.stop_session": {
-      "line": 118,
+      "line": 158,
       "module": "agent_bridge.executors.codex",
       "name": "CodexExecutor.stop_session"
     },
     "agent_bridge.executors.codex.CodexExecutor._build_command": {
-      "line": 138,
+      "line": 178,
       "module": "agent_bridge.executors.codex",
       "name": "CodexExecutor._build_command"
     },
     "agent_bridge.executors.codex.CodexExecutor._build_env": {
-      "line": 167,
+      "line": 207,
       "module": "agent_bridge.executors.codex",
       "name": "CodexExecutor._build_env"
     },
@@ -3906,6 +4086,10 @@
         "line": 176
       },
       {
+        "from": "core.orchestration.loop_executor.__init__",
+        "line": 80
+      },
+      {
         "from": "channels.wechat.auth.<module>",
         "line": 12
       },
@@ -3932,14 +4116,6 @@
       {
         "from": "agent_bridge.docker.manager.<module>",
         "line": 17
-      },
-      {
-        "from": "agent_bridge.executors.claude.<module>",
-        "line": 12
-      },
-      {
-        "from": "agent_bridge.executors.codex.<module>",
-        "line": 23
       },
       {
         "from": "agent_bridge.executors.docker_base.<module>",
@@ -4155,7 +4331,7 @@
       },
       {
         "from": "core.orchestration.loop_manager._load_from_persistence",
-        "line": 354
+        "line": 365
       },
       {
         "from": "channels.wechat.auth.load_token",
@@ -4333,35 +4509,39 @@
       },
       {
         "from": "core.orchestration.group_chat._start_agent_tasks",
-        "line": 192
+        "line": 205
       },
       {
         "from": "core.orchestration.group_chat._start_agent_tasks",
-        "line": 197
+        "line": 210
       },
       {
         "from": "core.orchestration.group_chat._start_agent_tasks",
-        "line": 200
+        "line": 213
       },
       {
         "from": "core.orchestration.group_chat.add_member",
-        "line": 328
+        "line": 344
+      },
+      {
+        "from": "core.orchestration.group_chat.create_and_start_loop",
+        "line": 400
       },
       {
         "from": "core.orchestration.group_chat.start_member",
-        "line": 904
+        "line": 1057
       },
       {
         "from": "core.orchestration.group_chat.start_member",
-        "line": 906
+        "line": 1059
       },
       {
         "from": "core.orchestration.group_chat.reset_member",
-        "line": 995
+        "line": 1148
       },
       {
         "from": "core.orchestration.group_chat.reset_member",
-        "line": 999
+        "line": 1152
       },
       {
         "from": "channels.wechat.channel.start",
@@ -4523,233 +4703,357 @@
     "mcp.server.get_logger": [
       {
         "from": "mcp.server.<module>",
-        "line": 86
+        "line": 92
       }
     ],
     "mcp.server.FastMCP": [
       {
         "from": "mcp.server.<module>",
-        "line": 91
+        "line": 97
       }
     ],
     "mcp.server.GroupChatService": [
       {
         "from": "mcp.server.<module>",
-        "line": 97
+        "line": 103
       }
     ],
     "mcp.server.RoleService": [
       {
         "from": "mcp.server.<module>",
-        "line": 98
+        "line": 104
       }
     ],
     "mcp.server.getattr": [
       {
         "from": "mcp.server._find_agent",
-        "line": 108
+        "line": 114
       },
       {
         "from": "mcp.server._find_agent",
-        "line": 109
+        "line": 115
       },
       {
         "from": "mcp.server._find_agent",
-        "line": 112
+        "line": 118
       },
       {
         "from": "mcp.server._make_chat_result",
-        "line": 128
+        "line": 134
       },
       {
         "from": "mcp.server._make_chat_result",
-        "line": 128
+        "line": 134
       },
       {
         "from": "mcp.server._make_chat_result",
-        "line": 129
+        "line": 135
       },
       {
         "from": "mcp.server.check_agent_call",
-        "line": 473
+        "line": 512
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1076
       }
     ],
     "mcp.server.isinstance": [
       {
         "from": "mcp.server._find_agent",
-        "line": 113
+        "line": 119
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1060
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1095
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1122
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1149
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1176
       }
     ],
     "mcp.server._find_agent": [
       {
         "from": "mcp.server._make_chat_result",
-        "line": 127
+        "line": 133
       },
       {
         "from": "mcp.server.complete_task",
-        "line": 666
+        "line": 705
       }
     ],
     "mcp.server.AgentResult": [
       {
         "from": "mcp.server._make_chat_result",
-        "line": 131
+        "line": 137
       }
     ],
     "mcp.server.AgentMessage": [
       {
         "from": "mcp.server._send_agent_call_completion_notification",
-        "line": 165
+        "line": 171
       },
       {
         "from": "mcp.server.call_agent",
-        "line": 245
+        "line": 284
       }
     ],
     "mcp.server.broadcast_group_chat_refresh": [
       {
         "from": "mcp.server._send_agent_call_completion_notification",
-        "line": 174
+        "line": 180
       },
       {
         "from": "mcp.server.call_agent",
-        "line": 255
+        "line": 294
       },
       {
         "from": "mcp.server.report_progress",
-        "line": 552
+        "line": 591
       },
       {
         "from": "mcp.server.complete_task",
-        "line": 746
+        "line": 785
       },
       {
         "from": "mcp.server.request_permission",
-        "line": 837
+        "line": 876
+      }
+    ],
+    "mcp.server.make_error_response": [
+      {
+        "from": "mcp.server._resolve_group_chat",
+        "line": 186
+      },
+      {
+        "from": "mcp.server._resolve_group_chat",
+        "line": 196
+      },
+      {
+        "from": "mcp.server._permission_denied",
+        "line": 210
+      },
+      {
+        "from": "mcp.server.call_agent",
+        "line": 249
+      },
+      {
+        "from": "mcp.server.call_agent",
+        "line": 261
+      },
+      {
+        "from": "mcp.server.call_agent",
+        "line": 302
+      },
+      {
+        "from": "mcp.server.call_agent",
+        "line": 312
+      },
+      {
+        "from": "mcp.server.assign_tasks_to_team",
+        "line": 341
+      },
+      {
+        "from": "mcp.server.assign_tasks_to_team",
+        "line": 353
+      },
+      {
+        "from": "mcp.server.assign_tasks_to_team",
+        "line": 362
+      },
+      {
+        "from": "mcp.server.assign_tasks_to_team",
+        "line": 379
+      },
+      {
+        "from": "mcp.server.archive_task_list",
+        "line": 407
+      },
+      {
+        "from": "mcp.server.archive_task_list",
+        "line": 419
+      },
+      {
+        "from": "mcp.server.archive_task_list",
+        "line": 428
+      },
+      {
+        "from": "mcp.server.archive_task_list",
+        "line": 443
+      },
+      {
+        "from": "mcp.server.check_agent_call",
+        "line": 481
+      },
+      {
+        "from": "mcp.server.check_agent_call",
+        "line": 493
+      },
+      {
+        "from": "mcp.server.check_agent_call",
+        "line": 502
+      },
+      {
+        "from": "mcp.server.check_agent_call",
+        "line": 528
+      },
+      {
+        "from": "mcp.server.report_progress",
+        "line": 564
+      },
+      {
+        "from": "mcp.server.report_progress",
+        "line": 574
+      },
+      {
+        "from": "mcp.server.report_progress",
+        "line": 596
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 649
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 660
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 668
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 675
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 682
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 689
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 799
+      },
+      {
+        "from": "mcp.server.request_permission",
+        "line": 839
+      },
+      {
+        "from": "mcp.server.request_permission",
+        "line": 851
+      },
+      {
+        "from": "mcp.server.request_permission",
+        "line": 883
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 920
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 944
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 951
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 958
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 965
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1000
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1020
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1027
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1034
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1077
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1080
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1083
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1107
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1110
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1134
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1137
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1161
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1164
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1184
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1187
       }
     ],
     "mcp.server.len": [
       {
         "from": "mcp.server.call_agent",
-        "line": 204
+        "line": 243
       },
       {
         "from": "mcp.server.assign_tasks_to_team",
-        "line": 297
+        "line": 336
       },
       {
         "from": "mcp.server.report_progress",
-        "line": 520
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 604
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 661
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 701
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 713
-      }
-    ],
-    "mcp.server.make_error_response": [
-      {
-        "from": "mcp.server.call_agent",
-        "line": 210
-      },
-      {
-        "from": "mcp.server.call_agent",
-        "line": 222
-      },
-      {
-        "from": "mcp.server.call_agent",
-        "line": 263
-      },
-      {
-        "from": "mcp.server.call_agent",
-        "line": 273
-      },
-      {
-        "from": "mcp.server.assign_tasks_to_team",
-        "line": 302
-      },
-      {
-        "from": "mcp.server.assign_tasks_to_team",
-        "line": 314
-      },
-      {
-        "from": "mcp.server.assign_tasks_to_team",
-        "line": 323
-      },
-      {
-        "from": "mcp.server.assign_tasks_to_team",
-        "line": 340
-      },
-      {
-        "from": "mcp.server.archive_task_list",
-        "line": 368
-      },
-      {
-        "from": "mcp.server.archive_task_list",
-        "line": 380
-      },
-      {
-        "from": "mcp.server.archive_task_list",
-        "line": 389
-      },
-      {
-        "from": "mcp.server.archive_task_list",
-        "line": 404
-      },
-      {
-        "from": "mcp.server.check_agent_call",
-        "line": 442
-      },
-      {
-        "from": "mcp.server.check_agent_call",
-        "line": 454
-      },
-      {
-        "from": "mcp.server.check_agent_call",
-        "line": 463
-      },
-      {
-        "from": "mcp.server.check_agent_call",
-        "line": 489
-      },
-      {
-        "from": "mcp.server.report_progress",
-        "line": 525
-      },
-      {
-        "from": "mcp.server.report_progress",
-        "line": 535
-      },
-      {
-        "from": "mcp.server.report_progress",
-        "line": 557
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 610
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 621
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 629
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 636
+        "line": 559
       },
       {
         "from": "mcp.server.complete_task",
@@ -4757,317 +5061,443 @@
       },
       {
         "from": "mcp.server.complete_task",
-        "line": 650
+        "line": 700
       },
       {
         "from": "mcp.server.complete_task",
-        "line": 760
+        "line": 740
       },
       {
-        "from": "mcp.server.request_permission",
-        "line": 800
+        "from": "mcp.server.complete_task",
+        "line": 752
       },
       {
-        "from": "mcp.server.request_permission",
-        "line": 812
-      },
-      {
-        "from": "mcp.server.request_permission",
-        "line": 844
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 881
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 905
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 912
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 919
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 926
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 961
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 981
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 988
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 995
+        "from": "mcp.server.create_loop",
+        "line": 1055
       }
     ],
     "mcp.server.str": [
       {
         "from": "mcp.server.call_agent",
-        "line": 261
+        "line": 300
       },
       {
         "from": "mcp.server.call_agent",
-        "line": 272
+        "line": 311
       },
       {
         "from": "mcp.server.call_agent",
-        "line": 275
+        "line": 314
       },
       {
         "from": "mcp.server.call_agent",
-        "line": 276
+        "line": 315
       },
       {
         "from": "mcp.server.assign_tasks_to_team",
-        "line": 339
+        "line": 378
       },
       {
         "from": "mcp.server.assign_tasks_to_team",
-        "line": 342
+        "line": 381
       },
       {
         "from": "mcp.server.assign_tasks_to_team",
-        "line": 343
+        "line": 382
       },
       {
         "from": "mcp.server.archive_task_list",
-        "line": 403
+        "line": 442
       },
       {
         "from": "mcp.server.archive_task_list",
-        "line": 406
+        "line": 445
       },
       {
         "from": "mcp.server.archive_task_list",
-        "line": 407
+        "line": 446
       },
       {
         "from": "mcp.server.check_agent_call",
-        "line": 473
+        "line": 512
       },
       {
         "from": "mcp.server.check_agent_call",
-        "line": 488
+        "line": 527
       },
       {
         "from": "mcp.server.check_agent_call",
-        "line": 491
+        "line": 530
       },
       {
         "from": "mcp.server.check_agent_call",
-        "line": 492
+        "line": 531
       },
       {
         "from": "mcp.server.report_progress",
-        "line": 556
+        "line": 595
       },
       {
         "from": "mcp.server.report_progress",
-        "line": 559
+        "line": 598
       },
       {
         "from": "mcp.server.report_progress",
-        "line": 560
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 697
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 759
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 762
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 763
-      },
-      {
-        "from": "mcp.server.request_permission",
-        "line": 819
-      },
-      {
-        "from": "mcp.server.request_permission",
-        "line": 843
-      },
-      {
-        "from": "mcp.server.request_permission",
-        "line": 846
-      },
-      {
-        "from": "mcp.server.request_permission",
-        "line": 847
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 904
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 907
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 911
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 914
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 918
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 921
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 925
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 928
-      },
-      {
-        "from": "mcp.server.create_group_chat",
-        "line": 929
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 980
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 983
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 987
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 990
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 994
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 997
-      },
-      {
-        "from": "mcp.server.create_agent",
-        "line": 998
-      }
-    ],
-    "mcp.server.redact_token": [
-      {
-        "from": "mcp.server.report_progress",
-        "line": 541
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 656
-      }
-    ],
-    "mcp.server.render_for_chat": [
-      {
-        "from": "mcp.server.report_progress",
-        "line": 543
-      },
-      {
-        "from": "mcp.server.complete_task",
-        "line": 739
-      }
-    ],
-    "mcp.server._make_chat_result": [
-      {
-        "from": "mcp.server.report_progress",
-        "line": 550
+        "line": 599
       },
       {
         "from": "mcp.server.complete_task",
         "line": 736
       },
       {
+        "from": "mcp.server.complete_task",
+        "line": 798
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 801
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 802
+      },
+      {
         "from": "mcp.server.request_permission",
-        "line": 829
+        "line": 858
+      },
+      {
+        "from": "mcp.server.request_permission",
+        "line": 882
+      },
+      {
+        "from": "mcp.server.request_permission",
+        "line": 885
+      },
+      {
+        "from": "mcp.server.request_permission",
+        "line": 886
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 943
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 946
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 950
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 953
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 957
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 960
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 964
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 967
+      },
+      {
+        "from": "mcp.server.create_group_chat",
+        "line": 968
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1019
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1022
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1026
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1029
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1033
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1036
+      },
+      {
+        "from": "mcp.server.create_agent",
+        "line": 1037
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1075
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1077
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1079
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1080
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1082
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1085
+      },
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1086
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1106
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1107
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1109
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1112
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1113
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1133
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1134
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1136
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1139
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1140
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1160
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1161
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1163
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1166
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1167
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1183
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1184
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1186
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1189
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1190
+      }
+    ],
+    "mcp.server.redact_token": [
+      {
+        "from": "mcp.server.report_progress",
+        "line": 580
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 695
+      }
+    ],
+    "mcp.server.render_for_chat": [
+      {
+        "from": "mcp.server.report_progress",
+        "line": 582
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 778
+      }
+    ],
+    "mcp.server._make_chat_result": [
+      {
+        "from": "mcp.server.report_progress",
+        "line": 589
+      },
+      {
+        "from": "mcp.server.complete_task",
+        "line": 775
+      },
+      {
+        "from": "mcp.server.request_permission",
+        "line": 868
       }
     ],
     "mcp.server.hasattr": [
       {
         "from": "mcp.server.complete_task",
-        "line": 668
+        "line": 707
       }
     ],
     "mcp.server.enumerate": [
       {
         "from": "mcp.server.complete_task",
-        "line": 684
+        "line": 723
       }
     ],
     "mcp.server.create_file_snapshot": [
       {
         "from": "mcp.server.complete_task",
-        "line": 686
+        "line": 725
       }
     ],
     "mcp.server.Path": [
       {
         "from": "mcp.server.complete_task",
-        "line": 730
+        "line": 769
       }
     ],
     "mcp.server._send_agent_call_completion_notification": [
       {
         "from": "mcp.server.complete_task",
-        "line": 748
+        "line": 787
       }
     ],
     "mcp.server.uuid4": [
       {
         "from": "mcp.server.request_permission",
-        "line": 819
+        "line": 858
       }
     ],
     "mcp.server._verify_system_token": [
       {
         "from": "mcp.server.create_group_chat",
-        "line": 880
+        "line": 919
       },
       {
         "from": "mcp.server.create_agent",
-        "line": 960
+        "line": 999
       }
     ],
     "mcp.server.RoleCreateRequest": [
       {
         "from": "mcp.server.create_agent",
-        "line": 968
+        "line": 1007
       }
     ],
     "mcp.server.asdict": [
       {
         "from": "mcp.server.create_agent",
-        "line": 977
+        "line": 1016
+      }
+    ],
+    "mcp.server._resolve_group_chat": [
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1059
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1094
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1121
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1148
+      },
+      {
+        "from": "mcp.server.get_loop_status",
+        "line": 1175
+      }
+    ],
+    "mcp.server._is_leader": [
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1064
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1099
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1126
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1153
+      }
+    ],
+    "mcp.server._permission_denied": [
+      {
+        "from": "mcp.server.create_loop",
+        "line": 1065
+      },
+      {
+        "from": "mcp.server.start_loop",
+        "line": 1100
+      },
+      {
+        "from": "mcp.server.stop_loop",
+        "line": 1127
+      },
+      {
+        "from": "mcp.server.delete_loop",
+        "line": 1154
       }
     ],
     "realtime.dependencies.get_logger": [
@@ -5176,16 +5606,24 @@
         "line": 563
       },
       {
-        "from": "core.orchestration.group_chat.stop_member",
-        "line": 787
+        "from": "core.orchestration.group_chat.stop_loop",
+        "line": 438
+      },
+      {
+        "from": "core.orchestration.group_chat.cleanup_loop",
+        "line": 471
       },
       {
         "from": "core.orchestration.group_chat.stop_member",
-        "line": 796
+        "line": 940
+      },
+      {
+        "from": "core.orchestration.group_chat.stop_member",
+        "line": 949
       },
       {
         "from": "core.orchestration.group_chat.cleanup",
-        "line": 1067
+        "line": 1225
       },
       {
         "from": "channels.wechat.channel.stop",
@@ -5415,11 +5853,11 @@
       },
       {
         "from": "core.orchestration.loop_manager._persist_loop",
-        "line": 404
+        "line": 415
       },
       {
         "from": "core.orchestration.loop_manager._persist_deletion",
-        "line": 425
+        "line": 436
       },
       {
         "from": "core.utils.session_fork.fork_codex_session",
@@ -5601,11 +6039,19 @@
       },
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 731
+        "line": 738
       },
       {
         "from": "core.agent.base_agent.extract_tag",
-        "line": 738
+        "line": 745
+      },
+      {
+        "from": "core.orchestration.loop_executor._validate_terminator_output",
+        "line": 160
+      },
+      {
+        "from": "core.orchestration.loop_executor._validate_terminator_output",
+        "line": 173
       }
     ],
     "roles.role_manager.RoleType": [
@@ -6325,113 +6771,117 @@
     "asyncio.Queue": [
       {
         "from": "core.agent.base_agent.__init__",
-        "line": 56
+        "line": 57
+      },
+      {
+        "from": "core.orchestration.group_chat.__init__",
+        "line": 87
       },
       {
         "from": "core.orchestration.group_chat._register_agents_to_router",
-        "line": 266
+        "line": 281
       },
       {
         "from": "core.orchestration.group_chat._register_agents_to_router",
-        "line": 269
+        "line": 284
+      },
+      {
+        "from": "core.orchestration.group_chat.create_and_start_loop",
+        "line": 379
       }
     ],
     "core.agent.base_agent.AgentContext": [
       {
         "from": "core.agent.base_agent.__init__",
-        "line": 58
+        "line": 59
       }
     ],
     "core.agent.base_agent.get_logger": [
       {
         "from": "core.agent.base_agent.__init__",
-        "line": 66
+        "line": 70
       }
     ],
     "core.agent.base_agent.AgentMessage": [
       {
         "from": "core.agent.base_agent.stop",
-        "line": 157
+        "line": 164
       },
       {
         "from": "core.agent.base_agent._enqueue_complete_task_reminder",
-        "line": 623
+        "line": 630
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 931
+        "line": 938
       }
     ],
     "core.agent.base_agent.getattr": [
       {
         "from": "core.agent.base_agent._validate_docker_config",
-        "line": 231
+        "line": 238
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 278
+        "line": 285
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 877
+        "line": 884
       }
     ],
     "core.agent.base_agent.DockerConfigError": [
       {
         "from": "core.agent.base_agent._validate_docker_config",
-        "line": 239
+        "line": 246
       }
     ],
     "core.agent.base_agent.Path": [
       {
         "from": "core.agent.base_agent._is_same_path",
-        "line": 253
+        "line": 260
       },
       {
         "from": "core.agent.base_agent._is_same_path",
-        "line": 253
+        "line": 260
       },
       {
         "from": "core.agent.base_agent.compress_context",
-        "line": 477
+        "line": 484
       },
       {
         "from": "core.agent.base_agent._build_opencode_system_prompt",
-        "line": 584
+        "line": 591
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 860
+        "line": 867
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 900
+        "line": 907
       }
     ],
     "core.agent.base_agent.len": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 270
+        "line": 277
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 312
+        "line": 319
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 355
+        "line": 362
       },
       {
         "from": "core.agent.base_agent._enqueue_complete_task_reminder",
-        "line": 607
+        "line": 614
       },
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 796
-      },
-      {
-        "from": "core.agent.base_agent._fallback_close_task",
-        "line": 894
+        "line": 803
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
@@ -6439,125 +6889,129 @@
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 902
+        "line": 908
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 956
+        "line": 909
+      },
+      {
+        "from": "core.agent.base_agent._fallback_close_task",
+        "line": 963
       }
     ],
     "core.agent.base_agent.get_git_head": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 300
+        "line": 307
       }
     ],
     "core.agent.base_agent.get_working_tree_status": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 308
+        "line": 315
       }
     ],
     "core.agent.base_agent.str": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 316
+        "line": 323
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 370
-      },
-      {
-        "from": "core.agent.base_agent._process_message",
-        "line": 374
+        "line": 377
       },
       {
         "from": "core.agent.base_agent._process_message",
         "line": 381
       },
       {
+        "from": "core.agent.base_agent._process_message",
+        "line": 388
+      },
+      {
         "from": "core.agent.base_agent._auto_compact_if_needed",
-        "line": 430
+        "line": 437
       },
       {
         "from": "core.agent.base_agent.compress_context",
-        "line": 492
+        "line": 499
       },
       {
         "from": "core.agent.base_agent.compress_context",
-        "line": 506
+        "line": 513
       },
       {
         "from": "core.agent.base_agent._set_error_status",
-        "line": 688
+        "line": 695
       },
       {
         "from": "core.agent.base_agent._set_error_status",
-        "line": 700
+        "line": 707
       },
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 791
+        "line": 798
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 907
+        "line": 914
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 948
+        "line": 955
       },
       {
         "from": "core.agent.base_agent.run",
-        "line": 996
+        "line": 1003
       }
     ],
     "core.agent.base_agent.AgentExecutionError": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 379
+        "line": 386
       }
     ],
     "core.agent.base_agent.AgentBusyError": [
       {
         "from": "core.agent.base_agent.compress_context",
-        "line": 461
+        "line": 468
       }
     ],
     "core.agent.base_agent.hasattr": [
       {
         "from": "core.agent.base_agent._set_error_status",
-        "line": 692
+        "line": 699
       }
     ],
     "core.agent.base_agent.isinstance": [
       {
         "from": "core.agent.base_agent._set_error_status",
-        "line": 692
+        "line": 699
       }
     ],
     "core.agent.base_agent.extract_tag": [
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 741
-      },
-      {
-        "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 746
-      },
-      {
-        "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 747
-      },
-      {
-        "from": "core.agent.base_agent._parse_changes_xml",
         "line": 748
+      },
+      {
+        "from": "core.agent.base_agent._parse_changes_xml",
+        "line": 753
+      },
+      {
+        "from": "core.agent.base_agent._parse_changes_xml",
+        "line": 754
+      },
+      {
+        "from": "core.agent.base_agent._parse_changes_xml",
+        "line": 755
       }
     ],
     "re.sub": [
       {
         "from": "core.agent.base_agent._strip_changes_xml",
-        "line": 753
+        "line": 760
       },
       {
         "from": "core.utils.path_utils.sanitize_project_path",
@@ -6571,51 +7025,57 @@
     "core.agent.base_agent.enumerate": [
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 779
+        "line": 786
       }
     ],
     "core.agent.base_agent.create_file_snapshot": [
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 781
+        "line": 788
       }
     ],
     "core.agent.base_agent.bool": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 813
+        "line": 820
       }
     ],
     "core.agent.base_agent.redact_token": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 841
+        "line": 848
       }
     ],
     "core.agent.base_agent.get_git_changed_files": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 880
+        "line": 887
       }
     ],
     "core.agent.base_agent.render_for_chat": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 916
+        "line": 923
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 921
+        "line": 928
       },
       {
         "from": "core.agent.base_agent._run_loop",
-        "line": 1076
+        "line": 1083
+      }
+    ],
+    "core.agent.base_agent.handler": [
+      {
+        "from": "core.agent.base_agent._notify_message_completion",
+        "line": 988
       }
     ],
     "core.agent.base_agent.render_for_llm": [
       {
         "from": "core.agent.base_agent._run_loop",
-        "line": 1046
+        "line": 1053
       }
     ],
     "core.agent.manager.super": [
@@ -6691,11 +7151,11 @@
       },
       {
         "from": "agent_bridge.executors.claude.__init__",
-        "line": 21
+        "line": 22
       },
       {
         "from": "agent_bridge.executors.codex.__init__",
-        "line": 32
+        "line": 33
       },
       {
         "from": "agent_bridge.executors.docker_base.__init__",
@@ -6845,7 +7305,7 @@
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1163
+        "line": 1321
       },
       {
         "from": "channels.wechat.auth.qr_login",
@@ -7545,7 +8005,15 @@
       },
       {
         "from": "core.orchestration.group_chat.cleanup",
-        "line": 1080
+        "line": 1238
+      },
+      {
+        "from": "core.orchestration.loop_executor._wait_for_node_result",
+        "line": 221
+      },
+      {
+        "from": "core.orchestration.loop_executor.receive_node_completion",
+        "line": 235
       },
       {
         "from": "api.websocket.endpoint.ping_loop",
@@ -7672,60 +8140,18 @@
       {
         "from": "core.context.group_chat_session.<module>",
         "line": 52
-      },
-      {
-        "from": "core.context.group_chat_session.<module>",
-        "line": 118
       }
     ],
     "core.context.group_chat_session.str": [
       {
         "from": "core.context.group_chat_session.<module>",
         "line": 48
-      },
-      {
-        "from": "core.context.group_chat_session.<module>",
-        "line": 118
-      },
-      {
-        "from": "core.context.group_chat_session.from_dict",
-        "line": 140
       }
     ],
     "core.context.group_chat_session.uuid4": [
       {
         "from": "core.context.group_chat_session.<module>",
         "line": 48
-      },
-      {
-        "from": "core.context.group_chat_session.<module>",
-        "line": 118
-      },
-      {
-        "from": "core.context.group_chat_session.from_dict",
-        "line": 140
-      }
-    ],
-    "core.context.group_chat_session.ValueError": [
-      {
-        "from": "core.context.group_chat_session.from_dict",
-        "line": 136
-      }
-    ],
-    "core.context.group_chat_session.list": [
-      {
-        "from": "core.context.group_chat_session.from_dict",
-        "line": 137
-      }
-    ],
-    "core.context.group_chat_session.cls": [
-      {
-        "from": "core.context.group_chat_session.from_dict",
-        "line": 139
-      },
-      {
-        "from": "core.context.group_chat_session.from_dict",
-        "line": 183
       }
     ],
     "core.context.group_metadata.cls": [
@@ -7734,74 +8160,126 @@
         "line": 46
       }
     ],
+    "core.context.loop_models.field": [
+      {
+        "from": "core.context.loop_models.<module>",
+        "line": 29
+      }
+    ],
+    "core.context.loop_models.str": [
+      {
+        "from": "core.context.loop_models.<module>",
+        "line": 29
+      },
+      {
+        "from": "core.context.loop_models.from_dict",
+        "line": 51
+      }
+    ],
+    "core.context.loop_models.uuid4": [
+      {
+        "from": "core.context.loop_models.<module>",
+        "line": 29
+      },
+      {
+        "from": "core.context.loop_models.from_dict",
+        "line": 51
+      }
+    ],
+    "core.context.loop_models.ValueError": [
+      {
+        "from": "core.context.loop_models.from_dict",
+        "line": 47
+      }
+    ],
+    "core.context.loop_models.list": [
+      {
+        "from": "core.context.loop_models.from_dict",
+        "line": 48
+      }
+    ],
+    "core.context.loop_models.cls": [
+      {
+        "from": "core.context.loop_models.from_dict",
+        "line": 50
+      },
+      {
+        "from": "core.context.loop_models.from_dict",
+        "line": 94
+      }
+    ],
     "core.foundation.exceptions.super": [
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 35
+        "line": 36
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 58
+        "line": 59
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 69
+        "line": 70
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 80
+        "line": 81
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 91
+        "line": 92
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 102
+        "line": 103
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 131
+        "line": 132
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 145
+        "line": 146
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 156
+        "line": 157
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 168
+        "line": 169
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 188
+        "line": 187
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 201
+        "line": 204
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 213
+        "line": 216
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 228
+        "line": 233
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 244
+        "line": 249
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 255
+        "line": 260
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 266
+        "line": 271
+      },
+      {
+        "from": "core.foundation.exceptions.__init__",
+        "line": 292
       }
     ],
     "core.foundation.file_snapshot.get_logger": [
@@ -8132,14 +8610,20 @@
         "line": 66
       }
     ],
+    "core.foundation.renderer.ValueError": [
+      {
+        "from": "core.foundation.renderer.render_for_chat",
+        "line": 87
+      }
+    ],
     "core.foundation.renderer.InvalidMessageError": [
       {
         "from": "core.foundation.renderer.parse_chat_input",
-        "line": 97
+        "line": 99
       },
       {
         "from": "core.foundation.renderer.parse_chat_input",
-        "line": 100
+        "line": 102
       }
     ],
     "secrets.token_hex": [
@@ -8151,265 +8635,299 @@
     "core.orchestration.group_chat.get_logger": [
       {
         "from": "core.orchestration.group_chat.<module>",
-        "line": 31
+        "line": 34
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1159
+        "line": 1317
       }
     ],
     "core.orchestration.group_chat.str": [
       {
         "from": "core.orchestration.group_chat.__init__",
-        "line": 54
+        "line": 57
       },
       {
         "from": "core.orchestration.group_chat.compress_all",
-        "line": 552
+        "line": 705
       },
       {
         "from": "core.orchestration.group_chat.compress_all",
-        "line": 557
+        "line": 710
       },
       {
         "from": "core.orchestration.group_chat._cleanup_agent_queue",
-        "line": 716
+        "line": 869
       },
       {
         "from": "core.orchestration.group_chat._on_agent_task_done",
-        "line": 825
+        "line": 978
       },
       {
         "from": "core.orchestration.group_chat._stop_agent_process",
-        "line": 856
+        "line": 1009
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1174
+        "line": 1332
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1199
+        "line": 1357
       }
     ],
     "core.orchestration.group_chat.uuid4": [
       {
         "from": "core.orchestration.group_chat.__init__",
-        "line": 54
+        "line": 57
       }
     ],
     "core.orchestration.group_chat.GroupChatRuntime": [
       {
         "from": "core.orchestration.group_chat.__init__",
-        "line": 72
+        "line": 75
       }
     ],
     "core.orchestration.group_chat.MessageRouter": [
       {
         "from": "core.orchestration.group_chat.__init__",
-        "line": 77
+        "line": 80
       }
     ],
     "core.orchestration.group_chat.AgentCallManager": [
       {
         "from": "core.orchestration.group_chat.__init__",
-        "line": 78
+        "line": 81
       }
     ],
     "core.orchestration.group_chat.TaskManager": [
       {
         "from": "core.orchestration.group_chat.__init__",
-        "line": 79
+        "line": 82
+      }
+    ],
+    "core.orchestration.group_chat.LoopManager": [
+      {
+        "from": "core.orchestration.group_chat._get_loop_manager",
+        "line": 98
       }
     ],
     "core.orchestration.group_chat.StateError": [
       {
         "from": "core.orchestration.group_chat._start_agent_tasks",
-        "line": 191
+        "line": 204
       },
       {
         "from": "core.orchestration.group_chat._register_agents_to_router",
-        "line": 256
+        "line": 271
       },
       {
         "from": "core.orchestration.group_chat.send_message_to_agent",
-        "line": 602
+        "line": 755
       },
       {
         "from": "core.orchestration.group_chat.start_member",
-        "line": 889
+        "line": 1042
       }
     ],
     "core.orchestration.group_chat.RoleManager": [
       {
         "from": "core.orchestration.group_chat._init_agents",
-        "line": 217
+        "line": 230
       },
       {
         "from": "core.orchestration.group_chat.add_member",
-        "line": 291
+        "line": 306
       },
       {
         "from": "core.orchestration.group_chat.compact_history",
-        "line": 501
+        "line": 654
       },
       {
         "from": "core.orchestration.group_chat.compact_history",
-        "line": 505
+        "line": 658
       }
     ],
     "core.orchestration.group_chat.Manager": [
       {
         "from": "core.orchestration.group_chat._init_agents",
-        "line": 221
+        "line": 234
       }
     ],
     "core.orchestration.group_chat.Worker": [
       {
         "from": "core.orchestration.group_chat._init_agents",
-        "line": 238
+        "line": 252
       },
       {
         "from": "core.orchestration.group_chat.add_member",
-        "line": 300
+        "line": 315
       }
     ],
     "core.orchestration.group_chat.list": [
       {
         "from": "core.orchestration.group_chat._register_agents_to_router",
-        "line": 274
+        "line": 289
       }
     ],
     "core.orchestration.group_chat.id": [
       {
         "from": "core.orchestration.group_chat._register_agents_to_router",
-        "line": 275
+        "line": 290
       }
     ],
     "core.orchestration.group_chat.generate_token": [
       {
         "from": "core.orchestration.group_chat.add_member",
-        "line": 320
+        "line": 336
       },
       {
         "from": "core.orchestration.group_chat._ensure_tokens",
-        "line": 1134
+        "line": 1292
       },
       {
         "from": "core.orchestration.group_chat._ensure_tokens",
-        "line": 1146
+        "line": 1304
+      }
+    ],
+    "core.orchestration.group_chat.LoopStateError": [
+      {
+        "from": "core.orchestration.group_chat.create_and_start_loop",
+        "line": 377
+      },
+      {
+        "from": "core.orchestration.group_chat.stop_loop",
+        "line": 429
+      }
+    ],
+    "core.orchestration.group_chat.LoopExecutor": [
+      {
+        "from": "core.orchestration.group_chat.create_and_start_loop",
+        "line": 391
+      }
+    ],
+    "core.orchestration.group_chat.set": [
+      {
+        "from": "core.orchestration.group_chat.stop_loop",
+        "line": 441
+      }
+    ],
+    "core.orchestration.group_chat.len": [
+      {
+        "from": "core.orchestration.group_chat.get_loop_status",
+        "line": 483
       }
     ],
     "core.orchestration.group_chat.bool": [
       {
         "from": "core.orchestration.group_chat._initialize_new_members",
-        "line": 385
+        "line": 538
       }
     ],
     "core.orchestration.group_chat.resolve_session_path": [
       {
         "from": "core.orchestration.group_chat.start_conversation",
-        "line": 415
+        "line": 568
       }
     ],
     "core.orchestration.group_chat.ForkError": [
       {
         "from": "core.orchestration.group_chat.start_conversation",
-        "line": 424
+        "line": 577
       },
       {
         "from": "core.orchestration.group_chat.start_conversation",
-        "line": 438
+        "line": 591
       }
     ],
     "core.orchestration.group_chat.fork_codex_session": [
       {
         "from": "core.orchestration.group_chat.start_conversation",
-        "line": 431
+        "line": 584
       }
     ],
     "core.orchestration.group_chat.AgentResult": [
       {
         "from": "core.orchestration.group_chat.start_conversation",
-        "line": 451
+        "line": 604
       },
       {
         "from": "core.orchestration.group_chat.send_message_to_agent",
-        "line": 630
+        "line": 783
       },
       {
         "from": "core.orchestration.group_chat._cleanup_agent_queue",
-        "line": 720
+        "line": 873
       }
     ],
     "asyncio.gather": [
       {
         "from": "core.orchestration.group_chat._initialize_new_members",
-        "line": 483
+        "line": 636
       },
       {
         "from": "core.orchestration.group_chat.cleanup",
-        "line": 1081
+        "line": 1239
       },
       {
         "from": "core.orchestration.group_chat.cleanup",
-        "line": 1089
+        "line": 1247
       }
     ],
     "core.orchestration.group_chat.start_conversation": [
       {
         "from": "core.orchestration.group_chat._initialize_new_members",
-        "line": 483
+        "line": 636
       }
     ],
     "core.orchestration.group_chat.render_for_chat": [
       {
         "from": "core.orchestration.group_chat.send_message_to_agent",
-        "line": 626
+        "line": 779
       },
       {
         "from": "core.orchestration.group_chat._cleanup_agent_queue",
-        "line": 722
+        "line": 875
       }
     ],
     "core.orchestration.group_chat.getattr": [
       {
         "from": "core.orchestration.group_chat.send_message_to_agent",
-        "line": 629
+        "line": 782
       },
       {
         "from": "core.orchestration.group_chat._stop_agent_process",
-        "line": 846
+        "line": 999
       }
     ],
     "core.orchestration.group_chat.AgentMessage": [
       {
         "from": "core.orchestration.group_chat._cleanup_agent_queue",
-        "line": 700
+        "line": 853
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1185
+        "line": 1343
       }
     ],
     "core.orchestration.group_chat.AgentNotFoundError": [
       {
         "from": "core.orchestration.group_chat.stop_member",
-        "line": 767
+        "line": 920
       },
       {
         "from": "core.orchestration.group_chat.start_member",
-        "line": 884
+        "line": 1037
       },
       {
         "from": "core.orchestration.group_chat.reset_member",
-        "line": 962
+        "line": 1115
       }
     ],
     "core.orchestration.group_chat.type": [
       {
         "from": "core.orchestration.group_chat._on_agent_task_done",
-        "line": 826
+        "line": 979
       }
     ],
     "core.orchestration.group_chat_manager.get_logger": [
@@ -8587,37 +9105,147 @@
     "core.orchestration.loop_executor.wrap_xml": [
       {
         "from": "core.orchestration.loop_executor._build_loop_context",
-        "line": 32
+        "line": 87
       },
       {
         "from": "core.orchestration.loop_executor._build_loop_context",
-        "line": 33
+        "line": 88
       },
       {
         "from": "core.orchestration.loop_executor._build_loop_context",
-        "line": 34
+        "line": 89
       },
       {
         "from": "core.orchestration.loop_executor._build_loop_context",
-        "line": 37
+        "line": 93
       }
     ],
     "core.orchestration.loop_executor.AgentMessage": [
       {
         "from": "core.orchestration.loop_executor._build_loop_message",
-        "line": 43
+        "line": 100
       }
     ],
     "core.orchestration.loop_executor.ValueError": [
       {
+        "from": "core.orchestration.loop_executor._wait_for_node_result",
+        "line": 213
+      },
+      {
+        "from": "core.orchestration.loop_executor.receive_node_completion",
+        "line": 233
+      },
+      {
+        "from": "core.orchestration.loop_executor._send_to_node",
+        "line": 325
+      },
+      {
+        "from": "core.orchestration.loop_executor._execute_node_with_retry",
+        "line": 437
+      },
+      {
+        "from": "core.orchestration.loop_executor._execute_node_with_retry",
+        "line": 441
+      },
+      {
         "from": "core.orchestration.loop_executor._save_loop_result",
-        "line": 61
+        "line": 494
+      }
+    ],
+    "asyncio.get_running_loop": [
+      {
+        "from": "core.orchestration.loop_executor._wait_for_node_result",
+        "line": 215
+      },
+      {
+        "from": "core.orchestration.loop_executor._wait_for_node_result",
+        "line": 217
+      }
+    ],
+    "core.orchestration.loop_executor.str": [
+      {
+        "from": "core.orchestration.loop_executor._handle_node_completion",
+        "line": 273
+      },
+      {
+        "from": "core.orchestration.loop_executor.run",
+        "line": 318
+      }
+    ],
+    "core.orchestration.loop_executor.len": [
+      {
+        "from": "core.orchestration.loop_executor._advance_to_next_node",
+        "line": 345
+      }
+    ],
+    "core.orchestration.loop_executor.getattr": [
+      {
+        "from": "core.orchestration.loop_executor._handle_node_timeout",
+        "line": 380
+      },
+      {
+        "from": "core.orchestration.loop_executor._cleanup",
+        "line": 395
+      },
+      {
+        "from": "core.orchestration.loop_executor._cleanup",
+        "line": 403
+      },
+      {
+        "from": "core.orchestration.loop_executor._cleanup",
+        "line": 411
+      }
+    ],
+    "core.orchestration.loop_executor.get_agent_member_info": [
+      {
+        "from": "core.orchestration.loop_executor._cleanup",
+        "line": 398
+      }
+    ],
+    "core.orchestration.loop_executor.hasattr": [
+      {
+        "from": "core.orchestration.loop_executor._cleanup",
+        "line": 401
+      }
+    ],
+    "core.orchestration.loop_executor.save_agent_members": [
+      {
+        "from": "core.orchestration.loop_executor._cleanup",
+        "line": 405
+      }
+    ],
+    "core.orchestration.loop_executor.setter": [
+      {
+        "from": "core.orchestration.loop_executor._cleanup",
+        "line": 414
+      }
+    ],
+    "inspect.isawaitable": [
+      {
+        "from": "core.orchestration.loop_executor._cleanup",
+        "line": 415
+      }
+    ],
+    "core.orchestration.loop_executor.range": [
+      {
+        "from": "core.orchestration.loop_executor._execute_node_with_retry",
+        "line": 453
+      }
+    ],
+    "core.orchestration.loop_executor.LoopExecutionError": [
+      {
+        "from": "core.orchestration.loop_executor._execute_node_with_retry",
+        "line": 466
+      },
+      {
+        "from": "core.orchestration.loop_executor._execute_node_with_retry",
+        "line": 484
       }
     ],
     "core.orchestration.loop_executor.render_for_chat": [
       {
         "from": "core.orchestration.loop_executor._save_loop_result",
-        "line": 62
+        "line": 495
       }
     ],
     "core.orchestration.loop_manager.set": [
@@ -8635,7 +9263,7 @@
       },
       {
         "from": "core.orchestration.loop_manager._load_from_persistence",
-        "line": 345
+        "line": 356
       }
     ],
     "core.orchestration.loop_manager.RoleManager": [
@@ -8663,27 +9291,27 @@
       },
       {
         "from": "core.orchestration.loop_manager._load_from_persistence",
-        "line": 387
+        "line": 398
       },
       {
         "from": "core.orchestration.loop_manager._load_from_persistence",
-        "line": 388
+        "line": 399
       },
       {
         "from": "core.orchestration.loop_manager._persist_loop",
-        "line": 408
+        "line": 419
       },
       {
         "from": "core.orchestration.loop_manager._persist_loop",
-        "line": 409
+        "line": 420
       },
       {
         "from": "core.orchestration.loop_manager._persist_deletion",
-        "line": 429
+        "line": 440
       },
       {
         "from": "core.orchestration.loop_manager._persist_deletion",
-        "line": 430
+        "line": 441
       }
     ],
     "core.orchestration.loop_manager.uuid4": [
@@ -8699,19 +9327,19 @@
       },
       {
         "from": "core.orchestration.loop_manager._validate_create_request",
-        "line": 272
+        "line": 283
       },
       {
         "from": "core.orchestration.loop_manager._validate_create_request",
-        "line": 275
+        "line": 286
       },
       {
         "from": "core.orchestration.loop_manager._validate_create_request",
-        "line": 279
+        "line": 290
       },
       {
         "from": "core.orchestration.loop_manager._load_from_persistence",
-        "line": 382
+        "line": 393
       }
     ],
     "core.orchestration.loop_manager.list": [
@@ -8747,61 +9375,65 @@
       },
       {
         "from": "core.orchestration.loop_manager._validate_create_request",
-        "line": 289
+        "line": 288
       },
       {
         "from": "core.orchestration.loop_manager._validate_create_request",
-        "line": 299
+        "line": 300
       },
       {
         "from": "core.orchestration.loop_manager._validate_create_request",
-        "line": 325
+        "line": 310
+      },
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 336
       }
     ],
     "core.orchestration.loop_manager.sum": [
       {
         "from": "core.orchestration.loop_manager._validate_create_request",
-        "line": 283
+        "line": 294
       }
     ],
     "core.orchestration.loop_manager.AgentNotFoundError": [
       {
         "from": "core.orchestration.loop_manager._validate_create_request",
-        "line": 313
+        "line": 324
       }
     ],
     "core.orchestration.loop_manager.open": [
       {
         "from": "core.orchestration.loop_manager._load_from_persistence",
-        "line": 347
+        "line": 358
       },
       {
         "from": "core.orchestration.loop_manager._persist_loop",
-        "line": 403
+        "line": 414
       },
       {
         "from": "core.orchestration.loop_manager._persist_deletion",
-        "line": 424
+        "line": 435
       }
     ],
     "core.orchestration.loop_manager.enumerate": [
       {
         "from": "core.orchestration.loop_manager._load_from_persistence",
-        "line": 348
+        "line": 359
       }
     ],
     "core.orchestration.loop_manager.FileSystemError": [
       {
         "from": "core.orchestration.loop_manager._load_from_persistence",
-        "line": 385
+        "line": 396
       },
       {
         "from": "core.orchestration.loop_manager._persist_loop",
-        "line": 406
+        "line": 417
       },
       {
         "from": "core.orchestration.loop_manager._persist_deletion",
-        "line": 427
+        "line": 438
       }
     ],
     "core.utils.markdown_injector._build_pattern": [
@@ -10839,11 +11471,11 @@
       },
       {
         "from": "agent_bridge.executors.claude.execute",
-        "line": 52
+        "line": 53
       },
       {
         "from": "agent_bridge.executors.codex.execute",
-        "line": 69
+        "line": 70
       },
       {
         "from": "agent_bridge.executors.docker_base.execute",
@@ -10976,40 +11608,52 @@
         "line": 325
       }
     ],
+    "agent_bridge.executors.claude.get_logger": [
+      {
+        "from": "agent_bridge.executors.claude.<module>",
+        "line": 13
+      }
+    ],
     "agent_bridge.executors.claude.CLINotFoundError": [
       {
         "from": "agent_bridge.executors.claude.execute",
-        "line": 61
+        "line": 62
       }
     ],
     "agent_bridge.executors.claude.CLIExecutionError": [
       {
         "from": "agent_bridge.executors.claude.execute",
-        "line": 92
+        "line": 130
       }
     ],
     "shlex.quote": [
       {
         "from": "agent_bridge.executors.codex._sanitize_for_codex_cli",
-        "line": 20
+        "line": 21
+      }
+    ],
+    "agent_bridge.executors.codex.get_logger": [
+      {
+        "from": "agent_bridge.executors.codex.<module>",
+        "line": 24
       }
     ],
     "agent_bridge.executors.codex.CLINotFoundError": [
       {
         "from": "agent_bridge.executors.codex.execute",
-        "line": 74
+        "line": 75
       }
     ],
     "agent_bridge.executors.codex.CLIExecutionError": [
       {
         "from": "agent_bridge.executors.codex.execute",
-        "line": 109
+        "line": 149
       }
     ],
     "agent_bridge.executors.codex._sanitize_for_codex_cli": [
       {
         "from": "agent_bridge.executors.codex._build_command",
-        "line": 162
+        "line": 202
       }
     ],
     "agent_bridge.executors.docker_base.ValueError": [
@@ -20150,6 +20794,12 @@
         "line": 174
       }
     ],
+    "core.orchestration.loop_executor.__init__": [
+      {
+        "to": "logging.getLogger",
+        "line": 80
+      }
+    ],
     "channels.wechat.auth.<module>": [
       {
         "to": "logging.getLogger",
@@ -20198,18 +20848,6 @@
       {
         "to": "logging.getLogger",
         "line": 17
-      }
-    ],
-    "agent_bridge.executors.claude.<module>": [
-      {
-        "to": "logging.getLogger",
-        "line": 12
-      }
-    ],
-    "agent_bridge.executors.codex.<module>": [
-      {
-        "to": "logging.getLogger",
-        "line": 23
       }
     ],
     "agent_bridge.executors.docker_base.<module>": [
@@ -20655,35 +21293,35 @@
     "core.orchestration.loop_manager._load_from_persistence": [
       {
         "to": "json.loads",
-        "line": 354
+        "line": 365
       },
       {
         "to": "core.orchestration.loop_manager.set",
-        "line": 345
+        "line": 356
       },
       {
         "to": "core.orchestration.loop_manager.str",
-        "line": 387
+        "line": 398
       },
       {
         "to": "core.orchestration.loop_manager.str",
-        "line": 388
+        "line": 399
       },
       {
         "to": "core.orchestration.loop_manager.len",
-        "line": 382
+        "line": 393
       },
       {
         "to": "core.orchestration.loop_manager.open",
-        "line": 347
+        "line": 358
       },
       {
         "to": "core.orchestration.loop_manager.enumerate",
-        "line": 348
+        "line": 359
       },
       {
         "to": "core.orchestration.loop_manager.FileSystemError",
-        "line": 385
+        "line": 396
       }
     ],
     "channels.wechat.auth.load_token": [
@@ -21029,69 +21667,87 @@
     "core.orchestration.group_chat._start_agent_tasks": [
       {
         "to": "asyncio.create_task",
-        "line": 192
+        "line": 205
       },
       {
         "to": "asyncio.create_task",
-        "line": 197
+        "line": 210
       },
       {
         "to": "asyncio.create_task",
-        "line": 200
+        "line": 213
       },
       {
         "to": "core.orchestration.group_chat.StateError",
-        "line": 191
+        "line": 204
       }
     ],
     "core.orchestration.group_chat.add_member": [
       {
         "to": "asyncio.create_task",
-        "line": 328
+        "line": 344
       },
       {
         "to": "core.orchestration.group_chat.RoleManager",
-        "line": 291
+        "line": 306
       },
       {
         "to": "core.orchestration.group_chat.Worker",
-        "line": 300
+        "line": 315
       },
       {
         "to": "core.orchestration.group_chat.generate_token",
-        "line": 320
+        "line": 336
+      }
+    ],
+    "core.orchestration.group_chat.create_and_start_loop": [
+      {
+        "to": "asyncio.create_task",
+        "line": 400
+      },
+      {
+        "to": "asyncio.Queue",
+        "line": 379
+      },
+      {
+        "to": "core.orchestration.group_chat.LoopStateError",
+        "line": 377
+      },
+      {
+        "to": "core.orchestration.group_chat.LoopExecutor",
+        "line": 391
       }
     ],
     "core.orchestration.group_chat.start_member": [
       {
         "to": "asyncio.create_task",
-        "line": 904
+        "line": 1057
       },
       {
         "to": "asyncio.create_task",
-        "line": 906
+        "line": 1059
       },
       {
         "to": "core.orchestration.group_chat.StateError",
-        "line": 889
+        "line": 1042
       },
       {
         "to": "core.orchestration.group_chat.AgentNotFoundError",
-        "line": 884
+        "line": 1037
       }
     ],
     "core.orchestration.group_chat.reset_member": [
       {
         "to": "asyncio.create_task",
-        "line": 995
+        "line": 1148
       },
       {
         "to": "asyncio.create_task",
-        "line": 999
+        "line": 1152
       },
       {
         "to": "core.orchestration.group_chat.AgentNotFoundError",
-        "line": 962
+        "line": 1115
       }
     ],
     "channels.wechat.channel.start": [
@@ -21339,349 +21995,469 @@
     "mcp.server.<module>": [
       {
         "to": "mcp.server.get_logger",
-        "line": 86
+        "line": 92
       },
       {
         "to": "mcp.server.FastMCP",
-        "line": 91
-      },
-      {
-        "to": "mcp.server.GroupChatService",
         "line": 97
       },
       {
+        "to": "mcp.server.GroupChatService",
+        "line": 103
+      },
+      {
         "to": "mcp.server.RoleService",
-        "line": 98
+        "line": 104
       }
     ],
     "mcp.server._find_agent": [
       {
         "to": "mcp.server.getattr",
-        "line": 108
+        "line": 114
       },
       {
         "to": "mcp.server.getattr",
-        "line": 109
+        "line": 115
       },
       {
         "to": "mcp.server.getattr",
-        "line": 112
+        "line": 118
       },
       {
         "to": "mcp.server.isinstance",
-        "line": 113
+        "line": 119
       }
     ],
     "mcp.server._make_chat_result": [
       {
         "to": "mcp.server.getattr",
-        "line": 128
+        "line": 134
       },
       {
         "to": "mcp.server.getattr",
-        "line": 128
+        "line": 134
       },
       {
         "to": "mcp.server.getattr",
-        "line": 129
+        "line": 135
       },
       {
         "to": "mcp.server._find_agent",
-        "line": 127
+        "line": 133
       },
       {
         "to": "mcp.server.AgentResult",
-        "line": 131
+        "line": 137
       }
     ],
     "mcp.server.check_agent_call": [
       {
         "to": "mcp.server.getattr",
-        "line": 473
+        "line": 512
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 442
+        "line": 481
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 454
+        "line": 493
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 463
+        "line": 502
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 489
+        "line": 528
       },
       {
         "to": "mcp.server.str",
-        "line": 473
+        "line": 512
       },
       {
         "to": "mcp.server.str",
-        "line": 488
+        "line": 527
       },
       {
         "to": "mcp.server.str",
-        "line": 491
+        "line": 530
       },
       {
         "to": "mcp.server.str",
-        "line": 492
+        "line": 531
+      }
+    ],
+    "mcp.server.create_loop": [
+      {
+        "to": "mcp.server.getattr",
+        "line": 1076
+      },
+      {
+        "to": "mcp.server.isinstance",
+        "line": 1060
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1077
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1080
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1083
+      },
+      {
+        "to": "mcp.server.len",
+        "line": 1055
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1075
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1077
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1079
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1080
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1082
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1085
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1086
+      },
+      {
+        "to": "mcp.server._resolve_group_chat",
+        "line": 1059
+      },
+      {
+        "to": "mcp.server._is_leader",
+        "line": 1064
+      },
+      {
+        "to": "mcp.server._permission_denied",
+        "line": 1065
+      }
+    ],
+    "mcp.server.start_loop": [
+      {
+        "to": "mcp.server.isinstance",
+        "line": 1095
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1107
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1110
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1106
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1107
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1109
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1112
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1113
+      },
+      {
+        "to": "mcp.server._resolve_group_chat",
+        "line": 1094
+      },
+      {
+        "to": "mcp.server._is_leader",
+        "line": 1099
+      },
+      {
+        "to": "mcp.server._permission_denied",
+        "line": 1100
+      }
+    ],
+    "mcp.server.stop_loop": [
+      {
+        "to": "mcp.server.isinstance",
+        "line": 1122
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1134
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1137
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1133
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1134
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1136
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1139
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1140
+      },
+      {
+        "to": "mcp.server._resolve_group_chat",
+        "line": 1121
+      },
+      {
+        "to": "mcp.server._is_leader",
+        "line": 1126
+      },
+      {
+        "to": "mcp.server._permission_denied",
+        "line": 1127
+      }
+    ],
+    "mcp.server.delete_loop": [
+      {
+        "to": "mcp.server.isinstance",
+        "line": 1149
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1161
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1164
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1160
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1161
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1163
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1166
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1167
+      },
+      {
+        "to": "mcp.server._resolve_group_chat",
+        "line": 1148
+      },
+      {
+        "to": "mcp.server._is_leader",
+        "line": 1153
+      },
+      {
+        "to": "mcp.server._permission_denied",
+        "line": 1154
+      }
+    ],
+    "mcp.server.get_loop_status": [
+      {
+        "to": "mcp.server.isinstance",
+        "line": 1176
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1184
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 1187
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1183
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1184
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1186
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1189
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 1190
+      },
+      {
+        "to": "mcp.server._resolve_group_chat",
+        "line": 1175
       }
     ],
     "mcp.server.complete_task": [
       {
         "to": "mcp.server._find_agent",
-        "line": 666
+        "line": 705
       },
       {
         "to": "mcp.server.broadcast_group_chat_refresh",
-        "line": 746
-      },
-      {
-        "to": "mcp.server.len",
-        "line": 604
-      },
-      {
-        "to": "mcp.server.len",
-        "line": 661
-      },
-      {
-        "to": "mcp.server.len",
-        "line": 701
-      },
-      {
-        "to": "mcp.server.len",
-        "line": 713
+        "line": 785
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 610
+        "line": 649
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 621
+        "line": 660
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 629
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 636
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 643
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 650
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 760
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 697
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 759
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 762
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 763
-      },
-      {
-        "to": "mcp.server.redact_token",
-        "line": 656
-      },
-      {
-        "to": "mcp.server.render_for_chat",
-        "line": 739
-      },
-      {
-        "to": "mcp.server._make_chat_result",
-        "line": 736
-      },
-      {
-        "to": "mcp.server.hasattr",
         "line": 668
       },
       {
+        "to": "mcp.server.make_error_response",
+        "line": 675
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 682
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 689
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 799
+      },
+      {
+        "to": "mcp.server.len",
+        "line": 643
+      },
+      {
+        "to": "mcp.server.len",
+        "line": 700
+      },
+      {
+        "to": "mcp.server.len",
+        "line": 740
+      },
+      {
+        "to": "mcp.server.len",
+        "line": 752
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 736
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 798
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 801
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 802
+      },
+      {
+        "to": "mcp.server.redact_token",
+        "line": 695
+      },
+      {
+        "to": "mcp.server.render_for_chat",
+        "line": 778
+      },
+      {
+        "to": "mcp.server._make_chat_result",
+        "line": 775
+      },
+      {
+        "to": "mcp.server.hasattr",
+        "line": 707
+      },
+      {
         "to": "mcp.server.enumerate",
-        "line": 684
+        "line": 723
       },
       {
         "to": "mcp.server.create_file_snapshot",
-        "line": 686
+        "line": 725
       },
       {
         "to": "mcp.server.Path",
-        "line": 730
+        "line": 769
       },
       {
         "to": "mcp.server._send_agent_call_completion_notification",
-        "line": 748
+        "line": 787
       }
     ],
     "mcp.server._send_agent_call_completion_notification": [
       {
         "to": "mcp.server.AgentMessage",
-        "line": 165
+        "line": 171
       },
       {
         "to": "mcp.server.broadcast_group_chat_refresh",
-        "line": 174
+        "line": 180
       }
     ],
     "mcp.server.call_agent": [
       {
         "to": "mcp.server.AgentMessage",
-        "line": 245
+        "line": 284
       },
       {
         "to": "mcp.server.broadcast_group_chat_refresh",
-        "line": 255
-      },
-      {
-        "to": "mcp.server.len",
-        "line": 204
+        "line": 294
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 210
+        "line": 249
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 222
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 263
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 273
-      },
-      {
-        "to": "mcp.server.str",
         "line": 261
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 272
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 275
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 276
-      }
-    ],
-    "mcp.server.report_progress": [
-      {
-        "to": "mcp.server.broadcast_group_chat_refresh",
-        "line": 552
-      },
-      {
-        "to": "mcp.server.len",
-        "line": 520
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 525
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 535
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 557
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 556
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 559
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 560
-      },
-      {
-        "to": "mcp.server.redact_token",
-        "line": 541
-      },
-      {
-        "to": "mcp.server.render_for_chat",
-        "line": 543
-      },
-      {
-        "to": "mcp.server._make_chat_result",
-        "line": 550
-      }
-    ],
-    "mcp.server.request_permission": [
-      {
-        "to": "mcp.server.broadcast_group_chat_refresh",
-        "line": 837
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 800
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 812
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 844
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 819
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 843
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 846
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 847
-      },
-      {
-        "to": "mcp.server._make_chat_result",
-        "line": 829
-      },
-      {
-        "to": "mcp.server.uuid4",
-        "line": 819
-      }
-    ],
-    "mcp.server.assign_tasks_to_team": [
-      {
-        "to": "mcp.server.len",
-        "line": 297
       },
       {
         "to": "mcp.server.make_error_response",
@@ -21689,177 +22465,315 @@
       },
       {
         "to": "mcp.server.make_error_response",
+        "line": 312
+      },
+      {
+        "to": "mcp.server.len",
+        "line": 243
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 300
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 311
+      },
+      {
+        "to": "mcp.server.str",
         "line": 314
       },
       {
+        "to": "mcp.server.str",
+        "line": 315
+      }
+    ],
+    "mcp.server.report_progress": [
+      {
+        "to": "mcp.server.broadcast_group_chat_refresh",
+        "line": 591
+      },
+      {
         "to": "mcp.server.make_error_response",
-        "line": 323
+        "line": 564
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 340
+        "line": 574
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 596
+      },
+      {
+        "to": "mcp.server.len",
+        "line": 559
       },
       {
         "to": "mcp.server.str",
-        "line": 339
+        "line": 595
       },
       {
         "to": "mcp.server.str",
-        "line": 342
+        "line": 598
       },
       {
         "to": "mcp.server.str",
-        "line": 343
+        "line": 599
+      },
+      {
+        "to": "mcp.server.redact_token",
+        "line": 580
+      },
+      {
+        "to": "mcp.server.render_for_chat",
+        "line": 582
+      },
+      {
+        "to": "mcp.server._make_chat_result",
+        "line": 589
+      }
+    ],
+    "mcp.server.request_permission": [
+      {
+        "to": "mcp.server.broadcast_group_chat_refresh",
+        "line": 876
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 839
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 851
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 883
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 858
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 882
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 885
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 886
+      },
+      {
+        "to": "mcp.server._make_chat_result",
+        "line": 868
+      },
+      {
+        "to": "mcp.server.uuid4",
+        "line": 858
+      }
+    ],
+    "mcp.server._resolve_group_chat": [
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 186
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 196
+      }
+    ],
+    "mcp.server._permission_denied": [
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 210
+      }
+    ],
+    "mcp.server.assign_tasks_to_team": [
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 341
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 353
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 362
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 379
+      },
+      {
+        "to": "mcp.server.len",
+        "line": 336
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 378
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 381
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 382
       }
     ],
     "mcp.server.archive_task_list": [
       {
         "to": "mcp.server.make_error_response",
-        "line": 368
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 380
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 389
-      },
-      {
-        "to": "mcp.server.make_error_response",
-        "line": 404
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 403
-      },
-      {
-        "to": "mcp.server.str",
-        "line": 406
-      },
-      {
-        "to": "mcp.server.str",
         "line": 407
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 419
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 428
+      },
+      {
+        "to": "mcp.server.make_error_response",
+        "line": 443
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 442
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 445
+      },
+      {
+        "to": "mcp.server.str",
+        "line": 446
       }
     ],
     "mcp.server.create_group_chat": [
       {
         "to": "mcp.server.make_error_response",
-        "line": 881
+        "line": 920
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 905
+        "line": 944
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 912
+        "line": 951
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 919
+        "line": 958
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 926
+        "line": 965
       },
       {
         "to": "mcp.server.str",
-        "line": 904
+        "line": 943
       },
       {
         "to": "mcp.server.str",
-        "line": 907
+        "line": 946
       },
       {
         "to": "mcp.server.str",
-        "line": 911
+        "line": 950
       },
       {
         "to": "mcp.server.str",
-        "line": 914
+        "line": 953
       },
       {
         "to": "mcp.server.str",
-        "line": 918
+        "line": 957
       },
       {
         "to": "mcp.server.str",
-        "line": 921
+        "line": 960
       },
       {
         "to": "mcp.server.str",
-        "line": 925
+        "line": 964
       },
       {
         "to": "mcp.server.str",
-        "line": 928
+        "line": 967
       },
       {
         "to": "mcp.server.str",
-        "line": 929
+        "line": 968
       },
       {
         "to": "mcp.server._verify_system_token",
-        "line": 880
+        "line": 919
       }
     ],
     "mcp.server.create_agent": [
       {
         "to": "mcp.server.make_error_response",
-        "line": 961
+        "line": 1000
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 981
+        "line": 1020
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 988
+        "line": 1027
       },
       {
         "to": "mcp.server.make_error_response",
-        "line": 995
+        "line": 1034
       },
       {
         "to": "mcp.server.str",
-        "line": 980
+        "line": 1019
       },
       {
         "to": "mcp.server.str",
-        "line": 983
+        "line": 1022
       },
       {
         "to": "mcp.server.str",
-        "line": 987
+        "line": 1026
       },
       {
         "to": "mcp.server.str",
-        "line": 990
+        "line": 1029
       },
       {
         "to": "mcp.server.str",
-        "line": 994
+        "line": 1033
       },
       {
         "to": "mcp.server.str",
-        "line": 997
+        "line": 1036
       },
       {
         "to": "mcp.server.str",
-        "line": 998
+        "line": 1037
       },
       {
         "to": "mcp.server._verify_system_token",
-        "line": 960
+        "line": 999
       },
       {
         "to": "mcp.server.RoleCreateRequest",
-        "line": 968
+        "line": 1007
       },
       {
         "to": "mcp.server.asdict",
-        "line": 977
+        "line": 1016
       }
     ],
     "realtime.dependencies.<module>": [
@@ -21968,36 +22882,56 @@
         "line": 563
       }
     ],
+    "core.orchestration.group_chat.stop_loop": [
+      {
+        "to": "contextlib.suppress",
+        "line": 438
+      },
+      {
+        "to": "core.orchestration.group_chat.LoopStateError",
+        "line": 429
+      },
+      {
+        "to": "core.orchestration.group_chat.set",
+        "line": 441
+      }
+    ],
+    "core.orchestration.group_chat.cleanup_loop": [
+      {
+        "to": "contextlib.suppress",
+        "line": 471
+      }
+    ],
     "core.orchestration.group_chat.stop_member": [
       {
         "to": "contextlib.suppress",
-        "line": 787
+        "line": 940
       },
       {
         "to": "contextlib.suppress",
-        "line": 796
+        "line": 949
       },
       {
         "to": "core.orchestration.group_chat.AgentNotFoundError",
-        "line": 767
+        "line": 920
       }
     ],
     "core.orchestration.group_chat.cleanup": [
       {
         "to": "contextlib.suppress",
-        "line": 1067
+        "line": 1225
       },
       {
         "to": "asyncio.wait_for",
-        "line": 1080
+        "line": 1238
       },
       {
         "to": "asyncio.gather",
-        "line": 1081
+        "line": 1239
       },
       {
         "to": "asyncio.gather",
-        "line": 1089
+        "line": 1247
       }
     ],
     "channels.wechat.channel.stop": [
@@ -22413,45 +23347,45 @@
     "core.orchestration.loop_manager._persist_loop": [
       {
         "to": "json.dumps",
-        "line": 404
+        "line": 415
       },
       {
         "to": "core.orchestration.loop_manager.str",
-        "line": 408
+        "line": 419
       },
       {
         "to": "core.orchestration.loop_manager.str",
-        "line": 409
+        "line": 420
       },
       {
         "to": "core.orchestration.loop_manager.open",
-        "line": 403
+        "line": 414
       },
       {
         "to": "core.orchestration.loop_manager.FileSystemError",
-        "line": 406
+        "line": 417
       }
     ],
     "core.orchestration.loop_manager._persist_deletion": [
       {
         "to": "json.dumps",
-        "line": 425
+        "line": 436
       },
       {
         "to": "core.orchestration.loop_manager.str",
-        "line": 429
+        "line": 440
       },
       {
         "to": "core.orchestration.loop_manager.str",
-        "line": 430
+        "line": 441
       },
       {
         "to": "core.orchestration.loop_manager.open",
-        "line": 424
+        "line": 435
       },
       {
         "to": "core.orchestration.loop_manager.FileSystemError",
-        "line": 427
+        "line": 438
       }
     ],
     "core.utils.session_fork.fork_codex_session": [
@@ -22647,29 +23581,39 @@
     "core.agent.base_agent._parse_changes_xml": [
       {
         "to": "re.search",
-        "line": 731
-      },
-      {
-        "to": "core.agent.base_agent.extract_tag",
-        "line": 741
-      },
-      {
-        "to": "core.agent.base_agent.extract_tag",
-        "line": 746
-      },
-      {
-        "to": "core.agent.base_agent.extract_tag",
-        "line": 747
+        "line": 738
       },
       {
         "to": "core.agent.base_agent.extract_tag",
         "line": 748
+      },
+      {
+        "to": "core.agent.base_agent.extract_tag",
+        "line": 753
+      },
+      {
+        "to": "core.agent.base_agent.extract_tag",
+        "line": 754
+      },
+      {
+        "to": "core.agent.base_agent.extract_tag",
+        "line": 755
       }
     ],
     "core.agent.base_agent.extract_tag": [
       {
         "to": "re.search",
-        "line": 738
+        "line": 745
+      }
+    ],
+    "core.orchestration.loop_executor._validate_terminator_output": [
+      {
+        "to": "re.search",
+        "line": 160
+      },
+      {
+        "to": "re.search",
+        "line": 173
       }
     ],
     "roles.role_manager.get_role": [
@@ -23413,75 +24357,101 @@
     "core.agent.base_agent.__init__": [
       {
         "to": "asyncio.Queue",
-        "line": 56
+        "line": 57
       },
       {
         "to": "core.agent.base_agent.AgentContext",
-        "line": 58
+        "line": 59
       },
       {
         "to": "core.agent.base_agent.get_logger",
-        "line": 66
+        "line": 70
+      }
+    ],
+    "core.orchestration.group_chat.__init__": [
+      {
+        "to": "asyncio.Queue",
+        "line": 87
+      },
+      {
+        "to": "core.orchestration.group_chat.str",
+        "line": 57
+      },
+      {
+        "to": "core.orchestration.group_chat.uuid4",
+        "line": 57
+      },
+      {
+        "to": "core.orchestration.group_chat.GroupChatRuntime",
+        "line": 75
+      },
+      {
+        "to": "core.orchestration.group_chat.MessageRouter",
+        "line": 80
+      },
+      {
+        "to": "core.orchestration.group_chat.AgentCallManager",
+        "line": 81
+      },
+      {
+        "to": "core.orchestration.group_chat.TaskManager",
+        "line": 82
       }
     ],
     "core.orchestration.group_chat._register_agents_to_router": [
       {
         "to": "asyncio.Queue",
-        "line": 266
+        "line": 281
       },
       {
         "to": "asyncio.Queue",
-        "line": 269
+        "line": 284
       },
       {
         "to": "core.orchestration.group_chat.StateError",
-        "line": 256
+        "line": 271
       },
       {
         "to": "core.orchestration.group_chat.list",
-        "line": 274
+        "line": 289
       },
       {
         "to": "core.orchestration.group_chat.id",
-        "line": 275
+        "line": 290
       }
     ],
     "core.agent.base_agent.stop": [
       {
         "to": "core.agent.base_agent.AgentMessage",
-        "line": 157
+        "line": 164
       }
     ],
     "core.agent.base_agent._enqueue_complete_task_reminder": [
       {
         "to": "core.agent.base_agent.AgentMessage",
-        "line": 623
+        "line": 630
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 607
+        "line": 614
       }
     ],
     "core.agent.base_agent._fallback_close_task": [
       {
         "to": "core.agent.base_agent.AgentMessage",
-        "line": 931
+        "line": 938
       },
       {
         "to": "core.agent.base_agent.getattr",
-        "line": 877
+        "line": 884
       },
       {
         "to": "core.agent.base_agent.Path",
-        "line": 860
+        "line": 867
       },
       {
         "to": "core.agent.base_agent.Path",
-        "line": 900
-      },
-      {
-        "to": "core.agent.base_agent.len",
-        "line": 894
+        "line": 907
       },
       {
         "to": "core.agent.base_agent.len",
@@ -23489,183 +24459,187 @@
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 902
+        "line": 908
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 956
+        "line": 909
+      },
+      {
+        "to": "core.agent.base_agent.len",
+        "line": 963
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 907
+        "line": 914
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 948
+        "line": 955
       },
       {
         "to": "core.agent.base_agent.bool",
-        "line": 813
+        "line": 820
       },
       {
         "to": "core.agent.base_agent.redact_token",
-        "line": 841
+        "line": 848
       },
       {
         "to": "core.agent.base_agent.get_git_changed_files",
-        "line": 880
+        "line": 887
       },
       {
         "to": "core.agent.base_agent.render_for_chat",
-        "line": 916
+        "line": 923
       },
       {
         "to": "core.agent.base_agent.render_for_chat",
-        "line": 921
+        "line": 928
       }
     ],
     "core.agent.base_agent._validate_docker_config": [
       {
         "to": "core.agent.base_agent.getattr",
-        "line": 231
+        "line": 238
       },
       {
         "to": "core.agent.base_agent.DockerConfigError",
-        "line": 239
+        "line": 246
       }
     ],
     "core.agent.base_agent._process_message": [
       {
         "to": "core.agent.base_agent.getattr",
-        "line": 278
+        "line": 285
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 270
+        "line": 277
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 312
+        "line": 319
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 355
+        "line": 362
       },
       {
         "to": "core.agent.base_agent.get_git_head",
-        "line": 300
+        "line": 307
       },
       {
         "to": "core.agent.base_agent.get_working_tree_status",
-        "line": 308
+        "line": 315
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 316
+        "line": 323
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 370
-      },
-      {
-        "to": "core.agent.base_agent.str",
-        "line": 374
+        "line": 377
       },
       {
         "to": "core.agent.base_agent.str",
         "line": 381
       },
       {
+        "to": "core.agent.base_agent.str",
+        "line": 388
+      },
+      {
         "to": "core.agent.base_agent.AgentExecutionError",
-        "line": 379
+        "line": 386
       }
     ],
     "core.agent.base_agent._is_same_path": [
       {
         "to": "core.agent.base_agent.Path",
-        "line": 253
+        "line": 260
       },
       {
         "to": "core.agent.base_agent.Path",
-        "line": 253
+        "line": 260
       }
     ],
     "core.agent.base_agent.compress_context": [
       {
         "to": "core.agent.base_agent.Path",
-        "line": 477
+        "line": 484
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 492
+        "line": 499
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 506
+        "line": 513
       },
       {
         "to": "core.agent.base_agent.AgentBusyError",
-        "line": 461
+        "line": 468
       }
     ],
     "core.agent.base_agent._build_opencode_system_prompt": [
       {
         "to": "core.agent.base_agent.Path",
-        "line": 584
+        "line": 591
       }
     ],
     "core.agent.base_agent._process_file_changes": [
       {
         "to": "core.agent.base_agent.len",
-        "line": 796
+        "line": 803
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 791
+        "line": 798
       },
       {
         "to": "core.agent.base_agent.enumerate",
-        "line": 779
+        "line": 786
       },
       {
         "to": "core.agent.base_agent.create_file_snapshot",
-        "line": 781
+        "line": 788
       }
     ],
     "core.agent.base_agent._auto_compact_if_needed": [
       {
         "to": "core.agent.base_agent.str",
-        "line": 430
+        "line": 437
       }
     ],
     "core.agent.base_agent._set_error_status": [
       {
         "to": "core.agent.base_agent.str",
-        "line": 688
+        "line": 695
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 700
+        "line": 707
       },
       {
         "to": "core.agent.base_agent.hasattr",
-        "line": 692
+        "line": 699
       },
       {
         "to": "core.agent.base_agent.isinstance",
-        "line": 692
+        "line": 699
       }
     ],
     "core.agent.base_agent.run": [
       {
         "to": "core.agent.base_agent.str",
-        "line": 996
+        "line": 1003
       }
     ],
     "core.agent.base_agent._strip_changes_xml": [
       {
         "to": "re.sub",
-        "line": 753
+        "line": 760
       }
     ],
     "core.utils.path_utils.sanitize_project_path": [
@@ -23681,11 +24655,17 @@
     "core.agent.base_agent._run_loop": [
       {
         "to": "core.agent.base_agent.render_for_chat",
-        "line": 1076
+        "line": 1083
       },
       {
         "to": "core.agent.base_agent.render_for_llm",
-        "line": 1046
+        "line": 1053
+      }
+    ],
+    "core.agent.base_agent._notify_message_completion": [
+      {
+        "to": "core.agent.base_agent.handler",
+        "line": 988
       }
     ],
     "core.agent.manager.__init__": [
@@ -23811,13 +24791,13 @@
     "agent_bridge.executors.claude.__init__": [
       {
         "to": "asyncio.Lock",
-        "line": 21
+        "line": 22
       }
     ],
     "agent_bridge.executors.codex.__init__": [
       {
         "to": "asyncio.Lock",
-        "line": 32
+        "line": 33
       }
     ],
     "agent_bridge.executors.docker_base.__init__": [
@@ -23907,23 +24887,23 @@
     "core.orchestration.group_chat._heartbeat_loop": [
       {
         "to": "asyncio.sleep",
-        "line": 1163
+        "line": 1321
       },
       {
         "to": "core.orchestration.group_chat.get_logger",
-        "line": 1159
+        "line": 1317
       },
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 1174
+        "line": 1332
       },
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 1199
+        "line": 1357
       },
       {
         "to": "core.orchestration.group_chat.AgentMessage",
-        "line": 1185
+        "line": 1343
       }
     ],
     "channels.wechat.auth.qr_login": [
@@ -24356,6 +25336,34 @@
         "line": 267
       }
     ],
+    "core.orchestration.loop_executor._wait_for_node_result": [
+      {
+        "to": "asyncio.wait_for",
+        "line": 221
+      },
+      {
+        "to": "core.orchestration.loop_executor.ValueError",
+        "line": 213
+      },
+      {
+        "to": "asyncio.get_running_loop",
+        "line": 215
+      },
+      {
+        "to": "asyncio.get_running_loop",
+        "line": 217
+      }
+    ],
+    "core.orchestration.loop_executor.receive_node_completion": [
+      {
+        "to": "asyncio.wait_for",
+        "line": 235
+      },
+      {
+        "to": "core.orchestration.loop_executor.ValueError",
+        "line": 233
+      }
+    ],
     "core.context.group_chat_runtime.initialize_metadata": [
       {
         "to": "core.context.group_chat_runtime.GroupMetadata",
@@ -24440,50 +25448,12 @@
         "line": 52
       },
       {
-        "to": "core.context.group_chat_session.field",
-        "line": 118
-      },
-      {
         "to": "core.context.group_chat_session.str",
         "line": 48
       },
       {
-        "to": "core.context.group_chat_session.str",
-        "line": 118
-      },
-      {
         "to": "core.context.group_chat_session.uuid4",
         "line": 48
-      },
-      {
-        "to": "core.context.group_chat_session.uuid4",
-        "line": 118
-      }
-    ],
-    "core.context.group_chat_session.from_dict": [
-      {
-        "to": "core.context.group_chat_session.str",
-        "line": 140
-      },
-      {
-        "to": "core.context.group_chat_session.uuid4",
-        "line": 140
-      },
-      {
-        "to": "core.context.group_chat_session.ValueError",
-        "line": 136
-      },
-      {
-        "to": "core.context.group_chat_session.list",
-        "line": 137
-      },
-      {
-        "to": "core.context.group_chat_session.cls",
-        "line": 139
-      },
-      {
-        "to": "core.context.group_chat_session.cls",
-        "line": 183
       }
     ],
     "core.context.group_metadata.from_dict": [
@@ -24492,74 +25462,118 @@
         "line": 46
       }
     ],
+    "core.context.loop_models.<module>": [
+      {
+        "to": "core.context.loop_models.field",
+        "line": 29
+      },
+      {
+        "to": "core.context.loop_models.str",
+        "line": 29
+      },
+      {
+        "to": "core.context.loop_models.uuid4",
+        "line": 29
+      }
+    ],
+    "core.context.loop_models.from_dict": [
+      {
+        "to": "core.context.loop_models.str",
+        "line": 51
+      },
+      {
+        "to": "core.context.loop_models.uuid4",
+        "line": 51
+      },
+      {
+        "to": "core.context.loop_models.ValueError",
+        "line": 47
+      },
+      {
+        "to": "core.context.loop_models.list",
+        "line": 48
+      },
+      {
+        "to": "core.context.loop_models.cls",
+        "line": 50
+      },
+      {
+        "to": "core.context.loop_models.cls",
+        "line": 94
+      }
+    ],
     "core.foundation.exceptions.__init__": [
       {
         "to": "core.foundation.exceptions.super",
-        "line": 35
+        "line": 36
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 58
+        "line": 59
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 69
+        "line": 70
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 80
+        "line": 81
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 91
+        "line": 92
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 102
+        "line": 103
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 131
+        "line": 132
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 145
+        "line": 146
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 156
+        "line": 157
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 168
+        "line": 169
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 188
+        "line": 187
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 201
+        "line": 204
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 213
+        "line": 216
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 228
+        "line": 233
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 244
+        "line": 249
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 255
+        "line": 260
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 266
+        "line": 271
+      },
+      {
+        "to": "core.foundation.exceptions.super",
+        "line": 292
       }
     ],
     "core.foundation.file_snapshot.<module>": [
@@ -24672,14 +25686,20 @@
         "line": 66
       }
     ],
+    "core.foundation.renderer.render_for_chat": [
+      {
+        "to": "core.foundation.renderer.ValueError",
+        "line": 87
+      }
+    ],
     "core.foundation.renderer.parse_chat_input": [
       {
         "to": "core.foundation.renderer.InvalidMessageError",
-        "line": 97
+        "line": 99
       },
       {
         "to": "core.foundation.renderer.InvalidMessageError",
-        "line": 100
+        "line": 102
       }
     ],
     "core.foundation.token.generate_token": [
@@ -24691,169 +25711,155 @@
     "core.orchestration.group_chat.<module>": [
       {
         "to": "core.orchestration.group_chat.get_logger",
-        "line": 31
-      }
-    ],
-    "core.orchestration.group_chat.__init__": [
-      {
-        "to": "core.orchestration.group_chat.str",
-        "line": 54
-      },
-      {
-        "to": "core.orchestration.group_chat.uuid4",
-        "line": 54
-      },
-      {
-        "to": "core.orchestration.group_chat.GroupChatRuntime",
-        "line": 72
-      },
-      {
-        "to": "core.orchestration.group_chat.MessageRouter",
-        "line": 77
-      },
-      {
-        "to": "core.orchestration.group_chat.AgentCallManager",
-        "line": 78
-      },
-      {
-        "to": "core.orchestration.group_chat.TaskManager",
-        "line": 79
+        "line": 34
       }
     ],
     "core.orchestration.group_chat.compress_all": [
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 552
+        "line": 705
       },
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 557
+        "line": 710
       }
     ],
     "core.orchestration.group_chat._cleanup_agent_queue": [
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 716
+        "line": 869
       },
       {
         "to": "core.orchestration.group_chat.AgentResult",
-        "line": 720
+        "line": 873
       },
       {
         "to": "core.orchestration.group_chat.render_for_chat",
-        "line": 722
+        "line": 875
       },
       {
         "to": "core.orchestration.group_chat.AgentMessage",
-        "line": 700
+        "line": 853
       }
     ],
     "core.orchestration.group_chat._on_agent_task_done": [
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 825
+        "line": 978
       },
       {
         "to": "core.orchestration.group_chat.type",
-        "line": 826
+        "line": 979
       }
     ],
     "core.orchestration.group_chat._stop_agent_process": [
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 856
+        "line": 1009
       },
       {
         "to": "core.orchestration.group_chat.getattr",
-        "line": 846
+        "line": 999
+      }
+    ],
+    "core.orchestration.group_chat._get_loop_manager": [
+      {
+        "to": "core.orchestration.group_chat.LoopManager",
+        "line": 98
       }
     ],
     "core.orchestration.group_chat.send_message_to_agent": [
       {
         "to": "core.orchestration.group_chat.StateError",
-        "line": 602
+        "line": 755
       },
       {
         "to": "core.orchestration.group_chat.AgentResult",
-        "line": 630
+        "line": 783
       },
       {
         "to": "core.orchestration.group_chat.render_for_chat",
-        "line": 626
+        "line": 779
       },
       {
         "to": "core.orchestration.group_chat.getattr",
-        "line": 629
+        "line": 782
       }
     ],
     "core.orchestration.group_chat._init_agents": [
       {
         "to": "core.orchestration.group_chat.RoleManager",
-        "line": 217
+        "line": 230
       },
       {
         "to": "core.orchestration.group_chat.Manager",
-        "line": 221
+        "line": 234
       },
       {
         "to": "core.orchestration.group_chat.Worker",
-        "line": 238
+        "line": 252
       }
     ],
     "core.orchestration.group_chat.compact_history": [
       {
         "to": "core.orchestration.group_chat.RoleManager",
-        "line": 501
+        "line": 654
       },
       {
         "to": "core.orchestration.group_chat.RoleManager",
-        "line": 505
+        "line": 658
       }
     ],
     "core.orchestration.group_chat._ensure_tokens": [
       {
         "to": "core.orchestration.group_chat.generate_token",
-        "line": 1134
+        "line": 1292
       },
       {
         "to": "core.orchestration.group_chat.generate_token",
-        "line": 1146
+        "line": 1304
+      }
+    ],
+    "core.orchestration.group_chat.get_loop_status": [
+      {
+        "to": "core.orchestration.group_chat.len",
+        "line": 483
       }
     ],
     "core.orchestration.group_chat._initialize_new_members": [
       {
         "to": "core.orchestration.group_chat.bool",
-        "line": 385
+        "line": 538
       },
       {
         "to": "asyncio.gather",
-        "line": 483
+        "line": 636
       },
       {
         "to": "core.orchestration.group_chat.start_conversation",
-        "line": 483
+        "line": 636
       }
     ],
     "core.orchestration.group_chat.start_conversation": [
       {
         "to": "core.orchestration.group_chat.resolve_session_path",
-        "line": 415
+        "line": 568
       },
       {
         "to": "core.orchestration.group_chat.ForkError",
-        "line": 424
+        "line": 577
       },
       {
         "to": "core.orchestration.group_chat.ForkError",
-        "line": 438
+        "line": 591
       },
       {
         "to": "core.orchestration.group_chat.fork_codex_session",
-        "line": 431
+        "line": 584
       },
       {
         "to": "core.orchestration.group_chat.AgentResult",
-        "line": 451
+        "line": 604
       }
     ],
     "core.orchestration.group_chat_manager.__new__": [
@@ -25001,35 +26007,121 @@
     "core.orchestration.loop_executor._build_loop_context": [
       {
         "to": "core.orchestration.loop_executor.wrap_xml",
-        "line": 32
+        "line": 87
       },
       {
         "to": "core.orchestration.loop_executor.wrap_xml",
-        "line": 33
+        "line": 88
       },
       {
         "to": "core.orchestration.loop_executor.wrap_xml",
-        "line": 34
+        "line": 89
       },
       {
         "to": "core.orchestration.loop_executor.wrap_xml",
-        "line": 37
+        "line": 93
       }
     ],
     "core.orchestration.loop_executor._build_loop_message": [
       {
         "to": "core.orchestration.loop_executor.AgentMessage",
-        "line": 43
+        "line": 100
+      }
+    ],
+    "core.orchestration.loop_executor._send_to_node": [
+      {
+        "to": "core.orchestration.loop_executor.ValueError",
+        "line": 325
+      }
+    ],
+    "core.orchestration.loop_executor._execute_node_with_retry": [
+      {
+        "to": "core.orchestration.loop_executor.ValueError",
+        "line": 437
+      },
+      {
+        "to": "core.orchestration.loop_executor.ValueError",
+        "line": 441
+      },
+      {
+        "to": "core.orchestration.loop_executor.range",
+        "line": 453
+      },
+      {
+        "to": "core.orchestration.loop_executor.LoopExecutionError",
+        "line": 466
+      },
+      {
+        "to": "core.orchestration.loop_executor.LoopExecutionError",
+        "line": 484
       }
     ],
     "core.orchestration.loop_executor._save_loop_result": [
       {
         "to": "core.orchestration.loop_executor.ValueError",
-        "line": 61
+        "line": 494
       },
       {
         "to": "core.orchestration.loop_executor.render_for_chat",
-        "line": 62
+        "line": 495
+      }
+    ],
+    "core.orchestration.loop_executor._handle_node_completion": [
+      {
+        "to": "core.orchestration.loop_executor.str",
+        "line": 273
+      }
+    ],
+    "core.orchestration.loop_executor.run": [
+      {
+        "to": "core.orchestration.loop_executor.str",
+        "line": 318
+      }
+    ],
+    "core.orchestration.loop_executor._advance_to_next_node": [
+      {
+        "to": "core.orchestration.loop_executor.len",
+        "line": 345
+      }
+    ],
+    "core.orchestration.loop_executor._handle_node_timeout": [
+      {
+        "to": "core.orchestration.loop_executor.getattr",
+        "line": 380
+      }
+    ],
+    "core.orchestration.loop_executor._cleanup": [
+      {
+        "to": "core.orchestration.loop_executor.getattr",
+        "line": 395
+      },
+      {
+        "to": "core.orchestration.loop_executor.getattr",
+        "line": 403
+      },
+      {
+        "to": "core.orchestration.loop_executor.getattr",
+        "line": 411
+      },
+      {
+        "to": "core.orchestration.loop_executor.get_agent_member_info",
+        "line": 398
+      },
+      {
+        "to": "core.orchestration.loop_executor.hasattr",
+        "line": 401
+      },
+      {
+        "to": "core.orchestration.loop_executor.save_agent_members",
+        "line": 405
+      },
+      {
+        "to": "core.orchestration.loop_executor.setter",
+        "line": 414
+      },
+      {
+        "to": "inspect.isawaitable",
+        "line": 415
       }
     ],
     "core.orchestration.loop_manager.<module>": [
@@ -25073,15 +26165,15 @@
     "core.orchestration.loop_manager._validate_create_request": [
       {
         "to": "core.orchestration.loop_manager.len",
-        "line": 272
+        "line": 283
       },
       {
         "to": "core.orchestration.loop_manager.len",
-        "line": 275
+        "line": 286
       },
       {
         "to": "core.orchestration.loop_manager.len",
-        "line": 279
+        "line": 290
       },
       {
         "to": "core.orchestration.loop_manager.LoopValidationError",
@@ -25089,23 +26181,27 @@
       },
       {
         "to": "core.orchestration.loop_manager.LoopValidationError",
-        "line": 289
+        "line": 288
       },
       {
         "to": "core.orchestration.loop_manager.LoopValidationError",
-        "line": 299
+        "line": 300
       },
       {
         "to": "core.orchestration.loop_manager.LoopValidationError",
-        "line": 325
+        "line": 310
+      },
+      {
+        "to": "core.orchestration.loop_manager.LoopValidationError",
+        "line": 336
       },
       {
         "to": "core.orchestration.loop_manager.sum",
-        "line": 283
+        "line": 294
       },
       {
         "to": "core.orchestration.loop_manager.AgentNotFoundError",
-        "line": 313
+        "line": 324
       }
     ],
     "core.orchestration.loop_manager.get_loop": [
@@ -26985,29 +28081,29 @@
     "agent_bridge.executors.claude.execute": [
       {
         "to": "asyncio.create_subprocess_exec",
-        "line": 52
+        "line": 53
       },
       {
         "to": "agent_bridge.executors.claude.CLINotFoundError",
-        "line": 61
+        "line": 62
       },
       {
         "to": "agent_bridge.executors.claude.CLIExecutionError",
-        "line": 92
+        "line": 130
       }
     ],
     "agent_bridge.executors.codex.execute": [
       {
         "to": "asyncio.create_subprocess_exec",
-        "line": 69
+        "line": 70
       },
       {
         "to": "agent_bridge.executors.codex.CLINotFoundError",
-        "line": 74
+        "line": 75
       },
       {
         "to": "agent_bridge.executors.codex.CLIExecutionError",
-        "line": 109
+        "line": 149
       }
     ],
     "agent_bridge.executors.docker_base.execute": [
@@ -27080,16 +28176,28 @@
         "line": 188
       }
     ],
+    "agent_bridge.executors.claude.<module>": [
+      {
+        "to": "agent_bridge.executors.claude.get_logger",
+        "line": 13
+      }
+    ],
     "agent_bridge.executors.codex._sanitize_for_codex_cli": [
       {
         "to": "shlex.quote",
-        "line": 20
+        "line": 21
+      }
+    ],
+    "agent_bridge.executors.codex.<module>": [
+      {
+        "to": "agent_bridge.executors.codex.get_logger",
+        "line": 24
       }
     ],
     "agent_bridge.executors.codex._build_command": [
       {
         "to": "agent_bridge.executors.codex._sanitize_for_codex_cli",
-        "line": 162
+        "line": 202
       }
     ],
     "agent_bridge.executors.docker_codex._build_command": [

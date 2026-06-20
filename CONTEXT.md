@@ -99,9 +99,9 @@
 - Agent 之间传递的消息结构
 - 属性：call_id、content、send_from、send_to、session_type、message_type、timestamp、metadata
 - session_type：MAIN（群聊）或 BTW（单聊）
-- message_type：TASK（需要回复）或 NOTIFICATION（不需要回复）
+- message_type：TASK（需要回复）、NOTIFICATION（不需要回复）或 LOOP_MESSAGE（循环内部投递）
 - metadata：消息元数据（dict），用于携带额外信息
-  - 循环消息的 metadata：`loop_id`（循环 ID）、`loop_context`（循环专用上下文）、`is_loop_message`（标记为循环消息）、`loop_iteration`（当前循环轮次）
+  - 循环消息的 metadata：`loop_id`（循环 ID）、`loop_iteration`（当前循环轮次）；循环专用上下文存放在 `content`
 - **content 不可变约定**：在 Agent 之间投递时，content 始终保持原始内容，
   不被预渲染（如包上 `[X] 发送消息给 [Y]:` 之类的包络）。所有渲染都发生在
   Agent 边界（参见 [Renderer](#渲染层renderer)），避免"包络套包络"问题。
@@ -247,6 +247,7 @@
 ### MessageType（消息类型）
 - TASK：需要回复的任务
 - NOTIFICATION：不需要回复的通知
+- LOOP_MESSAGE：循环内部消息，投递给 Agent 执行但不由 GroupChat 自动保存，结果由 LoopExecutor 统一保存
 
 ### CallStatus（调用状态）
 - PENDING：已创建，等待执行
