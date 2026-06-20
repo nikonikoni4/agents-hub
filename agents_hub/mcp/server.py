@@ -184,7 +184,6 @@ async def call_agent(
     send_to: str,
     content: str,
     need_response: bool = True,
-    timeout_seconds: int = 300,
 ) -> dict:
     """
     派活给团队成员
@@ -194,7 +193,6 @@ async def call_agent(
         send_to: 目标 Agent 名称
         content: 消息内容
         need_response: 是否需要响应（默认 True）
-        timeout_seconds: 超时时间（秒，默认 300）
 
     Returns:
         成功: {"call_id": "..."}
@@ -232,7 +230,7 @@ async def call_agent(
             send_to=send_to,
             content=content,
             message_type=message_type,
-            timeout_seconds=timeout_seconds if need_response else None,
+            timeout_seconds=None,
         )
         logger.info(
             "AgentCall 创建: call_id=%s, sender=%s, receiver=%s",
