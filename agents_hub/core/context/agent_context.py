@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 from agents_hub.config.types import RoleType
-from agents_hub.core.foundation import StateError, Tag, wrap_xml
+from agents_hub.core.foundation import MessageType, StateError, Tag, wrap_xml
 from agents_hub.core.foundation.message import AgentMessage
 from agents_hub.core.foundation.renderer import render_for_llm
 from agents_hub.utils import get_logger
@@ -199,10 +199,10 @@ class AgentContext:
         runtime = self._build_runtime(msg, agent_call_manager, task_manager)
         parts.append(runtime)
 
-        # 2. 获取上下文。循环消息使用隔离的 loop_context，不读取群聊历史。
+        # 2. 获取上下文。循环消息的 content 已经是隔离上下文，不读取群聊历史。
         history = ""
-        if msg.metadata and msg.metadata.get("loop_context"):
-            history = msg.metadata["loop_context"]
+        if msg.message_type == MessageType.LOOP_MESSAGE:
+            history = msg.content
         else:
             history = await self.get_context()
         if history:

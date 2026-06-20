@@ -10,6 +10,7 @@ from .group_chat_runtime import GroupChatRuntime
 from .group_chat_runtime_state import GroupChatRuntimeState
 from .group_chat_session import AgentContextState, AgentMemberInfo, GroupChatSession
 from .group_metadata import GroupMetadata
+from .loop_models import Loop, LoopNode, LoopNodeType
 
 __all__ = [
     "GroupChatSession",
@@ -20,4 +21,7 @@ __all__ = [
     "GroupMetadata",
     "GroupChatRuntimeState",
     "GroupChatRuntime",
+    "Loop",
+    "LoopNode",
+    "LoopNodeType",
 ]

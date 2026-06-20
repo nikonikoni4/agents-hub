@@ -7,6 +7,7 @@ import pytest
 from pathlib import Path
 from uuid import uuid4
 
+from agents_hub.core.context.loop_models import LoopNodeType
 from agents_hub.core.orchestration.loop_manager import LoopManager
 from agents_hub.core.foundation.exceptions import (
     LoopNotFoundError,
@@ -14,7 +15,7 @@ from agents_hub.core.foundation.exceptions import (
     LoopStateError,
     AgentNotFoundError,
 )
-from agents_hub.core.foundation.models import LoopStatus, LoopNodeType
+from agents_hub.core.foundation.models import LoopStatus
 from agents_hub.utils.logger import setup_logging
 
 
@@ -191,7 +192,9 @@ class TestLoopManagerCreate:
             )
 
     @pytest.mark.asyncio
-    async def test_create_loop_concurrent_running_conflict(self, loop_manager, valid_nodes):
+    async def test_create_loop_concurrent_running_conflict(
+        self, loop_manager, valid_nodes
+    ):
         """并发限制：已有 RUNNING Loop 时不能创建新的"""
         # 创建第一个 Loop
         loop1 = await loop_manager.create_loop(
@@ -406,7 +409,9 @@ class TestLoopManagerPersistence:
         assert len(recovered_loop.nodes) == len(loop.nodes)
 
     @pytest.mark.asyncio
-    async def test_persistence_same_id_takes_latest(self, temp_project_path, valid_nodes):
+    async def test_persistence_same_id_takes_latest(
+        self, temp_project_path, valid_nodes
+    ):
         """同一 loop_id 多条记录取最新"""
         group_chat_id = f"test_gc_{uuid4().hex[:8]}"
 
@@ -463,7 +468,9 @@ class TestLoopNodeFields:
             assert len(node.node_id) > 0
 
     @pytest.mark.asyncio
-    async def test_node_id_preserved_in_persistence(self, temp_project_path, valid_nodes):
+    async def test_node_id_preserved_in_persistence(
+        self, temp_project_path, valid_nodes
+    ):
         """node_id 序列化/反序列化后保持一致"""
         group_chat_id = f"test_gc_{uuid4().hex[:8]}"
 
@@ -517,7 +524,9 @@ class TestLoopNodeFields:
         assert loop.nodes[1].max_retries == 3  # 默认值
 
     @pytest.mark.asyncio
-    async def test_output_schema_prompt_preserved_in_persistence(self, temp_project_path):
+    async def test_output_schema_prompt_preserved_in_persistence(
+        self, temp_project_path
+    ):
         """output_schema_prompt 序列化/反序列化后保持一致"""
         group_chat_id = f"test_gc_{uuid4().hex[:8]}"
         nodes = [
@@ -546,7 +555,9 @@ class TestLoopNodeFields:
         assert "执行结果" in recovered.nodes[0].output_schema_prompt
 
     @pytest.mark.asyncio
-    async def test_output_schema_fields_preserved_in_persistence(self, temp_project_path):
+    async def test_output_schema_fields_preserved_in_persistence(
+        self, temp_project_path
+    ):
         """output_schema_fields 序列化/反序列化后保持一致"""
         group_chat_id = f"test_gc_{uuid4().hex[:8]}"
         nodes = [
@@ -580,7 +591,9 @@ class TestLoopStateMachine:
     """测试 Loop 状态机校验"""
 
     @pytest.mark.asyncio
-    async def test_invalid_transition_completed_to_running(self, loop_manager, valid_nodes):
+    async def test_invalid_transition_completed_to_running(
+        self, loop_manager, valid_nodes
+    ):
         """COMPLETED 不能转为 RUNNING"""
         loop = await loop_manager.create_loop(
             nodes=valid_nodes,
@@ -591,10 +604,14 @@ class TestLoopStateMachine:
         await loop_manager.update_loop_status(loop.loop_id, LoopStatus.COMPLETED.value)
 
         with pytest.raises(LoopStateError):
-            await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
+            await loop_manager.update_loop_status(
+                loop.loop_id, LoopStatus.RUNNING.value
+            )
 
     @pytest.mark.asyncio
-    async def test_invalid_transition_failed_to_running(self, loop_manager, valid_nodes):
+    async def test_invalid_transition_failed_to_running(
+        self, loop_manager, valid_nodes
+    ):
         """FAILED 不能转为 RUNNING"""
         loop = await loop_manager.create_loop(
             nodes=valid_nodes,
@@ -605,7 +622,9 @@ class TestLoopStateMachine:
         await loop_manager.update_loop_status(loop.loop_id, LoopStatus.FAILED.value)
 
         with pytest.raises(LoopStateError):
-            await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
+            await loop_manager.update_loop_status(
+                loop.loop_id, LoopStatus.RUNNING.value
+            )
 
     @pytest.mark.asyncio
     async def test_valid_transition_created_to_running(self, loop_manager, valid_nodes):
@@ -615,11 +634,15 @@ class TestLoopStateMachine:
             max_iterations=10,
             initial_task="测试任务",
         )
-        updated = await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
+        updated = await loop_manager.update_loop_status(
+            loop.loop_id, LoopStatus.RUNNING.value
+        )
         assert updated.status == LoopStatus.RUNNING.value
 
     @pytest.mark.asyncio
-    async def test_valid_transition_running_to_completed(self, loop_manager, valid_nodes):
+    async def test_valid_transition_running_to_completed(
+        self, loop_manager, valid_nodes
+    ):
         """RUNNING 可以转为 COMPLETED"""
         loop = await loop_manager.create_loop(
             nodes=valid_nodes,
@@ -627,7 +650,9 @@ class TestLoopStateMachine:
             initial_task="测试任务",
         )
         await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-        updated = await loop_manager.update_loop_status(loop.loop_id, LoopStatus.COMPLETED.value)
+        updated = await loop_manager.update_loop_status(
+            loop.loop_id, LoopStatus.COMPLETED.value
+        )
         assert updated.status == LoopStatus.COMPLETED.value
 
     @pytest.mark.asyncio
@@ -653,5 +678,7 @@ class TestLoopStateMachine:
             initial_task="测试任务",
         )
         await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-        updated = await loop_manager.update_loop_status(loop.loop_id, LoopStatus.PAUSED.value)
+        updated = await loop_manager.update_loop_status(
+            loop.loop_id, LoopStatus.PAUSED.value
+        )
         assert updated.status == LoopStatus.PAUSED.value

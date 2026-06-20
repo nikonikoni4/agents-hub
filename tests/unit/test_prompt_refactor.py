@@ -383,10 +383,10 @@ class TestBuildUserPrompt:
             assert "manager" not in lines[0] or "worker_a" in lines[0]
 
     @pytest.mark.asyncio
-    async def test_build_user_prompt_uses_loop_context_instead_of_group_context(
+    async def test_build_user_prompt_uses_loop_message_content_instead_of_group_context(
         self, mock_group_chat_context
     ):
-        """契约：循环消息使用 metadata.loop_context 替代群聊历史上下文"""
+        """契约：循环消息使用 msg.content 替代群聊历史上下文"""
         from agents_hub.core.context.agent_context import AgentContext
 
         agent_context = AgentContext(
@@ -398,12 +398,12 @@ class TestBuildUserPrompt:
 
         msg = AgentMessage(
             call_id="loop-call",
-            content="循环消息",
+            content="<LOOP_NODE_ROLE>\n节点职责\n</LOOP_NODE_ROLE>",
             send_from="loop",
             send_to="worker_a",
             session_type=SessionType.MAIN,
             message_type=MessageType.LOOP_MESSAGE,
-            metadata={"loop_context": "<LOOP_NODE_ROLE>\n节点职责\n</LOOP_NODE_ROLE>"},
+            metadata={"loop_id": "loop-1"},
         )
 
         result = await agent_context.build_user_prompt(msg)

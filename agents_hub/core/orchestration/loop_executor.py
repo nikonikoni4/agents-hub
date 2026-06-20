@@ -3,10 +3,37 @@
 当前切片只实现循环消息上下文构造和消息封装，核心调度逻辑在后续切片补齐。
 """
 
-from agents_hub.core.context.group_chat_session import Loop, LoopNode
+import asyncio
+
+from agents_hub.agent_bridge.models import AgentResult
+from agents_hub.core.context import GroupChatRuntime
+from agents_hub.core.context.loop_models import Loop, LoopNode, LoopNodeType
 from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
-from agents_hub.core.foundation.models import LoopNodeType
 from agents_hub.core.foundation.renderer import Tag, render_for_chat, wrap_xml
+
+
+async def notify_loop_completion(
+    queue: asyncio.Queue | None,
+    msg: AgentMessage,
+    result: AgentResult | None,
+) -> None:
+    """将循环消息完成事件投递给 LoopExecutor 调度队列。"""
+    if msg.message_type != MessageType.LOOP_MESSAGE:
+        return
+    if queue is None or result is None:
+        return
+
+    loop_id = msg.metadata.get("loop_id") if msg.metadata else None
+    if not loop_id:
+        return
+
+    await queue.put(
+        {
+            "loop_id": loop_id,
+            "agent_result": result,
+            "call_id": msg.call_id,
+        }
+    )
 
 
 class LoopExecutor:
@@ -22,7 +49,7 @@ class LoopExecutor:
         "如果缺少此标签，系统会要求你重新输出。"
     )
 
-    def __init__(self, loop: Loop, runtime=None):
+    def __init__(self, loop: Loop, runtime: GroupChatRuntime | None = None):
         self.loop = loop
         self.runtime = runtime
 
@@ -49,13 +76,11 @@ class LoopExecutor:
             message_type=MessageType.LOOP_MESSAGE,
             metadata={
                 "loop_id": self.loop.loop_id,
-                "loop_context": loop_context,
-                "is_loop_message": True,
                 "loop_iteration": self.loop.current_iteration,
             },
         )
 
-    async def _save_loop_result(self, node: LoopNode, result) -> None:
+    async def _save_loop_result(self, node: LoopNode, result: AgentResult) -> None:
         """保存循环节点输出到群聊历史。"""
         if self.runtime is None:
             raise ValueError("LoopExecutor 未注入 runtime，无法保存循环结果")

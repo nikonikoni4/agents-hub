@@ -28,6 +28,8 @@ from agents_hub.realtime import broadcast_group_chat_refresh
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_logger
 
+from .loop_executor import notify_loop_completion
+
 logger = get_logger(__name__)
 
 
@@ -77,6 +79,7 @@ class GroupChat:
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
         self.task_manager = TaskManager(self.group_chat_id, project_path)
+        self._loop_completion_queue: asyncio.Queue | None = asyncio.Queue()
 
         # Heartbeat 定时任务
         self._heartbeat_task: asyncio.Task | None = None
@@ -225,6 +228,9 @@ class GroupChat:
             self.message_router,
             self.task_manager,
         )
+        self.manager.add_message_completion_handler(
+            lambda msg, result: notify_loop_completion(self._loop_completion_queue, msg, result)
+        )
 
         # 初始化 workers
         if not self.team_members_name:
@@ -241,6 +247,9 @@ class GroupChat:
                 self.agent_call_manager,
                 self.message_router,
                 self.task_manager,
+            )
+            self.workers[role_name].add_message_completion_handler(
+                lambda msg, result: notify_loop_completion(self._loop_completion_queue, msg, result)
             )
 
         # 注册所有 agent 到 message_router
@@ -303,6 +312,9 @@ class GroupChat:
             self.agent_call_manager,
             self.message_router,
             self.task_manager,
+        )
+        new_worker.add_message_completion_handler(
+            lambda msg, result: notify_loop_completion(self._loop_completion_queue, msg, result)
         )
 
         # 4. 注册到 MessageRouter

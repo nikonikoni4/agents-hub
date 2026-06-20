@@ -11,6 +11,7 @@ Agent 基类
 
 import asyncio
 import re
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from agents_hub.agent_bridge import AgentResult, agent_platform_client
@@ -62,7 +63,9 @@ class Agent:
         self._run = True
         self._consecutive_no_finish_count: int = 0  # 连续未闭环计数
         self.max_consecutive_no_finish: int = 30  # 阈值
-        self._loop_completion_queue: asyncio.Queue | None = None  # 循环完成通知队列
+        self._message_completion_handlers: list[
+            Callable[[AgentMessage, AgentResult | None], Awaitable[None]]
+        ] = []
         self.logger = get_logger(f"agent.{self.name}")
 
     @property
@@ -85,13 +88,12 @@ class Agent:
         # TODO 后续使用，暂时占位
         self._run = run
 
-    def set_loop_completion_queue(self, queue: asyncio.Queue | None):
-        """设置或清除循环完成通知队列引用
-
-        Args:
-            queue: 循环完成通知队列，None 表示清除引用
-        """
-        self._loop_completion_queue = queue
+    def add_message_completion_handler(
+        self,
+        handler: Callable[[AgentMessage, AgentResult | None], Awaitable[None]],
+    ) -> None:
+        """注册消息处理完成后的通用回调。"""
+        self._message_completion_handlers.append(handler)
 
     def _should_accept_message(self, msg: AgentMessage) -> bool:
         """判断当前状态下是否应该接收该消息
@@ -956,29 +958,14 @@ call_id: {msg.call_id}
             len(safe_content),
         )
 
-    async def _notify_loop_completion(self, msg: AgentMessage, result: AgentResult | None) -> None:
-        """循环内部消息处理完成后通知 LoopExecutor。"""
-        if msg.message_type != MessageType.LOOP_MESSAGE:
-            return
-        if not self._loop_completion_queue or result is None:
-            return
-
-        loop_id = msg.metadata.get("loop_id") if msg.metadata else None
-        if not loop_id:
-            return
-
-        notification = {
-            "loop_id": loop_id,
-            "agent_result": result,
-            "call_id": msg.call_id,
-        }
-        await self._loop_completion_queue.put(notification)
-        self.logger.debug(
-            "Agent %s 已发送循环完成通知: loop_id=%s, call_id=%s",
-            self.name,
-            loop_id,
-            msg.call_id,
-        )
+    async def _notify_message_completion(
+        self,
+        msg: AgentMessage,
+        result: AgentResult | None,
+    ) -> None:
+        """通知消息处理完成事件。"""
+        for handler in self._message_completion_handlers:
+            await handler(msg, result)
 
     # 测试：添加空行，改变 run() 的行号
     async def run(self) -> None:
@@ -1065,7 +1052,7 @@ call_id: {msg.call_id}
             await self._auto_compact_if_needed()
 
             # 7. 兜底闭环（避免 MCP 断连导致群聊无消息）
-            await self._notify_loop_completion(msg, result)
+            await self._notify_message_completion(msg, result)
             await self._fallback_close_task(msg, result)
 
             # 8. NOTIFICATION 消息保存到群聊历史

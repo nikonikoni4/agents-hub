@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from agents_hub.core.context.group_chat_session import Loop, LoopNode
+from agents_hub.core.context.loop_models import Loop, LoopNode, LoopNodeType
 from agents_hub.core.foundation.exceptions import (
     AgentNotFoundError,
     FileSystemError,
@@ -18,7 +18,7 @@ from agents_hub.core.foundation.exceptions import (
     LoopStateError,
     LoopValidationError,
 )
-from agents_hub.core.foundation.models import LoopNodeType, LoopStatus
+from agents_hub.core.foundation.models import LoopStatus
 from agents_hub.core.foundation.paths import group_chat_paths
 from agents_hub.roles import RoleManager
 from agents_hub.utils.logger import get_specialized_logger

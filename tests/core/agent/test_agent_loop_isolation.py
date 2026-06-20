@@ -37,8 +37,8 @@ class TestAgentMemberInfoLoopSupport:
         assert info.status == "in_loop"
 
 
-class TestAgentLoopCompletionQueue:
-    """测试 Agent 对循环完成通知队列的支持"""
+class TestAgentMessageCompletionHandlers:
+    """测试 Agent 的通用消息完成处理器"""
 
     @pytest.fixture
     def mock_agent(self):
@@ -58,26 +58,17 @@ class TestAgentLoopCompletionQueue:
         )
         return agent
 
-    def test_agent_can_set_completion_queue(self, mock_agent):
-        """Agent 可以设置 completion_queue 引用"""
-        queue = asyncio.Queue()
-        mock_agent.set_loop_completion_queue(queue)
-        assert mock_agent._loop_completion_queue is queue
-
-    def test_agent_can_clear_completion_queue(self, mock_agent):
-        """Agent 可以清除 completion_queue 引用（设为 None）"""
-        queue = asyncio.Queue()
-        mock_agent.set_loop_completion_queue(queue)
-        mock_agent.set_loop_completion_queue(None)
-        assert mock_agent._loop_completion_queue is None
-
     @pytest.mark.asyncio
-    async def test_loop_message_sends_completion_notification(self, mock_agent):
-        """LOOP_MESSAGE 完成后向 completion_queue 发送完整通知"""
+    async def test_message_completion_handler_receives_message_and_result(self, mock_agent):
+        """消息完成后调用已注册的通用 handler"""
         from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
 
-        queue = asyncio.Queue()
-        mock_agent.set_loop_completion_queue(queue)
+        seen = []
+
+        async def handler(msg, result):
+            seen.append((msg, result))
+
+        mock_agent.add_message_completion_handler(handler)
         result = AgentResult(
             text="done",
             session_id="session-1",
@@ -96,28 +87,21 @@ class TestAgentLoopCompletionQueue:
             metadata={"loop_id": "loop-123"},
         )
 
-        await mock_agent._notify_loop_completion(msg, result)
+        await mock_agent._notify_message_completion(msg, result)
 
-        notification = queue.get_nowait()
-        assert notification["loop_id"] == "loop-123"
-        assert notification["agent_result"] is result
-        assert notification["call_id"] == "call-1"
+        assert seen == [(msg, result)]
 
     @pytest.mark.asyncio
-    async def test_normal_message_does_not_send_completion_notification(self, mock_agent):
-        """普通消息不会发送 loop completion 通知"""
+    async def test_message_completion_handlers_allow_none_result(self, mock_agent):
+        """通用 handler 能接收 None result，由 handler 自己判断是否处理"""
         from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
 
-        queue = asyncio.Queue()
-        mock_agent.set_loop_completion_queue(queue)
-        result = AgentResult(
-            text="done",
-            session_id="session-1",
-            timestamp="2026-06-20T00:00:00",
-            agent_name="test_agent",
-            platform=AgentPlatform.CLAUDE,
-            role_type=RoleType.TEAM_MEMBER,
-        )
+        seen = []
+
+        async def handler(msg, result):
+            seen.append((msg.call_id, result))
+
+        mock_agent.add_message_completion_handler(handler)
         msg = AgentMessage(
             call_id="call-1",
             send_from="leader",
@@ -127,9 +111,9 @@ class TestAgentLoopCompletionQueue:
             message_type=MessageType.NOTIFICATION,
         )
 
-        await mock_agent._notify_loop_completion(msg, result)
+        await mock_agent._notify_message_completion(msg, None)
 
-        assert queue.empty()
+        assert seen == [("call-1", None)]
 
 
 class TestAgentMessageWhitelist:
@@ -402,7 +386,7 @@ class TestAgentLoopMessageProcessing:
             content="loop context",
             session_type=SessionType.MAIN,
             message_type=MessageType.LOOP_MESSAGE,
-            metadata={"loop_context": "loop context"},
+            metadata={"loop_id": "loop-1"},
         )
 
         async def fake_execute(*args, **kwargs):

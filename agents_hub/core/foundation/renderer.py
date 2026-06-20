@@ -83,6 +83,8 @@ def render_for_chat(
         loop_iteration: 循环轮次
     """
     if is_loop_message:
+        if loop_iteration is None:
+            raise ValueError("loop_iteration is required when is_loop_message=True")
         return f"[循环-节点{send_from}-第{loop_iteration}轮] @{send_to} {content}"
     return f"@{send_to} {content}"
 

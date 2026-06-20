@@ -234,6 +234,11 @@ class TestRenderer:
         )
         assert result == "[循环-节点node_a-第3轮] @node_b hello"
 
+    def test_render_for_chat_loop_message_requires_iteration(self):
+        """契约：循环消息必须显式提供轮次"""
+        with pytest.raises(ValueError, match="loop_iteration"):
+            render_for_chat("node_a", "node_b", "hello", is_loop_message=True)
+
     def test_parse_chat_input_valid(self):
         """契约：parse_chat_input 正确解析 @xxx content"""
         send_to, content = parse_chat_input("@agent hello world")
