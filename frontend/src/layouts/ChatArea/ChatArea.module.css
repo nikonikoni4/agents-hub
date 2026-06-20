@@ -164,7 +164,7 @@
 
 /* 深色模式 User 气泡：更深沉的灰蓝色 */
 html[data-theme='dark'] .bubbleUser {
-  background: #2f4f6f;
+  background: #2a4560;
 }
 
 .emptyState {
