@@ -361,6 +361,12 @@ class GroupChat:
         initial_task: str,
     ):
         """创建 Loop 定义，暂不启动执行。"""
+        logger.info(
+            "创建 Loop: group=%s, nodes=%d, max_iterations=%d",
+            self.group_chat_id,
+            len(nodes) if nodes else 0,
+            max_iterations,
+        )
         return await self._get_loop_manager().create_loop(
             nodes=nodes,
             max_iterations=max_iterations,
@@ -376,6 +382,12 @@ class GroupChat:
 
             raise LoopStateError(loop_id, loop.status, "start")
 
+        logger.info(
+            "启动 Loop: loop_id=%s, group=%s, nodes=%d",
+            loop_id,
+            self.group_chat_id,
+            len(loop.nodes),
+        )
         completion_queue: asyncio.Queue = asyncio.Queue()
         agents = self._loop_agents(loop)
         for node in loop.nodes:
@@ -432,6 +444,11 @@ class GroupChat:
 
             raise LoopStateError(loop_id, loop.status, "stop")
 
+        logger.info(
+            "停止 Loop: loop_id=%s, group=%s",
+            loop_id,
+            self.group_chat_id,
+        )
         queue = self._loop_queues.get(loop_id)
         if queue is not None:
             await queue.put({"loop_id": loop_id, "is_termination_signal": True})
@@ -477,6 +494,11 @@ class GroupChat:
 
     async def delete_loop(self, loop_id: str) -> None:
         """删除非 RUNNING Loop。"""
+        logger.info(
+            "删除 Loop: loop_id=%s, group=%s",
+            loop_id,
+            self.group_chat_id,
+        )
         await self.cleanup_loop(loop_id)
         await self._get_loop_manager().delete_loop(loop_id)
 

@@ -244,6 +244,11 @@ class LoopExecutor:
             return
 
         result = notification.get("agent_result")
+        self.logger.debug(
+            "收到节点完成通知: loop_id=%s, call_id=%s",
+            notification.get("loop_id"),
+            notification.get("call_id"),
+        )
         if result is None:
             await self._emergency_stop("节点完成通知缺少 agent_result")
             return
@@ -288,11 +293,23 @@ class LoopExecutor:
         self._last_node_output = original_output
 
         if self._check_exit_condition(node, should_continue):
+            self.logger.info(
+                "Loop 完成: loop_id=%s, status=%s, iteration=%d",
+                self.loop.loop_id,
+                self.loop.status,
+                self.loop.current_iteration,
+            )
             await self._cleanup()
             return
 
         self._advance_to_next_node()
         if self._check_exit_condition():
+            self.logger.info(
+                "Loop 达到最大循环次数: loop_id=%s, iteration=%d, max=%d",
+                self.loop.loop_id,
+                self.loop.current_iteration,
+                self.loop.max_iterations,
+            )
             await self._cleanup()
             return
 
@@ -307,6 +324,12 @@ class LoopExecutor:
             if self.loop.status != LoopStatus.RUNNING.value:
                 self.loop.status = LoopStatus.RUNNING.value
 
+            self.logger.info(
+                "Loop 启动: loop_id=%s, nodes=%d, max_iterations=%d",
+                self.loop.loop_id,
+                len(self.loop.nodes),
+                self.loop.max_iterations,
+            )
             await self._send_to_node(
                 self.loop.nodes[self.loop.current_node_index],
                 self.loop.initial_task,
@@ -338,6 +361,12 @@ class LoopExecutor:
             )
             message.call_id = call.call_id
 
+        self.logger.info(
+            "发送循环消息: loop_id=%s, node=%s, iteration=%d",
+            self.loop.loop_id,
+            node.agent_name,
+            self.loop.current_iteration,
+        )
         await self.send_message_callback(message)
         return message
 

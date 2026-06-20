@@ -976,6 +976,12 @@ call_id: {msg.call_id}
             and self._loop_completion_queue is not None
             and result is not None
         ):
+            self.logger.debug(
+                "发送循环完成通知: agent=%s, loop_id=%s, call_id=%s",
+                self.name,
+                loop_id,
+                msg.call_id,
+            )
             await self._loop_completion_queue.put(
                 {
                     "loop_id": loop_id,
