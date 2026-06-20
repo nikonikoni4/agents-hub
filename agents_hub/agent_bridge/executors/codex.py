@@ -1,7 +1,6 @@
 """Codex CLI 执行器"""
 
 import asyncio
-import logging
 import os
 import shlex
 from collections.abc import AsyncIterator

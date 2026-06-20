@@ -1,7 +1,6 @@
 """Claude CLI 执行器"""
 
 import asyncio
-import logging
 import os
 from collections.abc import AsyncIterator
 
@@ -139,7 +138,7 @@ class ClaudeExecutor:
                     process.kill()
                     # 不等待 kill 完成，避免再次阻塞
                 except Exception as e:
-                    logger.debug("[ClaudeExecutor] 强制终止进程失败: %s", e)
+                    logger.warning("[ClaudeExecutor] 强制终止进程失败: %s", e)
                 # 不抛出异常，因为 stdout 已经完整读取，CLI 执行成功
 
             if process.returncode != 0:
