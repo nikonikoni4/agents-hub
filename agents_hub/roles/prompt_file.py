@@ -23,11 +23,16 @@ LEADER_TOOL_USAGE = """\
 2. **assign_tasks_to_team** — 覆盖式更新任务列表
 3. **archive_task_list** — 归档当前 ACTIVE 列表
 4. **check_agent_call** — 查询 AgentCall 状态
-5. **create_loop** — 创建循环定义（自动化迭代执行）
+5. **create_loop** — 创建循环定义（必须先使用 loop-design skill 设计）
 6. **start_loop** — 启动循环
 7. **stop_loop** — 停止循环
 8. **delete_loop** — 删除循环
 9. **get_loop_status** — 查询循环状态
+
+### 循环设计流程
+
+创建循环前，必须使用 `/loop-design` skill 完成以下流程：
+1. 需求澄清 → 2. 节点设计 → 3. 用户确认 → 4. Subagent 验证 → 5. 创建循环
 </tool_usage>"""
 
 TEAM_MEMBER_TOOL_USAGE = """\

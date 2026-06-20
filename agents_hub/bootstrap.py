@@ -14,6 +14,49 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+def _get_template_dir() -> Path:
+    """获取模板目录路径。
+
+    Returns:
+        模板目录路径。
+    """
+    if getattr(sys, "frozen", False):
+        bundle_dir = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+        return bundle_dir / "template"
+    else:
+        return Path(__file__).resolve().parent.parent / "template"
+
+
+def _copy_skill_to_role(skill_name: str, role_name: str) -> None:
+    """将 skill 复制到角色的 skills 目录。
+
+    如果 skill 已存在则覆盖，确保 skill 是最新的。
+
+    Args:
+        skill_name: skill 名称（template/skills/ 下的目录名）。
+        role_name: 角色名称。
+    """
+    from agents_hub.config.config import config
+
+    template_dir = _get_template_dir()
+    source_skill_dir = template_dir / "skills" / skill_name
+
+    if not source_skill_dir.exists():
+        logger.warning(f"Skill 模板不存在，跳过复制: {source_skill_dir}")
+        return
+
+    target_skill_dir = config.data_path / "agents" / role_name / "work_root" / "skills" / skill_name
+
+    # 如果目标已存在，先删除再复制（确保是最新的）
+    if target_skill_dir.exists():
+        shutil.rmtree(target_skill_dir)
+        logger.info(f"已删除旧版 skill: {target_skill_dir}")
+
+    # 复制整个 skill 目录
+    shutil.copytree(source_skill_dir, target_skill_dir)
+    logger.info(f"已复制 skill '{skill_name}' 到角色 '{role_name}': {target_skill_dir}")
+
+
 def initialize_resources() -> None:
     """初始化资源文件
 
@@ -21,12 +64,7 @@ def initialize_resources() -> None:
     """
     from agents_hub.config.config import config
 
-    if getattr(sys, "frozen", False):
-        bundle_dir = Path(sys._MEIPASS)  # type: ignore[attr-defined]
-        template_dir = bundle_dir / "template"
-    else:
-        template_dir = Path(__file__).resolve().parent.parent / "template"
-
+    template_dir = _get_template_dir()
     data_path = config.data_path
 
     if not template_dir.exists():
@@ -52,6 +90,7 @@ def initialize_default_roles() -> None:
     """初始化默认角色
 
     创建系统必需的默认角色（如 manager）和系统角色（如 Agents-Hub-Assistant），如果不存在则创建。
+    同时为 manager 角色复制 loop-design skill（无论角色是否已存在，确保 skill 是最新的）。
     """
     from agents_hub.config import RoleType, config
     from agents_hub.config.types import AgentPlatform
@@ -72,6 +111,12 @@ def initialize_default_roles() -> None:
             logger.info(f"已创建默认角色: {manager_role_name}")
         except Exception as e:
             logger.warning(f"创建默认角色 {manager_role_name} 失败: {e}")
+
+    # 为 manager 角色复制 loop-design skill（无论角色是否已存在，确保 skill 是最新的）
+    try:
+        _copy_skill_to_role("loop-design", manager_role_name)
+    except Exception as e:
+        logger.warning(f"复制 loop-design skill 到 {manager_role_name} 失败: {e}")
 
     # Agents-Hub-Assistant 角色：系统预置的助手角色
     assistant_role_name = "Agents-Hub-Assistant"

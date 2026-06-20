@@ -1055,68 +1055,23 @@ async def create_loop(
 ) -> dict:
     """创建循环定义（Leader-only）。
 
-    创建一个自动化循环，让多个 Agent 按顺序反复执行任务，直到满足退出条件。
-    典型场景：Executor 实现代码 → Reviewer 审查 → Executor 修改 → Reviewer 再审查 → ...
-
-    创建后循环处于 CREATED 状态，需要调用 start_loop 启动。
+    **重要**：必须先使用 loop-design skill 完成需求澄清和提示词设计，确保节点设计合理后再调用此工具。
 
     Args:
         agent_token: Leader 的身份令牌。
         nodes: 循环节点列表，每个节点包含：
-            - node_type: "normal"（执行任务）或 "terminator"（判断是否继续）
+            - node_type: "normal" 或 "terminator"
             - agent_name: 执行该节点的 Agent 名称
-            - role_description: 节点职责描述（告诉 Agent 它该做什么）
-            - output_schema_prompt: 输出格式要求（可选，Markdown 格式）
-            - output_schema_fields: 必需字段列表（可选，用于校验输出）
-            - max_retries: 输出校验失败时的重试次数（可选，默认 3）
-        max_iterations: 最大循环轮数，防止死循环。
-        initial_task: 第一轮执行时交给第一个节点的任务内容。
+            - role_description: 节点职责描述
+            - output_schema_prompt: 输出格式要求（Markdown 格式）
+            - output_schema_fields: 必需字段列表
+            - max_retries: 重试次数（可选，默认 3）
+        max_iterations: 最大循环轮数。
+        initial_task: 第一轮执行时的任务内容。
 
     Returns:
         成功: {"loop_id": "...", "status": "created"}
         失败: {"error": {"code": "...", "message": "..."}}
-
-    使用示例:
-        # 创建一个 Executor-Reviewer 循环
-        nodes = [
-            {
-                "node_type": "normal",
-                "agent_name": "executor",
-                "role_description": (
-                    "你是代码实现者（Executor）。\n"
-                    "输入：你会收到上一轮审查者的反馈意见。\n"
-                    "职责：根据反馈意见修改代码，修复问题。\n"
-                    "输出：修改后的代码和修改说明。"
-                ),
-                "output_schema_prompt": (
-                    "请按以下格式输出：\\n\\n"
-                    "## 实现代码\\n"
-                    "（粘贴修改后的代码）\\n\\n"
-                    "## 修改说明\\n"
-                    "（说明本次修改了哪些内容，为什么这样修改）"
-                ),
-                "output_schema_fields": ["## 实现代码", "## 修改说明"]
-            },
-            {
-                "node_type": "terminator",
-                "agent_name": "reviewer",
-                "role_description": (
-                    "你是代码审查者（Reviewer）。\n"
-                    "输入：你会收到 Executor 实现的代码。\n"
-                    "职责：审查代码质量，检查是否符合要求。\n"
-                    "输出：审查意见，指出问题或确认通过。"
-                ),
-                "output_schema_prompt": (
-                    "请按以下格式输出：\\n\\n"
-                    "## 审查意见\\n"
-                    "（详细说明审查结果）\\n\\n"
-                    "## 审查结论\\n"
-                    "（填写"通过"或"需修改"）"
-                ),
-                "output_schema_fields": ["## 审查意见", "## 审查结论"]
-            }
-        ]
-        result = await create_loop(token, nodes, 10, "实现用户登录功能")
     """
     logger.info(
         "MCP 调用: create_loop, nodes=%d, max_iterations=%d",
