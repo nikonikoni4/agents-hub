@@ -181,18 +181,25 @@ try:
     )
 except asyncio.TimeoutError:
     logger.warning(
-        "[CodexExecutor] 进程等待超时，强制终止: pid=%s, session_id=%s",
+        "[CodexExecutor] 进程等待超时(%ds)，强制终止: pid=%s, session_id=%s. "
+        "可能原因：进程僵尸、子进程未关闭、资源未释放。stdout 已完整读取，继续执行。",
+        30,
         process.pid,
         session_id,
     )
-    process.kill()
-    await process.wait()  # 等待 kill 后的退出
-    raise CLIExecutionError(
-        platform="Codex",
-        exit_code=-1,
-        stderr="进程等待超时（30秒），已强制终止。可能原因：进程僵尸、子进程未关闭、资源未释放"
-    )
+    try:
+        process.kill()
+        # 不等待 kill 完成，避免再次阻塞
+    except Exception as e:
+        logger.debug("[CodexExecutor] 强制终止进程失败: %s", e)
+    # 不抛出异常，因为 stdout 已经完整读取，CLI 执行成功
 ```
+
+**关键设计决策**：
+- **不抛出异常**：因为 stdout 已经完整读取（读到 EOF），CLI 实际上已经成功执行完成
+- **只记录警告**：超时是进程清理阶段的问题，不应该影响任务状态
+- **强制 kill**：尝试清理僵尸进程，但不等待 kill 完成（避免再次阻塞）
+- **继续执行**：任务正常闭环，Agent 状态不会变为 error
 
 ### 方案2：不等待进程退出（不推荐）
 

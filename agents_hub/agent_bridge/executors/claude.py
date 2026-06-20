@@ -10,7 +10,7 @@ from agents_hub.config.types import CLAUDE_COMMAND
 from agents_hub.roles.models import RoleConfig
 from agents_hub.utils import get_logger
 
-logger = get_logger(__name__, logging.DEBUG)
+logger = get_logger(__name__)
 
 
 class ClaudeExecutor:
@@ -126,23 +126,21 @@ class ClaudeExecutor:
                     session_id,
                     process.returncode,
                 )
-            except asyncio.TimeoutError as e:
-                logger.error(
-                    "[ClaudeExecutor] 进程等待超时(%ds)，强制终止: pid=%s, session_id=%s, line_count=%d",
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "[ClaudeExecutor] 进程等待超时(%ds)，强制终止: pid=%s, session_id=%s, line_count=%d. "
+                    "可能原因：进程僵尸、子进程未关闭、资源未释放。stdout 已完整读取，继续执行。",
                     process_wait_timeout,
                     process.pid,
                     session_id,
                     line_count,
                 )
-                process.kill()
-                await process.wait()
-                raise CLIExecutionError(
-                    platform="Claude",
-                    exit_code=-1,
-                    stderr=f"进程等待超时（{process_wait_timeout}秒），已强制终止。"
-                           f"可能原因：进程僵尸、子进程未关闭、资源未释放。"
-                           f"已读取 {line_count} 行输出。"
-                ) from e
+                try:
+                    process.kill()
+                    # 不等待 kill 完成，避免再次阻塞
+                except Exception as e:
+                    logger.debug("[ClaudeExecutor] 强制终止进程失败: %s", e)
+                # 不抛出异常，因为 stdout 已经完整读取，CLI 执行成功
 
             if process.returncode != 0:
                 assert process.stderr is not None
