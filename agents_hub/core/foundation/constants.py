@@ -9,5 +9,8 @@
 # 压缩阈值（token 数量）
 MAX_TOKEN = 1000
 
+# 自动上下文压缩阈值（K tokens），当 agent context_usage 超过此值时自动触发压缩
+AUTO_COMPACT_THRESHOLD = 200
+
 # 本地数据存储路径（保留用于向后兼容，新代码应使用 group_chat_paths）
 LOCAL_DATA_PATH = "local_data"

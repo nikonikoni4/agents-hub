@@ -410,6 +410,25 @@ class Agent:
                 context=f"Agent {self.name} context_usage → {context_usage}K"
             )
 
+    async def _auto_compact_if_needed(self) -> None:
+        """自动上下文压缩：当 context_usage 超过阈值时触发。"""
+        from agents_hub.core.foundation.constants import AUTO_COMPACT_THRESHOLD
+
+        if self.context_usage < AUTO_COMPACT_THRESHOLD:
+            return
+
+        self.logger.info(
+            "Agent %s context_usage=%dK 超过阈值 %dK，触发自动压缩",
+            self.name,
+            self.context_usage,
+            AUTO_COMPACT_THRESHOLD,
+        )
+        try:
+            await self.compress_context()
+        except Exception as e:
+            # 自动压缩失败不应影响正常消息处理
+            self.logger.error("Agent %s 自动压缩失败: %s", self.name, str(e))
+
     async def compress_context(self):
         """
         压缩 Agent 的 CLI session 上下文
@@ -993,6 +1012,10 @@ call_id: {msg.call_id}
                 await self._update_context_usage(result)
             finally:
                 await self._sync_status("idle")
+
+            # 6.5 自动上下文压缩（当 context_usage 超过阈值时）
+            await self._auto_compact_if_needed()
+
             # 7. 兜底闭环（避免 MCP 断连导致群聊无消息）
             await self._fallback_close_task(msg, result)
 
