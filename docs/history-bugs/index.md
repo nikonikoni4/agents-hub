@@ -189,3 +189,9 @@
  - path: docs/history-bugs/2026-06-20-codex-stdout-long-json-line-limit.md
  - 触发规则：Codex Agent 执行时报 `Separator is not found, and chunk exceed the limit` 或 `LimitOverrunError`
  - 内容摘要：Codex `--json` 的单行 JSON 可能因 `command_execution.aggregated_output` 超过 asyncio StreamReader limit；`readline`/`readuntil` 都会失败。修复：改用固定 chunk `read()`，自行维护 buffer 按换行切分，并添加超长单行复现测试
+
+## Codex/Claude 进程 wait() 阻塞导致任务无法闭环
+ - updated_at : 2026-06-20
+ - path: docs/history-bugs/2026-06-20-codex-process-wait-blocking.md
+ - 触发规则：Agent 任务一直处于 running 状态，消息无法显示在群聊中，日志最后停留在"等待进程退出"
+ - 内容摘要：偶发性 bug（出现频率较高）。CLI 进程 stdout 关闭后，`await process.wait()` 永久阻塞导致任务无法完成。可能原因：进程僵尸、子进程未关闭、Windows asyncio 进程管理问题。修复：添加 30 秒超时，超时后强制 kill 进程。已在 CodexExecutor 和 ClaudeExecutor 中修复

@@ -110,18 +110,40 @@ class ClaudeExecutor:
             )
 
             # 等待进程结束并检查返回码
+            # Bug fix: 添加超时防止永久阻塞
+            # 参考: docs/history-bugs/2026-06-20-codex-process-wait-blocking.md
+            process_wait_timeout = int(os.getenv("PROCESS_WAIT_TIMEOUT", "30"))
             logger.debug(
                 "[ClaudeExecutor] 等待进程退出: pid=%s, session_id=%s",
                 process.pid,
                 session_id,
             )
-            await process.wait()
-            logger.debug(
-                "[ClaudeExecutor] 进程已退出: pid=%s, session_id=%s, returncode=%s",
-                process.pid,
-                session_id,
-                process.returncode,
-            )
+            try:
+                await asyncio.wait_for(process.wait(), timeout=process_wait_timeout)
+                logger.debug(
+                    "[ClaudeExecutor] 进程已退出: pid=%s, session_id=%s, returncode=%s",
+                    process.pid,
+                    session_id,
+                    process.returncode,
+                )
+            except asyncio.TimeoutError as e:
+                logger.error(
+                    "[ClaudeExecutor] 进程等待超时(%ds)，强制终止: pid=%s, session_id=%s, line_count=%d",
+                    process_wait_timeout,
+                    process.pid,
+                    session_id,
+                    line_count,
+                )
+                process.kill()
+                await process.wait()
+                raise CLIExecutionError(
+                    platform="Claude",
+                    exit_code=-1,
+                    stderr=f"进程等待超时（{process_wait_timeout}秒），已强制终止。"
+                           f"可能原因：进程僵尸、子进程未关闭、资源未释放。"
+                           f"已读取 {line_count} 行输出。"
+                ) from e
+
             if process.returncode != 0:
                 assert process.stderr is not None
                 stderr = await process.stderr.read()
