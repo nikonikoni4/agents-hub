@@ -62,6 +62,7 @@ class Agent:
         self._run = True
         self._consecutive_no_finish_count: int = 0  # 连续未闭环计数
         self.max_consecutive_no_finish: int = 30  # 阈值
+        self._loop_completion_queue: asyncio.Queue | None = None  # 循环完成通知队列
         self.logger = get_logger(f"agent.{self.name}")
 
     @property
@@ -83,6 +84,60 @@ class Agent:
         """设置该agent是否工作"""
         # TODO 后续使用，暂时占位
         self._run = run
+
+    def set_loop_completion_queue(self, queue: asyncio.Queue | None):
+        """设置或清除循环完成通知队列引用
+
+        Args:
+            queue: 循环完成通知队列，None 表示清除引用
+        """
+        self._loop_completion_queue = queue
+
+    def _should_accept_message(self, msg: AgentMessage) -> bool:
+        """判断当前状态下是否应该接收该消息
+
+        白名单规则（仅在 status='in_loop' 时生效）：
+        - 接收：来自同一循环的消息（msg.metadata.get("loop_id") == self.current_loop_id）
+        - 接收：来自 Manager 的控制信号（msg.send_from == config.default_manager_name）
+        - 拒绝：其他所有消息
+
+        Args:
+            msg: 待判断的消息
+
+        Returns:
+            True: 接收消息，继续处理
+            False: 拒绝消息，记录 WARNING 并跳过
+        """
+        agent_member_info = self.runtime.get_agent_member_info(self.name)
+        if not agent_member_info:
+            return True
+
+        # 只有 in_loop 状态才启用白名单过滤
+        if agent_member_info.status != "in_loop":
+            return True
+
+        # in_loop 状态：检查白名单
+        current_loop_id = agent_member_info.current_loop_id
+        msg_loop_id = msg.metadata.get("loop_id") if msg.metadata else None
+
+        # 白名单 1：来自同一循环的消息
+        if msg_loop_id and msg_loop_id == current_loop_id:
+            return True
+
+        # 白名单 2：来自 Manager 的控制信号
+        if msg.send_from == config.default_manager_name:
+            return True
+
+        # 拒绝：不在白名单内
+        self.logger.warning(
+            "消息被白名单拒绝: agent=%s, call_id=%s, send_from=%s, "
+            "reason=Agent 处于循环中（loop_id=%s），只接收循环内消息和 Manager 控制信号",
+            self.name,
+            msg.call_id,
+            msg.send_from,
+            current_loop_id,
+        )
+        return False
 
     async def stop(self):
         """
@@ -906,7 +961,12 @@ call_id: {msg.call_id}
                 )
                 continue
 
-            # 3. 注入 runtime 和工具使用说明到 CLAUDE.md/AGENTS.md
+            # 4. 检查白名单（循环隔离）
+            if not self._should_accept_message(msg):
+                # 消息已被拒绝，_should_accept_message 已记录 WARNING 日志
+                continue
+
+            # 5. 注入 runtime 和工具使用说明到 CLAUDE.md/AGENTS.md
             # [deprecated]:已弃用，但保留
             # try:
             #     self._inject_runtime_to_files(self.task_manager)
@@ -915,7 +975,7 @@ call_id: {msg.call_id}
             #     # 注入失败不应该影响消息处理
             #     self.logger.debug("Runtime 注入失败: agent=%s, error=%s", self.name, str(e))
 
-            # 4. 渲染 LLM prompt（不写回 msg.content）
+            # 6. 渲染 LLM prompt（不写回 msg.content）
             prompt = render_for_llm(msg)
             status = (
                 "chatting" if msg.session_type == SessionType.BTW else "busy"
@@ -933,10 +993,10 @@ call_id: {msg.call_id}
                 await self._update_context_usage(result)
             finally:
                 await self._sync_status("idle")
-            # 5. 兜底闭环（避免 MCP 断连导致群聊无消息）
+            # 7. 兜底闭环（避免 MCP 断连导致群聊无消息）
             await self._fallback_close_task(msg, result)
 
-            # 6. NOTIFICATION 消息保存到群聊历史
+            # 8. NOTIFICATION 消息保存到群聊历史
             # _fallback_close_task 只处理 TASK 消息，NOTIFICATION 需要单独保存
             if msg.message_type == MessageType.NOTIFICATION and result and result.text:
                 call = await self.agent_call_manager.get_call(msg.call_id)
@@ -944,7 +1004,7 @@ call_id: {msg.call_id}
                     result.text = render_for_chat(self.name, msg.send_from, result.text)
                     await self.runtime.add_message(result)
 
-            # 6. TASK 闭环提醒（暂时注释，测试阶段）
+            # 9. TASK 闭环提醒（暂时注释，测试阶段）
             # if self._needs_complete_task_reminder(msg):
             #     self._enqueue_complete_task_reminder(msg)
             #     self._consecutive_no_finish_count += 1

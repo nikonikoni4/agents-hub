@@ -25,3 +25,5 @@ class AgentMessage:
     # 上传文件列表，每个 dict 对应 UploadedFileInfo 的序列化：
     # {"file_name": str, "file_path": str, "file_type": str, "file_size": int}
     files: list[dict[str, Any]] | None = None
+    # 消息元数据，用于携带额外信息（如循环标识、循环上下文等）
+    metadata: dict[str, Any] | None = None

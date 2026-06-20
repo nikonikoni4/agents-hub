@@ -62,3 +62,31 @@ class TaskListStatus(str, Enum):
 
     ACTIVE = "active"
     ARCHIVED = "archived"
+
+
+class LoopStatus(str, Enum):
+    """Loop 循环状态
+
+    - CREATED: 已创建，待启动
+    - RUNNING: 运行中
+    - PAUSED: 已暂停
+    - COMPLETED: 已完成
+    - FAILED: 失败
+    """
+
+    CREATED = "created"
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class LoopNodeType(str, Enum):
+    """Loop 节点类型
+
+    - NORMAL: 普通节点，执行任务
+    - TERMINATOR: 终止判断节点，决定是否继续循环
+    """
+
+    NORMAL = "normal"
+    TERMINATOR = "terminator"

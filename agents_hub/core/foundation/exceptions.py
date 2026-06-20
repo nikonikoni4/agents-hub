@@ -4,6 +4,8 @@
 定义 agents-hub 中使用的所有异常类，提供统一的错误处理机制。
 """
 
+from typing import Any
+
 from agents_hub.exceptions import AgentsHubError as _TopLevelAgentsHubError
 
 __all__ = [
@@ -231,5 +233,42 @@ class ForkError(AgentsHubError):
                 "platform": platform,
                 "source_session": source_session,
                 "reason": reason,
+            },
+        )
+
+
+class LoopNotFoundError(AgentsHubError):
+    """Loop 不存在"""
+
+    def __init__(self, loop_id: str):
+        super().__init__(
+            message=f"Loop '{loop_id}' 不存在",
+            error_code="LOOP_NOT_FOUND",
+            details={"loop_id": loop_id},
+        )
+
+
+class LoopValidationError(ValidationError):
+    """Loop 校验失败"""
+
+    def __init__(self, reason: str, details: dict[str, Any] | None = None):
+        super().__init__(
+            message=f"Loop 校验失败: {reason}",
+            error_code="LOOP_VALIDATION_ERROR",
+            details=details or {},
+        )
+
+
+class LoopStateError(AgentsHubError):
+    """Loop 状态错误"""
+
+    def __init__(self, loop_id: str, current_status: str, attempted_action: str):
+        super().__init__(
+            message=f"Loop '{loop_id}' 状态错误: 当前状态 '{current_status}' 不支持操作 '{attempted_action}'",
+            error_code="LOOP_STATE_ERROR",
+            details={
+                "loop_id": loop_id,
+                "current_status": current_status,
+                "attempted_action": attempted_action,
             },
         )

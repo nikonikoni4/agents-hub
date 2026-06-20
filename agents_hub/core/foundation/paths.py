@@ -259,6 +259,26 @@ class GroupChatPaths:
         """
         return self.base_dir(group_chat_id, project_path) / "tasks.jsonl"
 
+    def loops_data(self, group_chat_id: str, project_path: str) -> Path:
+        """
+        Loop 循环执行数据文件
+
+        存储内容：
+        - Loop 对象的 JSONL 序列化数据
+        - 包含循环 ID、节点列表、状态、迭代次数等
+
+        路径格式：local_data/teams/<project>/<id>/loops.jsonl
+        """
+        return self.base_dir(group_chat_id, project_path) / "loops.jsonl"
+
+    def loops_log(self, group_chat_id: str, project_path: str) -> Path:
+        """
+        Loop 循环执行日志文件
+
+        路径格式：local_data/teams/<project>/<id>/loops.log
+        """
+        return self.base_dir(group_chat_id, project_path) / "loops.log"
+
 
 # 全局单例实例
 group_chat_paths = GroupChatPaths()
