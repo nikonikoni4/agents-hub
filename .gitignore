@@ -238,3 +238,4 @@ prompts
 start_branch.ps1
 worktrees
 .last_sync_time
+.codex_pytest_tmp
