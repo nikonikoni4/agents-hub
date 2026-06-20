@@ -23,6 +23,11 @@ LEADER_TOOL_USAGE = """\
 2. **assign_tasks_to_team** — 覆盖式更新任务列表
 3. **archive_task_list** — 归档当前 ACTIVE 列表
 4. **check_agent_call** — 查询 AgentCall 状态
+5. **create_loop** — 创建循环定义（自动化迭代执行）
+6. **start_loop** — 启动循环
+7. **stop_loop** — 停止循环
+8. **delete_loop** — 删除循环
+9. **get_loop_status** — 查询循环状态
 </tool_usage>"""
 
 TEAM_MEMBER_TOOL_USAGE = """\
@@ -71,7 +76,7 @@ LEADER_ROLE_INSTRUCTION = f"""\
 
 1. 收到任务后，分析并拆解为可执行的子任务
 2. 通过 call_agent 将子任务派给对应的团队成员
-3. 通过 assign_tasks_to_team 更新任务列表，让团队可见
+3. 通过 assign_tasks_to_team 更新任务列表
 4. 安排完任务后，回复结果即可
 5. Worker 完成后会通过新的 AgentCall 重新激活你，届时汇总结果
 6. 如果 Worker 报告阻塞，根据情况处理：

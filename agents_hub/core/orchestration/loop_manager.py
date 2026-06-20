@@ -1,7 +1,15 @@
 """
-Loop 循环管理器
+Loop 循环管理器。
 
-管理 Loop 循环的创建、查询、更新和持久化。
+管理 Loop 循环的创建、查询、更新和持久化。LoopManager 是 Loop 功能的
+CRUD 入口，负责：
+- 创建循环（带校验和并发控制）
+- 查询循环（按 loop_id 或 group_chat_id）
+- 更新循环状态（带状态机校验）
+- 删除循环（只能删除非 RUNNING 状态）
+- 持久化到 JSONL（append-only 模式）
+
+设计决策参考：PRD 中的"数据模型"和"持久化"章节。
 """
 
 import asyncio
@@ -25,14 +33,27 @@ from agents_hub.utils.logger import get_specialized_logger
 
 
 class LoopManager:
-    """Loop 循环管理器
+    """Loop 循环管理器。
 
-    职责：
-    - 创建循环（带校验和并发控制）
-    - 查询循环（按 loop_id 或 group_chat_id）
-    - 更新循环状态（带状态机校验）
-    - 删除循环（只能删除非 RUNNING 状态）
-    - 持久化到 JSONL（append-only 模式）
+    负责 Loop 循环的 CRUD 操作和持久化管理。每个 GroupChat 实例化一个
+    LoopManager，通过 group_chat_id 隔离不同群聊的循环数据。
+
+    状态机转换规则：
+    - CREATED -> RUNNING（启动循环）
+    - RUNNING -> PAUSED / COMPLETED / FAILED（暂停/正常完成/失败）
+    - PAUSED -> RUNNING / FAILED（恢复/失败）
+    - COMPLETED / FAILED 是终态，不可转换
+
+    持久化策略：
+    - 使用 JSONL 格式，append-only 模式
+    - 每次状态变更追加一条记录
+    - 同一 loop_id 多条记录取最新（容错）
+    - 删除操作使用墓碑记录（_deleted: true）
+
+    Attributes:
+        group_chat_id: 所属群聊 ID。
+        role_manager: 角色管理器，用于校验 agent_name 是否存在。
+        logger: 专用日志器，输出到 loops.log。
     """
 
     # 合法的状态转换：from_status -> {allowed_to_statuses}
@@ -49,6 +70,12 @@ class LoopManager:
     }
 
     def __init__(self, group_chat_id: str, project_path: str):
+        """初始化 LoopManager。
+
+        Args:
+            group_chat_id: 所属群聊 ID，用于隔离不同群聊的循环数据。
+            project_path: 项目路径，用于构建持久化文件路径。
+        """
         self.group_chat_id = group_chat_id
         self.role_manager = RoleManager()
 
@@ -80,19 +107,40 @@ class LoopManager:
         max_iterations: int,
         initial_task: str,
     ) -> Loop:
-        """创建 Loop 循环
+        """创建 Loop 循环。
+
+        创建一个新的循环实例，包含节点列表、最大循环次数和初始任务。
+        创建过程会进行严格校验，确保循环定义合法。
+
+        创建流程：
+        1. 获取并发控制锁，确保线程安全
+        2. 将节点字典列表转换为 LoopNode 对象
+        3. 调用 _validate_create_request() 执行校验规则
+        4. 构造 Loop 对象，设置初始状态为 CREATED
+        5. 保存到内存缓存和 JSONL 持久化文件
+        6. 记录 INFO 日志并返回 Loop 实例
 
         Args:
-            nodes: 节点列表，每个节点包含 node_type, agent_name, role_description, output_schema_prompt, output_schema_fields, max_retries
-            max_iterations: 最大循环次数
-            initial_task: 初始任务描述
+            nodes: 节点列表，每个节点必须包含以下字段：
+                - node_type: 节点类型（"normal" 或 "terminator"）
+                - agent_name: 执行节点的 Agent 名称
+                - role_description: 节点职责描述
+                - output_schema_prompt: 输出格式提示词（可选）
+                - output_schema_fields: 必需字段列表（可选）
+                - max_retries: 最大重试次数（可选，默认 3）
+            max_iterations: 最大循环次数，必须大于 0。
+            initial_task: 初始任务描述，发送给第一个节点的任务内容。
 
         Returns:
-            Loop: 创建的循环对象
+            创建的 Loop 实例，状态为 CREATED。
 
         Raises:
-            LoopValidationError: 校验失败（节点数量、TERMINATOR、agent_name、并发限制）
-            AgentNotFoundError: Agent 不存在
+            LoopValidationError: 校验失败，包括：
+                - 节点数量不足（至少 2 个）
+                - TERMINATOR 节点数量不正确（必须恰好 1 个）
+                - max_iterations <= 0
+                - 该群聊已有 RUNNING 状态的循环
+            AgentNotFoundError: 节点中指定的 agent_name 在 RoleManager 中不存在。
         """
         async with self._lock:
             # 构造 LoopNode 对象
@@ -129,16 +177,16 @@ class LoopManager:
             return loop
 
     def get_loop(self, loop_id: str) -> Loop:
-        """查询单个 Loop
+        """查询单个 Loop。
 
         Args:
-            loop_id: Loop ID
+            loop_id: 循环唯一标识。
 
         Returns:
-            Loop: 循环对象
+            Loop 实例。
 
         Raises:
-            LoopNotFoundError: Loop 不存在
+            LoopNotFoundError: 循环不存在时抛出。
         """
         if loop_id not in self._loops:
             self.logger.error(
@@ -151,13 +199,13 @@ class LoopManager:
         return self._loops[loop_id]
 
     def list_loops(self, status: str | None = None) -> list[Loop]:
-        """查询群聊的所有 Loop
+        """查询群聊的所有 Loop。
 
         Args:
-            status: 可选的状态过滤（"created"/"running"/"paused"/"completed"/"failed"）
+            status: 可选的状态过滤，取值为 "created"/"running"/"paused"/"completed"/"failed"。
 
         Returns:
-            list[Loop]: 循环列表
+            循环列表，按创建时间排序。
         """
         loops = list(self._loops.values())
 
@@ -174,20 +222,33 @@ class LoopManager:
         current_node_index: int | None = None,
         error_message: str | None = None,
     ) -> Loop:
-        """更新 Loop 状态
+        """更新 Loop 状态。
+
+        按照状态机规则更新循环状态，同时可选更新迭代次数、节点索引和错误信息。
+        同状态更新（幂等操作）用于持久化迭代/节点等字段变更。
+
+        更新流程：
+        1. 调用 get_loop() 获取循环实例（不存在则抛出 LoopNotFoundError）
+        2. 检查状态转换合法性：
+           - 如果新状态与当前状态相同，视为幂等操作，允许更新其他字段
+           - 如果新状态不同，检查 _VALID_TRANSITIONS 字典是否允许该转换
+        3. 更新状态和其他可选字段
+        4. 调用 _persist_loop() 持久化到 JSONL 文件
+        5. 记录 INFO 日志并返回更新后的 Loop 实例
 
         Args:
-            loop_id: Loop ID
-            status: 新状态
-            current_iteration: 当前迭代次数（可选）
-            current_node_index: 当前节点索引（可选）
-            error_message: 错误信息（可选）
+            loop_id: 循环唯一标识。
+            status: 新状态，取值为 "created"/"running"/"paused"/"completed"/"failed"。
+            current_iteration: 当前迭代次数（可选）。
+            current_node_index: 当前节点索引（可选）。
+            error_message: 错误信息（可选），仅在 FAILED 状态时设置。
 
         Returns:
-            Loop: 更新后的循环对象
+            更新后的 Loop 实例。
 
         Raises:
-            LoopNotFoundError: Loop 不存在
+            LoopNotFoundError: 循环不存在时抛出。
+            LoopStateError: 状态转换非法时抛出（如 COMPLETED -> RUNNING）。
         """
         loop = self.get_loop(loop_id)
 
@@ -230,14 +291,17 @@ class LoopManager:
         return loop
 
     async def delete_loop(self, loop_id: str) -> None:
-        """删除 Loop
+        """删除 Loop。
+
+        删除指定的循环，只能删除非 RUNNING 状态的循环。
+        删除操作使用墓碑记录（_deleted: true）持久化，确保重启后仍保持删除状态。
 
         Args:
-            loop_id: Loop ID
+            loop_id: 循环唯一标识。
 
         Raises:
-            LoopNotFoundError: Loop 不存在
-            LoopStateError: Loop 状态为 RUNNING，不能删除
+            LoopNotFoundError: 循环不存在时抛出。
+            LoopStateError: 循环状态为 RUNNING 时抛出，不能删除正在运行的循环。
         """
         loop = self.get_loop(loop_id)
 
@@ -259,14 +323,29 @@ class LoopManager:
         self.logger.info("删除 Loop: loop_id=%s", loop_id)
 
     def _validate_create_request(self, nodes: list[LoopNode], max_iterations: int) -> None:
-        """校验创建 Loop 的请求
+        """校验创建 Loop 的请求。
+
+        执行以下校验规则：
+        1. max_iterations 必须大于 0
+        2. 节点数量至少 2 个
+        3. 有且仅有 1 个 TERMINATOR 节点
+        4. 所有 agent_name 必须在 RoleManager 中存在
+        5. 该群聊没有其他 RUNNING 状态的循环
+
+        校验逻辑详解：
+        - 规则 1：防止死循环，max_iterations 必须是正整数
+        - 规则 2：循环至少需要 2 个节点（一个执行者 + 一个审查者）
+        - 规则 3：TERMINATOR 节点负责判断循环是否继续，必须恰好 1 个
+        - 规则 4：确保节点指定的 Agent 在系统中存在
+        - 规则 5：一个群聊同时只能有一个 RUNNING 状态的循环，避免资源竞争
 
         Args:
-            nodes: 节点列表
+            nodes: 节点列表，已转换为 LoopNode 对象。
+            max_iterations: 最大循环次数。
 
         Raises:
-            LoopValidationError: 校验失败
-            AgentNotFoundError: Agent 不存在
+            LoopValidationError: 校验失败，包括节点数量、TERMINATOR 数量、并发限制等。
+            AgentNotFoundError: 节点中指定的 agent_name 不存在。
         """
         # 1. 最大循环次数必须大于 0
         if max_iterations <= 0:
@@ -339,13 +418,16 @@ class LoopManager:
             )
 
     def _load_from_persistence(self) -> None:
-        """从 JSONL 加载历史 Loop
+        """从 JSONL 文件加载历史 Loop 数据。
 
-        容错处理：
+        启动时调用，从持久化文件恢复循环状态。采用容错处理策略：
         - 跳过空行
-        - 跳过损坏行（记录 WARNING）
-        - 同一 loop_id 多条记录取最新
+        - 跳过损坏行（记录 WARNING 日志）
+        - 同一 loop_id 多条记录取最新（自动去重）
         - 跳过已删除的 Loop（墓碑记录）
+
+        Raises:
+            FileSystemError: 文件读取失败时抛出。
         """
         if not self._persistence_path.exists():
             self.logger.debug("持久化文件不存在，跳过加载")
@@ -400,13 +482,16 @@ class LoopManager:
             ) from e
 
     def _persist_loop(self, loop: Loop) -> None:
-        """持久化单个 Loop（追加模式）
+        """持久化单个 Loop（追加模式）。
+
+        将 Loop 序列化为 JSON 并追加到 JSONL 文件。
+        每次状态变更都会追加一条新记录，实现 append-only 持久化。
 
         Args:
-            loop: Loop 对象
+            loop: 要持久化的 Loop 实例。
 
         Raises:
-            FileSystemError: 文件操作失败
+            FileSystemError: 文件写入失败时抛出。
         """
         data = loop.to_dict()
 
@@ -421,13 +506,16 @@ class LoopManager:
             ) from e
 
     def _persist_deletion(self, loop_id: str) -> None:
-        """持久化删除标记（墓碑记录）
+        """持久化删除标记（墓碑记录）。
+
+        写入一条包含 _deleted: true 的记录，标记该 loop_id 已被删除。
+        重启加载时会跳过墓碑记录对应的 loop_id。
 
         Args:
-            loop_id: 被删除的 Loop ID
+            loop_id: 被删除的 Loop ID。
 
         Raises:
-            FileSystemError: 文件操作失败
+            FileSystemError: 文件写入失败时抛出。
         """
         data = {"loop_id": loop_id, "_deleted": True}
 

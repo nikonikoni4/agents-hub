@@ -554,6 +554,7 @@ async def report_progress(agent_token: str, content: str, send_to: str | None = 
         成功: {"ok": True}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    # 已弃用
     logger.info(
         "MCP 调用: report_progress, send_to=%s, content_len=%d",
         send_to,
@@ -637,6 +638,7 @@ async def complete_task(
         成功: {"call_id": "...", "status": "completed|failed"}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    # 已弃用
     logger.info(
         "MCP 调用: complete_task, call_id=%s, success=%s, content_len=%d",
         call_id,
@@ -1051,18 +1053,70 @@ async def create_loop(
     max_iterations: int,
     initial_task: str,
 ) -> dict:
-    """
-    创建循环定义（Leader-only）。
+    """创建循环定义（Leader-only）。
+
+    创建一个自动化循环，让多个 Agent 按顺序反复执行任务，直到满足退出条件。
+    典型场景：Executor 实现代码 → Reviewer 审查 → Executor 修改 → Reviewer 再审查 → ...
+
+    创建后循环处于 CREATED 状态，需要调用 start_loop 启动。
 
     Args:
         agent_token: Leader 的身份令牌。
-        nodes: 循环节点列表，每个节点声明 agent_name、node_type、角色说明和输出约束。
-        max_iterations: 最大循环轮数，必须大于 0。
-        initial_task: 循环首次执行时交给第一个节点的任务内容。
+        nodes: 循环节点列表，每个节点包含：
+            - node_type: "normal"（执行任务）或 "terminator"（判断是否继续）
+            - agent_name: 执行该节点的 Agent 名称
+            - role_description: 节点职责描述（告诉 Agent 它该做什么）
+            - output_schema_prompt: 输出格式要求（可选，Markdown 格式）
+            - output_schema_fields: 必需字段列表（可选，用于校验输出）
+            - max_retries: 输出校验失败时的重试次数（可选，默认 3）
+        max_iterations: 最大循环轮数，防止死循环。
+        initial_task: 第一轮执行时交给第一个节点的任务内容。
 
     Returns:
         成功: {"loop_id": "...", "status": "created"}
         失败: {"error": {"code": "...", "message": "..."}}
+
+    使用示例:
+        # 创建一个 Executor-Reviewer 循环
+        nodes = [
+            {
+                "node_type": "normal",
+                "agent_name": "executor",
+                "role_description": (
+                    "你是代码实现者（Executor）。\n"
+                    "输入：你会收到上一轮审查者的反馈意见。\n"
+                    "职责：根据反馈意见修改代码，修复问题。\n"
+                    "输出：修改后的代码和修改说明。"
+                ),
+                "output_schema_prompt": (
+                    "请按以下格式输出：\\n\\n"
+                    "## 实现代码\\n"
+                    "（粘贴修改后的代码）\\n\\n"
+                    "## 修改说明\\n"
+                    "（说明本次修改了哪些内容，为什么这样修改）"
+                ),
+                "output_schema_fields": ["## 实现代码", "## 修改说明"]
+            },
+            {
+                "node_type": "terminator",
+                "agent_name": "reviewer",
+                "role_description": (
+                    "你是代码审查者（Reviewer）。\n"
+                    "输入：你会收到 Executor 实现的代码。\n"
+                    "职责：审查代码质量，检查是否符合要求。\n"
+                    "输出：审查意见，指出问题或确认通过。"
+                ),
+                "output_schema_prompt": (
+                    "请按以下格式输出：\\n\\n"
+                    "## 审查意见\\n"
+                    "（详细说明审查结果）\\n\\n"
+                    "## 审查结论\\n"
+                    "（填写"通过"或"需修改"）"
+                ),
+                "output_schema_fields": ["## 审查意见", "## 审查结论"]
+            }
+        ]
+        result = await create_loop(token, nodes, 10, "实现用户登录功能")
     """
     logger.info(
         "MCP 调用: create_loop, nodes=%d, max_iterations=%d",
@@ -1102,12 +1156,13 @@ async def create_loop(
 
 
 async def start_loop(agent_token: str, loop_id: str) -> dict:
-    """
-    启动 CREATED 状态的循环（Leader-only）。
+    """启动循环执行（Leader-only）。
+
+    启动一个已创建的循环，参与的 Agent 将进入循环状态，自动执行任务流转。
 
     Args:
         agent_token: Leader 的身份令牌。
-        loop_id: 要启动的循环 ID。
+        loop_id: 要启动的循环 ID（从 create_loop 返回值获取）。
 
     Returns:
         成功: {"loop_id": "...", "status": "running"}
@@ -1139,15 +1194,16 @@ async def start_loop(agent_token: str, loop_id: str) -> dict:
 
 
 async def stop_loop(agent_token: str, loop_id: str) -> dict:
-    """
-    停止 RUNNING 状态的循环（Leader-only）。
+    """停止正在运行的循环（Leader-only）。
+
+    停止循环后，参与的 Agent 将恢复为普通状态，可以接收其他任务。
 
     Args:
         agent_token: Leader 的身份令牌。
         loop_id: 要停止的循环 ID。
 
     Returns:
-        成功: {"loop_id": "...", "status": "PAUSED"}
+        成功: {"loop_id": "...", "status": "paused"}
         失败: {"error": {"code": "...", "message": "..."}}
     """
     logger.info("MCP 调用: stop_loop, loop_id=%s", loop_id)
@@ -1176,8 +1232,9 @@ async def stop_loop(agent_token: str, loop_id: str) -> dict:
 
 
 async def delete_loop(agent_token: str, loop_id: str) -> dict:
-    """
-    删除非 RUNNING 状态的循环（Leader-only）。
+    """删除循环定义（Leader-only）。
+
+    删除已完成或已停止的循环。正在运行的循环需要先 stop_loop 再删除。
 
     Args:
         agent_token: Leader 的身份令牌。
@@ -1213,8 +1270,9 @@ async def delete_loop(agent_token: str, loop_id: str) -> dict:
 
 
 async def get_loop_status(agent_token: str, loop_id: str) -> dict:
-    """
-    查询循环状态，任意 Agent 可调用。
+    """查询循环状态（任意 Agent 可调用）。
+
+    查询循环的执行进度，包括当前轮次、当前节点、是否出错等。
 
     Args:
         agent_token: 调用者的身份令牌。
@@ -1222,12 +1280,12 @@ async def get_loop_status(agent_token: str, loop_id: str) -> dict:
 
     Returns:
         成功: {
-            "loop_id": "...",
-            "status": "...",
-            "current_iteration": int,
-            "max_iterations": int,
-            "current_node": "..." | None,
-            "error": "..." | None
+            "loop_id": "循环 ID",
+            "status": "created/running/paused/completed/failed",
+            "current_iteration": 当前轮次,
+            "max_iterations": 最大轮次,
+            "current_node": "当前执行的 Agent 名称",
+            "error": "错误信息（仅 failed 状态）"
         }
         失败: {"error": {"code": "...", "message": "..."}}
     """
