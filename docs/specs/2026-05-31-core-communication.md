@@ -48,7 +48,7 @@ abstract: core/communication 层的正式规格，定义消息路由机制、Age
 
 ### MessageRouter
 
-<key_function last_update="2026-06-19T11:19:09+08:00">
+<key_function last_update="2026-06-19T14:05:34+08:00">
 - agents_hub/core/communication/message_router.py
   - message_router.MessageRouter.register:26
   - message_router.MessageRouter.unregister:43

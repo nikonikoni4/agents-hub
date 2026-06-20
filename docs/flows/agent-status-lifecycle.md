@@ -69,7 +69,7 @@ class AgentMemberInfo:
 - 处理完成后：Agent.status = "idle"，AgentCall.status = COMPLETED/FAILED
 - 用户停止 Agent 时：Agent.status = "stopped"，所有未完成的 AgentCall 都被标记为 FAILED
 
-<key_function last_update="2026-06-19T11:19:08+08:00">
+<key_function last_update="2026-06-19T14:05:34+08:00">
 - agents_hub/api/routes/group_chat.py
   - group_chat.stop_member:406
   - group_chat.start_member:423
@@ -88,7 +88,7 @@ class AgentMemberInfo:
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent._sync_status:569
   - base_agent.Agent._set_error_status:599
-  - base_agent.Agent.run:860
+  - base_agent.Agent.run:862
 </key_function>
 
 ## 流程概览

@@ -89,11 +89,11 @@ Agent 间传递的消息结构，核心字段：
 
 ### 消息渲染契约
 
-<key_function last_update="2026-06-19T11:19:09+08:00">
+<key_function last_update="2026-06-19T14:05:34+08:00">
 - agents_hub/core/foundation/renderer.py
-  - renderer.parse_chat_input:76
-  - renderer.render_for_llm:45
-  - renderer.render_for_chat:65
+  - renderer.parse_chat_input:90
+  - renderer.render_for_llm:49
+  - renderer.render_for_chat:69
 </key_function>
 
 渲染只发生在三个边界，不在中间环节改写 content：
@@ -102,7 +102,7 @@ Agent 间传递的消息结构，核心字段：
 |------|------|------|------|
 | 入口 | parse_chat_input | 前端 → (send_to, content) | 解析 @xxx 格式，失败抛 InvalidMessageError |
 | LLM 出口 | render_for_llm | AgentMessage → LLM prompt | 用 `<incoming_message>` 标签包裹 |
-| UI 出口 | render_for_chat | Agent 输出 → 群聊记录 | 生成 `@xxx content` 格式 |
+| UI 出口 | render_for_chat | Agent 输出 → 群聊记录 | 非循环消息：`@{send_to} {content}`；循环消息：`[循环-节点{send_from}-第{loop_iteration}轮] @{send_to} {content}` |
 
 **XML 标签常量**（Tag 类）：预定义的 prompt 结构标签，用于 LLM 上下文的结构化输入：
 
@@ -113,6 +113,9 @@ Agent 间传递的消息结构，核心字段：
 | INCOMING_MESSAGE | incoming_message | 当前传入的消息 |
 | SUMMARY_OVERALL | overall_summary | 摘要中的整体内容 |
 | SUMMARY_FOR_YOU | summary_for_you | 摘要中针对当前 Agent 的内容 |
+| LOOP_NODE_ROLE | LOOP_NODE_ROLE | 循环节点职责描述 |
+| LOOP_OUTPUT_SCHEMA | LOOP_OUTPUT_SCHEMA | 循环节点输出格式要求 |
+| PREVIOUS_NODE_OUTPUT | PREVIOUS_NODE_OUTPUT | 上一个节点输出 |
 
 ### 异常体系
 

@@ -89,7 +89,7 @@ contract_refs:
 
 ### 对外接口
 
-<key_function last_update="2026-06-19T11:19:09+08:00">
+<key_function last_update="2026-06-19T14:05:34+08:00">
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent.SHARED_RULES:38
 - agents_hub/core/agent/manager.py
@@ -97,8 +97,8 @@ contract_refs:
 - agents_hub/core/agent/worker.py
   - worker.Worker.ROLE_INSTRUCTIONS:15
 - agents_hub/core/foundation/renderer.py
-  - renderer.render_for_llm:45
-  - renderer.render_for_chat:65
+  - renderer.render_for_llm:49
+  - renderer.render_for_chat:69
 - agents_hub/core/context/agent_context.py
   - agent_context.AgentContext.get_context:38
   - agent_context.AgentContext.build_user_prompt:180
@@ -108,7 +108,7 @@ contract_refs:
 |------|------|------|
 | `build_user_prompt(msg)` | 三段拼接构造 LLM user message | 按 runtime + context + incoming_message 顺序，`"\n\n"` 分隔 |
 | `render_for_llm(msg)` | 将消息渲染为 `<incoming_message>` XML 片段 | 输出必须包含 `[Agents Hub 平台消息]` 标识、`call_id`、`类型` |
-| `render_for_chat(content, send_to)` | 格式化消息写入群聊记录 | 格式 `@{send_to} {content}`，已以 `@{send_to}` 开头则不重复添加 |
+| `render_for_chat(send_from, send_to, content, is_loop_message?, loop_iteration?)` | 格式化消息写入群聊记录 | 非循环消息：`@{send_to} {content}`；循环消息：`[循环-节点{send_from}-第{loop_iteration}轮] @{send_to} {content}` |
 | `SHARED_RULES` (Agent) | 共享规则类变量 | 群聊消息显示规则 |
 | `ROLE_INSTRUCTIONS` (Manager) | Manager 工具指令类变量 | 工具列表、工作流程、派活要求、阻塞处理流程 |
 | `ROLE_INSTRUCTIONS` (Worker) | Worker 工具指令类变量 | 工具列表、工作流程、阻塞判定规则、回报要求 |

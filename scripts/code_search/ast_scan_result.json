@@ -1,7 +1,7 @@
 {
-  "total_files": 104,
-  "total_definitions": 742,
-  "total_calls": 3424,
+  "total_files": 106,
+  "total_definitions": 775,
+  "total_calls": 3493,
   "definitions": {
     "bootstrap.initialize_resources": {
       "line": 17,
@@ -74,47 +74,57 @@
       "name": "RecoverableError.__init__"
     },
     "agent_bridge.bridge.AgentBridge": {
-      "line": 29,
+      "line": 31,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge"
     },
     "agent_bridge.bridge.AgentBridge.__init__": {
-      "line": 32,
+      "line": 34,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge.__init__"
     },
     "agent_bridge.bridge.AgentBridge._create_parser": {
-      "line": 54,
+      "line": 56,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge._create_parser"
     },
+    "agent_bridge.bridge.AgentBridge._read_codex_usage_baseline": {
+      "line": 80,
+      "module": "agent_bridge.bridge",
+      "name": "AgentBridge._read_codex_usage_baseline"
+    },
+    "agent_bridge.bridge.AgentBridge._codex_usage_baseline": {
+      "line": 106,
+      "module": "agent_bridge.bridge",
+      "name": "AgentBridge._codex_usage_baseline"
+    },
     "agent_bridge.bridge.AgentBridge.execute_stream": {
-      "line": 78,
+      "line": 112,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge.execute_stream"
     },
     "agent_bridge.bridge.AgentBridge._dict_to_stream_event": {
-      "line": 151,
+      "line": 188,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge._dict_to_stream_event"
     },
     "agent_bridge.bridge.AgentBridge.execute": {
-      "line": 194,
+      "line": 231,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge.execute"
     },
     "agent_bridge.bridge.AgentBridge.bare_claude_call": {
-      "line": 282,
+      "line": 320,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge.bare_claude_call"
     },
     "agent_bridge.bridge.AgentBridge.stop_session": {
-      "line": 286,
+      "line": 324,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge.stop_session"
     },
     "agent_bridge.bridge.AgentBridge._init_bare_config": {
-      "line": 311,
+      "line": 349,
       "module": "agent_bridge.bridge",
       "name": "AgentBridge._init_bare_config"
     },
@@ -934,107 +944,127 @@
       "name": "Agent.__init__"
     },
     "core.agent.base_agent.Agent.set_run": {
-      "line": 82,
+      "line": 83,
       "module": "core.agent.base_agent",
       "name": "Agent.set_run"
     },
+    "core.agent.base_agent.Agent.set_loop_completion_queue": {
+      "line": 88,
+      "module": "core.agent.base_agent",
+      "name": "Agent.set_loop_completion_queue"
+    },
+    "core.agent.base_agent.Agent._should_accept_message": {
+      "line": 96,
+      "module": "core.agent.base_agent",
+      "name": "Agent._should_accept_message"
+    },
     "core.agent.base_agent.Agent.stop": {
-      "line": 87,
+      "line": 142,
       "module": "core.agent.base_agent",
       "name": "Agent.stop"
     },
     "core.agent.base_agent.Agent.execute": {
-      "line": 115,
+      "line": 170,
       "module": "core.agent.base_agent",
       "name": "Agent.execute"
     },
     "core.agent.base_agent.Agent.btw_execute": {
-      "line": 146,
+      "line": 201,
       "module": "core.agent.base_agent",
       "name": "Agent.btw_execute"
     },
     "core.agent.base_agent.Agent._validate_docker_config": {
-      "line": 170,
+      "line": 225,
       "module": "core.agent.base_agent",
       "name": "Agent._validate_docker_config"
     },
     "core.agent.base_agent.Agent._is_same_path": {
-      "line": 195,
+      "line": 250,
       "module": "core.agent.base_agent",
       "name": "Agent._is_same_path"
     },
     "core.agent.base_agent.Agent._process_message": {
-      "line": 202,
+      "line": 257,
       "module": "core.agent.base_agent",
       "name": "Agent._process_message"
     },
     "core.agent.base_agent.Agent._update_context_usage": {
-      "line": 331,
+      "line": 386,
       "module": "core.agent.base_agent",
       "name": "Agent._update_context_usage"
     },
+    "core.agent.base_agent.Agent._auto_compact_if_needed": {
+      "line": 413,
+      "module": "core.agent.base_agent",
+      "name": "Agent._auto_compact_if_needed"
+    },
     "core.agent.base_agent.Agent.compress_context": {
-      "line": 358,
+      "line": 432,
       "module": "core.agent.base_agent",
       "name": "Agent.compress_context"
     },
     "core.agent.base_agent.Agent._build_system_prompt": {
-      "line": 481,
+      "line": 555,
       "module": "core.agent.base_agent",
       "name": "Agent._build_system_prompt"
     },
     "core.agent.base_agent.Agent._build_opencode_system_prompt": {
-      "line": 499,
+      "line": 573,
       "module": "core.agent.base_agent",
       "name": "Agent._build_opencode_system_prompt"
     },
     "core.agent.base_agent.Agent._enqueue_complete_task_reminder": {
-      "line": 520,
+      "line": 594,
       "module": "core.agent.base_agent",
       "name": "Agent._enqueue_complete_task_reminder"
     },
     "core.agent.base_agent.Agent._needs_complete_task_reminder": {
-      "line": 559,
+      "line": 633,
       "module": "core.agent.base_agent",
       "name": "Agent._needs_complete_task_reminder"
     },
     "core.agent.base_agent.Agent._sync_status": {
-      "line": 569,
+      "line": 643,
       "module": "core.agent.base_agent",
       "name": "Agent._sync_status"
     },
     "core.agent.base_agent.Agent._set_error_status": {
-      "line": 599,
+      "line": 673,
       "module": "core.agent.base_agent",
       "name": "Agent._set_error_status"
     },
     "core.agent.base_agent.Agent._parse_changes_xml": {
-      "line": 641,
+      "line": 715,
       "module": "core.agent.base_agent",
       "name": "Agent._parse_changes_xml"
     },
     "core.agent.base_agent.Agent._strip_changes_xml": {
-      "line": 677,
+      "line": 751,
       "module": "core.agent.base_agent",
       "name": "Agent._strip_changes_xml"
     },
     "core.agent.base_agent.Agent._process_file_changes": {
-      "line": 681,
+      "line": 755,
       "module": "core.agent.base_agent",
       "name": "Agent._process_file_changes"
     },
     "core.agent.base_agent.Agent._fallback_close_task": {
-      "line": 729,
+      "line": 803,
       "module": "core.agent.base_agent",
       "name": "Agent._fallback_close_task"
     },
+    "core.agent.base_agent.Agent._notify_loop_completion": {
+      "line": 959,
+      "module": "core.agent.base_agent",
+      "name": "Agent._notify_loop_completion"
+    },
     "core.agent.base_agent.Agent.run": {
-      "line": 860,
+      "line": 984,
       "module": "core.agent.base_agent",
       "name": "Agent.run"
     },
     "core.agent.base_agent.Agent._run_loop": {
-      "line": 885,
+      "line": 1009,
       "module": "core.agent.base_agent",
       "name": "Agent._run_loop"
     },
@@ -1299,12 +1329,12 @@
       "name": "AgentContext.build_user_prompt"
     },
     "core.context.agent_context.AgentContext._build_runtime": {
-      "line": 213,
+      "line": 217,
       "module": "core.context.agent_context",
       "name": "AgentContext._build_runtime"
     },
     "core.context.agent_context.AgentContext._get_pinned_messages": {
-      "line": 280,
+      "line": 284,
       "module": "core.context.agent_context",
       "name": "AgentContext._get_pinned_messages"
     },
@@ -1509,159 +1539,189 @@
       "name": "GroupChatRuntime.close"
     },
     "core.foundation.exceptions.AgentsHubError": {
-      "line": 29,
+      "line": 31,
       "module": "core.foundation.exceptions",
       "name": "AgentsHubError"
     },
     "core.foundation.exceptions.AgentsHubError.__init__": {
-      "line": 32,
+      "line": 34,
       "module": "core.foundation.exceptions",
       "name": "AgentsHubError.__init__"
     },
     "core.foundation.exceptions.AgentsHubError.to_mcp_response": {
-      "line": 39,
+      "line": 41,
       "module": "core.foundation.exceptions",
       "name": "AgentsHubError.to_mcp_response"
     },
     "core.foundation.exceptions.AgentNotFoundError": {
-      "line": 52,
+      "line": 54,
       "module": "core.foundation.exceptions",
       "name": "AgentNotFoundError"
     },
     "core.foundation.exceptions.AgentNotFoundError.__init__": {
-      "line": 55,
+      "line": 57,
       "module": "core.foundation.exceptions",
       "name": "AgentNotFoundError.__init__"
     },
     "core.foundation.exceptions.GroupChatNotFoundError": {
-      "line": 63,
+      "line": 65,
       "module": "core.foundation.exceptions",
       "name": "GroupChatNotFoundError"
     },
     "core.foundation.exceptions.GroupChatNotFoundError.__init__": {
-      "line": 66,
+      "line": 68,
       "module": "core.foundation.exceptions",
       "name": "GroupChatNotFoundError.__init__"
     },
     "core.foundation.exceptions.MessageDeliveryError": {
-      "line": 74,
+      "line": 76,
       "module": "core.foundation.exceptions",
       "name": "MessageDeliveryError"
     },
     "core.foundation.exceptions.MessageDeliveryError.__init__": {
-      "line": 77,
+      "line": 79,
       "module": "core.foundation.exceptions",
       "name": "MessageDeliveryError.__init__"
     },
     "core.foundation.exceptions.AgentExecutionError": {
-      "line": 85,
+      "line": 87,
       "module": "core.foundation.exceptions",
       "name": "AgentExecutionError"
     },
     "core.foundation.exceptions.AgentExecutionError.__init__": {
-      "line": 88,
+      "line": 90,
       "module": "core.foundation.exceptions",
       "name": "AgentExecutionError.__init__"
     },
     "core.foundation.exceptions.AgentTimeoutError": {
-      "line": 96,
+      "line": 98,
       "module": "core.foundation.exceptions",
       "name": "AgentTimeoutError"
     },
     "core.foundation.exceptions.AgentTimeoutError.__init__": {
-      "line": 99,
+      "line": 101,
       "module": "core.foundation.exceptions",
       "name": "AgentTimeoutError.__init__"
     },
     "core.foundation.exceptions.ValidationError": {
-      "line": 110,
+      "line": 112,
       "module": "core.foundation.exceptions",
       "name": "ValidationError"
     },
     "core.foundation.exceptions.ExternalServiceError": {
-      "line": 116,
+      "line": 118,
       "module": "core.foundation.exceptions",
       "name": "ExternalServiceError"
     },
     "core.foundation.exceptions.InvalidMessageError": {
-      "line": 125,
+      "line": 127,
       "module": "core.foundation.exceptions",
       "name": "InvalidMessageError"
     },
     "core.foundation.exceptions.InvalidMessageError.__init__": {
-      "line": 128,
+      "line": 130,
       "module": "core.foundation.exceptions",
       "name": "InvalidMessageError.__init__"
     },
     "core.foundation.exceptions.FileSystemError": {
-      "line": 139,
+      "line": 141,
       "module": "core.foundation.exceptions",
       "name": "FileSystemError"
     },
     "core.foundation.exceptions.FileSystemError.__init__": {
-      "line": 142,
+      "line": 144,
       "module": "core.foundation.exceptions",
       "name": "FileSystemError.__init__"
     },
     "core.foundation.exceptions.CompactionError": {
-      "line": 150,
+      "line": 152,
       "module": "core.foundation.exceptions",
       "name": "CompactionError"
     },
     "core.foundation.exceptions.CompactionError.__init__": {
-      "line": 153,
+      "line": 155,
       "module": "core.foundation.exceptions",
       "name": "CompactionError.__init__"
     },
     "core.foundation.exceptions.AgentBusyError": {
-      "line": 161,
+      "line": 163,
       "module": "core.foundation.exceptions",
       "name": "AgentBusyError"
     },
     "core.foundation.exceptions.AgentBusyError.__init__": {
-      "line": 164,
+      "line": 166,
       "module": "core.foundation.exceptions",
       "name": "AgentBusyError.__init__"
     },
     "core.foundation.exceptions.DockerConfigError": {
-      "line": 176,
+      "line": 178,
       "module": "core.foundation.exceptions",
       "name": "DockerConfigError"
     },
     "core.foundation.exceptions.DockerConfigError.__init__": {
-      "line": 179,
+      "line": 181,
       "module": "core.foundation.exceptions",
       "name": "DockerConfigError.__init__"
     },
     "core.foundation.exceptions.DockerNotAvailableError": {
-      "line": 193,
+      "line": 195,
       "module": "core.foundation.exceptions",
       "name": "DockerNotAvailableError"
     },
     "core.foundation.exceptions.DockerNotAvailableError.__init__": {
-      "line": 196,
+      "line": 198,
       "module": "core.foundation.exceptions",
       "name": "DockerNotAvailableError.__init__"
     },
     "core.foundation.exceptions.DockerStartError": {
-      "line": 206,
+      "line": 208,
       "module": "core.foundation.exceptions",
       "name": "DockerStartError"
     },
     "core.foundation.exceptions.DockerStartError.__init__": {
-      "line": 209,
+      "line": 211,
       "module": "core.foundation.exceptions",
       "name": "DockerStartError.__init__"
     },
     "core.foundation.exceptions.ForkError": {
-      "line": 218,
+      "line": 220,
       "module": "core.foundation.exceptions",
       "name": "ForkError"
     },
     "core.foundation.exceptions.ForkError.__init__": {
-      "line": 225,
+      "line": 227,
       "module": "core.foundation.exceptions",
       "name": "ForkError.__init__"
+    },
+    "core.foundation.exceptions.LoopNotFoundError": {
+      "line": 240,
+      "module": "core.foundation.exceptions",
+      "name": "LoopNotFoundError"
+    },
+    "core.foundation.exceptions.LoopNotFoundError.__init__": {
+      "line": 243,
+      "module": "core.foundation.exceptions",
+      "name": "LoopNotFoundError.__init__"
+    },
+    "core.foundation.exceptions.LoopValidationError": {
+      "line": 251,
+      "module": "core.foundation.exceptions",
+      "name": "LoopValidationError"
+    },
+    "core.foundation.exceptions.LoopValidationError.__init__": {
+      "line": 254,
+      "module": "core.foundation.exceptions",
+      "name": "LoopValidationError.__init__"
+    },
+    "core.foundation.exceptions.LoopStateError": {
+      "line": 262,
+      "module": "core.foundation.exceptions",
+      "name": "LoopStateError"
+    },
+    "core.foundation.exceptions.LoopStateError.__init__": {
+      "line": 265,
+      "module": "core.foundation.exceptions",
+      "name": "LoopStateError.__init__"
     },
     "core.foundation.file_snapshot.create_file_snapshot": {
       "line": 16,
@@ -1739,24 +1799,34 @@
       "name": "MessageType"
     },
     "core.foundation.models.CallStatus": {
-      "line": 24,
+      "line": 25,
       "module": "core.foundation.models",
       "name": "CallStatus"
     },
     "core.foundation.models.GroupChatType": {
-      "line": 34,
+      "line": 35,
       "module": "core.foundation.models",
       "name": "GroupChatType"
     },
     "core.foundation.models.TaskStatus": {
-      "line": 41,
+      "line": 42,
       "module": "core.foundation.models",
       "name": "TaskStatus"
     },
     "core.foundation.models.TaskListStatus": {
-      "line": 56,
+      "line": 57,
       "module": "core.foundation.models",
       "name": "TaskListStatus"
+    },
+    "core.foundation.models.LoopStatus": {
+      "line": 68,
+      "module": "core.foundation.models",
+      "name": "LoopStatus"
+    },
+    "core.foundation.models.LoopNodeType": {
+      "line": 85,
+      "module": "core.foundation.models",
+      "name": "LoopNodeType"
     },
     "core.foundation.paths.GroupChatPaths": {
       "line": 14,
@@ -1823,28 +1893,38 @@
       "module": "core.foundation.paths",
       "name": "GroupChatPaths.tasks_data"
     },
+    "core.foundation.paths.GroupChatPaths.loops_data": {
+      "line": 262,
+      "module": "core.foundation.paths",
+      "name": "GroupChatPaths.loops_data"
+    },
+    "core.foundation.paths.GroupChatPaths.loops_log": {
+      "line": 274,
+      "module": "core.foundation.paths",
+      "name": "GroupChatPaths.loops_log"
+    },
     "core.foundation.renderer.Tag": {
       "line": 27,
       "module": "core.foundation.renderer",
       "name": "Tag"
     },
     "core.foundation.renderer.wrap_xml": {
-      "line": 35,
+      "line": 39,
       "module": "core.foundation.renderer",
       "name": "wrap_xml"
     },
     "core.foundation.renderer.render_for_llm": {
-      "line": 45,
+      "line": 49,
       "module": "core.foundation.renderer",
       "name": "render_for_llm"
     },
     "core.foundation.renderer.render_for_chat": {
-      "line": 65,
+      "line": 69,
       "module": "core.foundation.renderer",
       "name": "render_for_chat"
     },
     "core.foundation.renderer.parse_chat_input": {
-      "line": 76,
+      "line": 90,
       "module": "core.foundation.renderer",
       "name": "parse_chat_input"
     },
@@ -1934,57 +2014,57 @@
       "name": "GroupChat.send_message_to_agent"
     },
     "core.orchestration.group_chat.GroupChat._find_agent": {
-      "line": 632,
+      "line": 641,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._find_agent"
     },
     "core.orchestration.group_chat.GroupChat._cleanup_agent_queue": {
-      "line": 638,
+      "line": 647,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._cleanup_agent_queue"
     },
     "core.orchestration.group_chat.GroupChat.stop_member": {
-      "line": 732,
+      "line": 741,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.stop_member"
     },
     "core.orchestration.group_chat.GroupChat._on_agent_task_done": {
-      "line": 806,
+      "line": 815,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._on_agent_task_done"
     },
     "core.orchestration.group_chat.GroupChat._stop_agent_process": {
-      "line": 822,
+      "line": 831,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._stop_agent_process"
     },
     "core.orchestration.group_chat.GroupChat.start_member": {
-      "line": 849,
+      "line": 858,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.start_member"
     },
     "core.orchestration.group_chat.GroupChat.reset_member": {
-      "line": 925,
+      "line": 934,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.reset_member"
     },
     "core.orchestration.group_chat.GroupChat.stop": {
-      "line": 1012,
+      "line": 1021,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.stop"
     },
     "core.orchestration.group_chat.GroupChat.cleanup": {
-      "line": 1027,
+      "line": 1036,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat.cleanup"
     },
     "core.orchestration.group_chat.GroupChat._ensure_tokens": {
-      "line": 1109,
+      "line": 1118,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._ensure_tokens"
     },
     "core.orchestration.group_chat.GroupChat._heartbeat_loop": {
-      "line": 1148,
+      "line": 1157,
       "module": "core.orchestration.group_chat",
       "name": "GroupChat._heartbeat_loop"
     },
@@ -2062,6 +2142,86 @@
       "line": 408,
       "module": "core.orchestration.group_chat_manager",
       "name": "GroupChatManager.create_group_chat"
+    },
+    "core.orchestration.loop_executor.LoopExecutor": {
+      "line": 12,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor"
+    },
+    "core.orchestration.loop_executor.LoopExecutor.__init__": {
+      "line": 25,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor.__init__"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._build_loop_context": {
+      "line": 29,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._build_loop_context"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._build_loop_message": {
+      "line": 40,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._build_loop_message"
+    },
+    "core.orchestration.loop_executor.LoopExecutor._save_loop_result": {
+      "line": 58,
+      "module": "core.orchestration.loop_executor",
+      "name": "LoopExecutor._save_loop_result"
+    },
+    "core.orchestration.loop_manager.LoopManager": {
+      "line": 27,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager"
+    },
+    "core.orchestration.loop_manager.LoopManager.__init__": {
+      "line": 51,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager.__init__"
+    },
+    "core.orchestration.loop_manager.LoopManager.create_loop": {
+      "line": 77,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager.create_loop"
+    },
+    "core.orchestration.loop_manager.LoopManager.get_loop": {
+      "line": 131,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager.get_loop"
+    },
+    "core.orchestration.loop_manager.LoopManager.list_loops": {
+      "line": 153,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager.list_loops"
+    },
+    "core.orchestration.loop_manager.LoopManager.update_loop_status": {
+      "line": 169,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager.update_loop_status"
+    },
+    "core.orchestration.loop_manager.LoopManager.delete_loop": {
+      "line": 232,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager.delete_loop"
+    },
+    "core.orchestration.loop_manager.LoopManager._validate_create_request": {
+      "line": 261,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager._validate_create_request"
+    },
+    "core.orchestration.loop_manager.LoopManager._load_from_persistence": {
+      "line": 330,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager._load_from_persistence"
+    },
+    "core.orchestration.loop_manager.LoopManager._persist_loop": {
+      "line": 391,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager._persist_loop"
+    },
+    "core.orchestration.loop_manager.LoopManager._persist_deletion": {
+      "line": 412,
+      "module": "core.orchestration.loop_manager",
+      "name": "LoopManager._persist_deletion"
     },
     "core.utils.markdown_injector._build_pattern": {
       "line": 12,
@@ -2659,167 +2819,167 @@
       "name": "GroupChatService.create_group_chat"
     },
     "api.services.group_chat_service.GroupChatService.load_group_chat": {
-      "line": 183,
+      "line": 186,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.load_group_chat"
     },
     "api.services.group_chat_service.GroupChatService.delete_group_chat": {
-      "line": 223,
+      "line": 226,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.delete_group_chat"
     },
     "api.services.group_chat_service.GroupChatService.get_projects_summary": {
-      "line": 273,
+      "line": 276,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_projects_summary"
     },
     "api.services.group_chat_service.GroupChatService.list_group_chats": {
-      "line": 307,
+      "line": 310,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.list_group_chats"
     },
     "api.services.group_chat_service.GroupChatService.get_group_chat_info": {
-      "line": 386,
+      "line": 389,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_group_chat_info"
     },
     "api.services.group_chat_service.GroupChatService.get_group_chat_members": {
-      "line": 413,
+      "line": 416,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_group_chat_members"
     },
     "api.services.group_chat_service.GroupChatService.get_messages": {
-      "line": 442,
+      "line": 445,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_messages"
     },
     "api.services.group_chat_service.GroupChatService.send_message": {
-      "line": 479,
+      "line": 482,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.send_message"
     },
     "api.services.group_chat_service.GroupChatService.send_message_and_wait": {
-      "line": 555,
+      "line": 558,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.send_message_and_wait"
     },
     "api.services.group_chat_service.GroupChatService.toggle_use_docker": {
-      "line": 622,
+      "line": 625,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.toggle_use_docker"
     },
     "api.services.group_chat_service.GroupChatService.compress_agent_context": {
-      "line": 723,
+      "line": 726,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.compress_agent_context"
     },
     "api.services.group_chat_service.GroupChatService.compress_all_agents": {
-      "line": 779,
+      "line": 782,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.compress_all_agents"
     },
     "api.services.group_chat_service.GroupChatService.stop_member": {
-      "line": 816,
+      "line": 819,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.stop_member"
     },
     "api.services.group_chat_service.GroupChatService.start_member": {
-      "line": 851,
+      "line": 854,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.start_member"
     },
     "api.services.group_chat_service.GroupChatService.reset_member": {
-      "line": 887,
+      "line": 890,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.reset_member"
     },
     "api.services.group_chat_service.GroupChatService.get_member_history": {
-      "line": 922,
+      "line": 925,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_member_history"
     },
     "api.services.group_chat_service.GroupChatService._build_group_chat_info_from_instance": {
-      "line": 1003,
+      "line": 1006,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService._build_group_chat_info_from_instance"
     },
     "api.services.group_chat_service.GroupChatService.fork_group_chat": {
-      "line": 1008,
+      "line": 1011,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.fork_group_chat"
     },
     "api.services.group_chat_service.GroupChatService._get_pins_path": {
-      "line": 1201,
+      "line": 1204,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService._get_pins_path"
     },
     "api.services.group_chat_service.GroupChatService._get_pins_lock": {
-      "line": 1220,
+      "line": 1223,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService._get_pins_lock"
     },
     "api.services.group_chat_service.GroupChatService.get_file_snapshot_content": {
-      "line": 1228,
+      "line": 1231,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_file_snapshot_content"
     },
     "api.services.group_chat_service.GroupChatService.get_file_snapshot_diff": {
-      "line": 1269,
+      "line": 1272,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_file_snapshot_diff"
     },
     "api.services.group_chat_service.GroupChatService._read_pins": {
-      "line": 1304,
+      "line": 1307,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService._read_pins"
     },
     "api.services.group_chat_service.GroupChatService._write_pins": {
-      "line": 1318,
+      "line": 1321,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService._write_pins"
     },
     "api.services.group_chat_service.GroupChatService.get_pinned_messages": {
-      "line": 1324,
+      "line": 1327,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_pinned_messages"
     },
     "api.services.group_chat_service.GroupChatService.pin_message": {
-      "line": 1343,
+      "line": 1346,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.pin_message"
     },
     "api.services.group_chat_service.GroupChatService.unpin_message": {
-      "line": 1398,
+      "line": 1401,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.unpin_message"
     },
     "api.services.group_chat_service.GroupChatService.add_group_chat_members": {
-      "line": 1420,
+      "line": 1423,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.add_group_chat_members"
     },
     "api.services.group_chat_service.GroupChatService.get_agent_calls": {
-      "line": 1457,
+      "line": 1460,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_agent_calls"
     },
     "api.services.group_chat_service.GroupChatService.get_tasks": {
-      "line": 1489,
+      "line": 1492,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_tasks"
     },
     "api.services.group_chat_service.GroupChatService.update_permission_status": {
-      "line": 1522,
+      "line": 1525,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.update_permission_status"
     },
     "api.services.group_chat_service.GroupChatService.upload_file": {
-      "line": 1643,
+      "line": 1646,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.upload_file"
     },
     "api.services.group_chat_service.GroupChatService.get_uploaded_file_path": {
-      "line": 1701,
+      "line": 1704,
       "module": "api.services.group_chat_service",
       "name": "GroupChatService.get_uploaded_file_path"
     },
@@ -3299,19 +3459,24 @@
       "name": "CodexParser.__init__"
     },
     "agent_bridge.parsers.codex.CodexParser.parse_event": {
-      "line": 20,
+      "line": 21,
       "module": "agent_bridge.parsers.codex",
       "name": "CodexParser.parse_event"
     },
     "agent_bridge.parsers.codex.CodexParser._parse_item_completed": {
-      "line": 63,
+      "line": 64,
       "module": "agent_bridge.parsers.codex",
       "name": "CodexParser._parse_item_completed"
     },
     "agent_bridge.parsers.codex.CodexParser._parse_turn_completed": {
-      "line": 102,
+      "line": 103,
       "module": "agent_bridge.parsers.codex",
       "name": "CodexParser._parse_turn_completed"
+    },
+    "agent_bridge.parsers.codex.CodexParser._usage_delta": {
+      "line": 129,
+      "module": "agent_bridge.parsers.codex",
+      "name": "CodexParser._usage_delta"
     },
     "agent_bridge.parsers.opencode.OpenCodeParser": {
       "line": 14,
@@ -3722,7 +3887,7 @@
       },
       {
         "from": "agent_bridge.bridge.<module>",
-        "line": 24
+        "line": 26
       },
       {
         "from": "api.app.<module>",
@@ -3860,123 +4025,237 @@
     "agent_bridge.bridge.ClaudeExecutor": [
       {
         "from": "agent_bridge.bridge.__init__",
-        "line": 35
+        "line": 37
       }
     ],
     "agent_bridge.bridge.CodexExecutor": [
       {
         "from": "agent_bridge.bridge.__init__",
-        "line": 36
+        "line": 38
       }
     ],
     "agent_bridge.bridge.OpenCodeExecutor": [
       {
         "from": "agent_bridge.bridge.__init__",
-        "line": 37
+        "line": 39
       }
     ],
     "agent_bridge.bridge.DockerManager": [
       {
         "from": "agent_bridge.bridge.__init__",
-        "line": 45
+        "line": 47
       }
     ],
     "agent_bridge.bridge.DockerClaudeExecutor": [
       {
         "from": "agent_bridge.bridge.__init__",
-        "line": 47
+        "line": 49
       }
     ],
     "agent_bridge.bridge.DockerCodexExecutor": [
       {
         "from": "agent_bridge.bridge.__init__",
-        "line": 48
+        "line": 50
       }
     ],
     "agent_bridge.bridge.RoleManager": [
       {
         "from": "agent_bridge.bridge.__init__",
-        "line": 51
+        "line": 53
       }
     ],
     "agent_bridge.bridge.ClaudeParser": [
       {
         "from": "agent_bridge.bridge._create_parser",
-        "line": 70
+        "line": 72
       }
     ],
     "agent_bridge.bridge.CodexParser": [
       {
         "from": "agent_bridge.bridge._create_parser",
-        "line": 72
+        "line": 74
       }
     ],
     "agent_bridge.bridge.OpenCodeParser": [
       {
         "from": "agent_bridge.bridge._create_parser",
-        "line": 74
+        "line": 76
       }
     ],
     "agent_bridge.bridge.PlatformNotSupportedError": [
       {
         "from": "agent_bridge.bridge._create_parser",
-        "line": 76
+        "line": 78
       },
       {
         "from": "agent_bridge.bridge.execute_stream",
-        "line": 109
+        "line": 143
       }
     ],
     "agent_bridge.bridge.str": [
       {
         "from": "agent_bridge.bridge._create_parser",
-        "line": 76
+        "line": 78
+      }
+    ],
+    "agent_bridge.bridge.open": [
+      {
+        "from": "agent_bridge.bridge._read_codex_usage_baseline",
+        "line": 87
+      }
+    ],
+    "json.loads": [
+      {
+        "from": "agent_bridge.bridge._read_codex_usage_baseline",
+        "line": 92
+      },
+      {
+        "from": "roles.role._read_role_json",
+        "line": 64
+      },
+      {
+        "from": "roles.role_manager.list_roles",
+        "line": 144
+      },
+      {
+        "from": "utils.session_parser.load_jsonl",
+        "line": 48
+      },
+      {
+        "from": "utils.session_parser.parse_codex_session",
+        "line": 150
+      },
+      {
+        "from": "core.communication.agent_call_manager._load_from_persistence",
+        "line": 277
+      },
+      {
+        "from": "core.communication.task_manager._load_from_persistence",
+        "line": 291
+      },
+      {
+        "from": "core.context.agent_context._get_pinned_messages",
+        "line": 299
+      },
+      {
+        "from": "core.context.group_chat_repository.load_group_chat_session",
+        "line": 77
+      },
+      {
+        "from": "core.context.group_chat_repository.load_agent_member_infos",
+        "line": 172
+      },
+      {
+        "from": "core.context.group_chat_repository.load_compact_history",
+        "line": 286
+      },
+      {
+        "from": "core.context.group_chat_repository.load_group_metadata",
+        "line": 367
+      },
+      {
+        "from": "core.orchestration.loop_manager._load_from_persistence",
+        "line": 354
+      },
+      {
+        "from": "channels.wechat.auth.load_token",
+        "line": 34
+      },
+      {
+        "from": "channels.wechat.auth.save_token",
+        "line": 46
+      },
+      {
+        "from": "channels.wechat.commander._ask_assistant",
+        "line": 242
+      },
+      {
+        "from": "channels.wechat.commander._forward_to_agent",
+        "line": 297
+      },
+      {
+        "from": "api.services.group_chat_service.fork_group_chat",
+        "line": 1085
+      },
+      {
+        "from": "api.services.group_chat_service._read_pins",
+        "line": 1316
+      },
+      {
+        "from": "agent_bridge.executors.opencode.execute",
+        "line": 80
+      },
+      {
+        "from": "agent_bridge.executors.opencode.execute",
+        "line": 87
+      },
+      {
+        "from": "agent_bridge.parsers.claude.parse_event",
+        "line": 33
+      },
+      {
+        "from": "agent_bridge.parsers.claude._handle_content_block_stop",
+        "line": 124
+      },
+      {
+        "from": "agent_bridge.parsers.codex.parse_event",
+        "line": 32
+      },
+      {
+        "from": "agent_bridge.parsers.opencode.parse_event",
+        "line": 27
+      }
+    ],
+    "agent_bridge.bridge.resolve_session_path": [
+      {
+        "from": "agent_bridge.bridge._codex_usage_baseline",
+        "line": 109
       }
     ],
     "agent_bridge.bridge.isinstance": [
       {
         "from": "agent_bridge.bridge.execute_stream",
-        "line": 122
+        "line": 159
       },
       {
         "from": "agent_bridge.bridge.execute_stream",
-        "line": 127
+        "line": 164
       }
     ],
     "agent_bridge.bridge.StreamEvent": [
       {
         "from": "agent_bridge.bridge._dict_to_stream_event",
-        "line": 156
+        "line": 193
       },
       {
         "from": "agent_bridge.bridge._dict_to_stream_event",
-        "line": 166
+        "line": 203
       },
       {
         "from": "agent_bridge.bridge._dict_to_stream_event",
-        "line": 177
+        "line": 214
       }
     ],
     "agent_bridge.bridge.Usage": [
       {
         "from": "agent_bridge.bridge.execute",
-        "line": 241
+        "line": 279
       },
       {
         "from": "agent_bridge.bridge.execute",
-        "line": 264
+        "line": 302
       }
     ],
     "agent_bridge.bridge.AgentResult": [
       {
         "from": "agent_bridge.bridge.execute",
-        "line": 272
+        "line": 310
       }
     ],
     "agent_bridge.bridge.hasattr": [
       {
         "from": "agent_bridge.bridge.stop_session",
-        "line": 306
+        "line": 344
       }
     ],
     "agent_bridge.exceptions.super": [
@@ -4070,19 +4349,19 @@
       },
       {
         "from": "core.orchestration.group_chat.start_member",
-        "line": 895
+        "line": 904
       },
       {
         "from": "core.orchestration.group_chat.start_member",
-        "line": 897
+        "line": 906
       },
       {
         "from": "core.orchestration.group_chat.reset_member",
-        "line": 986
+        "line": 995
       },
       {
         "from": "core.orchestration.group_chat.reset_member",
-        "line": 990
+        "line": 999
       },
       {
         "from": "channels.wechat.channel.start",
@@ -4898,15 +5177,15 @@
       },
       {
         "from": "core.orchestration.group_chat.stop_member",
-        "line": 778
-      },
-      {
-        "from": "core.orchestration.group_chat.stop_member",
         "line": 787
       },
       {
+        "from": "core.orchestration.group_chat.stop_member",
+        "line": 796
+      },
+      {
         "from": "core.orchestration.group_chat.cleanup",
-        "line": 1058
+        "line": 1067
       },
       {
         "from": "channels.wechat.channel.stop",
@@ -5089,100 +5368,6 @@
         "line": 15
       }
     ],
-    "json.loads": [
-      {
-        "from": "roles.role._read_role_json",
-        "line": 64
-      },
-      {
-        "from": "roles.role_manager.list_roles",
-        "line": 144
-      },
-      {
-        "from": "utils.session_parser.load_jsonl",
-        "line": 48
-      },
-      {
-        "from": "utils.session_parser.parse_codex_session",
-        "line": 150
-      },
-      {
-        "from": "core.communication.agent_call_manager._load_from_persistence",
-        "line": 277
-      },
-      {
-        "from": "core.communication.task_manager._load_from_persistence",
-        "line": 291
-      },
-      {
-        "from": "core.context.agent_context._get_pinned_messages",
-        "line": 295
-      },
-      {
-        "from": "core.context.group_chat_repository.load_group_chat_session",
-        "line": 77
-      },
-      {
-        "from": "core.context.group_chat_repository.load_agent_member_infos",
-        "line": 172
-      },
-      {
-        "from": "core.context.group_chat_repository.load_compact_history",
-        "line": 286
-      },
-      {
-        "from": "core.context.group_chat_repository.load_group_metadata",
-        "line": 367
-      },
-      {
-        "from": "channels.wechat.auth.load_token",
-        "line": 34
-      },
-      {
-        "from": "channels.wechat.auth.save_token",
-        "line": 46
-      },
-      {
-        "from": "channels.wechat.commander._ask_assistant",
-        "line": 242
-      },
-      {
-        "from": "channels.wechat.commander._forward_to_agent",
-        "line": 297
-      },
-      {
-        "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1082
-      },
-      {
-        "from": "api.services.group_chat_service._read_pins",
-        "line": 1313
-      },
-      {
-        "from": "agent_bridge.executors.opencode.execute",
-        "line": 80
-      },
-      {
-        "from": "agent_bridge.executors.opencode.execute",
-        "line": 87
-      },
-      {
-        "from": "agent_bridge.parsers.claude.parse_event",
-        "line": 33
-      },
-      {
-        "from": "agent_bridge.parsers.claude._handle_content_block_stop",
-        "line": 124
-      },
-      {
-        "from": "agent_bridge.parsers.codex.parse_event",
-        "line": 31
-      },
-      {
-        "from": "agent_bridge.parsers.opencode.parse_event",
-        "line": 27
-      }
-    ],
     "json.dumps": [
       {
         "from": "roles.role._write_role_json",
@@ -5229,6 +5414,14 @@
         "line": 342
       },
       {
+        "from": "core.orchestration.loop_manager._persist_loop",
+        "line": 404
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_deletion",
+        "line": 425
+      },
+      {
         "from": "core.utils.session_fork.fork_codex_session",
         "line": 56
       },
@@ -5238,19 +5431,19 @@
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1124
+        "line": 1127
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1130
+        "line": 1133
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1159
+        "line": 1162
       },
       {
         "from": "api.services.group_chat_service._write_pins",
-        "line": 1322
+        "line": 1325
       },
       {
         "from": "api.services.single_chat_service._serialize_event",
@@ -5350,7 +5543,7 @@
       },
       {
         "from": "api.services.group_chat_service.delete_group_chat",
-        "line": 259
+        "line": 262
       }
     ],
     "roles.role.RoleConfig": [
@@ -5408,11 +5601,11 @@
       },
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 657
+        "line": 731
       },
       {
         "from": "core.agent.base_agent.extract_tag",
-        "line": 664
+        "line": 738
       }
     ],
     "roles.role_manager.RoleType": [
@@ -5546,15 +5739,15 @@
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 504
+        "line": 517
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 522
+        "line": 544
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 568
+        "line": 590
       },
       {
         "from": "agent_bridge.docker.manager._is_docker_running",
@@ -6152,215 +6345,219 @@
     "core.agent.base_agent.get_logger": [
       {
         "from": "core.agent.base_agent.__init__",
-        "line": 65
+        "line": 66
       }
     ],
     "core.agent.base_agent.AgentMessage": [
       {
         "from": "core.agent.base_agent.stop",
-        "line": 102
+        "line": 157
       },
       {
         "from": "core.agent.base_agent._enqueue_complete_task_reminder",
-        "line": 549
+        "line": 623
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 831
+        "line": 931
       }
     ],
     "core.agent.base_agent.getattr": [
       {
         "from": "core.agent.base_agent._validate_docker_config",
-        "line": 176
+        "line": 231
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 223
+        "line": 278
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 779
+        "line": 877
       }
     ],
     "core.agent.base_agent.DockerConfigError": [
       {
         "from": "core.agent.base_agent._validate_docker_config",
-        "line": 184
+        "line": 239
       }
     ],
     "core.agent.base_agent.Path": [
       {
         "from": "core.agent.base_agent._is_same_path",
-        "line": 198
+        "line": 253
       },
       {
         "from": "core.agent.base_agent._is_same_path",
-        "line": 198
+        "line": 253
       },
       {
         "from": "core.agent.base_agent.compress_context",
-        "line": 403
+        "line": 477
       },
       {
         "from": "core.agent.base_agent._build_opencode_system_prompt",
-        "line": 510
+        "line": 584
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 762
+        "line": 860
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 800
+        "line": 900
       }
     ],
     "core.agent.base_agent.len": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 215
+        "line": 270
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 257
+        "line": 312
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 300
+        "line": 355
       },
       {
         "from": "core.agent.base_agent._enqueue_complete_task_reminder",
-        "line": 533
+        "line": 607
       },
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 722
+        "line": 796
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 795
+        "line": 894
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 801
+        "line": 901
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 802
+        "line": 902
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 856
+        "line": 956
       }
     ],
     "core.agent.base_agent.get_git_head": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 245
+        "line": 300
       }
     ],
     "core.agent.base_agent.get_working_tree_status": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 253
+        "line": 308
       }
     ],
     "core.agent.base_agent.str": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 261
+        "line": 316
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 315
+        "line": 370
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 319
+        "line": 374
       },
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 326
+        "line": 381
+      },
+      {
+        "from": "core.agent.base_agent._auto_compact_if_needed",
+        "line": 430
       },
       {
         "from": "core.agent.base_agent.compress_context",
-        "line": 418
+        "line": 492
       },
       {
         "from": "core.agent.base_agent.compress_context",
-        "line": 432
+        "line": 506
       },
       {
         "from": "core.agent.base_agent._set_error_status",
-        "line": 614
+        "line": 688
       },
       {
         "from": "core.agent.base_agent._set_error_status",
-        "line": 626
+        "line": 700
       },
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 717
+        "line": 791
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 807
+        "line": 907
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 848
+        "line": 948
       },
       {
         "from": "core.agent.base_agent.run",
-        "line": 872
+        "line": 996
       }
     ],
     "core.agent.base_agent.AgentExecutionError": [
       {
         "from": "core.agent.base_agent._process_message",
-        "line": 324
+        "line": 379
       }
     ],
     "core.agent.base_agent.AgentBusyError": [
       {
         "from": "core.agent.base_agent.compress_context",
-        "line": 387
+        "line": 461
       }
     ],
     "core.agent.base_agent.hasattr": [
       {
         "from": "core.agent.base_agent._set_error_status",
-        "line": 618
+        "line": 692
       }
     ],
     "core.agent.base_agent.isinstance": [
       {
         "from": "core.agent.base_agent._set_error_status",
-        "line": 618
+        "line": 692
       }
     ],
     "core.agent.base_agent.extract_tag": [
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 667
+        "line": 741
       },
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 672
+        "line": 746
       },
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 673
+        "line": 747
       },
       {
         "from": "core.agent.base_agent._parse_changes_xml",
-        "line": 674
+        "line": 748
       }
     ],
     "re.sub": [
       {
         "from": "core.agent.base_agent._strip_changes_xml",
-        "line": 679
+        "line": 753
       },
       {
         "from": "core.utils.path_utils.sanitize_project_path",
@@ -6374,45 +6571,51 @@
     "core.agent.base_agent.enumerate": [
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 705
+        "line": 779
       }
     ],
     "core.agent.base_agent.create_file_snapshot": [
       {
         "from": "core.agent.base_agent._process_file_changes",
-        "line": 707
+        "line": 781
+      }
+    ],
+    "core.agent.base_agent.bool": [
+      {
+        "from": "core.agent.base_agent._fallback_close_task",
+        "line": 813
       }
     ],
     "core.agent.base_agent.redact_token": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 743
+        "line": 841
       }
     ],
     "core.agent.base_agent.get_git_changed_files": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 782
+        "line": 880
       }
     ],
     "core.agent.base_agent.render_for_chat": [
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 816
+        "line": 916
       },
       {
         "from": "core.agent.base_agent._fallback_close_task",
-        "line": 821
+        "line": 921
       },
       {
         "from": "core.agent.base_agent._run_loop",
-        "line": 942
+        "line": 1076
       }
     ],
     "core.agent.base_agent.render_for_llm": [
       {
         "from": "core.agent.base_agent._run_loop",
-        "line": 917
+        "line": 1046
       }
     ],
     "core.agent.manager.super": [
@@ -6479,8 +6682,12 @@
         "line": 52
       },
       {
+        "from": "core.orchestration.loop_manager.__init__",
+        "line": 72
+      },
+      {
         "from": "api.services.group_chat_service._get_pins_lock",
-        "line": 1225
+        "line": 1228
       },
       {
         "from": "agent_bridge.executors.claude.__init__",
@@ -6638,7 +6845,7 @@
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1154
+        "line": 1163
       },
       {
         "from": "channels.wechat.auth.qr_login",
@@ -6952,7 +7159,7 @@
       },
       {
         "from": "core.context.agent_context._get_pinned_messages",
-        "line": 303
+        "line": 307
       }
     ],
     "re.compile": [
@@ -6990,31 +7197,31 @@
     "core.context.agent_context.render_for_llm": [
       {
         "from": "core.context.agent_context.build_user_prompt",
-        "line": 208
+        "line": 212
       }
     ],
     "core.context.agent_context.hasattr": [
       {
         "from": "core.context.agent_context._build_runtime",
-        "line": 248
+        "line": 252
       }
     ],
     "core.context.agent_context.Path": [
       {
         "from": "core.context.agent_context._get_pinned_messages",
-        "line": 286
+        "line": 290
       }
     ],
     "core.context.agent_context.open": [
       {
         "from": "core.context.agent_context._get_pinned_messages",
-        "line": 293
+        "line": 297
       }
     ],
     "core.context.agent_context.sorted": [
       {
         "from": "core.context.agent_context._get_pinned_messages",
-        "line": 300
+        "line": 304
       }
     ],
     "core.context.group_chat_repository.get_logger": [
@@ -7136,7 +7343,7 @@
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1109
+        "line": 1112
       }
     ],
     "core.context.group_chat_repository.GroupChatSession": [
@@ -7184,23 +7391,23 @@
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1078
+        "line": 1081
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1114
+        "line": 1117
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1158
+        "line": 1161
       },
       {
         "from": "api.services.group_chat_service._read_pins",
-        "line": 1309
+        "line": 1312
       },
       {
         "from": "api.services.group_chat_service._write_pins",
-        "line": 1321
+        "line": 1324
       }
     ],
     "core.context.group_chat_repository.FileSystemError": [
@@ -7338,7 +7545,7 @@
       },
       {
         "from": "core.orchestration.group_chat.cleanup",
-        "line": 1071
+        "line": 1080
       },
       {
         "from": "api.websocket.endpoint.ping_loop",
@@ -7448,10 +7655,6 @@
       },
       {
         "from": "core.context.group_chat_session.<module>",
-        "line": 47
-      },
-      {
-        "from": "core.context.group_chat_session.<module>",
         "line": 48
       },
       {
@@ -7465,18 +7668,64 @@
       {
         "from": "core.context.group_chat_session.<module>",
         "line": 51
+      },
+      {
+        "from": "core.context.group_chat_session.<module>",
+        "line": 52
+      },
+      {
+        "from": "core.context.group_chat_session.<module>",
+        "line": 118
       }
     ],
     "core.context.group_chat_session.str": [
       {
         "from": "core.context.group_chat_session.<module>",
-        "line": 47
+        "line": 48
+      },
+      {
+        "from": "core.context.group_chat_session.<module>",
+        "line": 118
+      },
+      {
+        "from": "core.context.group_chat_session.from_dict",
+        "line": 140
       }
     ],
     "core.context.group_chat_session.uuid4": [
       {
         "from": "core.context.group_chat_session.<module>",
-        "line": 47
+        "line": 48
+      },
+      {
+        "from": "core.context.group_chat_session.<module>",
+        "line": 118
+      },
+      {
+        "from": "core.context.group_chat_session.from_dict",
+        "line": 140
+      }
+    ],
+    "core.context.group_chat_session.ValueError": [
+      {
+        "from": "core.context.group_chat_session.from_dict",
+        "line": 136
+      }
+    ],
+    "core.context.group_chat_session.list": [
+      {
+        "from": "core.context.group_chat_session.from_dict",
+        "line": 137
+      }
+    ],
+    "core.context.group_chat_session.cls": [
+      {
+        "from": "core.context.group_chat_session.from_dict",
+        "line": 139
+      },
+      {
+        "from": "core.context.group_chat_session.from_dict",
+        "line": 183
       }
     ],
     "core.context.group_metadata.cls": [
@@ -7488,59 +7737,71 @@
     "core.foundation.exceptions.super": [
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 33
+        "line": 35
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 56
+        "line": 58
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 67
+        "line": 69
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 78
+        "line": 80
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 89
+        "line": 91
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 100
+        "line": 102
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 129
+        "line": 131
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 143
+        "line": 145
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 154
+        "line": 156
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 166
+        "line": 168
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 186
+        "line": 188
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 199
+        "line": 201
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 211
+        "line": 213
       },
       {
         "from": "core.foundation.exceptions.__init__",
-        "line": 226
+        "line": 228
+      },
+      {
+        "from": "core.foundation.exceptions.__init__",
+        "line": 244
+      },
+      {
+        "from": "core.foundation.exceptions.__init__",
+        "line": 255
+      },
+      {
+        "from": "core.foundation.exceptions.__init__",
+        "line": 266
       }
     ],
     "core.foundation.file_snapshot.get_logger": [
@@ -7606,31 +7867,31 @@
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 465
+        "line": 469
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 478
+        "line": 490
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 497
+        "line": 509
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 551
+        "line": 573
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 557
+        "line": 579
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 598
+        "line": 620
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 603
+        "line": 625
       }
     ],
     "core.foundation.file_snapshot.str": [
@@ -7668,23 +7929,23 @@
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 480
+        "line": 492
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 491
+        "line": 503
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 547
+        "line": 569
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 595
+        "line": 617
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 612
+        "line": 634
       }
     ],
     "re.match": [
@@ -7734,27 +7995,27 @@
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 486
+        "line": 498
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 518
+        "line": 531
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 534
+        "line": 556
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 561
+        "line": 583
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 585
+        "line": 607
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 606
+        "line": 628
       }
     ],
     "core.foundation.file_snapshot.set": [
@@ -7772,37 +8033,41 @@
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 498
+        "line": 510
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 515
+        "line": 528
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 515
+        "line": 528
       },
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 531
+        "line": 553
       }
     ],
     "core.foundation.file_snapshot.get_working_tree_status": [
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 457
+        "line": 460
       }
     ],
     "core.foundation.file_snapshot.get_git_head": [
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 473
+        "line": 477
+      },
+      {
+        "from": "core.foundation.file_snapshot.get_git_changed_files",
+        "line": 535
       }
     ],
     "core.foundation.file_snapshot._get_committed_files": [
       {
         "from": "core.foundation.file_snapshot.get_git_changed_files",
-        "line": 476
+        "line": 488
       }
     ],
     "core.foundation.message.field": [
@@ -7852,29 +8117,29 @@
     "core.foundation.paths.GroupChatPaths": [
       {
         "from": "core.foundation.paths.<module>",
-        "line": 264
+        "line": 284
       }
     ],
     "core.foundation.renderer.str": [
       {
         "from": "core.foundation.renderer.render_for_llm",
-        "line": 58
+        "line": 62
       }
     ],
     "core.foundation.renderer.wrap_xml": [
       {
         "from": "core.foundation.renderer.render_for_llm",
-        "line": 62
+        "line": 66
       }
     ],
     "core.foundation.renderer.InvalidMessageError": [
       {
         "from": "core.foundation.renderer.parse_chat_input",
-        "line": 83
+        "line": 97
       },
       {
         "from": "core.foundation.renderer.parse_chat_input",
-        "line": 86
+        "line": 100
       }
     ],
     "secrets.token_hex": [
@@ -7890,7 +8155,7 @@
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1150
+        "line": 1159
       }
     ],
     "core.orchestration.group_chat.str": [
@@ -7908,23 +8173,23 @@
       },
       {
         "from": "core.orchestration.group_chat._cleanup_agent_queue",
-        "line": 707
+        "line": 716
       },
       {
         "from": "core.orchestration.group_chat._on_agent_task_done",
-        "line": 816
+        "line": 825
       },
       {
         "from": "core.orchestration.group_chat._stop_agent_process",
-        "line": 847
+        "line": 856
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1165
+        "line": 1174
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1190
+        "line": 1199
       }
     ],
     "core.orchestration.group_chat.uuid4": [
@@ -7972,7 +8237,7 @@
       },
       {
         "from": "core.orchestration.group_chat.start_member",
-        "line": 880
+        "line": 889
       }
     ],
     "core.orchestration.group_chat.RoleManager": [
@@ -8028,11 +8293,11 @@
       },
       {
         "from": "core.orchestration.group_chat._ensure_tokens",
-        "line": 1125
+        "line": 1134
       },
       {
         "from": "core.orchestration.group_chat._ensure_tokens",
-        "line": 1137
+        "line": 1146
       }
     ],
     "core.orchestration.group_chat.bool": [
@@ -8070,11 +8335,11 @@
       },
       {
         "from": "core.orchestration.group_chat.send_message_to_agent",
-        "line": 621
+        "line": 630
       },
       {
         "from": "core.orchestration.group_chat._cleanup_agent_queue",
-        "line": 711
+        "line": 720
       }
     ],
     "asyncio.gather": [
@@ -8084,11 +8349,11 @@
       },
       {
         "from": "core.orchestration.group_chat.cleanup",
-        "line": 1072
+        "line": 1081
       },
       {
         "from": "core.orchestration.group_chat.cleanup",
-        "line": 1080
+        "line": 1089
       }
     ],
     "core.orchestration.group_chat.start_conversation": [
@@ -8100,51 +8365,51 @@
     "core.orchestration.group_chat.render_for_chat": [
       {
         "from": "core.orchestration.group_chat.send_message_to_agent",
-        "line": 617
+        "line": 626
       },
       {
         "from": "core.orchestration.group_chat._cleanup_agent_queue",
-        "line": 713
+        "line": 722
       }
     ],
     "core.orchestration.group_chat.getattr": [
       {
         "from": "core.orchestration.group_chat.send_message_to_agent",
-        "line": 620
+        "line": 629
       },
       {
         "from": "core.orchestration.group_chat._stop_agent_process",
-        "line": 837
+        "line": 846
       }
     ],
     "core.orchestration.group_chat.AgentMessage": [
       {
         "from": "core.orchestration.group_chat._cleanup_agent_queue",
-        "line": 691
+        "line": 700
       },
       {
         "from": "core.orchestration.group_chat._heartbeat_loop",
-        "line": 1176
+        "line": 1185
       }
     ],
     "core.orchestration.group_chat.AgentNotFoundError": [
       {
         "from": "core.orchestration.group_chat.stop_member",
-        "line": 758
+        "line": 767
       },
       {
         "from": "core.orchestration.group_chat.start_member",
-        "line": 875
+        "line": 884
       },
       {
         "from": "core.orchestration.group_chat.reset_member",
-        "line": 953
+        "line": 962
       }
     ],
     "core.orchestration.group_chat.type": [
       {
         "from": "core.orchestration.group_chat._on_agent_task_done",
-        "line": 817
+        "line": 826
       }
     ],
     "core.orchestration.group_chat_manager.get_logger": [
@@ -8317,6 +8582,226 @@
       {
         "from": "core.orchestration.group_chat_manager.<module>",
         "line": 468
+      }
+    ],
+    "core.orchestration.loop_executor.wrap_xml": [
+      {
+        "from": "core.orchestration.loop_executor._build_loop_context",
+        "line": 32
+      },
+      {
+        "from": "core.orchestration.loop_executor._build_loop_context",
+        "line": 33
+      },
+      {
+        "from": "core.orchestration.loop_executor._build_loop_context",
+        "line": 34
+      },
+      {
+        "from": "core.orchestration.loop_executor._build_loop_context",
+        "line": 37
+      }
+    ],
+    "core.orchestration.loop_executor.AgentMessage": [
+      {
+        "from": "core.orchestration.loop_executor._build_loop_message",
+        "line": 43
+      }
+    ],
+    "core.orchestration.loop_executor.ValueError": [
+      {
+        "from": "core.orchestration.loop_executor._save_loop_result",
+        "line": 61
+      }
+    ],
+    "core.orchestration.loop_executor.render_for_chat": [
+      {
+        "from": "core.orchestration.loop_executor._save_loop_result",
+        "line": 62
+      }
+    ],
+    "core.orchestration.loop_manager.set": [
+      {
+        "from": "core.orchestration.loop_manager.<module>",
+        "line": 47
+      },
+      {
+        "from": "core.orchestration.loop_manager.<module>",
+        "line": 48
+      },
+      {
+        "from": "core.orchestration.loop_manager.update_loop_status",
+        "line": 195
+      },
+      {
+        "from": "core.orchestration.loop_manager._load_from_persistence",
+        "line": 345
+      }
+    ],
+    "core.orchestration.loop_manager.RoleManager": [
+      {
+        "from": "core.orchestration.loop_manager.__init__",
+        "line": 53
+      }
+    ],
+    "core.orchestration.loop_manager.get_specialized_logger": [
+      {
+        "from": "core.orchestration.loop_manager.__init__",
+        "line": 57
+      }
+    ],
+    "core.orchestration.loop_manager.Loop": [
+      {
+        "from": "core.orchestration.loop_manager.create_loop",
+        "line": 105
+      }
+    ],
+    "core.orchestration.loop_manager.str": [
+      {
+        "from": "core.orchestration.loop_manager.create_loop",
+        "line": 106
+      },
+      {
+        "from": "core.orchestration.loop_manager._load_from_persistence",
+        "line": 387
+      },
+      {
+        "from": "core.orchestration.loop_manager._load_from_persistence",
+        "line": 388
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_loop",
+        "line": 408
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_loop",
+        "line": 409
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_deletion",
+        "line": 429
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_deletion",
+        "line": 430
+      }
+    ],
+    "core.orchestration.loop_manager.uuid4": [
+      {
+        "from": "core.orchestration.loop_manager.create_loop",
+        "line": 106
+      }
+    ],
+    "core.orchestration.loop_manager.len": [
+      {
+        "from": "core.orchestration.loop_manager.create_loop",
+        "line": 125
+      },
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 272
+      },
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 275
+      },
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 279
+      },
+      {
+        "from": "core.orchestration.loop_manager._load_from_persistence",
+        "line": 382
+      }
+    ],
+    "core.orchestration.loop_manager.list": [
+      {
+        "from": "core.orchestration.loop_manager.get_loop",
+        "line": 147
+      },
+      {
+        "from": "core.orchestration.loop_manager.list_loops",
+        "line": 162
+      }
+    ],
+    "core.orchestration.loop_manager.LoopNotFoundError": [
+      {
+        "from": "core.orchestration.loop_manager.get_loop",
+        "line": 149
+      }
+    ],
+    "core.orchestration.loop_manager.LoopStateError": [
+      {
+        "from": "core.orchestration.loop_manager.update_loop_status",
+        "line": 204
+      },
+      {
+        "from": "core.orchestration.loop_manager.delete_loop",
+        "line": 251
+      }
+    ],
+    "core.orchestration.loop_manager.LoopValidationError": [
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 277
+      },
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 289
+      },
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 299
+      },
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 325
+      }
+    ],
+    "core.orchestration.loop_manager.sum": [
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 283
+      }
+    ],
+    "core.orchestration.loop_manager.AgentNotFoundError": [
+      {
+        "from": "core.orchestration.loop_manager._validate_create_request",
+        "line": 313
+      }
+    ],
+    "core.orchestration.loop_manager.open": [
+      {
+        "from": "core.orchestration.loop_manager._load_from_persistence",
+        "line": 347
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_loop",
+        "line": 403
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_deletion",
+        "line": 424
+      }
+    ],
+    "core.orchestration.loop_manager.enumerate": [
+      {
+        "from": "core.orchestration.loop_manager._load_from_persistence",
+        "line": 348
+      }
+    ],
+    "core.orchestration.loop_manager.FileSystemError": [
+      {
+        "from": "core.orchestration.loop_manager._load_from_persistence",
+        "line": 385
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_loop",
+        "line": 406
+      },
+      {
+        "from": "core.orchestration.loop_manager._persist_deletion",
+        "line": 427
       }
     ],
     "core.utils.markdown_injector._build_pattern": [
@@ -9464,27 +9949,27 @@
       },
       {
         "from": "api.services.group_chat_service.send_message",
-        "line": 523
+        "line": 526
       },
       {
         "from": "api.services.group_chat_service.toggle_use_docker",
-        "line": 688
+        "line": 691
       },
       {
         "from": "api.services.group_chat_service.update_permission_status",
-        "line": 1541
+        "line": 1544
       },
       {
         "from": "api.services.group_chat_service.upload_file",
-        "line": 1667
+        "line": 1670
       },
       {
         "from": "api.services.group_chat_service.upload_file",
-        "line": 1674
+        "line": 1677
       },
       {
         "from": "api.services.group_chat_service.get_uploaded_file_path",
-        "line": 1728
+        "line": 1731
       }
     ],
     "api.services.group_chat_service.RoleManager": [
@@ -9494,15 +9979,15 @@
       },
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 960
+        "line": 963
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1050
+        "line": 1053
       },
       {
         "from": "api.services.group_chat_service.add_group_chat_members",
-        "line": 1439
+        "line": 1442
       }
     ],
     "api.services.group_chat_service.ResourceNotFoundError": [
@@ -9516,111 +10001,111 @@
       },
       {
         "from": "api.services.group_chat_service.load_group_chat",
-        "line": 202
+        "line": 205
       },
       {
         "from": "api.services.group_chat_service.load_group_chat",
-        "line": 209
+        "line": 212
       },
       {
         "from": "api.services.group_chat_service.get_group_chat_info",
-        "line": 403
+        "line": 406
       },
       {
         "from": "api.services.group_chat_service.get_group_chat_members",
-        "line": 435
+        "line": 438
       },
       {
         "from": "api.services.group_chat_service.get_messages",
-        "line": 469
+        "line": 472
       },
       {
         "from": "api.services.group_chat_service.send_message",
-        "line": 510
+        "line": 513
       },
       {
         "from": "api.services.group_chat_service.toggle_use_docker",
-        "line": 657
+        "line": 660
       },
       {
         "from": "api.services.group_chat_service.toggle_use_docker",
-        "line": 673
+        "line": 676
       },
       {
         "from": "api.services.group_chat_service.compress_agent_context",
-        "line": 749
+        "line": 752
       },
       {
         "from": "api.services.group_chat_service.compress_agent_context",
-        "line": 757
+        "line": 760
       },
       {
         "from": "api.services.group_chat_service.compress_all_agents",
-        "line": 800
+        "line": 803
       },
       {
         "from": "api.services.group_chat_service.stop_member",
-        "line": 836
+        "line": 839
       },
       {
         "from": "api.services.group_chat_service.stop_member",
-        "line": 844
+        "line": 847
       },
       {
         "from": "api.services.group_chat_service.start_member",
-        "line": 872
+        "line": 875
       },
       {
         "from": "api.services.group_chat_service.start_member",
-        "line": 880
+        "line": 883
       },
       {
         "from": "api.services.group_chat_service.reset_member",
-        "line": 907
+        "line": 910
       },
       {
         "from": "api.services.group_chat_service.reset_member",
-        "line": 915
+        "line": 918
       },
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 943
+        "line": 946
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1035
+        "line": 1038
       },
       {
         "from": "api.services.group_chat_service._get_pins_path",
-        "line": 1205
+        "line": 1208
       },
       {
         "from": "api.services.group_chat_service.get_file_snapshot_content",
-        "line": 1260
+        "line": 1263
       },
       {
         "from": "api.services.group_chat_service.get_file_snapshot_diff",
-        "line": 1295
+        "line": 1298
       },
       {
         "from": "api.services.group_chat_service.get_agent_calls",
-        "line": 1475
+        "line": 1478
       },
       {
         "from": "api.services.group_chat_service.get_tasks",
-        "line": 1507
+        "line": 1510
       },
       {
         "from": "api.services.group_chat_service.update_permission_status",
-        "line": 1550
+        "line": 1553
       },
       {
         "from": "api.services.group_chat_service.get_uploaded_file_path",
-        "line": 1719
+        "line": 1722
       },
       {
         "from": "api.services.group_chat_service.get_uploaded_file_path",
-        "line": 1733
+        "line": 1736
       }
     ],
     "api.services.group_chat_service.Path": [
@@ -9630,15 +10115,15 @@
       },
       {
         "from": "api.services.group_chat_service.delete_group_chat",
-        "line": 257
+        "line": 260
       },
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 975
+        "line": 978
       },
       {
         "from": "api.services.group_chat_service._get_pins_path",
-        "line": 1210
+        "line": 1213
       }
     ],
     "api.services.group_chat_service.str": [
@@ -9648,35 +10133,35 @@
       },
       {
         "from": "api.services.group_chat_service.delete_group_chat",
-        "line": 267
+        "line": 270
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1087
+        "line": 1090
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1105
+        "line": 1108
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1132
+        "line": 1135
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1161
+        "line": 1164
       },
       {
         "from": "api.services.group_chat_service.get_file_snapshot_content",
-        "line": 1265
+        "line": 1268
       },
       {
         "from": "api.services.group_chat_service.get_file_snapshot_diff",
-        "line": 1300
+        "line": 1303
       },
       {
         "from": "api.services.group_chat_service.get_uploaded_file_path",
-        "line": 1730
+        "line": 1733
       }
     ],
     "api.services.group_chat_service.uuid4": [
@@ -9686,7 +10171,7 @@
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1105
+        "line": 1108
       }
     ],
     "api.services.group_chat_service.GroupChat": [
@@ -9696,7 +10181,7 @@
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1165
+        "line": 1168
       }
     ],
     "api.services.group_chat_service.StateError": [
@@ -9706,95 +10191,109 @@
       },
       {
         "from": "api.services.group_chat_service.load_group_chat",
-        "line": 215
+        "line": 218
       },
       {
         "from": "api.services.group_chat_service.compress_agent_context",
-        "line": 766
+        "line": 769
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1089
+        "line": 1092
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1133
+        "line": 1136
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1162
+        "line": 1165
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1179
+        "line": 1182
+      }
+    ],
+    "api.services.group_chat_service.broadcast_group_chat_refresh": [
+      {
+        "from": "api.services.group_chat_service.create_group_chat",
+        "line": 181
+      },
+      {
+        "from": "api.services.group_chat_service.fork_group_chat",
+        "line": 1197
+      },
+      {
+        "from": "api.services.group_chat_service.add_group_chat_members",
+        "line": 1456
+      },
+      {
+        "from": "api.services.group_chat_service.update_permission_status",
+        "line": 1602
       }
     ],
     "api.services.group_chat_service.ExternalServiceError": [
       {
         "from": "api.services.group_chat_service.delete_group_chat",
-        "line": 263
+        "line": 266
       }
     ],
     "api.services.group_chat_service.ProjectSummary": [
       {
         "from": "api.services.group_chat_service.get_projects_summary",
-        "line": 290
+        "line": 293
       }
     ],
     "api.services.group_chat_service.list": [
       {
         "from": "api.services.group_chat_service.get_projects_summary",
-        "line": 303
+        "line": 306
       },
       {
         "from": "api.services.group_chat_service.toggle_use_docker",
-        "line": 663
+        "line": 666
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1042
+        "line": 1045
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1052
+        "line": 1055
       }
     ],
     "api.services.group_chat_service.len": [
       {
         "from": "api.services.group_chat_service.get_projects_summary",
-        "line": 304
+        "line": 307
       },
       {
         "from": "api.services.group_chat_service.list_group_chats",
-        "line": 360
+        "line": 363
       },
       {
         "from": "api.services.group_chat_service.list_group_chats",
-        "line": 377
+        "line": 380
       },
       {
         "from": "api.services.group_chat_service.send_message",
-        "line": 501
+        "line": 504
       },
       {
         "from": "api.services.group_chat_service.send_message_and_wait",
-        "line": 577
+        "line": 580
       },
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1119
+        "line": 1122
       },
       {
         "from": "api.services.group_chat_service.unpin_message",
-        "line": 1414
+        "line": 1417
       },
       {
         "from": "api.services.group_chat_service.unpin_message",
-        "line": 1414
-      },
-      {
-        "from": "api.services.group_chat_service.upload_file",
-        "line": 1673
+        "line": 1417
       },
       {
         "from": "api.services.group_chat_service.upload_file",
@@ -9802,221 +10301,211 @@
       },
       {
         "from": "api.services.group_chat_service.upload_file",
-        "line": 1685
+        "line": 1679
+      },
+      {
+        "from": "api.services.group_chat_service.upload_file",
+        "line": 1688
       }
     ],
     "api.services.group_chat_service.GroupChatInfo": [
       {
         "from": "api.services.group_chat_service.list_group_chats",
-        "line": 366
+        "line": 369
       },
       {
         "from": "api.services.group_chat_service.get_group_chat_info",
-        "line": 411
+        "line": 414
       },
       {
         "from": "api.services.group_chat_service._build_group_chat_info_from_instance",
-        "line": 1006
+        "line": 1009
       }
     ],
     "api.services.group_chat_service.GroupChatType": [
       {
         "from": "api.services.group_chat_service.list_group_chats",
-        "line": 371
+        "line": 374
       }
     ],
     "api.services.group_chat_service.GroupChatListResponse": [
       {
         "from": "api.services.group_chat_service.list_group_chats",
-        "line": 378
+        "line": 381
       }
     ],
     "api.services.group_chat_service.GroupChatMember": [
       {
         "from": "api.services.group_chat_service.get_group_chat_members",
-        "line": 440
+        "line": 443
       },
       {
         "from": "api.services.group_chat_service.toggle_use_docker",
-        "line": 715
+        "line": 718
       },
       {
         "from": "api.services.group_chat_service.add_group_chat_members",
-        "line": 1455
+        "line": 1458
       }
     ],
     "api.services.group_chat_service.MessageInfo": [
       {
         "from": "api.services.group_chat_service.get_messages",
-        "line": 475
+        "line": 478
       }
     ],
     "api.services.group_chat_service.AgentMessage": [
       {
         "from": "api.services.group_chat_service.send_message",
-        "line": 543
+        "line": 546
       },
       {
         "from": "api.services.group_chat_service.update_permission_status",
-        "line": 1586
+        "line": 1589
       }
     ],
     "time.monotonic": [
       {
         "from": "api.services.group_chat_service.send_message_and_wait",
-        "line": 583
+        "line": 586
       },
       {
         "from": "api.services.group_chat_service.send_message_and_wait",
-        "line": 584
+        "line": 587
       },
       {
         "from": "api.services.group_chat_service.send_message_and_wait",
-        "line": 585
+        "line": 588
       }
     ],
     "api.services.group_chat_service.DockerManager": [
       {
         "from": "api.services.group_chat_service.toggle_use_docker",
-        "line": 697
+        "line": 700
       }
     ],
     "api.services.group_chat_service.DockerNotAvailableError": [
       {
         "from": "api.services.group_chat_service.toggle_use_docker",
-        "line": 701
+        "line": 704
       }
     ],
     "api.services.group_chat_service.sum": [
       {
         "from": "api.services.group_chat_service.compress_all_agents",
-        "line": 809
+        "line": 812
       }
     ],
     "api.services.group_chat_service.MemberHistoryResponse": [
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 953
+        "line": 956
       },
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 967
+        "line": 970
       },
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 978
+        "line": 981
       },
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 997
+        "line": 1000
       }
     ],
     "api.services.group_chat_service.resolve_session_path": [
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 964
+        "line": 967
       }
     ],
     "api.services.group_chat_service.parse_session_file": [
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 975
+        "line": 978
       }
     ],
     "api.services.group_chat_service.MemberHistoryMessage": [
       {
         "from": "api.services.group_chat_service.get_member_history",
-        "line": 986
+        "line": 989
       }
     ],
     "api.services.group_chat_service.ForkNotSupportedError": [
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1065
+        "line": 1068
       }
     ],
     "api.services.group_chat_service.enumerate": [
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1127
+        "line": 1130
       }
     ],
     "api.services.group_chat_service.dict": [
       {
         "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1128
-      }
-    ],
-    "api.services.group_chat_service.broadcast_group_chat_refresh": [
-      {
-        "from": "api.services.group_chat_service.fork_group_chat",
-        "line": 1194
-      },
-      {
-        "from": "api.services.group_chat_service.add_group_chat_members",
-        "line": 1453
-      },
-      {
-        "from": "api.services.group_chat_service.update_permission_status",
-        "line": 1599
+        "line": 1131
       }
     ],
     "api.services.group_chat_service.get_snapshot_content": [
       {
         "from": "api.services.group_chat_service.get_file_snapshot_content",
-        "line": 1252
+        "line": 1255
       }
     ],
     "api.services.group_chat_service.get_snapshot_diff": [
       {
         "from": "api.services.group_chat_service.get_file_snapshot_diff",
-        "line": 1293
+        "line": 1296
       }
     ],
     "api.services.group_chat_service.sorted": [
       {
         "from": "api.services.group_chat_service.get_pinned_messages",
-        "line": 1341
+        "line": 1344
       },
       {
         "from": "api.services.group_chat_service.get_agent_calls",
-        "line": 1484
+        "line": 1487
       }
     ],
     "api.services.group_chat_service.MessageNotFoundError": [
       {
         "from": "api.services.group_chat_service.pin_message",
-        "line": 1371
+        "line": 1374
       },
       {
         "from": "api.services.group_chat_service.update_permission_status",
-        "line": 1565
+        "line": 1568
       }
     ],
     "api.services.group_chat_service.PinnedMessageInfo": [
       {
         "from": "api.services.group_chat_service.pin_message",
-        "line": 1383
+        "line": 1386
       },
       {
         "from": "api.services.group_chat_service.pin_message",
-        "line": 1396
+        "line": 1399
       }
     ],
     "api.services.group_chat_service.next": [
       {
         "from": "api.services.group_chat_service.update_permission_status",
-        "line": 1572
+        "line": 1575
       }
     ],
     "api.services.group_chat_service.FileService": [
       {
         "from": "api.services.group_chat_service.upload_file",
-        "line": 1691
+        "line": 1694
       },
       {
         "from": "api.services.group_chat_service.get_uploaded_file_path",
-        "line": 1724
+        "line": 1727
       }
     ],
     "api.services.role_service.get_logger": [
@@ -10598,31 +11087,43 @@
     "agent_bridge.parsers.codex.ParseError": [
       {
         "from": "agent_bridge.parsers.codex.parse_event",
-        "line": 34
+        "line": 35
       }
     ],
     "agent_bridge.parsers.codex.str": [
       {
         "from": "agent_bridge.parsers.codex.parse_event",
-        "line": 35
+        "line": 36
       }
     ],
     "agent_bridge.parsers.codex.StreamEvent": [
       {
         "from": "agent_bridge.parsers.codex.parse_event",
-        "line": 43
+        "line": 44
       },
       {
         "from": "agent_bridge.parsers.codex._parse_item_completed",
-        "line": 73
+        "line": 74
       },
       {
         "from": "agent_bridge.parsers.codex._parse_item_completed",
-        "line": 85
+        "line": 86
       },
       {
         "from": "agent_bridge.parsers.codex._parse_turn_completed",
-        "line": 116
+        "line": 119
+      }
+    ],
+    "agent_bridge.parsers.codex.dict": [
+      {
+        "from": "agent_bridge.parsers.codex._usage_delta",
+        "line": 137
+      }
+    ],
+    "agent_bridge.parsers.codex.max": [
+      {
+        "from": "agent_bridge.parsers.codex._usage_delta",
+        "line": 146
       }
     ],
     "agent_bridge.parsers.opencode.ParseError": [
@@ -17800,7 +18301,7 @@
       },
       {
         "from": "shared.components.MarkdownRenderer.MarkdownRenderer.<module>",
-        "line": 12
+        "line": 13
       },
       {
         "from": "shared.components.UploadArea.UploadArea.<module>",
@@ -18659,12 +19160,6 @@
       {
         "from": "layouts.RightSidebar.RightSidebar.<module>",
         "line": 163
-      }
-    ],
-    "layouts.RightSidebar.RightSidebar.toggleLocation": [
-      {
-        "from": "layouts.RightSidebar.RightSidebar.<module>",
-        "line": 444
       }
     ],
     "features.skills.components.SkillDetailModal.SkillDetailModal.onClose": [
@@ -19588,7 +20083,7 @@
     "agent_bridge.bridge.<module>": [
       {
         "to": "logging.getLogger",
-        "line": 24
+        "line": 26
       }
     ],
     "api.app.<module>": [
@@ -19834,101 +20329,639 @@
     "agent_bridge.bridge.__init__": [
       {
         "to": "agent_bridge.bridge.ClaudeExecutor",
-        "line": 35
-      },
-      {
-        "to": "agent_bridge.bridge.CodexExecutor",
-        "line": 36
-      },
-      {
-        "to": "agent_bridge.bridge.OpenCodeExecutor",
         "line": 37
       },
       {
-        "to": "agent_bridge.bridge.DockerManager",
-        "line": 45
+        "to": "agent_bridge.bridge.CodexExecutor",
+        "line": 38
       },
       {
-        "to": "agent_bridge.bridge.DockerClaudeExecutor",
+        "to": "agent_bridge.bridge.OpenCodeExecutor",
+        "line": 39
+      },
+      {
+        "to": "agent_bridge.bridge.DockerManager",
         "line": 47
       },
       {
+        "to": "agent_bridge.bridge.DockerClaudeExecutor",
+        "line": 49
+      },
+      {
         "to": "agent_bridge.bridge.DockerCodexExecutor",
-        "line": 48
+        "line": 50
       },
       {
         "to": "agent_bridge.bridge.RoleManager",
-        "line": 51
+        "line": 53
       }
     ],
     "agent_bridge.bridge._create_parser": [
       {
         "to": "agent_bridge.bridge.ClaudeParser",
-        "line": 70
-      },
-      {
-        "to": "agent_bridge.bridge.CodexParser",
         "line": 72
       },
       {
-        "to": "agent_bridge.bridge.OpenCodeParser",
+        "to": "agent_bridge.bridge.CodexParser",
         "line": 74
       },
       {
-        "to": "agent_bridge.bridge.PlatformNotSupportedError",
+        "to": "agent_bridge.bridge.OpenCodeParser",
         "line": 76
       },
       {
+        "to": "agent_bridge.bridge.PlatformNotSupportedError",
+        "line": 78
+      },
+      {
         "to": "agent_bridge.bridge.str",
-        "line": 76
+        "line": 78
       }
     ],
     "agent_bridge.bridge.execute_stream": [
       {
         "to": "agent_bridge.bridge.PlatformNotSupportedError",
+        "line": 143
+      },
+      {
+        "to": "agent_bridge.bridge.isinstance",
+        "line": 159
+      },
+      {
+        "to": "agent_bridge.bridge.isinstance",
+        "line": 164
+      }
+    ],
+    "agent_bridge.bridge._read_codex_usage_baseline": [
+      {
+        "to": "agent_bridge.bridge.open",
+        "line": 87
+      },
+      {
+        "to": "json.loads",
+        "line": 92
+      }
+    ],
+    "roles.role._read_role_json": [
+      {
+        "to": "json.loads",
+        "line": 64
+      }
+    ],
+    "roles.role_manager.list_roles": [
+      {
+        "to": "json.loads",
+        "line": 144
+      },
+      {
+        "to": "roles.role_manager.RoleType",
+        "line": 146
+      },
+      {
+        "to": "roles.role_manager.RoleInfo",
+        "line": 148
+      },
+      {
+        "to": "roles.role_manager.AgentPlatform",
+        "line": 150
+      }
+    ],
+    "utils.session_parser.load_jsonl": [
+      {
+        "to": "json.loads",
+        "line": 48
+      },
+      {
+        "to": "utils.session_parser.open",
+        "line": 43
+      }
+    ],
+    "utils.session_parser.parse_codex_session": [
+      {
+        "to": "json.loads",
+        "line": 150
+      },
+      {
+        "to": "utils.session_parser.SessionMessage",
+        "line": 138
+      },
+      {
+        "to": "utils.session_parser.ToolCallInfo",
+        "line": 153
+      },
+      {
+        "to": "utils.session_parser.reversed",
+        "line": 164
+      }
+    ],
+    "core.communication.agent_call_manager._load_from_persistence": [
+      {
+        "to": "json.loads",
+        "line": 277
+      },
+      {
+        "to": "core.communication.agent_call_manager.open",
+        "line": 271
+      },
+      {
+        "to": "core.communication.agent_call_manager.len",
+        "line": 288
+      },
+      {
+        "to": "core.communication.agent_call_manager.str",
+        "line": 290
+      },
+      {
+        "to": "core.communication.agent_call_manager.str",
+        "line": 293
+      },
+      {
+        "to": "core.communication.agent_call_manager.str",
+        "line": 294
+      },
+      {
+        "to": "core.communication.agent_call_manager.FileSystemError",
+        "line": 291
+      }
+    ],
+    "core.communication.task_manager._load_from_persistence": [
+      {
+        "to": "json.loads",
+        "line": 291
+      },
+      {
+        "to": "core.communication.task_manager.len",
+        "line": 301
+      },
+      {
+        "to": "core.communication.task_manager.str",
+        "line": 305
+      },
+      {
+        "to": "core.communication.task_manager.str",
+        "line": 306
+      },
+      {
+        "to": "core.communication.task_manager.open",
+        "line": 285
+      },
+      {
+        "to": "core.communication.task_manager.FileSystemError",
+        "line": 303
+      }
+    ],
+    "core.context.agent_context._get_pinned_messages": [
+      {
+        "to": "json.loads",
+        "line": 299
+      },
+      {
+        "to": "core.context.agent_context.enumerate",
+        "line": 307
+      },
+      {
+        "to": "core.context.agent_context.Path",
+        "line": 290
+      },
+      {
+        "to": "core.context.agent_context.open",
+        "line": 297
+      },
+      {
+        "to": "core.context.agent_context.sorted",
+        "line": 304
+      }
+    ],
+    "core.context.group_chat_repository.load_group_chat_session": [
+      {
+        "to": "json.loads",
+        "line": 77
+      },
+      {
+        "to": "core.context.group_chat_repository.str",
+        "line": 84
+      },
+      {
+        "to": "core.context.group_chat_repository.str",
+        "line": 86
+      },
+      {
+        "to": "os.makedirs",
+        "line": 62
+      },
+      {
+        "to": "core.context.group_chat_repository.GroupChatSession",
+        "line": 66
+      },
+      {
+        "to": "core.context.group_chat_repository.GroupChatSession",
+        "line": 94
+      },
+      {
+        "to": "aiofiles.open",
+        "line": 73
+      },
+      {
+        "to": "core.context.group_chat_repository.FileSystemError",
+        "line": 86
+      },
+      {
+        "to": "core.context.group_chat_repository.enumerate",
+        "line": 89
+      },
+      {
+        "to": "core.context.group_chat_repository.len",
+        "line": 106
+      }
+    ],
+    "core.context.group_chat_repository.load_agent_member_infos": [
+      {
+        "to": "json.loads",
+        "line": 172
+      },
+      {
+        "to": "core.context.group_chat_repository.str",
+        "line": 178
+      },
+      {
+        "to": "core.context.group_chat_repository.str",
+        "line": 181
+      },
+      {
+        "to": "os.makedirs",
+        "line": 162
+      },
+      {
+        "to": "aiofiles.open",
+        "line": 170
+      },
+      {
+        "to": "core.context.group_chat_repository.FileSystemError",
+        "line": 180
+      },
+      {
+        "to": "core.context.group_chat_repository.AgentMemberInfo",
+        "line": 192
+      },
+      {
+        "to": "core.context.group_chat_repository.AgentContextState",
+        "line": 195
+      }
+    ],
+    "core.context.group_chat_repository.load_compact_history": [
+      {
+        "to": "json.loads",
+        "line": 286
+      },
+      {
+        "to": "core.context.group_chat_repository.str",
+        "line": 292
+      },
+      {
+        "to": "core.context.group_chat_repository.str",
+        "line": 295
+      },
+      {
+        "to": "aiofiles.open",
+        "line": 282
+      },
+      {
+        "to": "core.context.group_chat_repository.FileSystemError",
+        "line": 294
+      }
+    ],
+    "core.context.group_chat_repository.load_group_metadata": [
+      {
+        "to": "json.loads",
+        "line": 367
+      },
+      {
+        "to": "core.context.group_chat_repository.str",
+        "line": 375
+      },
+      {
+        "to": "core.context.group_chat_repository.str",
+        "line": 377
+      },
+      {
+        "to": "aiofiles.open",
+        "line": 365
+      },
+      {
+        "to": "core.context.group_chat_repository.FileSystemError",
+        "line": 377
+      }
+    ],
+    "core.orchestration.loop_manager._load_from_persistence": [
+      {
+        "to": "json.loads",
+        "line": 354
+      },
+      {
+        "to": "core.orchestration.loop_manager.set",
+        "line": 345
+      },
+      {
+        "to": "core.orchestration.loop_manager.str",
+        "line": 387
+      },
+      {
+        "to": "core.orchestration.loop_manager.str",
+        "line": 388
+      },
+      {
+        "to": "core.orchestration.loop_manager.len",
+        "line": 382
+      },
+      {
+        "to": "core.orchestration.loop_manager.open",
+        "line": 347
+      },
+      {
+        "to": "core.orchestration.loop_manager.enumerate",
+        "line": 348
+      },
+      {
+        "to": "core.orchestration.loop_manager.FileSystemError",
+        "line": 385
+      }
+    ],
+    "channels.wechat.auth.load_token": [
+      {
+        "to": "json.loads",
+        "line": 34
+      }
+    ],
+    "channels.wechat.auth.save_token": [
+      {
+        "to": "json.loads",
+        "line": 46
+      },
+      {
+        "to": "json.dumps",
+        "line": 52
+      }
+    ],
+    "channels.wechat.commander._ask_assistant": [
+      {
+        "to": "json.loads",
+        "line": 242
+      }
+    ],
+    "channels.wechat.commander._forward_to_agent": [
+      {
+        "to": "json.loads",
+        "line": 297
+      }
+    ],
+    "api.services.group_chat_service.fork_group_chat": [
+      {
+        "to": "json.loads",
+        "line": 1085
+      },
+      {
+        "to": "json.dumps",
+        "line": 1127
+      },
+      {
+        "to": "json.dumps",
+        "line": 1133
+      },
+      {
+        "to": "json.dumps",
+        "line": 1162
+      },
+      {
+        "to": "os.makedirs",
+        "line": 1112
+      },
+      {
+        "to": "aiofiles.open",
+        "line": 1081
+      },
+      {
+        "to": "aiofiles.open",
+        "line": 1117
+      },
+      {
+        "to": "aiofiles.open",
+        "line": 1161
+      },
+      {
+        "to": "api.services.group_chat_service.RoleManager",
+        "line": 1053
+      },
+      {
+        "to": "api.services.group_chat_service.ResourceNotFoundError",
+        "line": 1038
+      },
+      {
+        "to": "api.services.group_chat_service.str",
+        "line": 1090
+      },
+      {
+        "to": "api.services.group_chat_service.str",
+        "line": 1108
+      },
+      {
+        "to": "api.services.group_chat_service.str",
+        "line": 1135
+      },
+      {
+        "to": "api.services.group_chat_service.str",
+        "line": 1164
+      },
+      {
+        "to": "api.services.group_chat_service.uuid4",
+        "line": 1108
+      },
+      {
+        "to": "api.services.group_chat_service.GroupChat",
+        "line": 1168
+      },
+      {
+        "to": "api.services.group_chat_service.StateError",
+        "line": 1092
+      },
+      {
+        "to": "api.services.group_chat_service.StateError",
+        "line": 1136
+      },
+      {
+        "to": "api.services.group_chat_service.StateError",
+        "line": 1165
+      },
+      {
+        "to": "api.services.group_chat_service.StateError",
+        "line": 1182
+      },
+      {
+        "to": "api.services.group_chat_service.broadcast_group_chat_refresh",
+        "line": 1197
+      },
+      {
+        "to": "api.services.group_chat_service.list",
+        "line": 1045
+      },
+      {
+        "to": "api.services.group_chat_service.list",
+        "line": 1055
+      },
+      {
+        "to": "api.services.group_chat_service.len",
+        "line": 1122
+      },
+      {
+        "to": "api.services.group_chat_service.ForkNotSupportedError",
+        "line": 1068
+      },
+      {
+        "to": "api.services.group_chat_service.enumerate",
+        "line": 1130
+      },
+      {
+        "to": "api.services.group_chat_service.dict",
+        "line": 1131
+      }
+    ],
+    "api.services.group_chat_service._read_pins": [
+      {
+        "to": "json.loads",
+        "line": 1316
+      },
+      {
+        "to": "aiofiles.open",
+        "line": 1312
+      }
+    ],
+    "agent_bridge.executors.opencode.execute": [
+      {
+        "to": "json.loads",
+        "line": 80
+      },
+      {
+        "to": "json.loads",
+        "line": 87
+      },
+      {
+        "to": "asyncio.create_subprocess_exec",
+        "line": 51
+      },
+      {
+        "to": "agent_bridge.executors.opencode.CLINotFoundError",
+        "line": 60
+      },
+      {
+        "to": "agent_bridge.executors.opencode.CLIExecutionError",
+        "line": 99
+      }
+    ],
+    "agent_bridge.parsers.claude.parse_event": [
+      {
+        "to": "json.loads",
+        "line": 33
+      },
+      {
+        "to": "agent_bridge.parsers.claude.ParseError",
+        "line": 36
+      },
+      {
+        "to": "agent_bridge.parsers.claude.str",
+        "line": 37
+      }
+    ],
+    "agent_bridge.parsers.claude._handle_content_block_stop": [
+      {
+        "to": "json.loads",
+        "line": 124
+      },
+      {
+        "to": "agent_bridge.parsers.claude.StreamEvent",
+        "line": 128
+      }
+    ],
+    "agent_bridge.parsers.codex.parse_event": [
+      {
+        "to": "json.loads",
+        "line": 32
+      },
+      {
+        "to": "agent_bridge.parsers.codex.ParseError",
+        "line": 35
+      },
+      {
+        "to": "agent_bridge.parsers.codex.str",
+        "line": 36
+      },
+      {
+        "to": "agent_bridge.parsers.codex.StreamEvent",
+        "line": 44
+      }
+    ],
+    "agent_bridge.parsers.opencode.parse_event": [
+      {
+        "to": "json.loads",
+        "line": 27
+      },
+      {
+        "to": "agent_bridge.parsers.opencode.ParseError",
+        "line": 30
+      },
+      {
+        "to": "agent_bridge.parsers.opencode.str",
+        "line": 31
+      },
+      {
+        "to": "agent_bridge.parsers.opencode.StreamEvent",
+        "line": 41
+      },
+      {
+        "to": "agent_bridge.parsers.opencode.StreamEvent",
+        "line": 58
+      },
+      {
+        "to": "agent_bridge.parsers.opencode.StreamEvent",
+        "line": 75
+      }
+    ],
+    "agent_bridge.bridge._codex_usage_baseline": [
+      {
+        "to": "agent_bridge.bridge.resolve_session_path",
         "line": 109
-      },
-      {
-        "to": "agent_bridge.bridge.isinstance",
-        "line": 122
-      },
-      {
-        "to": "agent_bridge.bridge.isinstance",
-        "line": 127
       }
     ],
     "agent_bridge.bridge._dict_to_stream_event": [
       {
         "to": "agent_bridge.bridge.StreamEvent",
-        "line": 156
+        "line": 193
       },
       {
         "to": "agent_bridge.bridge.StreamEvent",
-        "line": 166
+        "line": 203
       },
       {
         "to": "agent_bridge.bridge.StreamEvent",
-        "line": 177
+        "line": 214
       }
     ],
     "agent_bridge.bridge.execute": [
       {
         "to": "agent_bridge.bridge.Usage",
-        "line": 241
+        "line": 279
       },
       {
         "to": "agent_bridge.bridge.Usage",
-        "line": 264
+        "line": 302
       },
       {
         "to": "agent_bridge.bridge.AgentResult",
-        "line": 272
+        "line": 310
       }
     ],
     "agent_bridge.bridge.stop_session": [
       {
         "to": "agent_bridge.bridge.hasattr",
-        "line": 306
+        "line": 344
       }
     ],
     "agent_bridge.exceptions.__init__": [
@@ -20032,33 +21065,33 @@
     "core.orchestration.group_chat.start_member": [
       {
         "to": "asyncio.create_task",
-        "line": 895
+        "line": 904
       },
       {
         "to": "asyncio.create_task",
-        "line": 897
+        "line": 906
       },
       {
         "to": "core.orchestration.group_chat.StateError",
-        "line": 880
+        "line": 889
       },
       {
         "to": "core.orchestration.group_chat.AgentNotFoundError",
-        "line": 875
+        "line": 884
       }
     ],
     "core.orchestration.group_chat.reset_member": [
       {
         "to": "asyncio.create_task",
-        "line": 986
+        "line": 995
       },
       {
         "to": "asyncio.create_task",
-        "line": 990
+        "line": 999
       },
       {
         "to": "core.orchestration.group_chat.AgentNotFoundError",
-        "line": 953
+        "line": 962
       }
     ],
     "channels.wechat.channel.start": [
@@ -20938,33 +21971,33 @@
     "core.orchestration.group_chat.stop_member": [
       {
         "to": "contextlib.suppress",
-        "line": 778
-      },
-      {
-        "to": "contextlib.suppress",
         "line": 787
       },
       {
+        "to": "contextlib.suppress",
+        "line": 796
+      },
+      {
         "to": "core.orchestration.group_chat.AgentNotFoundError",
-        "line": 758
+        "line": 767
       }
     ],
     "core.orchestration.group_chat.cleanup": [
       {
         "to": "contextlib.suppress",
-        "line": 1058
+        "line": 1067
       },
       {
         "to": "asyncio.wait_for",
-        "line": 1071
-      },
-      {
-        "to": "asyncio.gather",
-        "line": 1072
-      },
-      {
-        "to": "asyncio.gather",
         "line": 1080
+      },
+      {
+        "to": "asyncio.gather",
+        "line": 1081
+      },
+      {
+        "to": "asyncio.gather",
+        "line": 1089
       }
     ],
     "channels.wechat.channel.stop": [
@@ -21127,494 +22160,6 @@
       {
         "to": "roles.role.get_logger",
         "line": 15
-      }
-    ],
-    "roles.role._read_role_json": [
-      {
-        "to": "json.loads",
-        "line": 64
-      }
-    ],
-    "roles.role_manager.list_roles": [
-      {
-        "to": "json.loads",
-        "line": 144
-      },
-      {
-        "to": "roles.role_manager.RoleType",
-        "line": 146
-      },
-      {
-        "to": "roles.role_manager.RoleInfo",
-        "line": 148
-      },
-      {
-        "to": "roles.role_manager.AgentPlatform",
-        "line": 150
-      }
-    ],
-    "utils.session_parser.load_jsonl": [
-      {
-        "to": "json.loads",
-        "line": 48
-      },
-      {
-        "to": "utils.session_parser.open",
-        "line": 43
-      }
-    ],
-    "utils.session_parser.parse_codex_session": [
-      {
-        "to": "json.loads",
-        "line": 150
-      },
-      {
-        "to": "utils.session_parser.SessionMessage",
-        "line": 138
-      },
-      {
-        "to": "utils.session_parser.ToolCallInfo",
-        "line": 153
-      },
-      {
-        "to": "utils.session_parser.reversed",
-        "line": 164
-      }
-    ],
-    "core.communication.agent_call_manager._load_from_persistence": [
-      {
-        "to": "json.loads",
-        "line": 277
-      },
-      {
-        "to": "core.communication.agent_call_manager.open",
-        "line": 271
-      },
-      {
-        "to": "core.communication.agent_call_manager.len",
-        "line": 288
-      },
-      {
-        "to": "core.communication.agent_call_manager.str",
-        "line": 290
-      },
-      {
-        "to": "core.communication.agent_call_manager.str",
-        "line": 293
-      },
-      {
-        "to": "core.communication.agent_call_manager.str",
-        "line": 294
-      },
-      {
-        "to": "core.communication.agent_call_manager.FileSystemError",
-        "line": 291
-      }
-    ],
-    "core.communication.task_manager._load_from_persistence": [
-      {
-        "to": "json.loads",
-        "line": 291
-      },
-      {
-        "to": "core.communication.task_manager.len",
-        "line": 301
-      },
-      {
-        "to": "core.communication.task_manager.str",
-        "line": 305
-      },
-      {
-        "to": "core.communication.task_manager.str",
-        "line": 306
-      },
-      {
-        "to": "core.communication.task_manager.open",
-        "line": 285
-      },
-      {
-        "to": "core.communication.task_manager.FileSystemError",
-        "line": 303
-      }
-    ],
-    "core.context.agent_context._get_pinned_messages": [
-      {
-        "to": "json.loads",
-        "line": 295
-      },
-      {
-        "to": "core.context.agent_context.enumerate",
-        "line": 303
-      },
-      {
-        "to": "core.context.agent_context.Path",
-        "line": 286
-      },
-      {
-        "to": "core.context.agent_context.open",
-        "line": 293
-      },
-      {
-        "to": "core.context.agent_context.sorted",
-        "line": 300
-      }
-    ],
-    "core.context.group_chat_repository.load_group_chat_session": [
-      {
-        "to": "json.loads",
-        "line": 77
-      },
-      {
-        "to": "core.context.group_chat_repository.str",
-        "line": 84
-      },
-      {
-        "to": "core.context.group_chat_repository.str",
-        "line": 86
-      },
-      {
-        "to": "os.makedirs",
-        "line": 62
-      },
-      {
-        "to": "core.context.group_chat_repository.GroupChatSession",
-        "line": 66
-      },
-      {
-        "to": "core.context.group_chat_repository.GroupChatSession",
-        "line": 94
-      },
-      {
-        "to": "aiofiles.open",
-        "line": 73
-      },
-      {
-        "to": "core.context.group_chat_repository.FileSystemError",
-        "line": 86
-      },
-      {
-        "to": "core.context.group_chat_repository.enumerate",
-        "line": 89
-      },
-      {
-        "to": "core.context.group_chat_repository.len",
-        "line": 106
-      }
-    ],
-    "core.context.group_chat_repository.load_agent_member_infos": [
-      {
-        "to": "json.loads",
-        "line": 172
-      },
-      {
-        "to": "core.context.group_chat_repository.str",
-        "line": 178
-      },
-      {
-        "to": "core.context.group_chat_repository.str",
-        "line": 181
-      },
-      {
-        "to": "os.makedirs",
-        "line": 162
-      },
-      {
-        "to": "aiofiles.open",
-        "line": 170
-      },
-      {
-        "to": "core.context.group_chat_repository.FileSystemError",
-        "line": 180
-      },
-      {
-        "to": "core.context.group_chat_repository.AgentMemberInfo",
-        "line": 192
-      },
-      {
-        "to": "core.context.group_chat_repository.AgentContextState",
-        "line": 195
-      }
-    ],
-    "core.context.group_chat_repository.load_compact_history": [
-      {
-        "to": "json.loads",
-        "line": 286
-      },
-      {
-        "to": "core.context.group_chat_repository.str",
-        "line": 292
-      },
-      {
-        "to": "core.context.group_chat_repository.str",
-        "line": 295
-      },
-      {
-        "to": "aiofiles.open",
-        "line": 282
-      },
-      {
-        "to": "core.context.group_chat_repository.FileSystemError",
-        "line": 294
-      }
-    ],
-    "core.context.group_chat_repository.load_group_metadata": [
-      {
-        "to": "json.loads",
-        "line": 367
-      },
-      {
-        "to": "core.context.group_chat_repository.str",
-        "line": 375
-      },
-      {
-        "to": "core.context.group_chat_repository.str",
-        "line": 377
-      },
-      {
-        "to": "aiofiles.open",
-        "line": 365
-      },
-      {
-        "to": "core.context.group_chat_repository.FileSystemError",
-        "line": 377
-      }
-    ],
-    "channels.wechat.auth.load_token": [
-      {
-        "to": "json.loads",
-        "line": 34
-      }
-    ],
-    "channels.wechat.auth.save_token": [
-      {
-        "to": "json.loads",
-        "line": 46
-      },
-      {
-        "to": "json.dumps",
-        "line": 52
-      }
-    ],
-    "channels.wechat.commander._ask_assistant": [
-      {
-        "to": "json.loads",
-        "line": 242
-      }
-    ],
-    "channels.wechat.commander._forward_to_agent": [
-      {
-        "to": "json.loads",
-        "line": 297
-      }
-    ],
-    "api.services.group_chat_service.fork_group_chat": [
-      {
-        "to": "json.loads",
-        "line": 1082
-      },
-      {
-        "to": "json.dumps",
-        "line": 1124
-      },
-      {
-        "to": "json.dumps",
-        "line": 1130
-      },
-      {
-        "to": "json.dumps",
-        "line": 1159
-      },
-      {
-        "to": "os.makedirs",
-        "line": 1109
-      },
-      {
-        "to": "aiofiles.open",
-        "line": 1078
-      },
-      {
-        "to": "aiofiles.open",
-        "line": 1114
-      },
-      {
-        "to": "aiofiles.open",
-        "line": 1158
-      },
-      {
-        "to": "api.services.group_chat_service.RoleManager",
-        "line": 1050
-      },
-      {
-        "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1035
-      },
-      {
-        "to": "api.services.group_chat_service.str",
-        "line": 1087
-      },
-      {
-        "to": "api.services.group_chat_service.str",
-        "line": 1105
-      },
-      {
-        "to": "api.services.group_chat_service.str",
-        "line": 1132
-      },
-      {
-        "to": "api.services.group_chat_service.str",
-        "line": 1161
-      },
-      {
-        "to": "api.services.group_chat_service.uuid4",
-        "line": 1105
-      },
-      {
-        "to": "api.services.group_chat_service.GroupChat",
-        "line": 1165
-      },
-      {
-        "to": "api.services.group_chat_service.StateError",
-        "line": 1089
-      },
-      {
-        "to": "api.services.group_chat_service.StateError",
-        "line": 1133
-      },
-      {
-        "to": "api.services.group_chat_service.StateError",
-        "line": 1162
-      },
-      {
-        "to": "api.services.group_chat_service.StateError",
-        "line": 1179
-      },
-      {
-        "to": "api.services.group_chat_service.list",
-        "line": 1042
-      },
-      {
-        "to": "api.services.group_chat_service.list",
-        "line": 1052
-      },
-      {
-        "to": "api.services.group_chat_service.len",
-        "line": 1119
-      },
-      {
-        "to": "api.services.group_chat_service.ForkNotSupportedError",
-        "line": 1065
-      },
-      {
-        "to": "api.services.group_chat_service.enumerate",
-        "line": 1127
-      },
-      {
-        "to": "api.services.group_chat_service.dict",
-        "line": 1128
-      },
-      {
-        "to": "api.services.group_chat_service.broadcast_group_chat_refresh",
-        "line": 1194
-      }
-    ],
-    "api.services.group_chat_service._read_pins": [
-      {
-        "to": "json.loads",
-        "line": 1313
-      },
-      {
-        "to": "aiofiles.open",
-        "line": 1309
-      }
-    ],
-    "agent_bridge.executors.opencode.execute": [
-      {
-        "to": "json.loads",
-        "line": 80
-      },
-      {
-        "to": "json.loads",
-        "line": 87
-      },
-      {
-        "to": "asyncio.create_subprocess_exec",
-        "line": 51
-      },
-      {
-        "to": "agent_bridge.executors.opencode.CLINotFoundError",
-        "line": 60
-      },
-      {
-        "to": "agent_bridge.executors.opencode.CLIExecutionError",
-        "line": 99
-      }
-    ],
-    "agent_bridge.parsers.claude.parse_event": [
-      {
-        "to": "json.loads",
-        "line": 33
-      },
-      {
-        "to": "agent_bridge.parsers.claude.ParseError",
-        "line": 36
-      },
-      {
-        "to": "agent_bridge.parsers.claude.str",
-        "line": 37
-      }
-    ],
-    "agent_bridge.parsers.claude._handle_content_block_stop": [
-      {
-        "to": "json.loads",
-        "line": 124
-      },
-      {
-        "to": "agent_bridge.parsers.claude.StreamEvent",
-        "line": 128
-      }
-    ],
-    "agent_bridge.parsers.codex.parse_event": [
-      {
-        "to": "json.loads",
-        "line": 31
-      },
-      {
-        "to": "agent_bridge.parsers.codex.ParseError",
-        "line": 34
-      },
-      {
-        "to": "agent_bridge.parsers.codex.str",
-        "line": 35
-      },
-      {
-        "to": "agent_bridge.parsers.codex.StreamEvent",
-        "line": 43
-      }
-    ],
-    "agent_bridge.parsers.opencode.parse_event": [
-      {
-        "to": "json.loads",
-        "line": 27
-      },
-      {
-        "to": "agent_bridge.parsers.opencode.ParseError",
-        "line": 30
-      },
-      {
-        "to": "agent_bridge.parsers.opencode.str",
-        "line": 31
-      },
-      {
-        "to": "agent_bridge.parsers.opencode.StreamEvent",
-        "line": 41
-      },
-      {
-        "to": "agent_bridge.parsers.opencode.StreamEvent",
-        "line": 58
-      },
-      {
-        "to": "agent_bridge.parsers.opencode.StreamEvent",
-        "line": 75
       }
     ],
     "roles.role._write_role_json": [
@@ -21865,6 +22410,50 @@
         "line": 350
       }
     ],
+    "core.orchestration.loop_manager._persist_loop": [
+      {
+        "to": "json.dumps",
+        "line": 404
+      },
+      {
+        "to": "core.orchestration.loop_manager.str",
+        "line": 408
+      },
+      {
+        "to": "core.orchestration.loop_manager.str",
+        "line": 409
+      },
+      {
+        "to": "core.orchestration.loop_manager.open",
+        "line": 403
+      },
+      {
+        "to": "core.orchestration.loop_manager.FileSystemError",
+        "line": 406
+      }
+    ],
+    "core.orchestration.loop_manager._persist_deletion": [
+      {
+        "to": "json.dumps",
+        "line": 425
+      },
+      {
+        "to": "core.orchestration.loop_manager.str",
+        "line": 429
+      },
+      {
+        "to": "core.orchestration.loop_manager.str",
+        "line": 430
+      },
+      {
+        "to": "core.orchestration.loop_manager.open",
+        "line": 424
+      },
+      {
+        "to": "core.orchestration.loop_manager.FileSystemError",
+        "line": 427
+      }
+    ],
     "core.utils.session_fork.fork_codex_session": [
       {
         "to": "json.dumps",
@@ -21898,11 +22487,11 @@
     "api.services.group_chat_service._write_pins": [
       {
         "to": "json.dumps",
-        "line": 1322
+        "line": 1325
       },
       {
         "to": "aiofiles.open",
-        "line": 1321
+        "line": 1324
       }
     ],
     "api.services.single_chat_service._serialize_event": [
@@ -21998,19 +22587,19 @@
     "api.services.group_chat_service.delete_group_chat": [
       {
         "to": "shutil.rmtree",
-        "line": 259
+        "line": 262
       },
       {
         "to": "api.services.group_chat_service.Path",
-        "line": 257
+        "line": 260
       },
       {
         "to": "api.services.group_chat_service.str",
-        "line": 267
+        "line": 270
       },
       {
         "to": "api.services.group_chat_service.ExternalServiceError",
-        "line": 263
+        "line": 266
       }
     ],
     "roles.role_manager.<module>": [
@@ -22058,29 +22647,29 @@
     "core.agent.base_agent._parse_changes_xml": [
       {
         "to": "re.search",
-        "line": 657
+        "line": 731
       },
       {
         "to": "core.agent.base_agent.extract_tag",
-        "line": 667
+        "line": 741
       },
       {
         "to": "core.agent.base_agent.extract_tag",
-        "line": 672
+        "line": 746
       },
       {
         "to": "core.agent.base_agent.extract_tag",
-        "line": 673
+        "line": 747
       },
       {
         "to": "core.agent.base_agent.extract_tag",
-        "line": 674
+        "line": 748
       }
     ],
     "core.agent.base_agent.extract_tag": [
       {
         "to": "re.search",
-        "line": 664
+        "line": 738
       }
     ],
     "roles.role_manager.get_role": [
@@ -22224,115 +22813,119 @@
     "core.foundation.file_snapshot.get_git_changed_files": [
       {
         "to": "subprocess.run",
-        "line": 504
+        "line": 517
       },
       {
         "to": "subprocess.run",
-        "line": 522
+        "line": 544
       },
       {
         "to": "subprocess.run",
-        "line": 568
+        "line": 590
       },
       {
         "to": "core.foundation.file_snapshot.Path",
-        "line": 465
+        "line": 469
       },
       {
         "to": "core.foundation.file_snapshot.Path",
-        "line": 478
+        "line": 490
       },
       {
         "to": "core.foundation.file_snapshot.Path",
-        "line": 497
+        "line": 509
       },
       {
         "to": "core.foundation.file_snapshot.Path",
-        "line": 551
+        "line": 573
       },
       {
         "to": "core.foundation.file_snapshot.Path",
-        "line": 557
+        "line": 579
       },
       {
         "to": "core.foundation.file_snapshot.Path",
-        "line": 598
+        "line": 620
       },
       {
         "to": "core.foundation.file_snapshot.Path",
-        "line": 603
+        "line": 625
       },
       {
         "to": "core.foundation.file_snapshot.str",
-        "line": 480
+        "line": 492
       },
       {
         "to": "core.foundation.file_snapshot.str",
-        "line": 491
+        "line": 503
       },
       {
         "to": "core.foundation.file_snapshot.str",
-        "line": 547
+        "line": 569
       },
       {
         "to": "core.foundation.file_snapshot.str",
-        "line": 595
+        "line": 617
       },
       {
         "to": "core.foundation.file_snapshot.str",
-        "line": 612
+        "line": 634
       },
       {
         "to": "core.foundation.file_snapshot.len",
-        "line": 486
-      },
-      {
-        "to": "core.foundation.file_snapshot.len",
-        "line": 518
-      },
-      {
-        "to": "core.foundation.file_snapshot.len",
-        "line": 534
-      },
-      {
-        "to": "core.foundation.file_snapshot.len",
-        "line": 561
-      },
-      {
-        "to": "core.foundation.file_snapshot.len",
-        "line": 585
-      },
-      {
-        "to": "core.foundation.file_snapshot.len",
-        "line": 606
-      },
-      {
-        "to": "core.foundation.file_snapshot.set",
         "line": 498
       },
       {
-        "to": "core.foundation.file_snapshot.set",
-        "line": 515
-      },
-      {
-        "to": "core.foundation.file_snapshot.set",
-        "line": 515
-      },
-      {
-        "to": "core.foundation.file_snapshot.set",
+        "to": "core.foundation.file_snapshot.len",
         "line": 531
       },
       {
+        "to": "core.foundation.file_snapshot.len",
+        "line": 556
+      },
+      {
+        "to": "core.foundation.file_snapshot.len",
+        "line": 583
+      },
+      {
+        "to": "core.foundation.file_snapshot.len",
+        "line": 607
+      },
+      {
+        "to": "core.foundation.file_snapshot.len",
+        "line": 628
+      },
+      {
+        "to": "core.foundation.file_snapshot.set",
+        "line": 510
+      },
+      {
+        "to": "core.foundation.file_snapshot.set",
+        "line": 528
+      },
+      {
+        "to": "core.foundation.file_snapshot.set",
+        "line": 528
+      },
+      {
+        "to": "core.foundation.file_snapshot.set",
+        "line": 553
+      },
+      {
         "to": "core.foundation.file_snapshot.get_working_tree_status",
-        "line": 457
+        "line": 460
       },
       {
         "to": "core.foundation.file_snapshot.get_git_head",
-        "line": 473
+        "line": 477
+      },
+      {
+        "to": "core.foundation.file_snapshot.get_git_head",
+        "line": 535
       },
       {
         "to": "core.foundation.file_snapshot._get_committed_files",
-        "line": 476
+        "line": 488
       }
     ],
     "agent_bridge.docker.manager._is_docker_running": [
@@ -22828,7 +23421,7 @@
       },
       {
         "to": "core.agent.base_agent.get_logger",
-        "line": 65
+        "line": 66
       }
     ],
     "core.orchestration.group_chat._register_agents_to_router": [
@@ -22856,213 +23449,223 @@
     "core.agent.base_agent.stop": [
       {
         "to": "core.agent.base_agent.AgentMessage",
-        "line": 102
+        "line": 157
       }
     ],
     "core.agent.base_agent._enqueue_complete_task_reminder": [
       {
         "to": "core.agent.base_agent.AgentMessage",
-        "line": 549
+        "line": 623
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 533
+        "line": 607
       }
     ],
     "core.agent.base_agent._fallback_close_task": [
       {
         "to": "core.agent.base_agent.AgentMessage",
-        "line": 831
+        "line": 931
       },
       {
         "to": "core.agent.base_agent.getattr",
-        "line": 779
+        "line": 877
       },
       {
         "to": "core.agent.base_agent.Path",
-        "line": 762
+        "line": 860
       },
       {
         "to": "core.agent.base_agent.Path",
-        "line": 800
+        "line": 900
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 795
+        "line": 894
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 801
+        "line": 901
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 802
+        "line": 902
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 856
+        "line": 956
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 807
+        "line": 907
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 848
+        "line": 948
+      },
+      {
+        "to": "core.agent.base_agent.bool",
+        "line": 813
       },
       {
         "to": "core.agent.base_agent.redact_token",
-        "line": 743
+        "line": 841
       },
       {
         "to": "core.agent.base_agent.get_git_changed_files",
-        "line": 782
+        "line": 880
       },
       {
         "to": "core.agent.base_agent.render_for_chat",
-        "line": 816
+        "line": 916
       },
       {
         "to": "core.agent.base_agent.render_for_chat",
-        "line": 821
+        "line": 921
       }
     ],
     "core.agent.base_agent._validate_docker_config": [
       {
         "to": "core.agent.base_agent.getattr",
-        "line": 176
+        "line": 231
       },
       {
         "to": "core.agent.base_agent.DockerConfigError",
-        "line": 184
+        "line": 239
       }
     ],
     "core.agent.base_agent._process_message": [
       {
         "to": "core.agent.base_agent.getattr",
-        "line": 223
+        "line": 278
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 215
+        "line": 270
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 257
+        "line": 312
       },
       {
         "to": "core.agent.base_agent.len",
-        "line": 300
+        "line": 355
       },
       {
         "to": "core.agent.base_agent.get_git_head",
-        "line": 245
+        "line": 300
       },
       {
         "to": "core.agent.base_agent.get_working_tree_status",
-        "line": 253
+        "line": 308
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 261
+        "line": 316
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 315
+        "line": 370
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 319
+        "line": 374
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 326
+        "line": 381
       },
       {
         "to": "core.agent.base_agent.AgentExecutionError",
-        "line": 324
+        "line": 379
       }
     ],
     "core.agent.base_agent._is_same_path": [
       {
         "to": "core.agent.base_agent.Path",
-        "line": 198
+        "line": 253
       },
       {
         "to": "core.agent.base_agent.Path",
-        "line": 198
+        "line": 253
       }
     ],
     "core.agent.base_agent.compress_context": [
       {
         "to": "core.agent.base_agent.Path",
-        "line": 403
+        "line": 477
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 418
+        "line": 492
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 432
+        "line": 506
       },
       {
         "to": "core.agent.base_agent.AgentBusyError",
-        "line": 387
+        "line": 461
       }
     ],
     "core.agent.base_agent._build_opencode_system_prompt": [
       {
         "to": "core.agent.base_agent.Path",
-        "line": 510
+        "line": 584
       }
     ],
     "core.agent.base_agent._process_file_changes": [
       {
         "to": "core.agent.base_agent.len",
-        "line": 722
+        "line": 796
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 717
+        "line": 791
       },
       {
         "to": "core.agent.base_agent.enumerate",
-        "line": 705
+        "line": 779
       },
       {
         "to": "core.agent.base_agent.create_file_snapshot",
-        "line": 707
+        "line": 781
+      }
+    ],
+    "core.agent.base_agent._auto_compact_if_needed": [
+      {
+        "to": "core.agent.base_agent.str",
+        "line": 430
       }
     ],
     "core.agent.base_agent._set_error_status": [
       {
         "to": "core.agent.base_agent.str",
-        "line": 614
+        "line": 688
       },
       {
         "to": "core.agent.base_agent.str",
-        "line": 626
+        "line": 700
       },
       {
         "to": "core.agent.base_agent.hasattr",
-        "line": 618
+        "line": 692
       },
       {
         "to": "core.agent.base_agent.isinstance",
-        "line": 618
+        "line": 692
       }
     ],
     "core.agent.base_agent.run": [
       {
         "to": "core.agent.base_agent.str",
-        "line": 872
+        "line": 996
       }
     ],
     "core.agent.base_agent._strip_changes_xml": [
       {
         "to": "re.sub",
-        "line": 679
+        "line": 753
       }
     ],
     "core.utils.path_utils.sanitize_project_path": [
@@ -23078,11 +23681,11 @@
     "core.agent.base_agent._run_loop": [
       {
         "to": "core.agent.base_agent.render_for_chat",
-        "line": 942
+        "line": 1076
       },
       {
         "to": "core.agent.base_agent.render_for_llm",
-        "line": 917
+        "line": 1046
       }
     ],
     "core.agent.manager.__init__": [
@@ -23185,10 +23788,24 @@
         "line": 51
       }
     ],
+    "core.orchestration.loop_manager.__init__": [
+      {
+        "to": "asyncio.Lock",
+        "line": 72
+      },
+      {
+        "to": "core.orchestration.loop_manager.RoleManager",
+        "line": 53
+      },
+      {
+        "to": "core.orchestration.loop_manager.get_specialized_logger",
+        "line": 57
+      }
+    ],
     "api.services.group_chat_service._get_pins_lock": [
       {
         "to": "asyncio.Lock",
-        "line": 1225
+        "line": 1228
       }
     ],
     "agent_bridge.executors.claude.__init__": [
@@ -23290,23 +23907,23 @@
     "core.orchestration.group_chat._heartbeat_loop": [
       {
         "to": "asyncio.sleep",
-        "line": 1154
+        "line": 1163
       },
       {
         "to": "core.orchestration.group_chat.get_logger",
-        "line": 1150
+        "line": 1159
       },
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 1165
+        "line": 1174
       },
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 1190
+        "line": 1199
       },
       {
         "to": "core.orchestration.group_chat.AgentMessage",
-        "line": 1176
+        "line": 1185
       }
     ],
     "channels.wechat.auth.qr_login": [
@@ -23632,13 +24249,13 @@
     "core.context.agent_context.build_user_prompt": [
       {
         "to": "core.context.agent_context.render_for_llm",
-        "line": 208
+        "line": 212
       }
     ],
     "core.context.agent_context._build_runtime": [
       {
         "to": "core.context.agent_context.hasattr",
-        "line": 248
+        "line": 252
       }
     ],
     "core.context.group_chat_repository.<module>": [
@@ -23804,10 +24421,6 @@
       },
       {
         "to": "core.context.group_chat_session.field",
-        "line": 47
-      },
-      {
-        "to": "core.context.group_chat_session.field",
         "line": 48
       },
       {
@@ -23823,12 +24436,54 @@
         "line": 51
       },
       {
+        "to": "core.context.group_chat_session.field",
+        "line": 52
+      },
+      {
+        "to": "core.context.group_chat_session.field",
+        "line": 118
+      },
+      {
         "to": "core.context.group_chat_session.str",
-        "line": 47
+        "line": 48
+      },
+      {
+        "to": "core.context.group_chat_session.str",
+        "line": 118
       },
       {
         "to": "core.context.group_chat_session.uuid4",
-        "line": 47
+        "line": 48
+      },
+      {
+        "to": "core.context.group_chat_session.uuid4",
+        "line": 118
+      }
+    ],
+    "core.context.group_chat_session.from_dict": [
+      {
+        "to": "core.context.group_chat_session.str",
+        "line": 140
+      },
+      {
+        "to": "core.context.group_chat_session.uuid4",
+        "line": 140
+      },
+      {
+        "to": "core.context.group_chat_session.ValueError",
+        "line": 136
+      },
+      {
+        "to": "core.context.group_chat_session.list",
+        "line": 137
+      },
+      {
+        "to": "core.context.group_chat_session.cls",
+        "line": 139
+      },
+      {
+        "to": "core.context.group_chat_session.cls",
+        "line": 183
       }
     ],
     "core.context.group_metadata.from_dict": [
@@ -23840,59 +24495,71 @@
     "core.foundation.exceptions.__init__": [
       {
         "to": "core.foundation.exceptions.super",
-        "line": 33
+        "line": 35
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 56
+        "line": 58
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 67
+        "line": 69
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 78
+        "line": 80
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 89
+        "line": 91
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 100
+        "line": 102
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 129
+        "line": 131
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 143
+        "line": 145
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 154
+        "line": 156
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 166
+        "line": 168
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 186
+        "line": 188
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 199
+        "line": 201
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 211
+        "line": 213
       },
       {
         "to": "core.foundation.exceptions.super",
-        "line": 226
+        "line": 228
+      },
+      {
+        "to": "core.foundation.exceptions.super",
+        "line": 244
+      },
+      {
+        "to": "core.foundation.exceptions.super",
+        "line": 255
+      },
+      {
+        "to": "core.foundation.exceptions.super",
+        "line": 266
       }
     ],
     "core.foundation.file_snapshot.<module>": [
@@ -23992,27 +24659,27 @@
     "core.foundation.paths.<module>": [
       {
         "to": "core.foundation.paths.GroupChatPaths",
-        "line": 264
+        "line": 284
       }
     ],
     "core.foundation.renderer.render_for_llm": [
       {
         "to": "core.foundation.renderer.str",
-        "line": 58
+        "line": 62
       },
       {
         "to": "core.foundation.renderer.wrap_xml",
-        "line": 62
+        "line": 66
       }
     ],
     "core.foundation.renderer.parse_chat_input": [
       {
         "to": "core.foundation.renderer.InvalidMessageError",
-        "line": 83
+        "line": 97
       },
       {
         "to": "core.foundation.renderer.InvalidMessageError",
-        "line": 86
+        "line": 100
       }
     ],
     "core.foundation.token.generate_token": [
@@ -24066,39 +24733,39 @@
     "core.orchestration.group_chat._cleanup_agent_queue": [
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 707
+        "line": 716
       },
       {
         "to": "core.orchestration.group_chat.AgentResult",
-        "line": 711
+        "line": 720
       },
       {
         "to": "core.orchestration.group_chat.render_for_chat",
-        "line": 713
+        "line": 722
       },
       {
         "to": "core.orchestration.group_chat.AgentMessage",
-        "line": 691
+        "line": 700
       }
     ],
     "core.orchestration.group_chat._on_agent_task_done": [
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 816
+        "line": 825
       },
       {
         "to": "core.orchestration.group_chat.type",
-        "line": 817
+        "line": 826
       }
     ],
     "core.orchestration.group_chat._stop_agent_process": [
       {
         "to": "core.orchestration.group_chat.str",
-        "line": 847
+        "line": 856
       },
       {
         "to": "core.orchestration.group_chat.getattr",
-        "line": 837
+        "line": 846
       }
     ],
     "core.orchestration.group_chat.send_message_to_agent": [
@@ -24108,15 +24775,15 @@
       },
       {
         "to": "core.orchestration.group_chat.AgentResult",
-        "line": 621
+        "line": 630
       },
       {
         "to": "core.orchestration.group_chat.render_for_chat",
-        "line": 617
+        "line": 626
       },
       {
         "to": "core.orchestration.group_chat.getattr",
-        "line": 620
+        "line": 629
       }
     ],
     "core.orchestration.group_chat._init_agents": [
@@ -24146,11 +24813,11 @@
     "core.orchestration.group_chat._ensure_tokens": [
       {
         "to": "core.orchestration.group_chat.generate_token",
-        "line": 1125
+        "line": 1134
       },
       {
         "to": "core.orchestration.group_chat.generate_token",
-        "line": 1137
+        "line": 1146
       }
     ],
     "core.orchestration.group_chat._initialize_new_members": [
@@ -24329,6 +24996,138 @@
       {
         "to": "core.orchestration.group_chat_manager.uuid4",
         "line": 446
+      }
+    ],
+    "core.orchestration.loop_executor._build_loop_context": [
+      {
+        "to": "core.orchestration.loop_executor.wrap_xml",
+        "line": 32
+      },
+      {
+        "to": "core.orchestration.loop_executor.wrap_xml",
+        "line": 33
+      },
+      {
+        "to": "core.orchestration.loop_executor.wrap_xml",
+        "line": 34
+      },
+      {
+        "to": "core.orchestration.loop_executor.wrap_xml",
+        "line": 37
+      }
+    ],
+    "core.orchestration.loop_executor._build_loop_message": [
+      {
+        "to": "core.orchestration.loop_executor.AgentMessage",
+        "line": 43
+      }
+    ],
+    "core.orchestration.loop_executor._save_loop_result": [
+      {
+        "to": "core.orchestration.loop_executor.ValueError",
+        "line": 61
+      },
+      {
+        "to": "core.orchestration.loop_executor.render_for_chat",
+        "line": 62
+      }
+    ],
+    "core.orchestration.loop_manager.<module>": [
+      {
+        "to": "core.orchestration.loop_manager.set",
+        "line": 47
+      },
+      {
+        "to": "core.orchestration.loop_manager.set",
+        "line": 48
+      }
+    ],
+    "core.orchestration.loop_manager.update_loop_status": [
+      {
+        "to": "core.orchestration.loop_manager.set",
+        "line": 195
+      },
+      {
+        "to": "core.orchestration.loop_manager.LoopStateError",
+        "line": 204
+      }
+    ],
+    "core.orchestration.loop_manager.create_loop": [
+      {
+        "to": "core.orchestration.loop_manager.Loop",
+        "line": 105
+      },
+      {
+        "to": "core.orchestration.loop_manager.str",
+        "line": 106
+      },
+      {
+        "to": "core.orchestration.loop_manager.uuid4",
+        "line": 106
+      },
+      {
+        "to": "core.orchestration.loop_manager.len",
+        "line": 125
+      }
+    ],
+    "core.orchestration.loop_manager._validate_create_request": [
+      {
+        "to": "core.orchestration.loop_manager.len",
+        "line": 272
+      },
+      {
+        "to": "core.orchestration.loop_manager.len",
+        "line": 275
+      },
+      {
+        "to": "core.orchestration.loop_manager.len",
+        "line": 279
+      },
+      {
+        "to": "core.orchestration.loop_manager.LoopValidationError",
+        "line": 277
+      },
+      {
+        "to": "core.orchestration.loop_manager.LoopValidationError",
+        "line": 289
+      },
+      {
+        "to": "core.orchestration.loop_manager.LoopValidationError",
+        "line": 299
+      },
+      {
+        "to": "core.orchestration.loop_manager.LoopValidationError",
+        "line": 325
+      },
+      {
+        "to": "core.orchestration.loop_manager.sum",
+        "line": 283
+      },
+      {
+        "to": "core.orchestration.loop_manager.AgentNotFoundError",
+        "line": 313
+      }
+    ],
+    "core.orchestration.loop_manager.get_loop": [
+      {
+        "to": "core.orchestration.loop_manager.list",
+        "line": 147
+      },
+      {
+        "to": "core.orchestration.loop_manager.LoopNotFoundError",
+        "line": 149
+      }
+    ],
+    "core.orchestration.loop_manager.list_loops": [
+      {
+        "to": "core.orchestration.loop_manager.list",
+        "line": 162
+      }
+    ],
+    "core.orchestration.loop_manager.delete_loop": [
+      {
+        "to": "core.orchestration.loop_manager.LoopStateError",
+        "line": 251
       }
     ],
     "core.utils.markdown_injector.replace_marked_section": [
@@ -25469,94 +26268,94 @@
       {
         "to": "api.services.group_chat_service.StateError",
         "line": 168
+      },
+      {
+        "to": "api.services.group_chat_service.broadcast_group_chat_refresh",
+        "line": 181
       }
     ],
     "api.services.group_chat_service.send_message": [
       {
         "to": "api.services.group_chat_service.ValidationError",
-        "line": 523
+        "line": 526
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 510
+        "line": 513
       },
       {
         "to": "api.services.group_chat_service.len",
-        "line": 501
+        "line": 504
       },
       {
         "to": "api.services.group_chat_service.AgentMessage",
-        "line": 543
+        "line": 546
       }
     ],
     "api.services.group_chat_service.toggle_use_docker": [
       {
         "to": "api.services.group_chat_service.ValidationError",
-        "line": 688
+        "line": 691
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 657
+        "line": 660
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 673
+        "line": 676
       },
       {
         "to": "api.services.group_chat_service.list",
-        "line": 663
+        "line": 666
       },
       {
         "to": "api.services.group_chat_service.GroupChatMember",
-        "line": 715
+        "line": 718
       },
       {
         "to": "api.services.group_chat_service.DockerManager",
-        "line": 697
+        "line": 700
       },
       {
         "to": "api.services.group_chat_service.DockerNotAvailableError",
-        "line": 701
+        "line": 704
       }
     ],
     "api.services.group_chat_service.update_permission_status": [
       {
         "to": "api.services.group_chat_service.ValidationError",
-        "line": 1541
+        "line": 1544
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1550
-      },
-      {
-        "to": "api.services.group_chat_service.AgentMessage",
-        "line": 1586
+        "line": 1553
       },
       {
         "to": "api.services.group_chat_service.broadcast_group_chat_refresh",
-        "line": 1599
+        "line": 1602
+      },
+      {
+        "to": "api.services.group_chat_service.AgentMessage",
+        "line": 1589
       },
       {
         "to": "api.services.group_chat_service.MessageNotFoundError",
-        "line": 1565
+        "line": 1568
       },
       {
         "to": "api.services.group_chat_service.next",
-        "line": 1572
+        "line": 1575
       }
     ],
     "api.services.group_chat_service.upload_file": [
       {
         "to": "api.services.group_chat_service.ValidationError",
-        "line": 1667
+        "line": 1670
       },
       {
         "to": "api.services.group_chat_service.ValidationError",
-        "line": 1674
-      },
-      {
-        "to": "api.services.group_chat_service.len",
-        "line": 1673
+        "line": 1677
       },
       {
         "to": "api.services.group_chat_service.len",
@@ -25564,331 +26363,335 @@
       },
       {
         "to": "api.services.group_chat_service.len",
-        "line": 1685
+        "line": 1679
+      },
+      {
+        "to": "api.services.group_chat_service.len",
+        "line": 1688
       },
       {
         "to": "api.services.group_chat_service.FileService",
-        "line": 1691
+        "line": 1694
       }
     ],
     "api.services.group_chat_service.get_uploaded_file_path": [
       {
         "to": "api.services.group_chat_service.ValidationError",
-        "line": 1728
+        "line": 1731
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1719
+        "line": 1722
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1733
+        "line": 1736
       },
       {
         "to": "api.services.group_chat_service.str",
-        "line": 1730
+        "line": 1733
       },
       {
         "to": "api.services.group_chat_service.FileService",
-        "line": 1724
+        "line": 1727
       }
     ],
     "api.services.group_chat_service.get_member_history": [
       {
         "to": "api.services.group_chat_service.RoleManager",
-        "line": 960
+        "line": 963
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 943
+        "line": 946
       },
       {
         "to": "api.services.group_chat_service.Path",
-        "line": 975
-      },
-      {
-        "to": "api.services.group_chat_service.MemberHistoryResponse",
-        "line": 953
-      },
-      {
-        "to": "api.services.group_chat_service.MemberHistoryResponse",
-        "line": 967
-      },
-      {
-        "to": "api.services.group_chat_service.MemberHistoryResponse",
         "line": 978
       },
       {
         "to": "api.services.group_chat_service.MemberHistoryResponse",
-        "line": 997
+        "line": 956
+      },
+      {
+        "to": "api.services.group_chat_service.MemberHistoryResponse",
+        "line": 970
+      },
+      {
+        "to": "api.services.group_chat_service.MemberHistoryResponse",
+        "line": 981
+      },
+      {
+        "to": "api.services.group_chat_service.MemberHistoryResponse",
+        "line": 1000
       },
       {
         "to": "api.services.group_chat_service.resolve_session_path",
-        "line": 964
+        "line": 967
       },
       {
         "to": "api.services.group_chat_service.parse_session_file",
-        "line": 975
+        "line": 978
       },
       {
         "to": "api.services.group_chat_service.MemberHistoryMessage",
-        "line": 986
+        "line": 989
       }
     ],
     "api.services.group_chat_service.add_group_chat_members": [
       {
         "to": "api.services.group_chat_service.RoleManager",
-        "line": 1439
-      },
-      {
-        "to": "api.services.group_chat_service.GroupChatMember",
-        "line": 1455
+        "line": 1442
       },
       {
         "to": "api.services.group_chat_service.broadcast_group_chat_refresh",
-        "line": 1453
+        "line": 1456
+      },
+      {
+        "to": "api.services.group_chat_service.GroupChatMember",
+        "line": 1458
       }
     ],
     "api.services.group_chat_service.load_group_chat": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 202
+        "line": 205
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 209
+        "line": 212
       },
       {
         "to": "api.services.group_chat_service.StateError",
-        "line": 215
+        "line": 218
       }
     ],
     "api.services.group_chat_service.get_group_chat_info": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 403
+        "line": 406
       },
       {
         "to": "api.services.group_chat_service.GroupChatInfo",
-        "line": 411
+        "line": 414
       }
     ],
     "api.services.group_chat_service.get_group_chat_members": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 435
+        "line": 438
       },
       {
         "to": "api.services.group_chat_service.GroupChatMember",
-        "line": 440
+        "line": 443
       }
     ],
     "api.services.group_chat_service.get_messages": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 469
+        "line": 472
       },
       {
         "to": "api.services.group_chat_service.MessageInfo",
-        "line": 475
+        "line": 478
       }
     ],
     "api.services.group_chat_service.compress_agent_context": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 749
+        "line": 752
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 757
+        "line": 760
       },
       {
         "to": "api.services.group_chat_service.StateError",
-        "line": 766
+        "line": 769
       }
     ],
     "api.services.group_chat_service.compress_all_agents": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 800
+        "line": 803
       },
       {
         "to": "api.services.group_chat_service.sum",
-        "line": 809
+        "line": 812
       }
     ],
     "api.services.group_chat_service.stop_member": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 836
+        "line": 839
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 844
+        "line": 847
       }
     ],
     "api.services.group_chat_service.start_member": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 872
+        "line": 875
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 880
+        "line": 883
       }
     ],
     "api.services.group_chat_service.reset_member": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 907
+        "line": 910
       },
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 915
+        "line": 918
       }
     ],
     "api.services.group_chat_service._get_pins_path": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1205
+        "line": 1208
       },
       {
         "to": "api.services.group_chat_service.Path",
-        "line": 1210
+        "line": 1213
       }
     ],
     "api.services.group_chat_service.get_file_snapshot_content": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1260
+        "line": 1263
       },
       {
         "to": "api.services.group_chat_service.str",
-        "line": 1265
+        "line": 1268
       },
       {
         "to": "api.services.group_chat_service.get_snapshot_content",
-        "line": 1252
+        "line": 1255
       }
     ],
     "api.services.group_chat_service.get_file_snapshot_diff": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1295
+        "line": 1298
       },
       {
         "to": "api.services.group_chat_service.str",
-        "line": 1300
+        "line": 1303
       },
       {
         "to": "api.services.group_chat_service.get_snapshot_diff",
-        "line": 1293
+        "line": 1296
       }
     ],
     "api.services.group_chat_service.get_agent_calls": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1475
+        "line": 1478
       },
       {
         "to": "api.services.group_chat_service.sorted",
-        "line": 1484
+        "line": 1487
       }
     ],
     "api.services.group_chat_service.get_tasks": [
       {
         "to": "api.services.group_chat_service.ResourceNotFoundError",
-        "line": 1507
+        "line": 1510
       }
     ],
     "api.services.group_chat_service.get_projects_summary": [
       {
         "to": "api.services.group_chat_service.ProjectSummary",
-        "line": 290
+        "line": 293
       },
       {
         "to": "api.services.group_chat_service.list",
-        "line": 303
+        "line": 306
       },
       {
         "to": "api.services.group_chat_service.len",
-        "line": 304
+        "line": 307
       }
     ],
     "api.services.group_chat_service.list_group_chats": [
       {
         "to": "api.services.group_chat_service.len",
-        "line": 360
+        "line": 363
       },
       {
         "to": "api.services.group_chat_service.len",
-        "line": 377
+        "line": 380
       },
       {
         "to": "api.services.group_chat_service.GroupChatInfo",
-        "line": 366
+        "line": 369
       },
       {
         "to": "api.services.group_chat_service.GroupChatType",
-        "line": 371
+        "line": 374
       },
       {
         "to": "api.services.group_chat_service.GroupChatListResponse",
-        "line": 378
+        "line": 381
       }
     ],
     "api.services.group_chat_service.send_message_and_wait": [
       {
         "to": "api.services.group_chat_service.len",
-        "line": 577
+        "line": 580
       },
       {
         "to": "time.monotonic",
-        "line": 583
+        "line": 586
       },
       {
         "to": "time.monotonic",
-        "line": 584
+        "line": 587
       },
       {
         "to": "time.monotonic",
-        "line": 585
+        "line": 588
       }
     ],
     "api.services.group_chat_service.unpin_message": [
       {
         "to": "api.services.group_chat_service.len",
-        "line": 1414
+        "line": 1417
       },
       {
         "to": "api.services.group_chat_service.len",
-        "line": 1414
+        "line": 1417
       }
     ],
     "api.services.group_chat_service._build_group_chat_info_from_instance": [
       {
         "to": "api.services.group_chat_service.GroupChatInfo",
-        "line": 1006
+        "line": 1009
       }
     ],
     "api.services.group_chat_service.get_pinned_messages": [
       {
         "to": "api.services.group_chat_service.sorted",
-        "line": 1341
+        "line": 1344
       }
     ],
     "api.services.group_chat_service.pin_message": [
       {
         "to": "api.services.group_chat_service.MessageNotFoundError",
-        "line": 1371
+        "line": 1374
       },
       {
         "to": "api.services.group_chat_service.PinnedMessageInfo",
-        "line": 1383
+        "line": 1386
       },
       {
         "to": "api.services.group_chat_service.PinnedMessageInfo",
-        "line": 1396
+        "line": 1399
       }
     ],
     "api.services.role_service.<module>": [
@@ -26320,17 +27123,27 @@
     "agent_bridge.parsers.codex._parse_item_completed": [
       {
         "to": "agent_bridge.parsers.codex.StreamEvent",
-        "line": 73
+        "line": 74
       },
       {
         "to": "agent_bridge.parsers.codex.StreamEvent",
-        "line": 85
+        "line": 86
       }
     ],
     "agent_bridge.parsers.codex._parse_turn_completed": [
       {
         "to": "agent_bridge.parsers.codex.StreamEvent",
-        "line": 116
+        "line": 119
+      }
+    ],
+    "agent_bridge.parsers.codex._usage_delta": [
+      {
+        "to": "agent_bridge.parsers.codex.dict",
+        "line": 137
+      },
+      {
+        "to": "agent_bridge.parsers.codex.max",
+        "line": 146
       }
     ],
     "tests.setup.<module>": [
@@ -32095,10 +32908,6 @@
       {
         "to": "layouts.RightSidebar.RightSidebar.onReset",
         "line": 163
-      },
-      {
-        "to": "layouts.RightSidebar.RightSidebar.toggleLocation",
-        "line": 444
       }
     ],
     "layouts.RightSidebar.TasksPanel.<module>": [
@@ -34454,7 +35263,7 @@
     "shared.components.MarkdownRenderer.MarkdownRenderer.<module>": [
       {
         "to": "react.memo",
-        "line": 12
+        "line": 13
       }
     ],
     "shared.components.NavigationCard.NavigationCard.<module>": [

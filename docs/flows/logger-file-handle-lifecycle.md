@@ -53,7 +53,7 @@ logger: logging.Logger
 
 **说明**：GroupChat 在 cleanup 时必须关闭所有 logger handler，否则在 Windows 上无法删除群聊目录。AgentCallManager 持有 `agent_calls.log`，TaskManager 持有 `tasks.log`。
 
-<key_function last_update="2026-06-19T11:19:08+08:00">
+<key_function last_update="2026-06-19T14:05:34+08:00">
 - agents_hub/utils/logger.py
   - logger.get_specialized_logger:136
 - agents_hub/core/communication/agent_call_manager.py

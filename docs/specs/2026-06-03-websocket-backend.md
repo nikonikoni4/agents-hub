@@ -70,7 +70,7 @@ contract_refs:
 
 ### API 端点总览
 
-<key_function last_update="2026-06-19T11:19:09+08:00">
+<key_function last_update="2026-06-19T14:05:34+08:00">
 - agents_hub/api/websocket/endpoint.py
   - endpoint.websocket_endpoint:34
 - agents_hub/api/routes/websocket.py
