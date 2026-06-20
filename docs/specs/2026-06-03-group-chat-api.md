@@ -55,7 +55,7 @@ abstract: Group Chat API 模块的正式规格，定义群聊生命周期管理�
 
 ### HTTP API 端点总览
 
-<key_function last_update="2026-06-19T14:05:34+08:00">
+<key_function last_update="2026-06-20T14:08:10+08:00">
 - agents_hub/api/routes/group_chat.py
   - group_chat.create_group_chat:30
   - group_chat.list_group_chats:65

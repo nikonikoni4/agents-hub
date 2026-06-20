@@ -69,26 +69,26 @@ class AgentMemberInfo:
 - 处理完成后：Agent.status = "idle"，AgentCall.status = COMPLETED/FAILED
 - 用户停止 Agent 时：Agent.status = "stopped"，所有未完成的 AgentCall 都被标记为 FAILED
 
-<key_function last_update="2026-06-19T14:05:34+08:00">
+<key_function last_update="2026-06-20T14:08:10+08:00">
 - agents_hub/api/routes/group_chat.py
   - group_chat.stop_member:406
   - group_chat.start_member:423
   - group_chat.reset_member:439
 - agents_hub/api/services/group_chat_service.py
-  - group_chat_service.GroupChatService.stop_member:816
-  - group_chat_service.GroupChatService.start_member:851
-  - group_chat_service.GroupChatService.reset_member:887
+  - group_chat_service.GroupChatService.stop_member:819
+  - group_chat_service.GroupChatService.start_member:854
+  - group_chat_service.GroupChatService.reset_member:890
 - agents_hub/core/orchestration/group_chat.py
   - group_chat.GroupChat._initialize_single_member:341
   - group_chat.GroupChat._initialize_new_members:358
-  - group_chat.GroupChat._cleanup_agent_queue:638
-  - group_chat.GroupChat.stop_member:732
-  - group_chat.GroupChat.start_member:849
-  - group_chat.GroupChat.reset_member:925
+  - group_chat.GroupChat._cleanup_agent_queue:647
+  - group_chat.GroupChat.stop_member:741
+  - group_chat.GroupChat.start_member:858
+  - group_chat.GroupChat.reset_member:934
 - agents_hub/core/agent/base_agent.py
-  - base_agent.Agent._sync_status:569
-  - base_agent.Agent._set_error_status:599
-  - base_agent.Agent.run:862
+  - base_agent.Agent._sync_status:643
+  - base_agent.Agent._set_error_status:673
+  - base_agent.Agent.run:984
 </key_function>
 
 ## 流程概览
