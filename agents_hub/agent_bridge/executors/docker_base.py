@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
@@ -89,7 +90,7 @@ class DockerExecutor(ABC):
             if process.returncode != 0:
                 assert process.stderr is not None
                 stderr = await process.stderr.read()
-                stderr_text = stderr.decode("utf-8")
+                stderr_text = re.sub(r"\x1b\[[0-9;]*m", "", stderr.decode("utf-8"))
                 logger.error(f"Container exec failed: {stderr_text}")
                 raise RuntimeError(f"Container exec failed: {stderr_text}")
         finally:

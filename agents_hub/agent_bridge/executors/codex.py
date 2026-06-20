@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import re
 import shlex
 from collections.abc import AsyncIterator
 
@@ -163,7 +164,7 @@ class CodexExecutor:
             if process.returncode != 0:
                 assert process.stderr is not None
                 stderr = await process.stderr.read()
-                stderr_text = stderr.decode("utf-8")
+                stderr_text = re.sub(r"\x1b\[[0-9;]*m", "", stderr.decode("utf-8"))
                 logger.error(f"Codex CLI exited with code {process.returncode}: {stderr_text}")
                 raise CLIExecutionError(
                     platform="Codex", exit_code=process.returncode or 1, stderr=stderr_text

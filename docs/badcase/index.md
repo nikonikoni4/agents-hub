@@ -9,6 +9,13 @@
 当写入第一条数据之后删除该内容（index-write-guide）
 </index-write-guide>
 
+## CLI stderr 输出 ANSI 转义码乱码
+
+- updated_at: 2026-06-20
+- path: `docs/badcase/2026-06-20-stderr-ansi-garbled.md`
+- 触发规则：排查 CLI 错误信息乱码、stderr 输出不可读、ANSI 转义码问题时阅读
+- 内容摘要：CLI 执行失败时 stderr 中的 ANSI 终端颜色转义码直接输出导致乱码。修复方案是在所有 executor 的 stderr 解码处用 `re.sub(r"\x1b\[[0-9;]*m", "", ...)` 剥离转义码。同时发现 Codex CLI 在 Windows 上使用 bash heredoc 语法的 bug
+
 ## Agent 错误状态前端反馈机制
 
 - updated_at: 2026-06-16

@@ -290,6 +290,9 @@ class GroupChat:
         # 注册 heartbeat 系统身份，用于定时唤醒 manager
         self.message_router.register("__HEARTBEAT__", asyncio.Queue())
 
+        # 注册 loop 系统身份，用于循环执行器向节点投递 LOOP_MESSAGE
+        self.message_router.register("loop", asyncio.Queue())
+
         logger.info(
             "agents 注册完成: group=%s, 已注册agents=%s, MessageRouter_id=%s",
             self.group_chat_id,

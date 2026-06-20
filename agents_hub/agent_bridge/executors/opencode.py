@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from collections.abc import AsyncIterator
 
 from agents_hub.agent_bridge.exceptions import CLIExecutionError, CLINotFoundError
@@ -94,7 +95,7 @@ class OpenCodeExecutor:
             if process.returncode != 0:
                 assert process.stderr is not None
                 stderr = await process.stderr.read()
-                stderr_text = stderr.decode("utf-8")
+                stderr_text = re.sub(r"\x1b\[[0-9;]*m", "", stderr.decode("utf-8"))
                 logger.error(f"OpenCode CLI exited with code {process.returncode}: {stderr_text}")
                 raise CLIExecutionError(
                     platform="OpenCode", exit_code=process.returncode or 1, stderr=stderr_text
