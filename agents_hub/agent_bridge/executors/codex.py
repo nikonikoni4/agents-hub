@@ -9,6 +9,7 @@ from collections.abc import AsyncIterator
 from agents_hub.agent_bridge.exceptions import CLIExecutionError, CLINotFoundError
 from agents_hub.config.types import CODEX_COMMAND
 from agents_hub.roles.models import RoleConfig
+from agents_hub.utils import get_logger
 
 
 def _sanitize_for_codex_cli(text: str) -> str:
@@ -20,7 +21,7 @@ def _sanitize_for_codex_cli(text: str) -> str:
     return shlex.quote(cleaned)
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, logging.DEBUG)
 
 
 class CodexExecutor:
@@ -80,27 +81,66 @@ class CodexExecutor:
 
         try:
             assert process.stdout is not None
+            logger.debug(
+                "[CodexExecutor] 进程已启动: pid=%s, session_id=%s",
+                process.pid,
+                session_id,
+            )
 
-            # 使用 readuntil 按换行切分，避免 asyncio 默认 readline
-            # 在遇到超长单行输出时抛出 LimitOverrunError（Separator is not found）。
+            # 按固定块读取并手动切行，避免 asyncio 按行 API
+            # 在遇到超长单行输出时抛出 LimitOverrunError。
             # Codex 的单行 JSON 可能非常长（如 command_execution 的 aggregated_output）。
-
+            buffer = ""
+            line_count = 0
             while True:
-                try:
-                    raw = await process.stdout.readuntil(separator=b"\n")
-                except asyncio.IncompleteReadError as e:
-                    # 流结束但没有换行符的最后片段
-                    tail = (e.partial or b"").decode("utf-8", errors="ignore").strip()
-                    if tail:
-                        yield tail
+                logger.debug(
+                    "[CodexExecutor] read 等待: pid=%s, session_id=%s, line_count=%d",
+                    process.pid,
+                    session_id,
+                    line_count,
+                )
+                chunk = await process.stdout.read(256 * 1024)
+                if not chunk:
+                    logger.debug(
+                        "[CodexExecutor] read 返回空 (EOF): pid=%s, session_id=%s, line_count=%d",
+                        process.pid,
+                        session_id,
+                        line_count,
+                    )
                     break
 
-                decoded = raw.decode("utf-8", errors="ignore").strip()
-                if decoded:
-                    yield decoded
+                buffer += chunk.decode("utf-8", errors="ignore")
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    decoded = line.strip()
+                    if decoded:
+                        line_count += 1
+                        yield decoded
+
+            if buffer.strip():
+                line_count += 1
+                yield buffer.strip()
+
+            logger.debug(
+                "[CodexExecutor] stdout 流结束: pid=%s, session_id=%s, line_count=%d",
+                process.pid,
+                session_id,
+                line_count,
+            )
 
             # 等待进程结束并检查返回码
+            logger.debug(
+                "[CodexExecutor] 等待进程退出: pid=%s, session_id=%s",
+                process.pid,
+                session_id,
+            )
             await process.wait()
+            logger.debug(
+                "[CodexExecutor] 进程已退出: pid=%s, session_id=%s, returncode=%s",
+                process.pid,
+                session_id,
+                process.returncode,
+            )
             if process.returncode != 0:
                 assert process.stderr is not None
                 stderr = await process.stderr.read()

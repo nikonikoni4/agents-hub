@@ -183,3 +183,9 @@
  - path: docs/history-bugs/2026-06-19-notification-message-not-saved.md
  - 触发规则：所有 Agent 间通过 NOTIFICATION 通信的场景
  - 内容摘要：设计漏洞。_fallback_close_task 只处理 TASK 类型消息，NOTIFICATION 被直接跳过。完整流程：Manager → TASK → Worker → complete_task/兜底保存 + NOTIFICATION → Manager → _fallback_close_task 检查 msg.type != TASK → return，消息不保存。不管 complete_task 是否存在，都没有正式的对于 NOTIFICATION 的回应机制
+
+## Codex stdout 超长单行 JSON 导致 LimitOverrunError
+ - updated_at : 2026-06-20
+ - path: docs/history-bugs/2026-06-20-codex-stdout-long-json-line-limit.md
+ - 触发规则：Codex Agent 执行时报 `Separator is not found, and chunk exceed the limit` 或 `LimitOverrunError`
+ - 内容摘要：Codex `--json` 的单行 JSON 可能因 `command_execution.aggregated_output` 超过 asyncio StreamReader limit；`readline`/`readuntil` 都会失败。修复：改用固定 chunk `read()`，自行维护 buffer 按换行切分，并添加超长单行复现测试

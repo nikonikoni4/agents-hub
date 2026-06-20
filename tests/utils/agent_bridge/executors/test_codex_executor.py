@@ -1,7 +1,7 @@
 """CodexExecutor 单元测试"""
 
-import os
-from unittest.mock import MagicMock
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from agents_hub.agent_bridge.executors.codex import CodexExecutor, _sanitize_for_codex_cli
 from agents_hub.agent_bridge.executors.docker_codex import DockerCodexExecutor
@@ -11,6 +11,17 @@ from agents_hub.agent_bridge.executors.codex import CodexExecutor
 from agents_hub.agent_bridge.models import AgentPlatform
 from agents_hub.config.types import CODEX_COMMAND, DOCKER_CODEX_COMMAND
 from agents_hub.roles.models import RoleConfig
+
+
+class _MockProcess:
+    def __init__(self, stdout: asyncio.StreamReader, stderr: asyncio.StreamReader):
+        self.stdout = stdout
+        self.stderr = stderr
+        self.pid = 12345
+        self.returncode = 0
+
+    async def wait(self):
+        return self.returncode
 
 
 class TestCodexExecutor:
@@ -62,6 +73,25 @@ class TestCodexExecutor:
 
         # 应该保留原有的环境变量
         assert "PATH" in env
+
+    @pytest.mark.asyncio
+    async def test_execute_streams_json_line_longer_than_asyncio_separator_limit(self):
+        """Codex 单行 JSON 超过 asyncio 行限制时仍应完整产出。"""
+        config = RoleConfig(name="test", platform=AgentPlatform.CODEX)
+        long_line = b'{"type":"item.completed","item":{"type":"command_execution","aggregated_output":"' + (
+            b"x" * (70 * 1024)
+        ) + b'"}}\n'
+        stdout = asyncio.StreamReader()
+        stderr = asyncio.StreamReader()
+        stdout.feed_data(long_line)
+        stdout.feed_eof()
+        stderr.feed_eof()
+        process = _MockProcess(stdout=stdout, stderr=stderr)
+
+        with patch("asyncio.create_subprocess_exec", new=AsyncMock(return_value=process)):
+            lines = [line async for line in self.executor.execute("测试", config)]
+
+        assert lines == [long_line.decode("utf-8").strip()]
 
 
 class TestCodexExecutorSystemPrompt:

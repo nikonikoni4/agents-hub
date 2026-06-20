@@ -8,8 +8,9 @@ from collections.abc import AsyncIterator
 from agents_hub.agent_bridge.exceptions import CLIExecutionError, CLINotFoundError
 from agents_hub.config.types import CLAUDE_COMMAND
 from agents_hub.roles.models import RoleConfig
+from agents_hub.utils import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, logging.DEBUG)
 
 
 class ClaudeExecutor:
@@ -67,23 +68,60 @@ class ClaudeExecutor:
 
         try:
             assert process.stdout is not None
+            logger.debug(
+                "[ClaudeExecutor] 进程已启动: pid=%s, session_id=%s",
+                process.pid,
+                session_id,
+            )
             buffer = ""
+            line_count = 0
             while True:
+                logger.debug(
+                    "[ClaudeExecutor] read 等待: pid=%s, session_id=%s, line_count=%d",
+                    process.pid,
+                    session_id,
+                    line_count,
+                )
                 chunk = await process.stdout.read(256 * 1024)  # 256KB
                 if not chunk:
+                    logger.debug(
+                        "[ClaudeExecutor] read 返回空 (EOF): pid=%s, session_id=%s, line_count=%d",
+                        process.pid,
+                        session_id,
+                        line_count,
+                    )
                     break
                 buffer += chunk.decode("utf-8")
                 while "\n" in buffer:
                     line, buffer = buffer.split("\n", 1)
                     decoded = line.strip()
                     if decoded:
+                        line_count += 1
                         logger.debug("[ClaudeExecutor] raw line: %s", decoded[:200])
                         yield decoded
             if buffer.strip():
                 yield buffer.strip()
 
+            logger.debug(
+                "[ClaudeExecutor] stdout 流结束: pid=%s, session_id=%s, line_count=%d",
+                process.pid,
+                session_id,
+                line_count,
+            )
+
             # 等待进程结束并检查返回码
+            logger.debug(
+                "[ClaudeExecutor] 等待进程退出: pid=%s, session_id=%s",
+                process.pid,
+                session_id,
+            )
             await process.wait()
+            logger.debug(
+                "[ClaudeExecutor] 进程已退出: pid=%s, session_id=%s, returncode=%s",
+                process.pid,
+                session_id,
+                process.returncode,
+            )
             if process.returncode != 0:
                 assert process.stderr is not None
                 stderr = await process.stderr.read()
