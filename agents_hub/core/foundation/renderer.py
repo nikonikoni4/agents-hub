@@ -30,6 +30,10 @@ class Tag:
     INCOMING_MESSAGE = "incoming_message"  # 当前传入的消息（render_for_llm 输出）
     SUMMARY_OVERALL = "overall_summary"  # 摘要中的整体内容
     SUMMARY_FOR_YOU = "summary_for_you"  # 摘要中针对当前 agent 的内容
+    LOOP_NODE_ROLE = "LOOP_NODE_ROLE"  # 循环节点职责描述
+    LOOP_OUTPUT_SCHEMA = "LOOP_OUTPUT_SCHEMA"  # 循环节点输出格式要求
+    PREVIOUS_NODE_OUTPUT = "PREVIOUS_NODE_OUTPUT"  # 上一个节点输出
+    LOOP_TERMINATION_CHECK = "LOOP_TERMINATION_CHECK"  # 终止节点退出判断提示
 
 
 def wrap_xml(tag: str, content: str) -> str:
@@ -62,14 +66,24 @@ def render_for_llm(msg: AgentMessage) -> str:
     return wrap_xml(Tag.INCOMING_MESSAGE, body)
 
 
-def render_for_chat(send_from: str, send_to: str, content: str) -> str:
+def render_for_chat(
+    send_from: str,
+    send_to: str,
+    content: str,
+    is_loop_message: bool = False,
+    loop_iteration: int | None = None,
+) -> str:
     """Agent 输出 → 写入 jsonl/UI 的群聊字符串
 
     Args:
         send_from: 当前发言的 agent（用于将来扩展元数据，当前 jsonl 由 agent_name 字段承载来源）
         send_to: 这条群聊记录在 @ 谁
         content: 原始内容
+        is_loop_message: 是否为循环内部消息
+        loop_iteration: 循环轮次
     """
+    if is_loop_message:
+        return f"[循环-节点{send_from}-第{loop_iteration}轮] @{send_to} {content}"
     return f"@{send_to} {content}"
 
 

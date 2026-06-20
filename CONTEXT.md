@@ -36,8 +36,9 @@
 
 ### GroupChatSession（群聊会话）
 - 管理群聊的消息历史和元数据
-- 属性：group_chat_id、name、messages、created_at、updated_at、last_compacted_loc
+- 属性：group_chat_id、name、messages、created_at、updated_at、last_compacted_loc、next_message_id
 - 支持消息压缩和增量加载
+- next_message_id：下一个可用的消息 id（自增）
 
 ### GroupChatRuntime（群聊运行时）
 - 群聊运行时 Facade，管理 State（内存状态）和 Repository（持久化层）
@@ -64,13 +65,43 @@
 - 核心方法：get_active_task_list()、assign_tasks()、update_task_status()
 - 位于 `agents_hub/core/communication/task_manager.py`
 
+### Loop（循环）
+- 一种特殊的编排模式，将多个 Agent 串联成固定序列，反复执行直到满足退出条件
+- 属性：loop_id、group_chat_id、nodes、status、current_iteration、max_iterations、initial_task、created_at、error_message
+- **不变量**：一个 GroupChat 同时只能有一个 RUNNING 状态的 Loop
+- **生命周期**：CREATED（已创建）→ RUNNING（运行中）→ PAUSED（已暂停）/ COMPLETED（正常完成）/ FAILED（失败）
+- **隔离性**：Loop 运行期间，参与的 Agent 进入 `IN_LOOP` 状态，只接收来自该 Loop 的消息和 Manager 控制信号
+- **退出条件**：通过 TERMINATOR 节点输出 `<loop_decision>` 标签决定是否继续循环，或达到 `max_iterations`
+
+### LoopNode（循环节点）
+- 循环中的一个执行单元
+- 属性：node_id、node_type、agent_name、node_prompt、output_schema_prompt、output_schema_fields、max_retries
+- **节点类型**：NORMAL（普通节点，执行任务）或 TERMINATOR（结束节点，判断循环是否继续）
+- **职责描述**：`node_prompt` 定义节点的角色、输入、输出和职责（由 Manager 创建时定义）
+- **输出校验**：`output_schema_fields` 列出必需字段（如 `["# 执行结果", "**任务状态**"]`），用于简单字符串匹配校验
+- **重试机制**：输出校验失败时自动重试，最多 `max_retries` 次（默认 3）
+
+### LoopExecutor（循环执行器）
+- 循环执行引擎，负责节点调度、输出校验、退出判断、错误处理
+- 职责：发送消息给节点、监听完成通知、校验输出格式、检查退出条件、处理异常
+- 持有：Loop 状态、send_message_callback（回调函数）、agent_call_manager、completion_queue（完成通知队列）
+- 位于 `agents_hub/core/orchestration/loop_executor.py`
+
+### LoopManager（循环管理器）
+- 循环 CRUD 和持久化管理
+- 职责：创建 Loop、查询 Loop 状态、删除 Loop、持久化 Loop 状态变更
+- 持久化文件：`local_data/teams/<team_name>/<project_path>/<group_chat_id>/loops.jsonl`
+- 位于 `agents_hub/core/orchestration/loop_manager.py`
+
 ## 通信系统
 
 ### AgentMessage（智能体消息）
 - Agent 之间传递的消息结构
-- 属性：call_id、content、send_from、send_to、session_type、message_type、timestamp
+- 属性：call_id、content、send_from、send_to、session_type、message_type、timestamp、metadata
 - session_type：MAIN（群聊）或 BTW（单聊）
 - message_type：TASK（需要回复）或 NOTIFICATION（不需要回复）
+- metadata：消息元数据（dict），用于携带额外信息
+  - 循环消息的 metadata：`loop_id`（循环 ID）、`loop_context`（循环专用上下文）、`is_loop_message`（标记为循环消息）、`loop_iteration`（当前循环轮次）
 - **content 不可变约定**：在 Agent 之间投递时，content 始终保持原始内容，
   不被预渲染（如包上 `[X] 发送消息给 [Y]:` 之类的包络）。所有渲染都发生在
   Agent 边界（参见 [Renderer](#渲染层renderer)），避免"包络套包络"问题。
@@ -142,7 +173,7 @@
 |------|------|---------|---------|
 | AgentMessage.content | 原始内容（始终不可变） | —— | —— |
 | LLM prompt | `[{send_from}] 发送消息给 [{send_to}(你)]: {content}` | `render_for_llm(msg)` | Agent.run() 第 2 步 |
-| jsonl / UI 群聊串 | `@{send_to} {content}` | `render_for_chat(send_from, send_to, content)` | Agent.run() 出口 A |
+| jsonl / UI 群聊串 | `@{send_to} {content}` 或 `[循环-节点{send_from}-第{iteration}轮] @{send_to} {content}` | `render_for_chat(send_from, send_to, content, is_loop_message, loop_iteration)` | Agent.run() 出口 A |
 | 前端原始输入 → 结构化 | `@xxx 内容` → `(send_to, content)` | `parse_chat_input(raw)` | 前端→后端边界 |
 
 ### 核心约束
@@ -152,6 +183,7 @@
 3. **回复方向不预渲染**：worker 回复 manager 时，新构造的 AgentMessage.content
    就是 `result.text` 原文，不带 `[X] 对[Y(你)]的回复:` 包装。下游 agent 的
    `run()` 会用 `render_for_llm` 统一加唯一一层包络。
+4. **循环消息特殊渲染**：循环消息在保存到群聊历史时，通过 `render_for_chat()` 添加循环标记（`[循环-节点{agent}-第{iteration}轮]`），参数从 `msg.metadata` 提取。
 
 ### 设计动机
 
@@ -171,6 +203,7 @@
   - `INCOMING_MESSAGE`：当前传入消息（`render_for_llm` 输出）
   - `GROUP_HISTORY` / `RECENT_MESSAGES`：历史摘要 / 最近消息（`AgentContext.get_context` 输出）
   - `SUMMARY_OVERALL` / `SUMMARY_FOR_YOU`：摘要内的整体内容 / 针对当前 agent 的内容
+  - `LOOP_NODE_ROLE` / `LOOP_OUTPUT_SCHEMA` / `PREVIOUS_NODE_OUTPUT` / `LOOP_TERMINATION_CHECK`：循环上下文标签（`LoopExecutor._build_loop_context` 输出）
 - 使用约定：稳定结构用 `Tag` 常量，临时结构直接传 str 字面量
 - 嵌套深度遵循 Anthropic 官方建议——只在内容有"自然层级"时嵌套，普通分块用平铺标签
 
@@ -183,13 +216,17 @@
 
 ### AgentMemberInfo（会话信息）
 - Agent 的会话信息
-- 属性：main_session、btw_session、context_state、token、cwd、use_docker
+- 属性：main_session、btw_session、context_state、token、cwd、use_docker、status、context_usage、error_info
 - main_session：主会话 ID
 - btw_session：单聊会话 ID 列表
 - context_state：上下文加载状态
 - token：Agent 的身份验证令牌
 - cwd：CLI 命令启动的工作目录路径
 - use_docker：是否启用 Docker 沙箱执行
+- status：Agent 状态（idle/busy/stopped/error/in_loop）
+- current_loop_id：当前所在循环 ID（IN_LOOP 状态时非空）
+- context_usage：上下文使用量（input_tokens/1000 取整）
+- error_info：错误信息（dict，包含 type/message/exit_code/stderr）
 
 ### AgentContextState（上下文状态）
 - Agent 的上下文加载状态
@@ -205,7 +242,7 @@
 
 ### SessionType（会话类型）
 - MAIN：主会话（群聊）
-- BTW：单聊会话（by the way） ->已经弃用，但未清除，由single chat service替代
+- BTW：单聊会话（by the way）- 代码中仍存在，但 SingleChatService 提供了更完整的单聊实现
 
 ### MessageType（消息类型）
 - TASK：需要回复的任务
@@ -237,6 +274,24 @@
 - ACTIVE：激活（当前使用）
 - ARCHIVED：已归档
 
+### LoopNodeType（循环节点类型）
+- NORMAL：普通节点，执行任务并输出结果
+- TERMINATOR：结束节点，判断循环是否继续（输出 `<loop_decision>` 标签）
+
+### LoopStatus（循环状态）
+- CREATED：已创建，未启动
+- RUNNING：运行中
+- PAUSED：已暂停
+- COMPLETED：正常完成
+- FAILED：失败（超时/出错/达到最大循环次数）
+
+### AgentStatus（智能体状态）
+- idle：空闲，可接收任务
+- busy：忙碌，正在执行任务
+- stopped：已停止
+- error：错误状态
+- in_loop：循环中，只接收循环内消息和 Manager 控制信号
+
 ## 异常体系
 
 ### 异常层次结构
@@ -246,10 +301,12 @@ AgentsHubError (agents_hub/exceptions.py)  ← 顶层基类
 ├── ValidationError（验证错误：输入参数不符合要求）
 │   └── DockerConfigError（Docker 配置不合理）
 ├── ResourceNotFoundError（资源不存在）
+│   └── MessageNotFoundError（消息不存在）
 ├── StateError（状态错误：在错误的状态下执行操作）
 ├── ExternalServiceError（外部服务调用失败）
 │   ├── DockerNotAvailableError（Docker Engine 不可用）
 │   └── DockerStartError（Docker 容器启动失败）
+├── ForkNotSupportedError（Fork 不支持错误）
 └── RecoverableError（可恢复错误，用于重试逻辑）
 
 AgentsHubError (agents_hub/core/foundation/exceptions.py)  ← 继承顶层基类
@@ -262,7 +319,9 @@ AgentsHubError (agents_hub/core/foundation/exceptions.py)  ← 继承顶层基�
 ├── ExternalServiceError
 ├── InvalidMessageError
 ├── FileSystemError
-└── CompactionError
+├── CompactionError
+├── AgentBusyError（Agent 正在执行任务，无法压缩上下文）
+└── ForkError（Fork 执行失败）
 ```
 
 ### 顶层通用异常（agents_hub/exceptions.py）
@@ -282,6 +341,8 @@ AgentsHubError (agents_hub/core/foundation/exceptions.py)  ← 继承顶层基�
 - InvalidMessageError：消息格式错误
 - FileSystemError：文件系统错误
 - CompactionError：压缩失败
+- AgentBusyError：Agent 正在执行任务，无法压缩上下文
+- ForkError：Fork 执行失败
 
 ### Docker 异常（agents_hub/core/foundation/exceptions.py）
 - DockerConfigError（继承 ValidationError）：Docker 配置不合理
@@ -320,6 +381,7 @@ AgentsHubError (agents_hub/core/foundation/exceptions.py)  ← 继承顶层基�
 ### AgentPlatform（智能体平台）
 - CLAUDE：Claude Code 平台
 - CODEX：Codex 平台
+- OPENCODE：OpenCode 平台
 - 用途：标识 Agent 所使用的 CLI 工具平台
 
 ## 架构分层
@@ -349,13 +411,14 @@ AgentsHubError (agents_hub/core/foundation/exceptions.py)  ← 继承顶层基�
 
 ### RoleConfig（角色配置）
 - 面向 agent_bridge 的运行时配置
-- 属性：name、platform、description、work_root、role_type、bare
+- 属性：name、platform、description、work_root、role_type、bare、disabled_tools
 - system_prompt 和 skills 由 CLI 从目录自动加载，不在此配置
 - bare：Claude CLI 极简模式，跳过 hooks/LSP/plugin sync/auto-memory/CLAUDE.md 自动发现
+- disabled_tools：禁用的工具列表（通过 CLI --disallowedTools 传递）
 
 ### RoleInfo（角色摘要信息）
 - 用于列表和摘要场景
-- 属性：name、platform、avatar、abilities、type、description、scope
+- 属性：name、platform、avatar、abilities、type、description、scope、disabled_tools
 - 不包含完整的配置数据
 
 ### SkillInfo（Skill 摘要信息）
@@ -394,6 +457,10 @@ local_data/
 ├── skills/                        # 全局 skill 库
 │   └── <skill_id>/
 │       └── skill.json
+│
+├── single_chats/                  # 单聊数据（SingleChatService 管理）
+│   ├── index.json                 # 单聊索引（所有单聊的元数据）
+│   └── <single_chat_id>/         # 单聊消息历史（按需解析 session 文件）
 │
 └── teams/                         # Team 数据
     └── <team_name>/
@@ -436,13 +503,13 @@ Agent 实际使用的 cwd = AgentMemberInfo.cwd (如果非空)
 ```json
 {
     "name": "角色名称",
-    "platform": "claude|codex",
+    "platform": "claude|codex|opencode",
     "description": "角色职责描述",
     "avatar": "头像文件名（位于 assets/ 目录）",
     "abilities": ["能力标签1", "能力标签2"],
     "type": "leader|team_member|system",
     "scope": ["群聊ID1", "群聊ID2"],
-    "skills": ["skill_id1", "skill_id2"]
+    "disabled_tools": ["工具名称1", "工具名称2"]
 }
 ```
 

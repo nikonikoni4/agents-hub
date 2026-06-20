@@ -573,4 +573,4 @@ class AgentCallManager:
             return not call.has_agent_response
         if call.message_type == MessageType.NOTIFICATION:
             return call.status != CallStatus.COMPLETED
-        return False  # type: ignore[unreachable]
+        return False

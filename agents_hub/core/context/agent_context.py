@@ -199,8 +199,12 @@ class AgentContext:
         runtime = self._build_runtime(msg, agent_call_manager, task_manager)
         parts.append(runtime)
 
-        # 2. 获取历史上下文
-        history = await self.get_context()
+        # 2. 获取上下文。循环消息使用隔离的 loop_context，不读取群聊历史。
+        history = ""
+        if msg.metadata and msg.metadata.get("loop_context"):
+            history = msg.metadata["loop_context"]
+        else:
+            history = await self.get_context()
         if history:
             parts.append(history)
 

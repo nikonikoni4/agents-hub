@@ -230,6 +230,7 @@ class TestBuildUserPrompt:
             "manager": agent_info,
             "worker_a": worker_info,
         }
+        context.get_agent_member_info.side_effect = context.state.agent_member_infos.get
 
         # repository
         context.repository = MagicMock()
@@ -237,6 +238,7 @@ class TestBuildUserPrompt:
 
         # update_context_load_state
         context.update_context_load_state = AsyncMock()
+        context.save_agent_members = AsyncMock()
 
         # load_compact_history (async)
         context.load_compact_history = AsyncMock(return_value=[])
@@ -379,6 +381,37 @@ class TestBuildUserPrompt:
         lines = [line for line in result.split("\n") if "team_members" in line]
         if lines:
             assert "manager" not in lines[0] or "worker_a" in lines[0]
+
+    @pytest.mark.asyncio
+    async def test_build_user_prompt_uses_loop_context_instead_of_group_context(
+        self, mock_group_chat_context
+    ):
+        """契约：循环消息使用 metadata.loop_context 替代群聊历史上下文"""
+        from agents_hub.core.context.agent_context import AgentContext
+
+        agent_context = AgentContext(
+            agent_name="worker_a",
+            runtime=mock_group_chat_context,
+            role_type=RoleType.TEAM_MEMBER,
+        )
+        agent_context.get_context = AsyncMock(return_value="<recent_messages>历史</recent_messages>")
+
+        msg = AgentMessage(
+            call_id="loop-call",
+            content="循环消息",
+            send_from="loop",
+            send_to="worker_a",
+            session_type=SessionType.MAIN,
+            message_type=MessageType.LOOP_MESSAGE,
+            metadata={"loop_context": "<LOOP_NODE_ROLE>\n节点职责\n</LOOP_NODE_ROLE>"},
+        )
+
+        result = await agent_context.build_user_prompt(msg)
+
+        agent_context.get_context.assert_not_awaited()
+        assert "<LOOP_NODE_ROLE>" in result
+        assert "节点职责" in result
+        assert "<recent_messages>历史</recent_messages>" not in result
 
 
 # ==================== create_role 写入系统提示文件 测试 ====================

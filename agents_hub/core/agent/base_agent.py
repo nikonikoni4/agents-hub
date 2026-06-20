@@ -803,8 +803,28 @@ call_id: {msg.call_id}
     async def _fallback_close_task(self, msg: AgentMessage, result: AgentResult | None) -> None:
         """兜底闭环：未闭环的 TASK 补齐 mark_agent_response + 分流通知（避免 MCP 断连导致群聊无消息）"""
         if msg.message_type != MessageType.TASK:
+            self.logger.debug(
+                "[fallback_close] 跳过: message_type=%s (非 TASK), call_id=%s",
+                msg.message_type,
+                msg.call_id,
+            )
             return
         call = await self.agent_call_manager.get_call(msg.call_id)
+        has_result_text = bool(result and result.text)
+        has_call = call is not None
+        is_task_call = call is not None and call.message_type == MessageType.TASK
+        no_response_yet = call is not None and not call.has_agent_response
+        call_status = call.status.value if call else "N/A"
+        self.logger.info(
+            "[fallback_close] 条件检查: call_id=%s, has_result_text=%s, has_call=%s, "
+            "is_task_call=%s, no_response_yet=%s, call_status=%s",
+            msg.call_id,
+            has_result_text,
+            has_call,
+            is_task_call,
+            no_response_yet,
+            call_status,
+        )
         if not (
             result
             and result.text
@@ -812,6 +832,10 @@ call_id: {msg.call_id}
             and call.message_type == MessageType.TASK
             and not call.has_agent_response
         ):
+            self.logger.info(
+                "[fallback_close] 退出: 条件不满足, call_id=%s",
+                msg.call_id,
+            )
             return
 
         safe_content = redact_token(result.text)
@@ -932,6 +956,30 @@ call_id: {msg.call_id}
             len(safe_content),
         )
 
+    async def _notify_loop_completion(self, msg: AgentMessage, result: AgentResult | None) -> None:
+        """循环内部消息处理完成后通知 LoopExecutor。"""
+        if msg.message_type != MessageType.LOOP_MESSAGE:
+            return
+        if not self._loop_completion_queue or result is None:
+            return
+
+        loop_id = msg.metadata.get("loop_id") if msg.metadata else None
+        if not loop_id:
+            return
+
+        notification = {
+            "loop_id": loop_id,
+            "agent_result": result,
+            "call_id": msg.call_id,
+        }
+        await self._loop_completion_queue.put(notification)
+        self.logger.debug(
+            "Agent %s 已发送循环完成通知: loop_id=%s, call_id=%s",
+            self.name,
+            loop_id,
+            msg.call_id,
+        )
+
     # 测试：添加空行，改变 run() 的行号
     async def run(self) -> None:
         """持续监听私有队列，处理收到的消息"""
@@ -1017,6 +1065,7 @@ call_id: {msg.call_id}
             await self._auto_compact_if_needed()
 
             # 7. 兜底闭环（避免 MCP 断连导致群聊无消息）
+            await self._notify_loop_completion(msg, result)
             await self._fallback_close_task(msg, result)
 
             # 8. NOTIFICATION 消息保存到群聊历史

@@ -19,6 +19,7 @@ class MessageType(Enum):
 
     TASK = "task"  # 需要回复的任务
     NOTIFICATION = "notification"  # 不需要回复的通知
+    LOOP_MESSAGE = "loop_message"  # 循环内部消息，不自动保存
 
 
 class CallStatus(Enum):

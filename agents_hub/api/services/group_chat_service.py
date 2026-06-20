@@ -177,7 +177,10 @@ class GroupChatService:
         self.group_chat_manager.register(group_chat_id, group_chat)
         logger.info("群聊创建成功: id=%s, name=%s", group_chat_id, group_chat_name)
 
-        # 8. 返回 GroupChatInfo
+        # 8. 广播刷新信号（通知前端更新群聊列表）
+        await broadcast_group_chat_refresh(group_chat_id)
+
+        # 9. 返回 GroupChatInfo
         return await self._build_group_chat_info_from_instance(group_chat)
 
     async def load_group_chat(self, group_chat_id: str) -> GroupChatInfo:

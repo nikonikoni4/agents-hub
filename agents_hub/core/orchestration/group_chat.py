@@ -607,6 +607,15 @@ class GroupChat:
         # 2. 投递消息
         await self.message_router.send_message(message)
 
+        if message.message_type == MessageType.LOOP_MESSAGE:
+            logger.info(
+                "循环内部消息已投递，不自动保存: group=%s, call_id=%s, loop_id=%s",
+                self.group_chat_id,
+                message.call_id,
+                message.metadata.get("loop_id") if message.metadata else None,
+            )
+            return
+
         # 3. 获取发送方的 platform
         sender_agent = self._find_agent(message.send_from)
         platform = sender_agent.role_config.platform if sender_agent else AgentPlatform.CLAUDE

@@ -45,9 +45,10 @@ class TestModels:
         assert SessionType.BTW.value == "btw"
 
     def test_message_type_values(self):
-        """契约：MessageType 包含 TASK 和 NOTIFICATION"""
+        """契约：MessageType 包含 TASK、NOTIFICATION 和 LOOP_MESSAGE"""
         assert MessageType.TASK.value == "task"
         assert MessageType.NOTIFICATION.value == "notification"
+        assert MessageType.LOOP_MESSAGE.value == "loop_message"
 
     def test_call_status_values(self):
         """契约：CallStatus 包含完整状态机"""
@@ -222,6 +223,17 @@ class TestRenderer:
         result = render_for_chat("from_agent", "to_agent", "hello")
         assert result == "@to_agent hello"
 
+    def test_render_for_chat_loop_message_format(self):
+        """契约：循环消息带循环节点和轮次前缀"""
+        result = render_for_chat(
+            "node_a",
+            "node_b",
+            "hello",
+            is_loop_message=True,
+            loop_iteration=3,
+        )
+        assert result == "[循环-节点node_a-第3轮] @node_b hello"
+
     def test_parse_chat_input_valid(self):
         """契约：parse_chat_input 正确解析 @xxx content"""
         send_to, content = parse_chat_input("@agent hello world")
@@ -251,6 +263,10 @@ class TestRenderer:
         assert Tag.INCOMING_MESSAGE == "incoming_message"
         assert Tag.SUMMARY_OVERALL == "overall_summary"
         assert Tag.SUMMARY_FOR_YOU == "summary_for_you"
+        assert Tag.LOOP_NODE_ROLE == "LOOP_NODE_ROLE"
+        assert Tag.LOOP_OUTPUT_SCHEMA == "LOOP_OUTPUT_SCHEMA"
+        assert Tag.PREVIOUS_NODE_OUTPUT == "PREVIOUS_NODE_OUTPUT"
+        assert Tag.LOOP_TERMINATION_CHECK == "LOOP_TERMINATION_CHECK"
 
 
 # ==================== constants.py ====================
