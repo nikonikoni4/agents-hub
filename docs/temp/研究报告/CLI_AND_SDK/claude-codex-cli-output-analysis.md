@@ -277,6 +277,71 @@ assistant     (完整消息，包含 thinking + text 内容块)           ← �
 - `usage.output_tokens` - 输出 token 数
 - `usage.reasoning_output_tokens` - 推理输出 token 数
 
+### 2.3 Codex `turn.completed.usage` 的累计量陷阱
+
+2026-06-20 对 `codex exec resume --json` 做多轮实测时发现：恢复已有 session 后，stdout 最后一条 `turn.completed.usage` 不是本轮 LLM 调用的 token 用量，而是当前 session 的累计用量。
+
+实测命令形态：
+
+```powershell
+codex exec resume --json 019ee34b-deea-73b0-8bc0-9911a1283bd0 "<prompt>"
+```
+
+stdout 最后一条：
+
+```json
+{"type":"turn.completed","usage":{"input_tokens":657268,"cached_input_tokens":574464,"output_tokens":4864,"reasoning_output_tokens":410}}
+```
+
+同一个 session JSONL 的最后一条 `token_count`：
+
+```json
+{
+  "payload": {
+    "type": "token_count",
+    "info": {
+      "total_token_usage": {
+        "input_tokens": 657268,
+        "cached_input_tokens": 574464,
+        "output_tokens": 4864,
+        "reasoning_output_tokens": 410
+      },
+      "last_token_usage": {
+        "input_tokens": 81627,
+        "cached_input_tokens": 80256,
+        "output_tokens": 1026,
+        "reasoning_output_tokens": 104
+      },
+      "model_context_window": 258400
+    }
+  }
+}
+```
+
+对应关系：
+
+```text
+turn.completed.usage.input_tokens == token_count.info.total_token_usage.input_tokens
+turn.completed.usage.cached_input_tokens == token_count.info.total_token_usage.cached_input_tokens
+```
+
+因此，恢复会话时不能把 `turn.completed.usage.input_tokens` 当作当前上下文窗口占用。上例中错误值是 `657K`，真实的最后一次 LLM 调用输入是 `81K`，且 `81K < model_context_window 258400`。
+
+正确方案：
+
+1. 新会话没有历史累计时，可以直接使用 `turn.completed.usage`。
+2. resume 已有会话时，在启动 CLI 前读取 session JSONL 最后一条 `token_count.info.total_token_usage` 作为 baseline。
+3. 收到 stdout 的 `turn.completed.usage` 后，对 token 字段做差分：
+
+```text
+last_input_tokens = current_usage.input_tokens - baseline.input_tokens
+last_cached_input_tokens = current_usage.cached_input_tokens - baseline.cached_input_tokens
+last_output_tokens = current_usage.output_tokens - baseline.output_tokens
+last_reasoning_output_tokens = current_usage.reasoning_output_tokens - baseline.reasoning_output_tokens
+```
+
+4. 对外输出的 `AgentResult.usage.input_tokens` 应使用差分后的 `last_input_tokens`，这样 `input_tokens` 才表示本轮 LLM 调用的上下文窗口输入占用。
+
 ---
 
 ## 三、输出对比总结

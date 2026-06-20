@@ -71,6 +71,40 @@ class TestCodexParser:
         assert result.content["usage"]["input_tokens"] == 100
         assert result.session_id == "thread-123"
 
+    def test_parse_turn_completed_with_usage_baseline_returns_last_usage(self):
+        """Codex resume 输出累计 usage 时，解析为本轮实际 usage"""
+        parser = CodexParser(
+            usage_baseline={
+                "input_tokens": 575641,
+                "cached_input_tokens": 494208,
+                "output_tokens": 3838,
+                "reasoning_output_tokens": 306,
+            }
+        )
+        raw_line = json.dumps(
+            {
+                "type": "turn.completed",
+                "usage": {
+                    "input_tokens": 657268,
+                    "cached_input_tokens": 574464,
+                    "output_tokens": 4864,
+                    "reasoning_output_tokens": 410,
+                },
+                "thread_id": "thread-123",
+            }
+        )
+
+        result = parser.parse_event(raw_line)
+
+        assert result is not None
+        assert result.type == AgentEventType.TURN_COMPLETE
+        assert result.content["usage"] == {
+            "input_tokens": 81627,
+            "cached_input_tokens": 80256,
+            "output_tokens": 1026,
+            "reasoning_output_tokens": 104,
+        }
+
     def test_parse_unknown_event_returns_none(self):
         """测试解析未知事件返回 None"""
         raw_line = json.dumps({"type": "unknown_type"})

@@ -1,5 +1,6 @@
 """AgentBridge 统一接口"""
 
+import json
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -20,6 +21,7 @@ from agents_hub.agent_bridge.parsers.opencode import OpenCodeParser
 from agents_hub.config.types import AgentPlatform
 from agents_hub.roles import RoleManager
 from agents_hub.roles.models import RoleConfig
+from agents_hub.utils.session_parser import resolve_session_path
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,7 @@ class AgentBridge:
         self._bare_config = self._init_bare_config()
 
     def _create_parser(
-        self, platform: AgentPlatform
+        self, platform: AgentPlatform, usage_baseline: dict | None = None
     ) -> ClaudeParser | CodexParser | OpenCodeParser:
         """
         创建独立的 parser 实例
@@ -69,11 +71,43 @@ class AgentBridge:
         if platform == AgentPlatform.CLAUDE:
             return ClaudeParser()
         elif platform == AgentPlatform.CODEX:
-            return CodexParser()
+            return CodexParser(usage_baseline=usage_baseline)
         elif platform == AgentPlatform.OPENCODE:
             return OpenCodeParser()
         else:
             raise PlatformNotSupportedError(platform=str(platform))
+
+    def _read_codex_usage_baseline(self, session_path: str | None) -> dict:
+        """读取 Codex session 执行前的累计 usage，用于把 resume 输出转成本轮 usage。"""
+        if not session_path:
+            return {}
+
+        baseline: dict = {}
+        try:
+            with open(session_path, encoding="utf-8") as f:
+                for line in f:
+                    if '"token_count"' not in line:
+                        continue
+                    try:
+                        event = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    payload = event.get("payload", {})
+                    if payload.get("type") != "token_count":
+                        continue
+                    usage = payload.get("info", {}).get("total_token_usage", {})
+                    if usage:
+                        baseline = usage
+        except OSError as exc:
+            logger.warning("Failed to read Codex usage baseline: %s", exc)
+            return {}
+        return baseline
+
+    def _codex_usage_baseline(self, config: RoleConfig, session_id: str | None) -> dict:
+        if config.platform != AgentPlatform.CODEX or not session_id:
+            return {}
+        session_path = resolve_session_path(session_id, config.platform, config.work_root)
+        return self._read_codex_usage_baseline(session_path)
 
     async def execute_stream(
         self,
@@ -111,7 +145,10 @@ class AgentBridge:
             )
 
         executor = self._executors[config.platform]
-        parser = self._create_parser(config.platform)  # 每次创建新的 parser 实例
+        usage_baseline = self._codex_usage_baseline(config, session_id)
+        parser = self._create_parser(
+            config.platform, usage_baseline=usage_baseline
+        )  # 每次创建新的 parser 实例
 
         try:
             raw_stream = executor.execute(
@@ -226,7 +263,8 @@ class AgentBridge:
         if use_docker:
             # Docker 模式：直接使用 Docker executor（不支持 fork_from）
             executor = self._docker_executors[config.platform]
-            parser = self._create_parser(config.platform)
+            usage_baseline = self._codex_usage_baseline(config, session_id)
+            parser = self._create_parser(config.platform, usage_baseline=usage_baseline)
             async for raw_line in executor.execute(
                 prompt, config, session_id, cwd, group_chat_id, system_prompt=system_prompt
             ):

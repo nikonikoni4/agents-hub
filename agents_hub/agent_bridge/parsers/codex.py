@@ -14,8 +14,9 @@ logger = logging.getLogger(__name__)
 class CodexParser:
     """解析 Codex CLI 的流式输出"""
 
-    def __init__(self):
+    def __init__(self, usage_baseline: dict | None = None):
         self._thread_id: str = ""
+        self._usage_baseline = usage_baseline or {}
 
     def parse_event(self, raw_line: str) -> StreamEvent | None:
         """
@@ -104,7 +105,7 @@ class CodexParser:
 
         Codex turn.completed 事件的 usage 字段结构：
         {
-            "input_tokens": int,          # 输入 token 数
+            "input_tokens": int,          # session 累计输入 token 数，不是最后一次 LLM 调用输入
             "cached_input_tokens": int,   # 缓存的输入 token 数
             "output_tokens": int,         # 输出 token 数
             "reasoning_output_tokens": int # 推理输出 token 数（思维链）
@@ -113,6 +114,8 @@ class CodexParser:
         注意：usage 数据最终会传递到 AgentResult.usage
         """
         usage = event.get("usage", {})
+        if self._usage_baseline:
+            usage = self._usage_delta(usage)
         return StreamEvent(
             type=AgentEventType.TURN_COMPLETE,
             content={"usage": usage},
@@ -122,3 +125,23 @@ class CodexParser:
             platform=AgentPlatform.CODEX,
             role_type=RoleType.TEAM_MEMBER,  # 默认值，将在 bridge 中更新
         )
+
+    def _usage_delta(self, usage: dict) -> dict:
+        """Codex resume 的 turn.completed usage 是累计值，转成本轮用量。
+
+        `codex exec --json` stdout 没有 last_token_usage；该字段只写入
+        session JSONL。bridge 在启动 CLI 前读取执行前累计值作为 baseline，
+        parser 在 turn.completed 到达时做差分，避免把累计 token 当作窗口占用。
+
+        """
+        result = dict(usage)
+        for key in (
+            "input_tokens",
+            "cached_input_tokens",
+            "output_tokens",
+            "reasoning_output_tokens",
+            "total_tokens",
+        ):
+            if key in usage:
+                result[key] = max(0, usage.get(key, 0) - self._usage_baseline.get(key, 0))
+        return result
