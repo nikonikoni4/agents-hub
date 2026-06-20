@@ -26,6 +26,7 @@ MCP Server 和 8 个工具
 # TODO 缺乏工具调用错误统计，需要增加显式的工具错误调用统计，但是在外围无法直接关闭agent的工具调用循环，
 # 只能做提醒或者强行关闭一致错误的agent（调用错误可能是系统问题，直接停止是比较好的选择）
 
+import inspect
 from datetime import datetime
 from pathlib import Path
 
@@ -149,6 +150,7 @@ def _make_chat_result(
 
 async def _send_agent_call_completion_notification(
     group_chat: GroupChat,
+    group_chat_id: str,
     send_from: str,
     send_to: str,
     content: str,
@@ -176,7 +178,7 @@ async def _send_agent_call_completion_notification(
     )
     logger.info("消息投递: from=%s, to=%s", send_from, send_to)
     await group_chat.send_message_to_agent(message)
-    await broadcast_group_chat_refresh(group_chat.group_chat_id)
+    await broadcast_group_chat_refresh(group_chat_id)
 
 
 async def _resolve_group_chat(agent_token: str) -> tuple[str, str, GroupChat] | dict:
@@ -785,6 +787,7 @@ async def complete_task(
         else:
             await _send_agent_call_completion_notification(
                 group_chat=group_chat,
+                group_chat_id=group_chat_id,
                 send_from=agent_name,
                 send_to=call.send_from,
                 content=safe_content,
@@ -1048,7 +1051,19 @@ async def create_loop(
     max_iterations: int,
     initial_task: str,
 ) -> dict:
-    """创建循环定义（Leader-only）。"""
+    """
+    创建循环定义（Leader-only）。
+
+    Args:
+        agent_token: Leader 的身份令牌。
+        nodes: 循环节点列表，每个节点声明 agent_name、node_type、角色说明和输出约束。
+        max_iterations: 最大循环轮数，必须大于 0。
+        initial_task: 循环首次执行时交给第一个节点的任务内容。
+
+    Returns:
+        成功: {"loop_id": "...", "status": "created"}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
     logger.info(
         "MCP 调用: create_loop, nodes=%d, max_iterations=%d",
         len(nodes) if nodes else 0,
@@ -1087,7 +1102,17 @@ async def create_loop(
 
 
 async def start_loop(agent_token: str, loop_id: str) -> dict:
-    """启动 CREATED 状态的循环（Leader-only）。"""
+    """
+    启动 CREATED 状态的循环（Leader-only）。
+
+    Args:
+        agent_token: Leader 的身份令牌。
+        loop_id: 要启动的循环 ID。
+
+    Returns:
+        成功: {"loop_id": "...", "status": "running"}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
     logger.info("MCP 调用: start_loop, loop_id=%s", loop_id)
     try:
         resolved = await _resolve_group_chat(agent_token)
@@ -1114,7 +1139,17 @@ async def start_loop(agent_token: str, loop_id: str) -> dict:
 
 
 async def stop_loop(agent_token: str, loop_id: str) -> dict:
-    """停止 RUNNING 状态的循环（Leader-only）。"""
+    """
+    停止 RUNNING 状态的循环（Leader-only）。
+
+    Args:
+        agent_token: Leader 的身份令牌。
+        loop_id: 要停止的循环 ID。
+
+    Returns:
+        成功: {"loop_id": "...", "status": "PAUSED"}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
     logger.info("MCP 调用: stop_loop, loop_id=%s", loop_id)
     try:
         resolved = await _resolve_group_chat(agent_token)
@@ -1141,7 +1176,17 @@ async def stop_loop(agent_token: str, loop_id: str) -> dict:
 
 
 async def delete_loop(agent_token: str, loop_id: str) -> dict:
-    """删除非 RUNNING 状态的循环（Leader-only）。"""
+    """
+    删除非 RUNNING 状态的循环（Leader-only）。
+
+    Args:
+        agent_token: Leader 的身份令牌。
+        loop_id: 要删除的循环 ID。
+
+    Returns:
+        成功: {"success": true}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
     logger.info("MCP 调用: delete_loop, loop_id=%s", loop_id)
     try:
         resolved = await _resolve_group_chat(agent_token)
@@ -1168,7 +1213,24 @@ async def delete_loop(agent_token: str, loop_id: str) -> dict:
 
 
 async def get_loop_status(agent_token: str, loop_id: str) -> dict:
-    """查询循环状态，任意 Agent 可调用。"""
+    """
+    查询循环状态，任意 Agent 可调用。
+
+    Args:
+        agent_token: 调用者的身份令牌。
+        loop_id: 要查询的循环 ID。
+
+    Returns:
+        成功: {
+            "loop_id": "...",
+            "status": "...",
+            "current_iteration": int,
+            "max_iterations": int,
+            "current_node": "..." | None,
+            "error": "..." | None
+        }
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
     logger.info("MCP 调用: get_loop_status, loop_id=%s", loop_id)
     try:
         resolved = await _resolve_group_chat(agent_token)
@@ -1213,18 +1275,24 @@ async def health_check() -> dict:
 # 注册工具到 FastMCP
 # ============================================================================
 
-mcp.tool()(call_agent)
-mcp.tool()(assign_tasks_to_team)
-mcp.tool()(archive_task_list)
-mcp.tool()(check_agent_call)
+
+def _register_tool_with_docstring(tool_func):
+    """注册工具时保留完整 docstring，避免 FastMCP 只暴露第一段摘要。"""
+    return mcp.tool(description=inspect.getdoc(tool_func))(tool_func)
+
+
+_register_tool_with_docstring(call_agent)
+_register_tool_with_docstring(assign_tasks_to_team)
+_register_tool_with_docstring(archive_task_list)
+_register_tool_with_docstring(check_agent_call)
 # mcp.tool()(report_progress)
 # mcp.tool()(complete_task)
 # mcp.tool()(request_permission)
-mcp.tool()(create_group_chat)
-mcp.tool()(create_agent)
-mcp.tool()(create_loop)
-mcp.tool()(start_loop)
-mcp.tool()(stop_loop)
-mcp.tool()(delete_loop)
-mcp.tool()(get_loop_status)
-mcp.tool()(health_check)
+_register_tool_with_docstring(create_group_chat)
+_register_tool_with_docstring(create_agent)
+_register_tool_with_docstring(create_loop)
+_register_tool_with_docstring(start_loop)
+_register_tool_with_docstring(stop_loop)
+_register_tool_with_docstring(delete_loop)
+_register_tool_with_docstring(get_loop_status)
+_register_tool_with_docstring(health_check)

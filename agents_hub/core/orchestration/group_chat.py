@@ -66,6 +66,7 @@ class GroupChat:
         self.manager: Manager | None = None
         self.manager_task: asyncio.Task | None = None
         self.worker_tasks: dict[str, asyncio.Task] = {}
+        self._member_lifecycle_locks: dict[str, asyncio.Lock] = {}
 
         # fork 模式：agent_name → source_session_id
         self.fork_from_sessions = fork_from_sessions
@@ -97,6 +98,12 @@ class GroupChat:
         if self.loop_manager is None:
             self.loop_manager = LoopManager(self.group_chat_id, self.runtime.project_path)
         return self.loop_manager
+
+    def _get_member_lifecycle_lock(self, agent_name: str) -> asyncio.Lock:
+        """获取单个成员 stop/start 生命周期锁。"""
+        if agent_name not in self._member_lifecycle_locks:
+            self._member_lifecycle_locks[agent_name] = asyncio.Lock()
+        return self._member_lifecycle_locks[agent_name]
 
     async def start(self):
         """
@@ -937,6 +944,11 @@ class GroupChat:
         Raises:
             AgentNotFoundError: Agent 不存在
         """
+        async with self._get_member_lifecycle_lock(agent_name):
+            return await self._stop_member_locked(agent_name)
+
+    async def _stop_member_locked(self, agent_name: str) -> dict:
+        """在成员生命周期锁内停止单个 agent。"""
         from agents_hub.core.foundation import AgentNotFoundError
 
         # 1. 查找 agent
@@ -949,7 +961,14 @@ class GroupChat:
 
         # 2. 先更新状态为 "stopped"（阻止新消息投递）
         agent_info = self.runtime.get_agent_member_info(agent_name)
-        assert agent_info is not None, f"Agent {agent_name} not found"
+        if agent_info is None:
+            logger.warning(
+                "停止 Agent 时发现运行态存在但成员状态缺失，自动恢复: group=%s, agent=%s",
+                self.group_chat_id,
+                agent_name,
+            )
+            agent_info = self.runtime.get_or_create_agent_member_info(agent_name)
+            agent_info.cwd = agent_info.cwd or self.runtime.project_path
         agent_info.status = "stopped"
         await self.runtime.save_agent_members(context=f"Stop agent {agent_name}")
 
@@ -1032,7 +1051,9 @@ class GroupChat:
             )
             logger.info("已终止 Agent %s 的 CLI 进程 (session: %s)", agent.name, session_id)
         except Exception as e:
-            logger.error("终止 Agent %s 进程失败: %s", agent.name, str(e))
+            # 降级处理：进程停止失败不阻止后续清理（队列清空、MessageRouter 注销）
+            # 避免因外部服务异常导致 Agent 状态不一致
+            logger.error("终止 Agent %s 进程失败（降级继续）: %s", agent.name, str(e))
 
     async def start_member(self, agent_name: str) -> dict:
         """
@@ -1054,6 +1075,11 @@ class GroupChat:
             AgentNotFoundError: Agent 不存在
             StateError: Agent 未处于 stopped 状态
         """
+        async with self._get_member_lifecycle_lock(agent_name):
+            return await self._start_member_locked(agent_name)
+
+    async def _start_member_locked(self, agent_name: str) -> dict:
+        """在成员生命周期锁内重新启动单个 agent。"""
         from agents_hub.core.foundation import AgentNotFoundError
         from agents_hub.exceptions import StateError
 
@@ -1132,6 +1158,11 @@ class GroupChat:
         Raises:
             AgentNotFoundError: Agent 不存在
         """
+        async with self._get_member_lifecycle_lock(agent_name):
+            return await self._reset_member_locked(agent_name)
+
+    async def _reset_member_locked(self, agent_name: str) -> dict:
+        """在成员生命周期锁内重置单个 agent。"""
         from agents_hub.core.foundation import AgentNotFoundError
 
         # 1. 查找 agent
@@ -1145,7 +1176,7 @@ class GroupChat:
         # 2. 如果正在运行，先停止
         agent_member_info = self.runtime.state.agent_member_infos.get(agent_name)
         if agent_member_info and agent_member_info.status != "stopped":
-            await self.stop_member(agent_name)
+            await self._stop_member_locked(agent_name)
 
         # 3. 清空 main_session 和 btw_sessions
         if agent_member_info:
