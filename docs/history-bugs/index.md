@@ -195,3 +195,9 @@
  - path: docs/history-bugs/2026-06-20-codex-process-wait-blocking.md
  - 触发规则：Agent 任务一直处于 running 状态，消息无法显示在群聊中，日志最后停留在"等待进程退出"
  - 内容摘要：偶发性 bug（出现频率较高）。CLI 进程 stdout 关闭后，`await process.wait()` 永久阻塞导致任务无法完成。可能原因：进程僵尸、子进程未关闭、Windows asyncio 进程管理问题。修复：添加 30 秒超时，超时后强制 kill 进程。已在 CodexExecutor 和 ClaudeExecutor 中修复
+
+## GroupChat stop_member 成员状态缺失导致 KeyError
+ - updated_at : 2026-06-20
+ - path: docs/history-bugs/2026-06-20-group-chat-stop-member-missing-member-info.md
+ - 触发规则：快速重复停止/启动群聊成员时，停止接口报 `KeyError: '<agent_name>'` 或 API 返回 500
+ - 内容摘要：运行态 Agent 对象存在，但 `runtime.agent_member_infos` 中对应成员状态短暂缺失，`stop_member()` 读取状态时抛 KeyError。修复：在 stop 流程中把缺失状态视为可恢复不一致，使用 `get_or_create_agent_member_info()` 恢复状态记录后继续停止和清理

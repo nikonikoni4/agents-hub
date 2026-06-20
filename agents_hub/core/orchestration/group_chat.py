@@ -960,7 +960,10 @@ class GroupChat:
         logger.info("停止 Agent: %s", agent_name)
 
         # 2. 先更新状态为 "stopped"（阻止新消息投递）
-        agent_info = self.runtime.get_agent_member_info(agent_name)
+        try:
+            agent_info = self.runtime.get_agent_member_info(agent_name)
+        except KeyError:
+            agent_info = None
         if agent_info is None:
             logger.warning(
                 "停止 Agent 时发现运行态存在但成员状态缺失，自动恢复: group=%s, agent=%s",
