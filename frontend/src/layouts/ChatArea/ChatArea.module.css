@@ -162,6 +162,11 @@
   border-top-right-radius: 4px;
 }
 
+/* 深色模式 User 气泡：更深沉的灰蓝色 */
+html[data-theme='dark'] .bubbleUser {
+  background: #2f4f6f;
+}
+
 .emptyState {
   flex: 1;
   display: flex;

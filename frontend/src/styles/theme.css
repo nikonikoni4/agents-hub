@@ -65,9 +65,9 @@ html[data-theme='dark'] {
   --bg-input-wrapper: rgb(35, 35, 35);
   --bg-input-wrapper-focus: rgb(40, 40, 40);
 
-  --text-primary: rgb(230, 230, 230);
-  --text-secondary: rgb(180, 180, 180);
-  --text-tertiary: rgb(120, 120, 120);
+  --text-primary: rgb(200, 200, 200);
+  --text-secondary: rgb(160, 160, 160);
+  --text-tertiary: rgb(110, 110, 110);
   --text-disabled: rgb(80, 80, 80);
   --border-color: rgb(60, 60, 60);
   --accent-color: #96b0cc;

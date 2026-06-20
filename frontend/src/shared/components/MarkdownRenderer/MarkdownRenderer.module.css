@@ -26,6 +26,12 @@
   border-radius: 4px;
   background: var(--bg-shadow, rgba(0, 0, 0, 0.06));
   color: var(--text-primary);
+  font-size: 0.9em;
+}
+
+html[data-theme='dark'] .markdown :not(pre) > code {
+  background: rgba(110, 160, 210, 0.15);
+  color: #9cdcfe;
 }
 
 .markdown ul,
@@ -36,6 +42,7 @@
 
 .markdown li {
   margin: 2px 0;
+  color: var(--text-secondary);
 }
 
 .markdown blockquote {
@@ -43,6 +50,11 @@
   padding: 4px 12px;
   border-left: 3px solid var(--accent-color, #8ba5bf);
   color: var(--text-secondary, #666);
+}
+
+html[data-theme='dark'] .markdown blockquote {
+  border-left-color: #569cd6;
+  color: #9cdcfe;
 }
 
 .markdown table {
@@ -69,6 +81,14 @@
 .markdown h4 {
   margin: 8px 0 4px;
   font-weight: 600;
+  color: var(--text-primary);
+}
+
+html[data-theme='dark'] .markdown h1,
+html[data-theme='dark'] .markdown h2,
+html[data-theme='dark'] .markdown h3,
+html[data-theme='dark'] .markdown h4 {
+  color: #ffffff;
 }
 
 .markdown h1 {
