@@ -482,7 +482,7 @@ class Agent:
         # 这是项目编码规则"中间层不做兜底"的特例，因为留痕是辅助功能而非核心路径。
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d-%H%M")
-            handoff_dir = Path(self.agent_cwd) / "docs" / "hand-off"
+            handoff_dir = Path(self.agent_cwd) / "docs" / "temp" / "hand-off"
             handoff_dir.mkdir(parents=True, exist_ok=True)
             handoff_file = handoff_dir / f"{timestamp}-{self.name}-compact.md"
             handoff_content = (
