@@ -6,7 +6,6 @@ Agent 上下文
 """
 
 import json
-import re
 from pathlib import Path
 
 from agents_hub.config.types import RoleType
@@ -139,7 +138,6 @@ class AgentContext:
 
         过滤规则：
         1. 排除自己发送的消息（agent_name == self.agent_name）
-        2. 排除 @ 自己的消息（content 包含 @{self.agent_name}，精确匹配词边界）
 
         Args:
             last_loaded_message_index: 上次加载到的消息索引
@@ -150,12 +148,8 @@ class AgentContext:
         session = self.runtime.get_group_chat_session()
         assert session is not None
         messages = session.messages
-        # 负向前瞻：@name 后不能紧跟 ASCII 字母、数字或下划线
-        at_pattern = re.compile(rf"@{re.escape(self.agent_name)}(?![_a-zA-Z0-9])")
         return [
-            m
-            for m in messages[last_loaded_message_index:]
-            if m["agent_name"] != self.agent_name and not at_pattern.search(m["content"])
+            m for m in messages[last_loaded_message_index:] if m["agent_name"] != self.agent_name
         ]
 
     async def _update_agent_context_state(

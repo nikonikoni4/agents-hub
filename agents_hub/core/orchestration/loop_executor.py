@@ -27,7 +27,11 @@ from agents_hub.core.foundation import (
     SessionType,
 )
 from agents_hub.core.foundation.exceptions import LoopExecutionError
-from agents_hub.core.foundation.models import LoopExecutionStatus, SystemRoles
+from agents_hub.core.foundation.models import (
+    LOOP_NODE_TIMEOUT_SECONDS,
+    LoopExecutionStatus,
+    SystemRoles,
+)
 from agents_hub.core.foundation.renderer import Tag, render_for_chat, wrap_xml
 
 
@@ -111,7 +115,7 @@ class LoopExecutor:
         loop_execution_manager=None,
         agents: dict[str, Any] | None = None,
         logger: logging.Logger | None = None,
-        node_result_timeout_seconds: float = 300.0,
+        node_result_timeout_seconds: float = LOOP_NODE_TIMEOUT_SECONDS,
     ):
         """初始化 LoopExecutor。
 
@@ -125,7 +129,7 @@ class LoopExecutor:
             loop_execution_manager: 执行实例管理器，用于持久化状态变更。
             agents: Agent 实例字典，键为 agent_name，用于清理 completion_queue 引用。
             logger: 日志器，如果为 None 则使用模块默认日志器。
-            node_result_timeout_seconds: 等待节点完成通知的超时时间（秒），默认 300 秒。
+            node_result_timeout_seconds: 等待节点完成通知的超时时间（秒），默认 2400 秒（40 分钟）。
         """
         self.loop = loop
         self.execution = execution
@@ -578,7 +582,7 @@ class LoopExecutor:
                 send_to=node.agent_name,
                 content=message.content,
                 message_type=MessageType.LOOP_MESSAGE,
-                timeout_seconds=300,
+                timeout_seconds=int(LOOP_NODE_TIMEOUT_SECONDS),
             )
             message.call_id = call.call_id
 
