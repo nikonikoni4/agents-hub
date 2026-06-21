@@ -135,3 +135,9 @@
  - path: `docs/specs/2026-06-19-chat-history.md`
  - 触发规则：当设计、修改或扩展聊天历史记录功能时阅读，包括群聊聚合消息存储、成员个人历史解析、消息检索接口和分页策略
  - 内容摘要：聊天历史记录模块规格，定义群聊聚合消息（JSONL 文件）和成员个人历史（平台 session 文件）的存储模型、检索接口、数据结构（MessageInfo/MemberHistoryMessage/SessionMessage）、游标分页策略和单聊 LRU 缓存机制
+
+## loop
+ - updated_at : 2026-06-21
+ - path: `docs/specs/2026-06-21-loop.md`
+ - 触发规则：当设计、修改或扩展 Loop 循环执行功能时阅读，包括多节点循环编排、输出校验、状态机规则和 MCP 工具接口
+ - 内容摘要：Loop 循环执行功能的正式规格，定义多节点循环编排模型（至少 2 个节点，有且仅有 1 个 TERMINATOR）、Loop/LoopNode 数据结构、状态机规则、输出校验和重试机制、MCP 工具接口（create_loop/start_loop/stop_loop/delete_loop/get_loop_status）

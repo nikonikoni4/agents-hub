@@ -10,6 +10,7 @@ Flow 文档记录系统中核心数据对象的生命周期和状态变化，帮
 | [agent-status-lifecycle.md](agent-status-lifecycle.md) | Agent 状态（AgentMemberInfo.status） | Agent 状态的生命周期，包括 idle/busy/stopped/error 四种状态的流转规则、触发位置、与 AgentCall 状态的耦合关系 |
 | [group-chat-lifecycle.md](group-chat-lifecycle.md) | GroupChat | 群聊从创建到删除的完整生命周期，包括成员管理、状态变化和资源清理 |
 | [logger-file-handle-lifecycle.md](logger-file-handle-lifecycle.md) | Logger FileHandler | Logger 文件句柄的生命周期管理，包括 RotatingFileHandler 的创建、持有和释放，以及与 GroupChat 资源清理的耦合关系 |
+| [loop-lifecycle.md](loop-lifecycle.md) | Loop | Loop 循环执行的生命周期，包括创建、启动、执行节点、输出校验、检查退出、停止和清理的完整链路 |
 
 ## 编写规则
 
