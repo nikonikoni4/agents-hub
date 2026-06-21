@@ -45,10 +45,14 @@ def mock_group_chat_manager():
 def mock_group_chat():
     """Mock GroupChat 实例"""
     mock = MagicMock()
+    mock.group_chat_id = "group_123"
     mock.message_router = MagicMock()
     mock.send_message_to_agent = AsyncMock()
     mock.task_manager = MagicMock()
     mock.agent_call_manager = MagicMock()
+    mock.agent_call_manager.create_call = AsyncMock()
+    mock.agent_call_manager.get_call = AsyncMock()
+    mock.agent_call_manager.mark_agent_response = AsyncMock()
     mock.team = MagicMock()
     mock.runtime.add_message = AsyncMock()
     return mock

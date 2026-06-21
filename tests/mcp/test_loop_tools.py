@@ -6,6 +6,40 @@ from agents_hub.core.foundation.models import LoopStatus
 from agents_hub.mcp import INVALID_TOKEN, PERMISSION_DENIED
 
 
+@pytest.mark.asyncio
+async def test_loop_tools_expose_complete_docstrings():
+    """契约：MCP 客户端能从工具元数据读取 Loop 工具参数和返回说明。"""
+    from agents_hub.mcp.server import mcp
+
+    expected_terms = {
+        "create_loop": [
+            "Args:",
+            "agent_token:",
+            "nodes:",
+            "max_iterations:",
+            "initial_task:",
+            "Returns:",
+            "loop_id",
+        ],
+        "start_loop": ["Args:", "agent_token:", "loop_id:", "Returns:", "status"],
+        "stop_loop": ["Args:", "agent_token:", "loop_id:", "Returns:", "PAUSED"],
+        "delete_loop": ["Args:", "agent_token:", "loop_id:", "Returns:", "success"],
+        "get_loop_status": [
+            "Args:",
+            "agent_token:",
+            "loop_id:",
+            "Returns:",
+            "current_iteration",
+        ],
+    }
+
+    for tool_name, terms in expected_terms.items():
+        tool = await mcp.get_tool(tool_name)
+        description = tool.description or ""
+        for term in terms:
+            assert term in description, f"{tool_name} description missing {term!r}"
+
+
 @pytest.fixture
 def mock_group_chat_manager():
     with patch("agents_hub.mcp.server.group_chat_manager") as mock:

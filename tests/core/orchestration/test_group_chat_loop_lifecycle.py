@@ -7,7 +7,8 @@ import pytest
 
 from agents_hub.agent_bridge.models import AgentResult
 from agents_hub.config.types import AgentPlatform, RoleType
-from agents_hub.core.foundation import MessageType
+from agents_hub.core.communication import MessageRouter
+from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
 from agents_hub.core.context.loop_models import Loop, LoopNode, LoopNodeType
 from agents_hub.core.foundation.models import LoopStatus
 from agents_hub.core.orchestration.group_chat import GroupChat
@@ -99,6 +100,31 @@ async def test_loop_lifecycle_auto_completes_through_group_chat_callbacks():
     assert loop.loop_id not in group_chat._loop_queues
 
 
+@pytest.mark.asyncio
+async def test_loop_system_sender_can_deliver_loop_message_through_group_chat_router():
+    group_chat = _make_group_chat()
+    group_chat.message_router = MessageRouter()
+
+    group_chat._register_agents_to_router()
+
+    await group_chat.message_router.send_message(
+        AgentMessage(
+            call_id="loop-call-1",
+            content="循环节点任务",
+            send_from="loop",
+            send_to="executor",
+            session_type=SessionType.MAIN,
+            message_type=MessageType.LOOP_MESSAGE,
+            metadata={"loop_id": "loop-1"},
+        )
+    )
+
+    received = group_chat.agents["executor"].message_queue.get_nowait()
+    assert received.call_id == "loop-call-1"
+    assert received.send_from == "loop"
+    assert received.message_type == MessageType.LOOP_MESSAGE
+
+
 def _make_group_chat():
     group_chat = GroupChat.__new__(GroupChat)
     group_chat.group_chat_id = "group-1"
@@ -114,7 +140,7 @@ def _make_group_chat():
         "executor": _FakeAgent("executor"),
         "reviewer": _FakeAgent("reviewer"),
     }
-    group_chat.manager = SimpleNamespace(name="manager")
+    group_chat.manager = _FakeAgent("manager")
     group_chat.workers = group_chat.agents
 
     def find_agent(agent_name):
@@ -172,6 +198,7 @@ def _make_loop(status: str) -> Loop:
 class _FakeAgent:
     def __init__(self, name: str):
         self.name = name
+        self.message_queue = asyncio.Queue()
         self.loop_completion_queue = None
 
     def set_loop_completion_queue(self, queue):
