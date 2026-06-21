@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loop Status Prototype - RightSidebar</title>
+  <style>
+    /*
+     * Loop Status 组件原型
+     *
+     * Assumptions:
+     * 1. 位置：RightSidebar chat tab，Pinned section 下方
+     * 2. 内容：Loop 状态、当前节点、迭代进度
+     * 3. 不展示节点输入输出（已在群聊消息中）
+     * 4. 遵循现有设计系统：CSS 变量、4px 间距、12px 圆角
+     *
+     * 设计决策:
+     * - 复用 .rightModule 卡片模式（与 Pinned、AgentCalls 同级）
+     * - 状态徽章用 rgba 背景 + 文字色（复用现有 pattern）
+     * - 进度用细条 + 数字，不抢视觉重心
+     * - 节点列表用简洁的行展示，高亮当前节点
+     */
+
+    :root {
+      /* Light theme (default) */
+      --bg-sidebar: rgb(246, 246, 246);
+      --bg-main: rgb(255, 255, 255);
+      --bg-right-base: rgb(255, 255, 255);
+      --bg-hover: rgba(0, 0, 0, 0.04);
+      --bg-active: rgba(0, 0, 0, 0.06);
+
+      --text-primary: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+
+      --accent-color: rgb(74, 158, 255);
+      --accent-bg: rgba(74, 158, 255, 0.1);
+
+      --border-color: rgba(0, 0, 0, 0.06);
+
+      /* Status colors */
+      --status-running: rgb(74, 158, 255);
+      --status-running-bg: rgba(74, 158, 255, 0.12);
+      --status-paused: rgb(232, 176, 46);
+      --status-paused-bg: rgba(232, 176, 46, 0.12);
+      --status-completed: rgb(76, 175, 80);
+      --status-completed-bg: rgba(76, 175, 80, 0.12);
+      --status-failed: rgb(234, 67, 53);
+      --status-failed-bg: rgba(234, 67, 53, 0.12);
+      --status-created: rgba(0, 0, 0, 0.45);
+      --status-created-bg: rgba(0, 0, 0, 0.06);
+
+      /* Typography */
+      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+      /* Spacing */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+
+      /* Radius */
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-sidebar);
+      color: var(--text-primary);
+      padding: 24px;
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+    }
+
+    .prototype-label {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .sidebar-mock {
+      width: 280px;
+      background: var(--bg-right-base);
+      border-radius: var(--radius-xl);
+      padding: 16px 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.04);
+    }
+
+    /* ===== Right Module (existing pattern) ===== */
+    .rightModule {
+      margin: 8px 12px;
+      padding: 14px 16px;
+      background: var(--bg-right-base);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+    }
+
+    .moduleTitle {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 12px;
+    }
+
+    /* ===== Status Badge ===== */
+    .statusBadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .statusBadge--running {
+      background: var(--status-running-bg);
+      color: var(--status-running);
+    }
+
+    .statusBadge--paused {
+      background: var(--status-paused-bg);
+      color: var(--status-paused);
+    }
+
+    .statusBadge--completed {
+      background: var(--status-completed-bg);
+      color: var(--status-completed);
+    }
+
+    .statusBadge--failed {
+      background: var(--status-failed-bg);
+      color: var(--status-failed);
+    }
+
+    .statusBadge--created {
+      background: var(--status-created-bg);
+      color: var(--status-created);
+    }
+
+    .statusDot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .statusBadge--running .statusDot {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ===== Loop Header ===== */
+    .loopHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .loopHeader .moduleTitle {
+      margin-bottom: 0;
+    }
+
+    /* ===== Progress Bar ===== */
+    .progressContainer {
+      margin-bottom: 12px;
+    }
+
+    .progressInfo {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .progressLabel {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .progressCount {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progressBar {
+      height: 3px;
+      background: var(--bg-hover);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progressFill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent-color);
+      transition: width 0.3s ease;
+    }
+
+    .progressFill--completed {
+      background: var(--status-completed);
+    }
+
+    .progressFill--failed {
+      background: var(--status-failed);
+    }
+
+    /* ===== Node List ===== */
+    .nodeList {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nodeItem {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: var(--radius-md);
+      transition: background 0.15s ease;
+    }
+
+    .nodeItem:hover {
+      background: var(--bg-hover);
+    }
+
+    .nodeItem--active {
+      background: var(--accent-bg);
+    }
+
+    .nodeItem--active:hover {
+      background: var(--accent-bg);
+    }
+
+    .nodeIndicator {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .nodeIndicator--active {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .nodeIndicator--pending {
+      background: var(--bg-hover);
+      color: var(--text-tertiary);
+    }
+
+    .nodeIndicator--done {
+      background: var(--status-completed-bg);
+      color: var(--status-completed);
+    }
+
+    .nodeInfo {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .nodeName {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nodeItem--pending .nodeName {
+      color: var(--text-secondary);
+    }
+
+    .nodeRole {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-top: 1px;
+    }
+
+    .nodeTypeTag {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 100px;
+      background: var(--bg-hover);
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    .nodeTypeTag--terminator {
+      background: rgba(232, 176, 46, 0.1);
+      color: var(--status-paused);
+    }
+
+    /* ===== Error Message ===== */
+    .errorMessage {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: var(--status-failed-bg);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      color: var(--status-failed);
+      line-height: 1.4;
+    }
+
+    /* ===== Empty State ===== */
+    .emptyState {
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    .emptyStateIcon {
+      font-size: 20px;
+      margin-bottom: 6px;
+      opacity: 0.3;
+    }
+
+    .emptyStateText {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    /* ===== Divider ===== */
+    .divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 16px 0;
+    }
+
+    /* ===== Section Label (for mock) ===== */
+    .sectionLabel {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+
+    /* ===== Existing Pinned Mock ===== */
+    .pinnedItem {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: var(--radius-md);
+      cursor: default;
+    }
+
+    .pinnedItem:hover {
+      background: var(--bg-hover);
+    }
+
+    .pinnedIcon {
+      font-size: 14px;
+      color: var(--text-tertiary);
+    }
+
+    .pinnedText {
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pinnedText em {
+      font-style: normal;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Variant 1: Running -->
+  <div>
+    <div class="prototype-label">Running</div>
+    <div class="sidebar-mock">
+      <!-- Mock Pinned section -->
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - loop design requirements</span>
+        </div>
+      </div>
+
+      <!-- Loop Status - Running -->
+      <div class="rightModule">
+        <div class="loopHeader">
+          <div class="moduleTitle">Loop</div>
+          <span class="statusBadge statusBadge--running">
+            <span class="statusDot"></span>
+            Running
+          </span>
+        </div>
+
+        <div class="progressContainer">
+          <div class="progressInfo">
+            <span class="progressLabel">Iteration</span>
+            <span class="progressCount">2 / 5</span>
+          </div>
+          <div class="progressBar">
+            <div class="progressFill" style="width: 40%"></div>
+          </div>
+        </div>
+
+        <div class="nodeList">
+          <div class="nodeItem nodeItem--done">
+            <div class="nodeIndicator nodeIndicator--done">&#10003;</div>
+            <div class="nodeInfo">
+              <div class="nodeName">researcher</div>
+              <div class="nodeRole">Research & Analysis</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--active">
+            <div class="nodeIndicator nodeIndicator--active">2</div>
+            <div class="nodeInfo">
+              <div class="nodeName">coder</div>
+              <div class="nodeRole">Implementation</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--pending">
+            <div class="nodeIndicator nodeIndicator--pending">3</div>
+            <div class="nodeInfo">
+              <div class="nodeName">reviewer</div>
+              <div class="nodeRole">Quality Check & Termination</div>
+            </div>
+            <span class="nodeTypeTag nodeTypeTag--terminator">terminator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 2: Paused -->
+  <div>
+    <div class="prototype-label">Paused</div>
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - loop design requirements</span>
+        </div>
+      </div>
+
+      <div class="rightModule">
+        <div class="loopHeader">
+          <div class="moduleTitle">Loop</div>
+          <span class="statusBadge statusBadge--paused">
+            <span class="statusDot"></span>
+            Paused
+          </span>
+        </div>
+
+        <div class="progressContainer">
+          <div class="progressInfo">
+            <span class="progressLabel">Iteration</span>
+            <span class="progressCount">1 / 5</span>
+          </div>
+          <div class="progressBar">
+            <div class="progressFill" style="width: 20%"></div>
+          </div>
+        </div>
+
+        <div class="nodeList">
+          <div class="nodeItem nodeItem--done">
+            <div class="nodeIndicator nodeIndicator--done">&#10003;</div>
+            <div class="nodeInfo">
+              <div class="nodeName">researcher</div>
+              <div class="nodeRole">Research & Analysis</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--pending">
+            <div class="nodeIndicator nodeIndicator--pending">2</div>
+            <div class="nodeInfo">
+              <div class="nodeName">coder</div>
+              <div class="nodeRole">Implementation</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--pending">
+            <div class="nodeIndicator nodeIndicator--pending">3</div>
+            <div class="nodeInfo">
+              <div class="nodeName">reviewer</div>
+              <div class="nodeRole">Quality Check & Termination</div>
+            </div>
+            <span class="nodeTypeTag nodeTypeTag--terminator">terminator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 3: Completed -->
+  <div>
+    <div class="prototype-label">Completed</div>
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - loop design requirements</span>
+        </div>
+      </div>
+
+      <div class="rightModule">
+        <div class="loopHeader">
+          <div class="moduleTitle">Loop</div>
+          <span class="statusBadge statusBadge--completed">
+            <span class="statusDot"></span>
+            Completed
+          </span>
+        </div>
+
+        <div class="progressContainer">
+          <div class="progressInfo">
+            <span class="progressLabel">Iteration</span>
+            <span class="progressCount">3 / 5</span>
+          </div>
+          <div class="progressBar">
+            <div class="progressFill progressFill--completed" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <div class="nodeList">
+          <div class="nodeItem nodeItem--done">
+            <div class="nodeIndicator nodeIndicator--done">&#10003;</div>
+            <div class="nodeInfo">
+              <div class="nodeName">researcher</div>
+              <div class="nodeRole">Research & Analysis</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--done">
+            <div class="nodeIndicator nodeIndicator--done">&#10003;</div>
+            <div class="nodeInfo">
+              <div class="nodeName">coder</div>
+              <div class="nodeRole">Implementation</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--done">
+            <div class="nodeIndicator nodeIndicator--done">&#10003;</div>
+            <div class="nodeInfo">
+              <div class="nodeName">reviewer</div>
+              <div class="nodeRole">Quality Check & Termination</div>
+            </div>
+            <span class="nodeTypeTag nodeTypeTag--terminator">terminator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 4: Failed -->
+  <div>
+    <div class="prototype-label">Failed</div>
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - loop design requirements</span>
+        </div>
+      </div>
+
+      <div class="rightModule">
+        <div class="loopHeader">
+          <div class="moduleTitle">Loop</div>
+          <span class="statusBadge statusBadge--failed">
+            <span class="statusDot"></span>
+            Failed
+          </span>
+        </div>
+
+        <div class="progressContainer">
+          <div class="progressInfo">
+            <span class="progressLabel">Iteration</span>
+            <span class="progressCount">2 / 5</span>
+          </div>
+          <div class="progressBar">
+            <div class="progressFill progressFill--failed" style="width: 40%"></div>
+          </div>
+        </div>
+
+        <div class="nodeList">
+          <div class="nodeItem nodeItem--done">
+            <div class="nodeIndicator nodeIndicator--done">&#10003;</div>
+            <div class="nodeInfo">
+              <div class="nodeName">researcher</div>
+              <div class="nodeRole">Research & Analysis</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--active">
+            <div class="nodeIndicator nodeIndicator--active">!</div>
+            <div class="nodeInfo">
+              <div class="nodeName">coder</div>
+              <div class="nodeRole">Implementation</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--pending">
+            <div class="nodeIndicator nodeIndicator--pending">3</div>
+            <div class="nodeInfo">
+              <div class="nodeName">reviewer</div>
+              <div class="nodeRole">Quality Check & Termination</div>
+            </div>
+            <span class="nodeTypeTag nodeTypeTag--terminator">terminator</span>
+          </div>
+        </div>
+
+        <div class="errorMessage">
+          Agent timeout after 3 retries: coder node failed to respond within 60s
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 5: Created (not started) -->
+  <div>
+    <div class="prototype-label">Created</div>
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - loop design requirements</span>
+        </div>
+      </div>
+
+      <div class="rightModule">
+        <div class="loopHeader">
+          <div class="moduleTitle">Loop</div>
+          <span class="statusBadge statusBadge--created">
+            <span class="statusDot"></span>
+            Created
+          </span>
+        </div>
+
+        <div class="progressContainer">
+          <div class="progressInfo">
+            <span class="progressLabel">Iteration</span>
+            <span class="progressCount">0 / 5</span>
+          </div>
+          <div class="progressBar">
+            <div class="progressFill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="nodeList">
+          <div class="nodeItem nodeItem--pending">
+            <div class="nodeIndicator nodeIndicator--pending">1</div>
+            <div class="nodeInfo">
+              <div class="nodeName">researcher</div>
+              <div class="nodeRole">Research & Analysis</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--pending">
+            <div class="nodeIndicator nodeIndicator--pending">2</div>
+            <div class="nodeInfo">
+              <div class="nodeName">coder</div>
+              <div class="nodeRole">Implementation</div>
+            </div>
+            <span class="nodeTypeTag">normal</span>
+          </div>
+
+          <div class="nodeItem nodeItem--pending">
+            <div class="nodeIndicator nodeIndicator--pending">3</div>
+            <div class="nodeInfo">
+              <div class="nodeName">reviewer</div>
+              <div class="nodeRole">Quality Check & Termination</div>
+            </div>
+            <span class="nodeTypeTag nodeTypeTag--terminator">terminator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 6: No Loop (empty state) -->
+  <div>
+    <div class="prototype-label">No Active Loop</div>
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - loop design requirements</span>
+        </div>
+      </div>
+
+      <div class="rightModule">
+        <div class="moduleTitle">Loop</div>
+        <div class="emptyState">
+          <div class="emptyStateIcon">&#8634;</div>
+          <div class="emptyStateText">No active loop</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
