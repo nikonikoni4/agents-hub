@@ -6,6 +6,24 @@
 
 ## 待开始
 
+### 42. Loop 内存清理策略优化
+- **来源**：代码审查发现
+- **状态**：⏳ 待开始
+- **创建时间**：2026-06-21
+- **描述**：当前 Loop 机制存在内存管理问题，已完成/失败的 Loop 永久驻留内存，JSONL 文件无 compaction 机制，启动时全量加载历史数据。需要优化内存清理策略，防止长期运行时内存泄漏。
+- **背景**：审查 Loop 代码时发现 `LoopManager._loops` 字典会无限增长，只有显式调用 `delete_loop()` 才会移除。JSONL 文件采用 append-only 模式，墓碑记录不会物理删除。
+- **需求清单**：
+  1. 自动过期清理：为已完成/失败的 Loop 添加 TTL，超过一定时间自动从内存移除
+  2. JSONL compaction：定期压缩 JSONL 文件，移除墓碑记录和过期数据
+  3. 懒加载历史 Loop：启动时只加载活跃 Loop，历史 Loop 按需加载
+- **涉及模块**：
+  - `agents_hub/core/orchestration/loop_manager.py`：LoopManager 内存管理、持久化策略
+  - `agents_hub/core/orchestration/group_chat.py`：GroupChat 层面的 Loop 生命周期管理
+- **风险点**：
+  - `LoopManager._loops` 无限增长（中风险）
+  - JSONL 文件无 compaction（低风险）
+  - 启动时全量加载（中风险）
+
 ### 41. AI 训练营
 - **来源**：用户直接输入
 - **状态**：🚧 进行中

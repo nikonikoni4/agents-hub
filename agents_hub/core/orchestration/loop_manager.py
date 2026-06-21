@@ -92,14 +92,13 @@ class LoopManager:
         self._persistence_path = group_chat_paths.loops_data(group_chat_id, project_path)
         self._persistence_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # 内存缓存
+        # 内存缓存（懒加载，初始为空）
         self._loops: dict[str, Loop] = {}
 
         # 并发控制锁
         self._lock = asyncio.Lock()
 
-        # 从持久化恢复
-        self._load_from_persistence()
+        # 不自动加载历史 Loop，改为懒加载策略（按需加载）
 
     async def create_loop(
         self,
@@ -148,6 +147,16 @@ class LoopManager:
 
             # 校验
             self._validate_create_request(loop_nodes, max_iterations)
+
+            # 清空旧 Loop（单 Loop 保持策略）
+            old_loop_count = len(self._loops)
+            if old_loop_count > 0:
+                self.logger.info(
+                    "创建新 Loop 前清空内存: group=%s, 清理数量=%d",
+                    self.group_chat_id,
+                    old_loop_count,
+                )
+                self._loops.clear()
 
             # 创建 Loop
             loop = Loop(
@@ -198,21 +207,176 @@ class LoopManager:
 
         return self._loops[loop_id]
 
-    def list_loops(self, status: str | None = None) -> list[Loop]:
-        """查询群聊的所有 Loop。
+    def _read_jsonl_loops(self) -> dict[str, dict]:
+        """从 JSONL 文件读取所有 Loop 记录（内部辅助方法）。
+
+        遍历 JSONL 文件，处理墓碑记录，返回每个 loop_id 的最新记录。
+        容错处理：跳过空行和损坏的 JSON 行，记录 WARNING 日志。
+
+        Returns:
+            loop_id -> 最新记录的字典。
+        """
+        if not self._persistence_path.exists():
+            return {}
+
+        loop_records: dict[str, dict] = {}
+        deleted_ids: set[str] = set()
+
+        try:
+            with open(self._persistence_path, encoding="utf-8") as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        data = json.loads(line)
+                        loop_id = data["loop_id"]
+
+                        # 墓碑记录：标记删除
+                        if data.get("_deleted"):
+                            deleted_ids.add(loop_id)
+                            loop_records.pop(loop_id, None)
+                            continue
+
+                        # 跳过已删除的 loop_id
+                        if loop_id in deleted_ids:
+                            continue
+
+                        # 后面的记录覆盖前面的（取最新）
+                        loop_records[loop_id] = data
+                    except (json.JSONDecodeError, KeyError) as e:
+                        self.logger.warning(
+                            "跳过损坏的 JSONL 行: 行号=%d, error=%s",
+                            line_num,
+                            e,
+                        )
+                        continue
+
+            return loop_records
+
+        except OSError as e:
+            raise FileSystemError(
+                operation="read",
+                path=str(self._persistence_path),
+                reason=str(e),
+            ) from e
+
+    def get_loop_with_lazy_load(self, loop_id: str) -> Loop:
+        """查询单个 Loop，支持懒加载。
+
+        如果 Loop 在内存中，直接返回；如果不在内存中，从 JSONL 加载。
+        用于 start_loop() 和 get_loop_status() 等需要懒加载的场景。
+
+        Args:
+            loop_id: 循环唯一标识。
+
+        Returns:
+            Loop 实例。
+
+        Raises:
+            LoopNotFoundError: 循环在 JSONL 中也不存在时抛出。
+        """
+        # 1. 检查内存
+        if loop_id in self._loops:
+            self.logger.debug("Loop 命中内存: loop_id=%s", loop_id)
+            return self._loops[loop_id]
+
+        # 2. 从 JSONL 加载
+        self.logger.info(
+            "Loop 未在内存，触发懒加载: loop_id=%s, group=%s",
+            loop_id,
+            self.group_chat_id,
+        )
+
+        loop_records = self._read_jsonl_loops()
+        loop_record = loop_records.get(loop_id)
+
+        if loop_record is None:
+            self.logger.error(
+                "Loop 不存在: loop_id=%s, JSONL 中无有效记录",
+                loop_id,
+            )
+            raise LoopNotFoundError(loop_id)
+
+        # 3. 反序列化并加载到内存
+        loop = Loop.from_dict(loop_record)
+        self._loops[loop_id] = loop
+
+        self.logger.info(
+            "Loop 懒加载成功: loop_id=%s, status=%s",
+            loop_id,
+            loop.status,
+        )
+
+        return loop
+
+    def list_loops(self, status: str | None = None) -> list[dict]:
+        """查询群聊的所有历史 Loop（直接读取 JSONL）。
+
+        不依赖内存缓存，直接读取 JSONL 文件并返回摘要信息。
+        返回格式包含 `in_memory` 标记，指示该 Loop 是否在内存中。
 
         Args:
             status: 可选的状态过滤，取值为 "created"/"running"/"paused"/"completed"/"failed"。
 
         Returns:
-            循环列表，按创建时间排序。
+            循环摘要列表，每个元素包含：
+            - loop_id: 循环 ID
+            - status: 循环状态
+            - created_at: 创建时间
+            - updated_at: 更新时间
+            - max_iterations: 最大循环次数
+            - current_iteration: 当前轮次
+            - in_memory: 是否在内存中（bool）
         """
-        loops = list(self._loops.values())
+        loop_records = self._read_jsonl_loops()
 
-        if status:
-            loops = [loop for loop in loops if loop.status == status]
+        # 构造摘要信息
+        result = []
+        for loop_id, data in loop_records.items():
+            # 状态过滤
+            if status and data.get("status") != status:
+                continue
 
-        return loops
+            summary = {
+                "loop_id": loop_id,
+                "status": data.get("status"),
+                "created_at": data.get("created_at"),
+                "updated_at": data.get("updated_at"),
+                "max_iterations": data.get("max_iterations"),
+                "current_iteration": data.get("current_iteration"),
+                "in_memory": loop_id in self._loops,  # 标记是否在内存
+            }
+            result.append(summary)
+
+        # 按创建时间排序（最新的在前）
+        result.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+
+        return result
+
+    def clear_other_loops(self, keep_loop_id: str) -> int:
+        """清空内存中除指定 Loop 外的所有 Loop。
+
+        用于启动 Loop 时保持单 Loop 内存策略。
+
+        Args:
+            keep_loop_id: 要保留的 Loop ID。
+
+        Returns:
+            清理的 Loop 数量。
+        """
+        other_loops = [lid for lid in self._loops if lid != keep_loop_id]
+        if other_loops:
+            self.logger.info(
+                "清空其他 Loop: group=%s, 清理数量=%d, 保留=%s",
+                self.group_chat_id,
+                len(other_loops),
+                keep_loop_id,
+            )
+            for lid in other_loops:
+                self._loops.pop(lid, None)
+        return len(other_loops)
 
     async def update_loop_status(
         self,
@@ -429,57 +593,14 @@ class LoopManager:
         Raises:
             FileSystemError: 文件读取失败时抛出。
         """
-        if not self._persistence_path.exists():
-            self.logger.debug("持久化文件不存在，跳过加载")
-            return
+        loop_records = self._read_jsonl_loops()
 
-        try:
-            loop_records: dict[str, dict[str, Any]] = {}  # loop_id -> 最新记录（去重）
-            deleted_ids: set[str] = set()  # 已删除的 loop_id
+        # 反序列化并加载到内存
+        for loop_id, data in loop_records.items():
+            loop = Loop.from_dict(data)
+            self._loops[loop_id] = loop
 
-            with open(self._persistence_path, encoding="utf-8") as f:
-                for line_num, line in enumerate(f, 1):
-                    line = line.strip()
-                    if not line:
-                        continue  # 跳过空行
-
-                    try:
-                        data = json.loads(line)
-                        loop_id = data["loop_id"]
-
-                        # 墓碑记录：标记删除
-                        if data.get("_deleted"):
-                            deleted_ids.add(loop_id)
-                            loop_records.pop(loop_id, None)
-                            continue
-
-                        # 跳过已删除的 loop_id
-                        if loop_id in deleted_ids:
-                            continue
-
-                        # 后面的记录覆盖前面的（取最新，自动去重）
-                        loop_records[loop_id] = data
-                    except (json.JSONDecodeError, KeyError) as e:
-                        self.logger.warning(
-                            "跳过损坏的 JSONL 行: 行号=%d, error=%s",
-                            line_num,
-                            e,
-                        )
-                        continue
-
-            # 反序列化
-            for loop_id, data in loop_records.items():
-                loop = Loop.from_dict(data)
-                self._loops[loop_id] = loop
-
-            self.logger.info("加载了 %d 个 Loop", len(loop_records))
-
-        except OSError as e:
-            raise FileSystemError(
-                operation="read",
-                path=str(self._persistence_path),
-                reason=str(e),
-            ) from e
+        self.logger.info("加载了 %d 个 Loop", len(loop_records))
 
     def _persist_loop(self, loop: Loop) -> None:
         """持久化单个 Loop（追加模式）。

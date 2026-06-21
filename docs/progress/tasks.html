@@ -1020,6 +1020,19 @@
         // Task data (mock data for demo)
         const TASKS_DATA = [
   {
+    "id": 42,
+    "title": "Loop 内存清理策略优化",
+    "source": "代码审查发现",
+    "status": "⏳ 待开始",
+    "created_at": "2026-06-21",
+    "description": "当前 Loop 机制存在内存管理问题，已完成/失败的 Loop 永久驻留内存，JSONL 文件无 compaction 机制，启动时全量加载历史数据。需要优化内存清理策略，防止长期运行时内存泄漏。",
+    "modules": [
+      "`agents_hub/core/orchestration/loop_manager.py`：LoopManager 内存管理、持久化策略",
+      "`agents_hub/core/orchestration/group_chat.py`：GroupChat 层面的 Loop 生命周期管理"
+    ],
+    "background": "审查 Loop 代码时发现 `LoopManager._loops` 字典会无限增长，只有显式调用 `delete_loop()` 才会移除。JSONL 文件采用 append-only 模式，墓碑记录不会物理删除。"
+  },
+  {
     "id": 41,
     "title": "AI 训练营",
     "source": "用户直接输入",

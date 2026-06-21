@@ -1,9 +1,9 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-21
 updated_at: 2026-06-21
-last_updated: 2026-06-21T10:15:00+08:00
-abstract: Loop 循环执行功能的数据流文档，记录 Loop 的生命周期、状态变化、节点执行和资源清理的完整链路
+last_updated: 2026-06-21T12:00:00+08:00
+abstract: Loop 循环执行功能的数据流文档，记录 Loop 的生命周期、状态变化、节点执行、内存管理和资源清理的完整链路
 ---
 
 ## 版本
@@ -11,6 +11,7 @@ abstract: Loop 循环执行功能的数据流文档，记录 Loop 的生命周�
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 Loop Flow 初稿 |
+| 1.1 | 添加内存管理策略说明 |
 
 # 数据流：Loop 生命周期
 
@@ -75,11 +76,11 @@ class Loop:
 - Agent 的 `current_loop_id` 字段记录当前所在的循环 ID
 - `stop_loop()` 的 Agent 恢复机制：先调用 `stop_member()` 再调用 `start_member()`，最后手动设置 status 为 "idle"（stop-then-start 模式）
 
-<key_function last_update="2026-06-21T10:07:03+08:00">
+<key_function last_update="2026-06-21T12:57:42+08:00">
 - agents_hub/core/agent/base_agent.py
-  - base_agent.Agent._should_accept_message:103
-  - base_agent.Agent.set_loop_completion_queue:99
-  - base_agent.Agent._notify_message_completion:966
+  - base_agent.Agent._should_accept_message:104
+  - base_agent.Agent.set_loop_completion_queue:100
+  - base_agent.Agent._notify_message_completion:967
 </key_function>
 
 ### Loop ↔ AgentCall
@@ -117,14 +118,24 @@ class Loop:
 - `_loop_tasks`：循环后台任务字典（loop_id → asyncio.Task）
 - `_loop_queues`：循环完成队列字典（loop_id → asyncio.Queue）
 
+**LoopManager 相关字段**：
+- `_loops`：内存缓存字典（loop_id → Loop），实现单 Loop 保持策略
+
 **耦合关系**：
 
-| Loop 操作 | GroupChat 影响 | 触发位置 |
-|----------|--------------|---------|
-| 创建循环 | LoopManager 创建 Loop 对象 | `GroupChat.create_loop()` |
-| 启动循环 | 注册到 active_loops、_loop_tasks、_loop_queues | `GroupChat.create_and_start_loop()` |
-| 停止循环 | 从 active_loops 等字典中移除 | `GroupChat.stop_loop()` |
-| 循环结束 | 触发 `_on_loop_task_done` 回调清理 | `LoopExecutor.run()` |
+| Loop 操作 | GroupChat 影响 | LoopManager 内存影响 | 触发位置 |
+|----------|--------------|---------------------|---------|
+| 创建循环 | LoopManager 创建 Loop 对象 | 清空 `_loops`，加载新 Loop | `GroupChat.create_loop()` |
+| 启动循环 | 注册到 active_loops、_loop_tasks、_loop_queues | 懒加载（如不在内存），清空其他 Loop | `GroupChat.create_and_start_loop()` |
+| 停止循环 | 从 active_loops 等字典中移除 | 保留在 `_loops`（PAUSED 需要查询） | `GroupChat.stop_loop()` |
+| 循环结束 | 触发 `_on_loop_task_done` 回调清理 | 保留在 `_loops`（COMPLETED/FAILED 需要查询） | `LoopExecutor.run()` |
+| 删除循环 | 无影响 | 从 `_loops` 移除，写墓碑记录 | `GroupChat.delete_loop()` |
+
+**内存管理说明**：
+- LoopManager 初始化时 `_loops = {}`，不自动加载历史
+- `create_loop()` 和 `start_loop()` 时清空其他 Loop，保持单 Loop 在内存
+- COMPLETED/FAILED/PAUSED 状态保留在内存，方便查询状态
+- `list_loops()` 直接读取 JSONL，不依赖内存
 
 <key_function last_update="2026-06-21T10:00:00+08:00">
 - agents_hub/core/orchestration/group_chat.py
@@ -175,6 +186,76 @@ stateDiagram-v2
 链路 1: 创建循环 → 启动循环 → 执行节点 → 节点完成 → 检查退出 → 下一个节点 → ...
 链路 2: 手动停止循环 → 发送终止信号 → 取消后台任务 → 恢复 Agent 状态
 链路 3: 循环结束 → 清理资源 → 持久化最终状态
+链路 4: 内存管理 → 清空旧 Loop → 懒加载 → 保持单 Loop
+```
+
+## 链路 4：内存管理（新增）
+
+```
+1. LoopManager.__init__()
+   初始化循环管理器
+   内存: _loops = {} | 持久化: ❌ | 跨模块: ❌
+   步骤: 不调用 _load_from_persistence()，保持空字典
+
+2. LoopManager.create_loop()
+   创建新循环时清空所有旧 Loop
+   内存: 清空 _loops → 加载新 Loop | 持久化: ✅ | 跨模块: ❌
+   步骤: 
+   - 获取并发锁
+   - 清空 _loops.clear()（清理所有旧 Loop）
+   - 转换节点对象 → 校验 → 构造 Loop
+   - _loops[loop_id] = loop（加载新 Loop）
+   - 持久化到 JSONL
+
+3. GroupChat.create_and_start_loop()
+   启动循环时懒加载并清空其他
+   内存: 懒加载目标 Loop → 清空其他 | 持久化: ✅ | 跨模块: ❌
+   步骤:
+   - 调用 loop_manager.get_loop(loop_id)
+   - 如果不在内存，触发懒加载（从 JSONL 读取）
+   - 清空其他 Loop（保持单 Loop）
+   - 更新状态为 RUNNING
+
+4. LoopManager.get_loop()（内部方法）
+   查询 Loop，不在内存时抛出异常
+   内存: 查询 _loops | 持久化: ❌ | 跨模块: ❌
+   步骤: 
+   - 检查 loop_id in _loops
+   - 在内存：直接返回
+   - 不在内存：抛出 LoopNotFoundError
+
+5. LoopManager.get_loop_with_lazy_load()（需新增）
+   查询 Loop，支持懒加载
+   内存: 查询 _loops，不在则从 JSONL 加载 | 持久化: ❌读取 | 跨模块: ❌
+   步骤:
+   - 检查 loop_id in _loops
+   - 在内存：直接返回
+   - 不在内存：从 JSONL 加载 → 加入 _loops → 返回
+
+6. LoopManager.list_loops()（需新增）
+   查询所有历史 Loop
+   内存: 不依赖 _loops | 持久化: ❌读取 | 跨模块: ❌
+   步骤:
+   - 读取 JSONL 文件
+   - 解析所有 Loop 记录（跳过墓碑）
+   - 添加 in_memory 标记（检查 loop_id in _loops）
+   - 返回摘要信息
+
+7. Loop 完成后
+   保留在内存（COMPLETED/FAILED）
+   内存: 保留在 _loops | 持久化: ✅ | 跨模块: ❌
+   步骤:
+   - LoopExecutor._cleanup() 更新状态
+   - 持久化到 JSONL
+   - 保留在 _loops 中（不移除）
+
+8. LoopManager.delete_loop()
+   删除循环
+   内存: 从 _loops 移除 | 持久化: ✅墓碑 | 跨模块: ❌
+   步骤:
+   - 校验状态（不能是 RUNNING）
+   - del _loops[loop_id]
+   - 写入墓碑记录到 JSONL
 ```
 
 ## 链路 1：创建并启动循环

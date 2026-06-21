@@ -67,14 +67,14 @@ contract_refs:
 
 ### GroupChatRuntime（运行时 Facade）
 
-<key_function last_update="2026-06-21T07:52:42+08:00">
+<key_function last_update="2026-06-21T12:57:42+08:00">
 - agents_hub/core/context/group_chat_runtime.py
-  - group_chat_runtime.GroupChatRuntime.load:56
-  - group_chat_runtime.GroupChatRuntime.add_message:319
-  - group_chat_runtime.GroupChatRuntime.save_agent_members:438
-  - group_chat_runtime.GroupChatRuntime.compact_messages:493
-  - group_chat_runtime.GroupChatRuntime.update_agent_session:397
-  - group_chat_runtime.GroupChatRuntime.close:642
+  - group_chat_runtime.GroupChatRuntime.load:57
+  - group_chat_runtime.GroupChatRuntime.add_message:320
+  - group_chat_runtime.GroupChatRuntime.save_agent_members:439
+  - group_chat_runtime.GroupChatRuntime.compact_messages:494
+  - group_chat_runtime.GroupChatRuntime.update_agent_session:398
+  - group_chat_runtime.GroupChatRuntime.close:643
 </key_function>
 
 **对外接口**：

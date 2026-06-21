@@ -217,27 +217,37 @@ class LoopStatus(str, Enum):
 **create_loop(agent_token, nodes, max_iterations, initial_task)**：
 - 权限：只有 Manager（LEADER 角色）可调用
 - 校验：至少 2 个节点、有且仅有 1 个 TERMINATOR、所有 agent_name 存在、该群聊无 RUNNING 循环
+- 内存管理：清空 `_loops` 中所有旧 Loop
 - 返回：`{"loop_id": "...", "status": "CREATED"}`
 
 **start_loop(agent_token, loop_id)**：
 - 权限：只有 Manager 可调用
+- 懒加载：如果 Loop 不在内存，从 JSONL 加载
+- 内存管理：清空 `_loops` 中其他 Loop
 - 操作：设置参与 Agent 为 IN_LOOP 状态、注入 completion_queue、创建 LoopExecutor、发送初始任务
 - 返回：`{"loop_id": "...", "status": "RUNNING"}`
 
 **stop_loop(agent_token, loop_id)**：
 - 权限：只有 Manager 可调用
 - 操作：停止参与 Agent 的 CLI（`stop_member` + `start_member`）、设置 Loop 状态为 PAUSED、清理队列引用
+- 内存管理：保留在 `_loops` 中（PAUSED 状态需要保留）
 - 返回：`{"loop_id": "...", "status": "PAUSED"}`
 
 **delete_loop(agent_token, loop_id)**：
 - 权限：只有 Manager 可调用
 - 约束：只能删除非 RUNNING 状态的循环
-- 操作：从 LoopManager 删除循环记录
+- 操作：从 `_loops` 移除、写墓碑记录到 JSONL
 - 返回：`{"success": true}`
 
 **get_loop_status(agent_token, loop_id)**：
 - 权限：任意 Agent 可调用
+- 懒加载：如果 Loop 不在内存，从 JSONL 加载
 - 返回：`{"loop_id": "...", "status": "...", "current_iteration": 3, "max_iterations": 10, "current_node": "reviewer", "error": null}`
+
+**list_loops(agent_token)**（新增）：
+- 权限：任意 Agent 可调用
+- 功能：读取 JSONL 文件，返回所有 Loop 的摘要信息
+- 返回：`{"loops": [{"loop_id": "...", "status": "...", "nodes": [...], "created_at": "...", "in_memory": true/false}]}`
 
 ### 持久化
 
@@ -251,6 +261,33 @@ class LoopStatus(str, Enum):
 - 启动循环（RUNNING）
 - 每轮循环开始（`current_iteration` 增加）
 - 循环结束（COMPLETED / FAILED / PAUSED）
+
+### 内存管理策略
+
+**设计原则**：Loop 是无状态工具，内存占用固定且极小（每个 Loop 约 1-5 KB），内存中同时保持单个 Loop。
+
+**不自动加载**：
+- LoopManager 初始化时，`_loops = {}`（空字典）
+- 不从 JSONL 自动加载历史 Loop
+
+**内存清理时机**：
+1. **创建新 Loop**：`create_loop()` 时清空 `_loops` 中所有旧 Loop
+2. **启动 Loop**：`start_loop()` 时清空其他 Loop，加载目标 Loop（懒加载）
+3. **显式删除**：`delete_loop()` 时从 `_loops` 移除并写墓碑记录
+4. **群聊销毁**：GroupChat 对象生命周期结束时自动清空
+
+**保留在内存的情况**：
+- **RUNNING** 状态：正在执行，必须保留
+- **PAUSED** 状态：暂停但未删除，必须保留（用户可能需要查询状态或恢复）
+- **COMPLETED/FAILED** 状态：完成后保留在内存，方便查询状态和结果（前端可能需要显示）
+
+**懒加载机制**：
+- `start_loop(loop_id)` 时，如果 Loop 不在内存，从 JSONL 加载
+- `get_loop_status(loop_id)` 时，如果 Loop 不在内存，从 JSONL 加载（按需）
+
+**MCP 工具扩展**：
+- 新增 `list_loops()`：读取 JSONL，返回所有 Loop 的摘要信息（包括 `in_memory` 标记）
+- Manager 可查看历史 Loop，选择 `loop_id` 来启动或删除
 
 ### 错误处理与清理
 

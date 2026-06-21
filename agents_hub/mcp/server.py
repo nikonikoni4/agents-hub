@@ -1,15 +1,20 @@
 """
-MCP Server 和 8 个工具
+MCP Server 和 13 个工具
 
 提供 Manager 编排团队协作的能力：
 1. call_agent: 派活给团队成员
 2. assign_tasks_to_team: 覆盖式更新任务列表
 3. archive_task_list: 归档当前 ACTIVE 列表
 4. check_agent_call: 查询 AgentCall 状态
-5. report_progress: 复杂任务过程汇报
-6. complete_task: 最终任务总结
-7. create_group_chat: 创建新群聊（系统助手专用）
-8. create_agent: 创建新的成员角色（系统助手专用）
+5. create_group_chat: 创建新群聊（系统助手专用）
+6. create_agent: 创建新的成员角色（系统助手专用）
+7. create_loop: 创建循环定义（Leader-only）
+8. start_loop: 启动已创建的循环（Leader-only）
+9. stop_loop: 停止运行中的循环（Leader-only）
+10. delete_loop: 删除循环（Leader-only）
+11. get_loop_status: 查询循环状态（任意 Agent）
+12. list_loops: 查询所有历史循环（任意 Agent）
+13. health_check: 健康检查端点
 
 维护说明：
 - 当前 tool 数量少，且共享同一套 token 解析、GroupChat 获取和错误响应约定，
@@ -71,6 +76,7 @@ from agents_hub.core.foundation import (  # noqa: E402
     render_for_chat,
 )
 from agents_hub.core.foundation.exceptions import (  # noqa: E402
+    FileSystemError,
     LoopNotFoundError,
     LoopStateError,
     LoopValidationError,
@@ -85,6 +91,7 @@ from agents_hub.mcp.errors import (  # noqa: E402  # noqa: E402
     AGENT_ALREADY_EXISTS,
     AGENT_CALL_NOT_FOUND,
     AGENT_NOT_FOUND,
+    FILE_SYSTEM_ERROR,
     GROUP_CHAT_NOT_FOUND,
     INTERNAL_ERROR,
     INVALID_AGENT_CALL_STATE,
@@ -1313,6 +1320,65 @@ async def get_loop_status(agent_token: str, loop_id: str) -> dict:
         )
 
 
+async def list_loops(
+    agent_token: str,
+    status: str | None = None,
+) -> dict:
+    """查询所有历史 Loop（任意 Agent 可调用）。
+
+    查询当前群聊的所有历史 Loop，返回摘要信息。
+    不依赖内存，直接读取 JSONL 文件。
+
+    Args:
+        agent_token: 调用者的身份令牌。
+        status: 可选的状态过滤（"created"/"running"/"paused"/"completed"/"failed"）。
+
+    Returns:
+        成功: {
+            "loops": [
+                {
+                    "loop_id": "循环 ID",
+                    "status": "循环状态",
+                    "created_at": "创建时间",
+                    "updated_at": "更新时间",
+                    "max_iterations": 最大轮次,
+                    "current_iteration": 当前轮次,
+                    "in_memory": true/false
+                },
+                ...
+            ]
+        }
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    logger.info("MCP 调用: list_loops, status=%s", status)
+    try:
+        resolved = await _resolve_group_chat(agent_token)
+        if isinstance(resolved, dict):
+            return resolved
+
+        _agent_name, _group_chat_id, group_chat = resolved
+        loop_manager = group_chat._get_loop_manager()
+
+        loops = loop_manager.list_loops(status=status)
+
+        return {"loops": loops}
+
+    except FileSystemError as e:
+        logger.warning("list_loops 文件读取失败: %s", str(e))
+        return make_error_response(
+            FILE_SYSTEM_ERROR,
+            str(e),
+            details=e.details,
+        )
+    except Exception as e:
+        logger.error("list_loops 失败: %s", str(e), exc_info=True)
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
 # ============================================================================
 # Tool 10: health_check
 # ============================================================================
@@ -1356,4 +1422,5 @@ _register_tool_with_docstring(start_loop)
 _register_tool_with_docstring(stop_loop)
 _register_tool_with_docstring(delete_loop)
 _register_tool_with_docstring(get_loop_status)
+_register_tool_with_docstring(list_loops)
 _register_tool_with_docstring(health_check)

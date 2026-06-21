@@ -270,36 +270,43 @@ class TestLoopManagerQuery:
         all_loops = loop_manager.list_loops()
 
         assert len(all_loops) == 2
-        loop_ids = [loop.loop_id for loop in all_loops]
+        loop_ids = [loop["loop_id"] for loop in all_loops]
         assert loop1.loop_id in loop_ids
         assert loop2.loop_id in loop_ids
+        # 验证包含 in_memory 标记
+        assert all("in_memory" in loop for loop in all_loops)
 
     @pytest.mark.asyncio
-    async def test_list_loops_by_status(self, loop_manager, valid_nodes):
-        """按状态过滤 Loop"""
-        loop1 = await loop_manager.create_loop(
+    async def test_list_loops_by_status(self, temp_project_path, valid_nodes):
+        """按状态过滤 Loop（从 JSONL 读取）"""
+        group_chat_id = f"test_gc_{uuid4().hex[:8]}"
+
+        # 创建第一个 Loop 并更新为 RUNNING
+        manager1 = LoopManager(group_chat_id, temp_project_path)
+        loop1 = await manager1.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
             initial_task="任务1",
         )
-        loop2 = await loop_manager.create_loop(
+        await manager1.update_loop_status(loop1.loop_id, LoopStatus.RUNNING.value)
+
+        # 创建第二个 Loop（使用新的 manager 实例，避免内存冲突检查）
+        manager2 = LoopManager(group_chat_id, temp_project_path)
+        loop2 = await manager2.create_loop(
             nodes=valid_nodes,
             max_iterations=5,
             initial_task="任务2",
         )
 
-        # 更新 loop1 为 RUNNING
-        await loop_manager.update_loop_status(loop1.loop_id, LoopStatus.RUNNING.value)
-
-        # 查询 RUNNING 状态
-        running_loops = loop_manager.list_loops(status=LoopStatus.RUNNING.value)
+        # 查询 RUNNING 状态（从 JSONL 读取，应该能找到 loop1）
+        running_loops = manager2.list_loops(status=LoopStatus.RUNNING.value)
         assert len(running_loops) == 1
-        assert running_loops[0].loop_id == loop1.loop_id
+        assert running_loops[0]["loop_id"] == loop1.loop_id
 
-        # 查询 CREATED 状态
-        created_loops = loop_manager.list_loops(status=LoopStatus.CREATED.value)
+        # 查询 CREATED 状态（应该能找到 loop2）
+        created_loops = manager2.list_loops(status=LoopStatus.CREATED.value)
         assert len(created_loops) == 1
-        assert created_loops[0].loop_id == loop2.loop_id
+        assert created_loops[0]["loop_id"] == loop2.loop_id
 
 
 class TestLoopManagerUpdate:
@@ -416,7 +423,7 @@ class TestLoopManagerPersistence:
 
         # 第二个 Manager：从持久化恢复
         manager2 = LoopManager(group_chat_id, temp_project_path)
-        recovered_loop = manager2.get_loop(loop.loop_id)
+        recovered_loop = manager2.get_loop_with_lazy_load(loop.loop_id)
 
         assert recovered_loop.loop_id == loop.loop_id
         assert recovered_loop.status == loop.status
@@ -440,9 +447,9 @@ class TestLoopManagerPersistence:
         await manager1.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
         await manager1.update_loop_status(loop.loop_id, LoopStatus.COMPLETED.value)
 
-        # 重新加载
+        # 重新加载（使用懒加载）
         manager2 = LoopManager(group_chat_id, temp_project_path)
-        recovered_loop = manager2.get_loop(loop.loop_id)
+        recovered_loop = manager2.get_loop_with_lazy_load(loop.loop_id)
 
         # 应该取最新状态
         assert recovered_loop.status == LoopStatus.COMPLETED.value
@@ -463,7 +470,7 @@ class TestLoopManagerPersistence:
         # 重启 Manager
         manager2 = LoopManager(group_chat_id, temp_project_path)
         with pytest.raises(LoopNotFoundError):
-            manager2.get_loop(loop.loop_id)
+            manager2.get_loop_with_lazy_load(loop.loop_id)
 
 
 class TestLoopNodeFields:
@@ -497,7 +504,7 @@ class TestLoopNodeFields:
         original_ids = [n.node_id for n in loop.nodes]
 
         manager2 = LoopManager(group_chat_id, temp_project_path)
-        recovered = manager2.get_loop(loop.loop_id)
+        recovered = manager2.get_loop_with_lazy_load(loop.loop_id)
         recovered_ids = [n.node_id for n in recovered.nodes]
 
         assert original_ids == recovered_ids
@@ -565,7 +572,7 @@ class TestLoopNodeFields:
         )
 
         manager2 = LoopManager(group_chat_id, temp_project_path)
-        recovered = manager2.get_loop(loop.loop_id)
+        recovered = manager2.get_loop_with_lazy_load(loop.loop_id)
         assert "执行结果" in recovered.nodes[0].output_schema_prompt
 
     @pytest.mark.asyncio
@@ -596,7 +603,7 @@ class TestLoopNodeFields:
         )
 
         manager2 = LoopManager(group_chat_id, temp_project_path)
-        recovered = manager2.get_loop(loop.loop_id)
+        recovered = manager2.get_loop_with_lazy_load(loop.loop_id)
         assert recovered.nodes[0].output_schema_fields == ["# 执行结果", "**任务状态**"]
         assert recovered.nodes[1].output_schema_fields is None  # 默认 None
 

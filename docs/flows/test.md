@@ -72,7 +72,7 @@ class AgentCall:
 - 当 Agent 从队列取出消息开始处理时，Agent 状态变为 busy，AgentCall 状态变为 RUNNING
 - 处理完成后，Agent 状态回到 idle，AgentCall 状态进入终态（COMPLETED/FAILED）
 
-<key_function last_update="2026-06-21T07:52:42+08:00">
+<key_function last_update="2026-06-21T12:57:42+08:00">
 - frontend/src/layouts/ChatArea/ChatArea.tsx
   - ChatArea.handleSend:377
 - frontend/src/core/api/groupChatApi.ts
@@ -80,13 +80,13 @@ class AgentCall:
 - agents_hub/api/services/group_chat_service.py
   - GroupChatService.send_message:482
 - agents_hub/mcp/server.py
-  - call_agent:223
+  - call_agent:271
 - agents_hub/core/agent/base_agent.py
-  - Agent._process_message:264
-  - Agent._fallback_close_task:810
+  - Agent._process_message:265
+  - Agent._fallback_close_task:811
 - agents_hub/core/orchestration/group_chat.py
-  - GroupChat.send_message_to_agent:752
-  - GroupChat._cleanup_agent_queue:836
+  - GroupChat.send_message_to_agent:985
+  - GroupChat._cleanup_agent_queue:1069
 </key_function>
 
 
@@ -244,3 +244,8 @@ stateDiagram-v2
 - **MCP 工具取消方案**：`docs/ADR/2026-06-16-mcp-tools-to-direct-output.md`
   - 取消 complete_task 和 report_progress
   - 改为直接使用 agentbridge 输出（解释 has_agent_response 退化原因）
+
+[执行] 随机数: 340
+[审查] 随机数: 822
+[执行] 随机数: 585
+[审查] 随机数: 590

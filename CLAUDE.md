@@ -17,7 +17,7 @@
 | **文档规则** | `docs/docs-rules/` | 编写 docs 时必须遵守的规范、约束、触发场景 |
 | **产品规格（Spec）** | `docs/specs/` | 技术契约文档，定义模块的业务意图、对外接口、状态机规则、设计决策 |
 | **数据状态流（Flow）** | `docs/flows/` | 数据流转与状态变化文档，提供完整的调用链路和函数位置导航 |
-| **使用指南** | `docs/guides/` | 面向用户的使用指南，说明如何配置和使用系统功能（如 Docker 沙箱） |
+| **使用指南** | `docs\known-constraints` | 当前系统已知的设计限制，提供为什么这么设计而不那么设计的原因 |
 | **架构决策（ADR）** | `docs/adr/` | 记录对于长期具有重要的作用的修改决定 |
 | **重要bug历史记录**  | `docs/history-bugs`      | 存放可复用的bug经验   |
 | **superpower文件夹** | `docs/superpowers/` | superpower 插件下skill专用的文件夹，包括`docs/superpower/specs` 和 `docs/superpower/plans` |

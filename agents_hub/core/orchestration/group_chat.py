@@ -435,12 +435,14 @@ class GroupChat:
         """启动已创建的 Loop，并在后台运行执行器。
 
         执行流程：
-        1. 验证 Loop 状态必须为 CREATED
-        2. 创建完成通知队列（completion_queue）
-        3. 将参与的 Agent 状态设置为 IN_LOOP（隔离外部消息）
-        4. 为参与的 Agent 注入完成通知队列
-        5. 更新 Loop 状态为 RUNNING
-        6. 创建 LoopExecutor 并在后台启动执行
+        1. 懒加载目标 Loop（如果不在内存）
+        2. 清空其他 Loop（单 Loop 保持策略）
+        3. 验证 Loop 状态必须为 CREATED
+        4. 创建完成通知队列（completion_queue）
+        5. 将参与的 Agent 状态设置为 IN_LOOP（隔离外部消息）
+        6. 为参与的 Agent 注入完成通知队列
+        7. 更新 Loop 状态为 RUNNING
+        8. 创建 LoopExecutor 并在后台启动执行
 
         Args:
             loop_id: 要启动的 Loop ID
@@ -453,7 +455,12 @@ class GroupChat:
             LoopStateError: Loop 状态不是 CREATED
         """
         loop_manager = self._get_loop_manager()
-        loop = loop_manager.get_loop(loop_id)
+
+        # 懒加载目标 Loop（如果不在内存，从 JSONL 加载）
+        loop = loop_manager.get_loop_with_lazy_load(loop_id)
+
+        # 清空其他 Loop（单 Loop 保持策略）
+        loop_manager.clear_other_loops(loop_id)
 
         # 状态校验：只能启动 CREATED 状态的 Loop
         if loop.status != LoopStatus.CREATED.value:
