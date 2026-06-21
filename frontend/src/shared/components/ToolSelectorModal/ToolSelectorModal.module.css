@@ -24,7 +24,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid var(--border-main);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .header h2 {
@@ -90,7 +90,7 @@
   color: var(--text-secondary);
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-main);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .toolsGrid {
@@ -126,6 +126,7 @@
 .toolName {
   font-size: 13px;
   font-weight: 600;
+  color: var(--text-primary);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -166,7 +167,7 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid var(--border-main);
+  border-top: 1px solid var(--border-color);
 }
 
 .cancelBtn,
