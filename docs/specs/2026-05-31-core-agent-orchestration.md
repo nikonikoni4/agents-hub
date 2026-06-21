@@ -69,10 +69,10 @@ contract_refs:
 
 ### Agent 层
 
-<key_function last_update="2026-06-20T19:01:20+08:00">
+<key_function last_update="2026-06-21T07:52:42+08:00">
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent.__init__:46
-  - base_agent.Agent.run:991
+  - base_agent.Agent.run:997
   - base_agent.Agent.stop:149
   - base_agent.Agent.execute:177
   - base_agent.Agent.btw_execute:208

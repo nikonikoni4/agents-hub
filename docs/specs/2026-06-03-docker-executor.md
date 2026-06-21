@@ -63,14 +63,14 @@ contract_refs:
 
 ### 对外接口总览
 
-<key_function last_update="2026-06-20T19:01:20+08:00">
+<key_function last_update="2026-06-21T07:52:42+08:00">
 - agents_hub/agent_bridge/docker/manager.py
   - manager.DockerManager.get_or_create_container:262
   - manager.DockerManager.release_container:297
   - manager.DockerManager.ensure_image_ready:54
 - agents_hub/agent_bridge/executors/docker_base.py
-  - docker_base.DockerExecutor.execute:36
-  - docker_base.DockerExecutor.stop_session:103
+  - docker_base.DockerExecutor.execute:37
+  - docker_base.DockerExecutor.stop_session:104
 </key_function>
 
 | 接口 | 所属类 | 说明 | 约束 |

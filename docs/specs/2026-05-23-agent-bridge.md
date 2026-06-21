@@ -66,7 +66,7 @@ contract_refs:
 
 ### 对外接口
 
-<key_function last_update="2026-06-20T19:01:20+08:00">
+<key_function last_update="2026-06-21T07:52:42+08:00">
 - agents_hub/agent_bridge/bridge.py
   - bridge.AgentBridge.execute_stream:112
   - bridge.AgentBridge.execute:231

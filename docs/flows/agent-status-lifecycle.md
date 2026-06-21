@@ -69,7 +69,7 @@ class AgentMemberInfo:
 - 处理完成后：Agent.status = "idle"，AgentCall.status = COMPLETED/FAILED
 - 用户停止 Agent 时：Agent.status = "stopped"，所有未完成的 AgentCall 都被标记为 FAILED
 
-<key_function last_update="2026-06-20T19:01:20+08:00">
+<key_function last_update="2026-06-21T07:52:42+08:00">
 - agents_hub/api/routes/group_chat.py
   - group_chat.stop_member:406
   - group_chat.start_member:423
@@ -79,16 +79,16 @@ class AgentMemberInfo:
   - group_chat_service.GroupChatService.start_member:854
   - group_chat_service.GroupChatService.reset_member:890
 - agents_hub/core/orchestration/group_chat.py
-  - group_chat.GroupChat._initialize_single_member:494
-  - group_chat.GroupChat._initialize_new_members:511
-  - group_chat.GroupChat._cleanup_agent_queue:800
-  - group_chat.GroupChat.stop_member:894
-  - group_chat.GroupChat.start_member:1011
-  - group_chat.GroupChat.reset_member:1087
+  - group_chat.GroupChat._initialize_single_member:530
+  - group_chat.GroupChat._initialize_new_members:547
+  - group_chat.GroupChat._cleanup_agent_queue:836
+  - group_chat.GroupChat.stop_member:930
+  - group_chat.GroupChat.start_member:1064
+  - group_chat.GroupChat.reset_member:1145
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent._sync_status:650
   - base_agent.Agent._set_error_status:680
-  - base_agent.Agent.run:991
+  - base_agent.Agent.run:997
 </key_function>
 
 ## 流程概览
