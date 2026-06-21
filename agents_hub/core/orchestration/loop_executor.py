@@ -177,7 +177,7 @@ class LoopExecutor:
         return AgentMessage(
             call_id=f"{self.loop.loop_id}:{node.node_id}:{self.loop.current_iteration}",
             content=loop_context,
-            send_from="loop",
+            send_from=node.agent_name,
             send_to=node.agent_name,
             session_type=SessionType.MAIN,
             message_type=MessageType.LOOP_MESSAGE,
@@ -569,7 +569,7 @@ class LoopExecutor:
         message = self._build_loop_message(node, previous_output)
         if self.agent_call_manager is not None:
             call = await self.agent_call_manager.create_call(
-                send_from="loop",
+                send_from=node.agent_name,
                 send_to=node.agent_name,
                 content=message.content,
                 message_type=MessageType.LOOP_MESSAGE,

@@ -64,7 +64,7 @@ def test_build_loop_message_uses_loop_message_type_and_metadata():
     message = executor._build_loop_message(node, previous_output="input")
 
     assert message.message_type.value == "loop_message"
-    assert message.send_from == "loop"
+    assert message.send_from == "worker"
     assert message.send_to == "worker"
     assert message.metadata["loop_id"] == "loop-abc"
     assert message.metadata["loop_iteration"] == 2
@@ -377,7 +377,7 @@ def _make_loop(
 def _make_loop_message(metadata: dict) -> AgentMessage:
     return AgentMessage(
         call_id="call-1",
-        send_from="loop",
+        send_from="worker",
         send_to="worker",
         content="loop context",
         session_type=SessionType.MAIN,

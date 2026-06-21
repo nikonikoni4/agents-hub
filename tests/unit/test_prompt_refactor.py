@@ -399,7 +399,7 @@ class TestBuildUserPrompt:
         msg = AgentMessage(
             call_id="loop-call",
             content="<LOOP_NODE_ROLE>\n节点职责\n</LOOP_NODE_ROLE>",
-            send_from="loop",
+            send_from="worker_a",
             send_to="worker_a",
             session_type=SessionType.MAIN,
             message_type=MessageType.LOOP_MESSAGE,
@@ -545,7 +545,7 @@ class TestCreateRoleWritesSystemFile:
 
         # Worker 特有的指令
         assert "阻塞判定" in content
-        assert "complete_task回报要求" in content
+        assert "成果汇报要求" in content
 
         # Worker 不应该有 Manager 特有的工具
         assert "call_agent" not in content

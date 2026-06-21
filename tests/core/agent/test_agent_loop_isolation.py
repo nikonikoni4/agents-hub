@@ -79,7 +79,7 @@ class TestAgentMessageCompletionHandlers:
         )
         msg = AgentMessage(
             call_id="call-1",
-            send_from="loop",
+            send_from="test_agent",
             send_to="test_agent",
             content="loop context",
             session_type=SessionType.MAIN,
@@ -400,7 +400,7 @@ class TestAgentLoopMessageProcessing:
         await agent.message_queue.put(
             AgentMessage(
                 call_id="loop-call",
-                send_from="loop",
+                send_from="test_agent",
                 send_to="test_agent",
                 content="loop context",
                 session_type=SessionType.MAIN,
@@ -465,7 +465,7 @@ class TestAgentLoopMessageProcessing:
 
         msg = AgentMessage(
             call_id="loop-call",
-            send_from="loop",
+            send_from="test_agent",
             send_to="test_agent",
             content="loop context",
             session_type=SessionType.MAIN,

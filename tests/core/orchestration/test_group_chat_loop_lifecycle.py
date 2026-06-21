@@ -111,7 +111,7 @@ async def test_loop_system_sender_can_deliver_loop_message_through_group_chat_ro
         AgentMessage(
             call_id="loop-call-1",
             content="循环节点任务",
-            send_from="loop",
+            send_from="executor",
             send_to="executor",
             session_type=SessionType.MAIN,
             message_type=MessageType.LOOP_MESSAGE,
@@ -121,7 +121,7 @@ async def test_loop_system_sender_can_deliver_loop_message_through_group_chat_ro
 
     received = group_chat.agents["executor"].message_queue.get_nowait()
     assert received.call_id == "loop-call-1"
-    assert received.send_from == "loop"
+    assert received.send_from == "executor"
     assert received.message_type == MessageType.LOOP_MESSAGE
 
 
@@ -142,6 +142,13 @@ def _make_group_chat():
     }
     group_chat.manager = _FakeAgent("manager")
     group_chat.workers = group_chat.agents
+
+    # 添加 message_router
+    from agents_hub.core.communication.message_router import MessageRouter
+    group_chat.message_router = MessageRouter()
+    for agent_name, agent in group_chat.agents.items():
+        group_chat.message_router.register(agent_name, agent.message_queue)
+    group_chat.message_router.register(group_chat.manager.name, group_chat.manager.message_queue)
 
     def find_agent(agent_name):
         return group_chat.agents.get(agent_name)
