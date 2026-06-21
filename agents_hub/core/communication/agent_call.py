@@ -9,6 +9,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from agents_hub.core.foundation import CallStatus, MessageType
+from agents_hub.core.foundation.models import NOTIFICATION_RETENTION_SECONDS
 
 
 @dataclass
@@ -89,7 +90,7 @@ class AgentCall:
         """
         # 默认保留时间配置（秒）
         default_retention = {
-            "notification_completed": 300,  # 5 分钟
+            "notification_completed": NOTIFICATION_RETENTION_SECONDS,  # 25 分钟
             "task_completed": 3600,  # 1 小时
             "failed": 86400,  # 24 小时
         }
