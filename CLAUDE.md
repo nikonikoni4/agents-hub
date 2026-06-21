@@ -39,7 +39,7 @@
 6. **修复bug时**: 可以阅读`docs/history-bugs/index.md`来获取历史bug解决方法
 7. **修改前端UI/UX时** ： 必须阅读`docs/DESIGN.md`
 8. **自主决策时**，参考`docs/adr/user-design-summary.md`, 了解用户的决策习惯
-
+9. 遇到不了解的关键词，在`CONTEXT.md`中搜索查看
 
 </docs-read-rules>
 
