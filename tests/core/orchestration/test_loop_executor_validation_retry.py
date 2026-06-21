@@ -1,17 +1,18 @@
 import pytest
+from datetime import datetime
 from unittest.mock import AsyncMock
 
 from agents_hub.agent_bridge.models import AgentResult
 from agents_hub.config.types import AgentPlatform, RoleType
 
-from agents_hub.core.context.loop_models import Loop, LoopNode, LoopNodeType
+from agents_hub.core.context.loop_models import Loop, LoopExecution, LoopNode, LoopNodeType
 from agents_hub.core.foundation import CallStatus
 from agents_hub.core.foundation.exceptions import LoopExecutionError
 from agents_hub.core.orchestration.loop_executor import LoopExecutor
 
 
 def test_validate_schema_fields_accepts_output_with_all_required_fields():
-    executor = LoopExecutor(loop=_make_loop())
+    executor = LoopExecutor(loop=_make_loop(), execution=_make_execution())
 
     is_valid, error_message = executor._validate_schema_fields(
         output="# 执行结果\n完成\n**任务状态**：成功",
@@ -23,7 +24,7 @@ def test_validate_schema_fields_accepts_output_with_all_required_fields():
 
 
 def test_validate_schema_fields_accepts_empty_required_fields():
-    executor = LoopExecutor(loop=_make_loop())
+    executor = LoopExecutor(loop=_make_loop(), execution=_make_execution())
 
     is_valid, error_message = executor._validate_schema_fields(
         output="任意输出",
@@ -35,7 +36,7 @@ def test_validate_schema_fields_accepts_empty_required_fields():
 
 
 def test_validate_schema_fields_reports_all_missing_fields():
-    executor = LoopExecutor(loop=_make_loop())
+    executor = LoopExecutor(loop=_make_loop(), execution=_make_execution())
 
     is_valid, error_message = executor._validate_schema_fields(
         output="只有普通文本",
@@ -50,7 +51,7 @@ def test_validate_schema_fields_reports_all_missing_fields():
 
 
 def test_validate_terminator_output_accepts_false_decision_with_business_fields():
-    executor = LoopExecutor(loop=_make_loop())
+    executor = LoopExecutor(loop=_make_loop(), execution=_make_execution())
     node = LoopNode(
         node_type=LoopNodeType.TERMINATOR.value,
         agent_name="reviewer",
@@ -75,7 +76,7 @@ def test_validate_terminator_output_accepts_false_decision_with_business_fields(
 
 
 def test_validate_terminator_output_accepts_true_decision_case_insensitive():
-    executor = LoopExecutor(loop=_make_loop())
+    executor = LoopExecutor(loop=_make_loop(), execution=_make_execution())
     node = LoopNode(
         node_type=LoopNodeType.TERMINATOR.value,
         agent_name="reviewer",
@@ -93,7 +94,7 @@ def test_validate_terminator_output_accepts_true_decision_case_insensitive():
 
 
 def test_validate_terminator_output_rejects_missing_loop_decision_tag():
-    executor = LoopExecutor(loop=_make_loop())
+    executor = LoopExecutor(loop=_make_loop(), execution=_make_execution())
     node = LoopNode(
         node_type=LoopNodeType.TERMINATOR.value,
         agent_name="reviewer",
@@ -111,7 +112,7 @@ def test_validate_terminator_output_rejects_missing_loop_decision_tag():
 
 
 def test_validate_terminator_output_rejects_invalid_should_continue_value():
-    executor = LoopExecutor(loop=_make_loop())
+    executor = LoopExecutor(loop=_make_loop(), execution=_make_execution())
     node = LoopNode(
         node_type=LoopNodeType.TERMINATOR.value,
         agent_name="reviewer",
@@ -142,6 +143,7 @@ async def test_execute_node_with_retry_returns_first_valid_output_without_retry(
     send_message = AsyncMock()
     executor = LoopExecutor(
         loop=_make_loop(),
+        execution=_make_execution(),
         completion_queue=completion_queue,
         send_message_callback=send_message,
     )
@@ -185,6 +187,7 @@ async def test_execute_node_with_retry_retries_with_error_prompt_and_same_call_i
     send_message = AsyncMock()
     executor = LoopExecutor(
         loop=_make_loop(),
+        execution=_make_execution(),
         completion_queue=completion_queue,
         send_message_callback=send_message,
     )
@@ -229,6 +232,7 @@ async def test_execute_node_with_retry_marks_call_failed_and_raises_after_max_re
     agent_call_manager = AsyncMock()
     executor = LoopExecutor(
         loop=_make_loop(),
+        execution=_make_execution(),
         completion_queue=completion_queue,
         send_message_callback=send_message,
         agent_call_manager=agent_call_manager,
@@ -269,6 +273,7 @@ async def test_execute_node_with_retry_does_not_retry_when_max_retries_is_zero()
     agent_call_manager = AsyncMock()
     executor = LoopExecutor(
         loop=_make_loop(),
+        execution=_make_execution(),
         completion_queue=completion_queue,
         send_message_callback=send_message,
         agent_call_manager=agent_call_manager,
@@ -300,6 +305,7 @@ async def test_execute_node_with_retry_times_out_and_marks_call_failed_when_no_r
     agent_call_manager = AsyncMock()
     executor = LoopExecutor(
         loop=_make_loop(),
+        execution=_make_execution(),
         completion_queue=__import__("asyncio").Queue(),
         send_message_callback=send_message,
         agent_call_manager=agent_call_manager,
@@ -347,6 +353,7 @@ async def test_execute_node_with_retry_times_out_when_only_unrelated_results_arr
     agent_call_manager = AsyncMock()
     executor = LoopExecutor(
         loop=_make_loop(),
+        execution=_make_execution(),
         completion_queue=completion_queue,
         send_message_callback=send_message,
         agent_call_manager=agent_call_manager,
@@ -373,8 +380,6 @@ async def test_execute_node_with_retry_times_out_when_only_unrelated_results_arr
 
 
 def _make_loop() -> Loop:
-    from datetime import datetime
-
     now = datetime.now()
     node = LoopNode(
         node_type=LoopNodeType.NORMAL.value,
@@ -385,11 +390,21 @@ def _make_loop() -> Loop:
         loop_id="loop-1",
         group_chat_id="group-1",
         nodes=[node],
-        status="created",
         max_iterations=3,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def _make_execution() -> LoopExecution:
+    now = datetime.now()
+    return LoopExecution(
+        execution_id="exec-1",
+        loop_id="loop-1",
+        initial_task="初始任务",
+        status="running",
         current_iteration=1,
         current_node_index=0,
-        initial_task="初始任务",
         created_at=now,
         updated_at=now,
     )

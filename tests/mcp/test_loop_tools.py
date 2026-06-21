@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents_hub.core.foundation.models import LoopStatus
+from agents_hub.core.foundation.models import LoopExecutionStatus
 from agents_hub.mcp import INVALID_TOKEN, PERMISSION_DENIED
 
 
@@ -17,17 +17,23 @@ async def test_loop_tools_expose_complete_docstrings():
             "agent_token:",
             "nodes:",
             "max_iterations:",
-            "initial_task:",
             "Returns:",
             "loop_id",
         ],
-        "start_loop": ["Args:", "agent_token:", "loop_id:", "Returns:", "status"],
-        "stop_loop": ["Args:", "agent_token:", "loop_id:", "Returns:", "PAUSED"],
+        "start_loop": [
+            "Args:",
+            "agent_token:",
+            "loop_id:",
+            "initial_task:",
+            "Returns:",
+            "execution_id",
+        ],
+        "stop_loop": ["Args:", "agent_token:", "execution_id:", "Returns:", "paused"],
         "delete_loop": ["Args:", "agent_token:", "loop_id:", "Returns:", "success"],
         "get_loop_status": [
             "Args:",
             "agent_token:",
-            "loop_id:",
+            "execution_id:",
             "Returns:",
             "current_iteration",
         ],
@@ -88,23 +94,23 @@ class TestCreateLoopTool:
         mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
         mock_group_chat.manager.name = "manager"
 
+        from datetime import datetime
+
         loop = MagicMock()
         loop.loop_id = "loop-1"
-        loop.status = LoopStatus.CREATED.value
+        loop.created_at = datetime(2026, 6, 21, 10, 0, 0)
         mock_group_chat.create_loop.return_value = loop
 
         result = await create_loop(
             agent_token="leader-token",
             nodes=_loop_nodes(),
             max_iterations=3,
-            initial_task="修复 bug",
         )
 
-        assert result == {"loop_id": "loop-1", "status": LoopStatus.CREATED.value}
+        assert result == {"loop_id": "loop-1", "created_at": "2026-06-21T10:00:00"}
         mock_group_chat.create_loop.assert_awaited_once_with(
             nodes=_loop_nodes(),
             max_iterations=3,
-            initial_task="修复 bug",
         )
 
     @pytest.mark.asyncio
@@ -117,7 +123,6 @@ class TestCreateLoopTool:
             agent_token="bad-token",
             nodes=_loop_nodes(),
             max_iterations=3,
-            initial_task="修复 bug",
         )
 
         assert result["error"]["code"] == INVALID_TOKEN
@@ -136,7 +141,6 @@ class TestCreateLoopTool:
             agent_token="worker-token",
             nodes=_loop_nodes(),
             max_iterations=3,
-            initial_task="修复 bug",
         )
 
         assert result["error"]["code"] == PERMISSION_DENIED
@@ -154,15 +158,24 @@ class TestStartLoopTool:
         mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
         mock_group_chat.manager.name = "manager"
 
-        loop = MagicMock()
-        loop.loop_id = "loop-1"
-        loop.status = LoopStatus.RUNNING.value
-        mock_group_chat.create_and_start_loop.return_value = loop
+        mock_group_chat.create_and_start_loop.return_value = {
+            "execution_id": "exec-1",
+            "loop_id": "loop-1",
+        }
 
-        result = await start_loop(agent_token="leader-token", loop_id="loop-1")
+        result = await start_loop(
+            agent_token="leader-token",
+            loop_id="loop-1",
+            initial_task="修复 bug",
+        )
 
-        assert result == {"loop_id": "loop-1", "status": LoopStatus.RUNNING.value}
-        mock_group_chat.create_and_start_loop.assert_awaited_once_with("loop-1")
+        assert result == {
+            "execution_id": "exec-1",
+            "loop_id": "loop-1",
+        }
+        mock_group_chat.create_and_start_loop.assert_awaited_once_with(
+            "loop-1", "修复 bug"
+        )
 
     @pytest.mark.asyncio
     async def test_start_loop_rejects_non_leader(
@@ -174,7 +187,11 @@ class TestStartLoopTool:
         mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
         mock_group_chat.manager.name = "manager"
 
-        result = await start_loop(agent_token="worker-token", loop_id="loop-1")
+        result = await start_loop(
+            agent_token="worker-token",
+            loop_id="loop-1",
+            initial_task="修复 bug",
+        )
 
         assert result["error"]["code"] == PERMISSION_DENIED
         mock_group_chat.create_and_start_loop.assert_not_called()
@@ -190,19 +207,21 @@ class TestStopDeleteStatusLoopTools:
         mock_group_chat_manager.resolve_token.return_value = ("worker", "group-1")
         mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
         mock_group_chat.get_loop_status.return_value = {
+            "execution_id": "exec-1",
             "loop_id": "loop-1",
-            "status": LoopStatus.RUNNING.value,
+            "status": LoopExecutionStatus.RUNNING.value,
             "current_iteration": 2,
             "max_iterations": 3,
             "current_node": "reviewer",
             "error": None,
         }
 
-        result = await get_loop_status(agent_token="worker-token", loop_id="loop-1")
+        result = await get_loop_status(agent_token="worker-token", execution_id="exec-1")
 
-        assert result["status"] == LoopStatus.RUNNING.value
+        assert result["status"] == LoopExecutionStatus.RUNNING.value
         assert result["current_node"] == "reviewer"
-        mock_group_chat.get_loop_status.assert_called_once_with("loop-1")
+        assert result["execution_id"] == "exec-1"
+        mock_group_chat.get_loop_status.assert_called_once_with("exec-1")
 
     @pytest.mark.asyncio
     async def test_stop_loop_leader_pauses_running_loop(
@@ -214,15 +233,18 @@ class TestStopDeleteStatusLoopTools:
         mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
         mock_group_chat.manager.name = "manager"
 
-        loop = MagicMock()
-        loop.loop_id = "loop-1"
-        loop.status = LoopStatus.PAUSED.value
-        mock_group_chat.stop_loop.return_value = loop
+        execution = MagicMock()
+        execution.execution_id = "exec-1"
+        execution.status = LoopExecutionStatus.PAUSED.value
+        mock_group_chat.stop_loop.return_value = execution
 
-        result = await stop_loop(agent_token="leader-token", loop_id="loop-1")
+        result = await stop_loop(agent_token="leader-token", execution_id="exec-1")
 
-        assert result == {"loop_id": "loop-1", "status": LoopStatus.PAUSED.value}
-        mock_group_chat.stop_loop.assert_awaited_once_with("loop-1")
+        assert result == {
+            "execution_id": "exec-1",
+            "status": LoopExecutionStatus.PAUSED.value,
+        }
+        mock_group_chat.stop_loop.assert_awaited_once_with("exec-1")
 
     @pytest.mark.asyncio
     async def test_delete_loop_leader_deletes_non_running_loop(

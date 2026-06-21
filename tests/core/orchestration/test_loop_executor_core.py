@@ -7,9 +7,9 @@ import pytest
 
 from agents_hub.agent_bridge.models import AgentResult
 from agents_hub.config.types import AgentPlatform, RoleType
-from agents_hub.core.context.loop_models import Loop, LoopNode, LoopNodeType
+from agents_hub.core.context.loop_models import Loop, LoopExecution, LoopNode, LoopNodeType
 from agents_hub.core.foundation import MessageType
-from agents_hub.core.foundation.models import LoopStatus
+from agents_hub.core.foundation.models import LoopExecutionStatus
 from agents_hub.core.orchestration.loop_executor import LoopExecutor
 
 
@@ -50,8 +50,10 @@ async def test_run_sends_first_node_then_advances_until_terminator_completes():
     runtime = SimpleNamespace(add_message=AsyncMock())
     agent_call_manager = _FakeAgentCallManager()
     loop = _make_loop(max_iterations=3)
+    execution = _make_execution()
     executor = LoopExecutor(
         loop=loop,
+        execution=execution,
         runtime=runtime,
         completion_queue=queue,
         send_message_callback=send_message,
@@ -60,7 +62,7 @@ async def test_run_sends_first_node_then_advances_until_terminator_completes():
 
     await executor.run()
 
-    assert loop.status == LoopStatus.COMPLETED.value
+    assert execution.status == LoopExecutionStatus.COMPLETED.value
     assert [message.send_to for message in sent_messages] == ["executor", "reviewer"]
     assert all(message.message_type == MessageType.LOOP_MESSAGE for message in sent_messages)
     assert sent_messages[0].metadata["loop_id"] == "loop-1"
@@ -119,8 +121,10 @@ async def test_run_retries_invalid_node_output_then_continues_loop():
 
     runtime = SimpleNamespace(add_message=AsyncMock())
     loop = _make_loop(max_iterations=3)
+    execution = _make_execution()
     executor = LoopExecutor(
         loop=loop,
+        execution=execution,
         runtime=runtime,
         completion_queue=queue,
         send_message_callback=send_message,
@@ -128,7 +132,7 @@ async def test_run_retries_invalid_node_output_then_continues_loop():
 
     await executor.run()
 
-    assert loop.status == LoopStatus.COMPLETED.value
+    assert execution.status == LoopExecutionStatus.COMPLETED.value
     assert [message.send_to for message in sent_messages] == [
         "executor",
         "executor",
@@ -176,8 +180,10 @@ async def test_run_cycles_nodes_and_fails_when_max_iterations_is_exceeded():
             )
 
     loop = _make_loop(max_iterations=1)
+    execution = _make_execution()
     executor = LoopExecutor(
         loop=loop,
+        execution=execution,
         runtime=SimpleNamespace(add_message=AsyncMock()),
         completion_queue=queue,
         send_message_callback=send_message,
@@ -186,9 +192,9 @@ async def test_run_cycles_nodes_and_fails_when_max_iterations_is_exceeded():
 
     await executor.run()
 
-    assert loop.status == LoopStatus.FAILED.value
-    assert loop.error_message == "达到最大循环次数"
-    assert loop.current_iteration == 2
+    assert execution.status == LoopExecutionStatus.FAILED.value
+    assert execution.error_message == "达到最大循环次数"
+    assert execution.current_iteration == 2
     assert [message.send_to for message in sent_messages] == ["executor", "reviewer"]
 
 
@@ -208,9 +214,11 @@ async def test_run_times_out_with_reason_from_current_agent_status(
         return None
 
     loop = _make_loop(max_iterations=3)
+    execution = _make_execution()
     runtime = _FakeRuntime(agent_status=agent_status)
     executor = LoopExecutor(
         loop=loop,
+        execution=execution,
         runtime=runtime,
         completion_queue=asyncio.Queue(),
         send_message_callback=send_message,
@@ -220,8 +228,8 @@ async def test_run_times_out_with_reason_from_current_agent_status(
 
     await executor.run()
 
-    assert loop.status == LoopStatus.FAILED.value
-    assert loop.error_message == expected_error
+    assert execution.status == LoopExecutionStatus.FAILED.value
+    assert execution.error_message == expected_error
     assert runtime.member_infos["executor"].status == "idle"
     assert runtime.save_agent_members.await_count == 1
 
@@ -229,17 +237,19 @@ async def test_run_times_out_with_reason_from_current_agent_status(
 @pytest.mark.asyncio
 async def test_cleanup_restores_agent_state_clears_queue_reference_and_persists_status():
     runtime = _FakeRuntime(agent_status="in_loop")
-    loop_manager = SimpleNamespace(update_loop_status=AsyncMock())
+    loop_execution_manager = SimpleNamespace(update_execution_status=AsyncMock())
     agents = {
         "executor": SimpleNamespace(set_loop_completion_queue=AsyncMock()),
         "reviewer": SimpleNamespace(set_loop_completion_queue=AsyncMock()),
     }
     loop = _make_loop(max_iterations=3)
-    loop.status = LoopStatus.COMPLETED.value
+    execution = _make_execution()
+    execution.status = LoopExecutionStatus.COMPLETED.value
     executor = LoopExecutor(
         loop=loop,
+        execution=execution,
         runtime=runtime,
-        loop_manager=loop_manager,
+        loop_execution_manager=loop_execution_manager,
         agents=agents,
     )
 
@@ -251,9 +261,9 @@ async def test_cleanup_restores_agent_state_clears_queue_reference_and_persists_
     assert runtime.member_infos["reviewer"].current_loop_id is None
     agents["executor"].set_loop_completion_queue.assert_awaited_once_with(None)
     agents["reviewer"].set_loop_completion_queue.assert_awaited_once_with(None)
-    loop_manager.update_loop_status.assert_awaited_once_with(
-        "loop-1",
-        LoopStatus.COMPLETED.value,
+    loop_execution_manager.update_execution_status.assert_awaited_once_with(
+        "exec-1",
+        LoopExecutionStatus.COMPLETED.value,
         current_iteration=1,
         current_node_index=0,
         error_message=None,
@@ -314,11 +324,21 @@ def _make_loop(max_iterations: int) -> Loop:
                 output_schema_fields=["# 审查结果"],
             ),
         ],
-        status=LoopStatus.RUNNING.value,
         max_iterations=max_iterations,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def _make_execution() -> LoopExecution:
+    now = datetime.now()
+    return LoopExecution(
+        execution_id="exec-1",
+        loop_id="loop-1",
+        initial_task="请实现功能",
+        status=LoopExecutionStatus.RUNNING.value,
         current_iteration=1,
         current_node_index=0,
-        initial_task="请实现功能",
         created_at=now,
         updated_at=now,
     )

@@ -2,7 +2,7 @@ import pytest
 
 from agents_hub.agent_bridge.models import AgentResult
 from agents_hub.config.types import AgentPlatform, RoleType
-from agents_hub.core.context.loop_models import Loop, LoopNode, LoopNodeType
+from agents_hub.core.context.loop_models import Loop, LoopExecution, LoopNode, LoopNodeType
 from agents_hub.core.foundation import (
     AgentMessage,
     GroupChatType,
@@ -24,7 +24,7 @@ def test_build_loop_context_for_normal_node_contains_role_schema_and_previous_ou
         role_description="整理输入并产出摘要",
         output_schema_prompt="请输出 Markdown 摘要",
     )
-    executor = LoopExecutor(loop=_make_loop([node]))
+    executor = LoopExecutor(loop=_make_loop([node]), execution=_make_execution())
 
     context = executor._build_loop_context(node, previous_output="上一节点结果")
 
@@ -44,7 +44,7 @@ def test_build_loop_context_for_terminator_node_includes_termination_check():
         role_description="判断结果是否需要继续迭代",
         output_schema_prompt="请输出 should_continue",
     )
-    executor = LoopExecutor(loop=_make_loop([node]))
+    executor = LoopExecutor(loop=_make_loop([node]), execution=_make_execution())
 
     context = executor._build_loop_context(node, previous_output="待判断结果")
 
@@ -58,8 +58,9 @@ def test_build_loop_message_uses_loop_message_type_and_metadata():
         agent_name="worker",
         role_description="执行节点任务",
     )
-    loop = _make_loop([node], loop_id="loop-abc", current_iteration=2)
-    executor = LoopExecutor(loop=loop)
+    loop = _make_loop([node], loop_id="loop-abc")
+    execution = _make_execution(loop_id="loop-abc", current_iteration=2)
+    executor = LoopExecutor(loop=loop, execution=execution)
 
     message = executor._build_loop_message(node, previous_output="input")
 
@@ -83,14 +84,15 @@ async def test_save_loop_result_uses_loop_chat_format():
         role_description="执行节点任务",
     )
     runtime = SimpleNamespace(add_message=AsyncMock())
+    execution = _make_execution(current_iteration=2)
     executor = LoopExecutor(
-        loop=_make_loop([node], current_iteration=2), runtime=runtime
+        loop=_make_loop([node]), execution=execution, runtime=runtime
     )
     result = SimpleNamespace(text="节点输出")
 
     await executor._save_loop_result(node, result)
 
-    assert result.text == "[循环-节点worker-第2轮] @loop 节点输出"
+    assert result.text == "[循环exec-1-节点worker-第2轮] @loop 节点输出"
     runtime.add_message.assert_awaited_once_with(result)
 
 
@@ -156,6 +158,7 @@ async def test_loop_executor_receives_notification_and_handles_fields():
                 )
             ]
         ),
+        execution=_make_execution(),
         completion_queue=queue,
     )
 
@@ -355,7 +358,6 @@ async def test_group_chat_injects_and_clears_loop_completion_queue(monkeypatch):
 def _make_loop(
     nodes: list[LoopNode],
     loop_id: str = "loop-1",
-    current_iteration: int = 1,
 ) -> Loop:
     from datetime import datetime
 
@@ -364,11 +366,27 @@ def _make_loop(
         loop_id=loop_id,
         group_chat_id="group-1",
         nodes=nodes,
-        status="created",
         max_iterations=3,
-        current_iteration=current_iteration,
-        current_node_index=0,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def _make_execution(
+    loop_id: str = "loop-1",
+    current_iteration: int = 1,
+    current_node_index: int = 0,
+) -> LoopExecution:
+    from datetime import datetime
+
+    now = datetime.now()
+    return LoopExecution(
+        execution_id="exec-1",
+        loop_id=loop_id,
         initial_task="初始任务",
+        status="running",
+        current_iteration=current_iteration,
+        current_node_index=current_node_index,
         created_at=now,
         updated_at=now,
     )

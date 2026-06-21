@@ -1,5 +1,9 @@
 """
 LoopManager 单元测试
+
+测试 Loop 循环定义的 CRUD 操作、校验规则和持久化。
+注意：Loop 定义不再包含执行状态字段（status、current_iteration 等），
+这些字段已迁移到 LoopExecution。
 """
 
 import json
@@ -12,10 +16,8 @@ from agents_hub.core.orchestration.loop_manager import LoopManager
 from agents_hub.core.foundation.exceptions import (
     LoopNotFoundError,
     LoopValidationError,
-    LoopStateError,
     AgentNotFoundError,
 )
-from agents_hub.core.foundation.models import LoopStatus
 from agents_hub.utils.logger import setup_logging
 
 
@@ -69,21 +71,16 @@ class TestLoopManagerCreate:
 
     @pytest.mark.asyncio
     async def test_create_loop_success(self, loop_manager, valid_nodes):
-        """正常创建 Loop"""
+        """正常创建 Loop 定义"""
         loop = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="生成一个计算器",
         )
 
         assert loop.loop_id is not None
         assert loop.group_chat_id == loop_manager.group_chat_id
         assert len(loop.nodes) == 3
-        assert loop.status == LoopStatus.CREATED.value
         assert loop.max_iterations == 10
-        assert loop.current_iteration == 1
-        assert loop.current_node_index == 0
-        assert loop.initial_task == "生成一个计算器"
 
     @pytest.mark.asyncio
     async def test_create_loop_insufficient_nodes(self, loop_manager):
@@ -101,7 +98,6 @@ class TestLoopManagerCreate:
             await loop_manager.create_loop(
                 nodes=nodes,
                 max_iterations=10,
-                initial_task="测试任务",
             )
 
         assert "节点数量不足" in str(exc_info.value)
@@ -115,7 +111,6 @@ class TestLoopManagerCreate:
             await loop_manager.create_loop(
                 nodes=valid_nodes,
                 max_iterations=0,
-                initial_task="测试任务",
             )
 
         assert "max_iterations 必须大于 0" in str(exc_info.value)
@@ -142,7 +137,6 @@ class TestLoopManagerCreate:
             await loop_manager.create_loop(
                 nodes=nodes,
                 max_iterations=10,
-                initial_task="测试任务",
             )
 
         assert "缺少 TERMINATOR 节点" in str(exc_info.value)
@@ -175,7 +169,6 @@ class TestLoopManagerCreate:
             await loop_manager.create_loop(
                 nodes=nodes,
                 max_iterations=10,
-                initial_task="测试任务",
             )
 
         assert "TERMINATOR 节点过多" in str(exc_info.value)
@@ -202,33 +195,7 @@ class TestLoopManagerCreate:
             await loop_manager.create_loop(
                 nodes=nodes,
                 max_iterations=10,
-                initial_task="测试任务",
             )
-
-    @pytest.mark.asyncio
-    async def test_create_loop_concurrent_running_conflict(
-        self, loop_manager, valid_nodes
-    ):
-        """并发限制：已有 RUNNING Loop 时不能创建新的"""
-        # 创建第一个 Loop
-        loop1 = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="任务1",
-        )
-
-        # 更新为 RUNNING
-        await loop_manager.update_loop_status(loop1.loop_id, LoopStatus.RUNNING.value)
-
-        # 尝试创建第二个 Loop（应该失败）
-        with pytest.raises(LoopValidationError) as exc_info:
-            await loop_manager.create_loop(
-                nodes=valid_nodes,
-                max_iterations=10,
-                initial_task="任务2",
-            )
-
-        assert "已有 RUNNING 状态的 Loop" in str(exc_info.value)
 
 
 class TestLoopManagerQuery:
@@ -240,13 +207,12 @@ class TestLoopManagerQuery:
         created_loop = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
 
         retrieved_loop = loop_manager.get_loop(created_loop.loop_id)
 
         assert retrieved_loop.loop_id == created_loop.loop_id
-        assert retrieved_loop.status == LoopStatus.CREATED.value
+        assert retrieved_loop.max_iterations == 10
 
     def test_get_loop_not_found(self, loop_manager):
         """查询不存在的 Loop"""
@@ -255,16 +221,14 @@ class TestLoopManagerQuery:
 
     @pytest.mark.asyncio
     async def test_list_loops_all(self, loop_manager, valid_nodes):
-        """查询所有 Loop"""
+        """查询所有 Loop 定义"""
         loop1 = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="任务1",
         )
         loop2 = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=5,
-            initial_task="任务2",
         )
 
         all_loops = loop_manager.list_loops()
@@ -277,96 +241,25 @@ class TestLoopManagerQuery:
         assert all("in_memory" in loop for loop in all_loops)
 
     @pytest.mark.asyncio
-    async def test_list_loops_by_status(self, temp_project_path, valid_nodes):
-        """按状态过滤 Loop（从 JSONL 读取）"""
-        group_chat_id = f"test_gc_{uuid4().hex[:8]}"
-
-        # 创建第一个 Loop 并更新为 RUNNING
-        manager1 = LoopManager(group_chat_id, temp_project_path)
-        loop1 = await manager1.create_loop(
+    async def test_list_loops_returns_definition_summary(self, loop_manager, valid_nodes):
+        """list_loops 返回 Loop 定义摘要（不含执行状态字段）"""
+        await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="任务1",
-        )
-        await manager1.update_loop_status(loop1.loop_id, LoopStatus.RUNNING.value)
-
-        # 创建第二个 Loop（使用新的 manager 实例，避免内存冲突检查）
-        manager2 = LoopManager(group_chat_id, temp_project_path)
-        loop2 = await manager2.create_loop(
-            nodes=valid_nodes,
-            max_iterations=5,
-            initial_task="任务2",
         )
 
-        # 查询 RUNNING 状态（从 JSONL 读取，应该能找到 loop1）
-        running_loops = manager2.list_loops(status=LoopStatus.RUNNING.value)
-        assert len(running_loops) == 1
-        assert running_loops[0]["loop_id"] == loop1.loop_id
+        all_loops = loop_manager.list_loops()
 
-        # 查询 CREATED 状态（应该能找到 loop2）
-        created_loops = manager2.list_loops(status=LoopStatus.CREATED.value)
-        assert len(created_loops) == 1
-        assert created_loops[0]["loop_id"] == loop2.loop_id
-
-
-class TestLoopManagerUpdate:
-    """测试 Loop 更新"""
-
-    @pytest.mark.asyncio
-    async def test_update_loop_status(self, loop_manager, valid_nodes):
-        """更新 Loop 状态"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-
-        updated_loop = await loop_manager.update_loop_status(
-            loop.loop_id,
-            LoopStatus.RUNNING.value,
-        )
-
-        assert updated_loop.status == LoopStatus.RUNNING.value
-
-    @pytest.mark.asyncio
-    async def test_update_loop_iteration_and_node(self, loop_manager, valid_nodes):
-        """更新 Loop 迭代次数和节点索引"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-
-        updated_loop = await loop_manager.update_loop_status(
-            loop.loop_id,
-            LoopStatus.RUNNING.value,
-            current_iteration=3,
-            current_node_index=1,
-        )
-
-        assert updated_loop.current_iteration == 3
-        assert updated_loop.current_node_index == 1
-
-    @pytest.mark.asyncio
-    async def test_update_loop_with_error(self, loop_manager, valid_nodes):
-        """更新 Loop 为失败状态并记录错误"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-
-        # 先转为 RUNNING
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-
-        updated_loop = await loop_manager.update_loop_status(
-            loop.loop_id,
-            LoopStatus.FAILED.value,
-            error_message="节点执行超时",
-        )
-
-        assert updated_loop.status == LoopStatus.FAILED.value
-        assert updated_loop.error_message == "节点执行超时"
+        assert len(all_loops) == 1
+        summary = all_loops[0]
+        assert "loop_id" in summary
+        assert "max_iterations" in summary
+        assert "nodes_count" in summary
+        assert summary["nodes_count"] == 3
+        assert "in_memory" in summary
+        # 执行状态字段不应出现
+        assert "status" not in summary
+        assert "current_iteration" not in summary
 
 
 class TestLoopManagerDelete:
@@ -374,11 +267,10 @@ class TestLoopManagerDelete:
 
     @pytest.mark.asyncio
     async def test_delete_loop_success(self, loop_manager, valid_nodes):
-        """删除非 RUNNING Loop"""
+        """删除 Loop 定义"""
         loop = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
 
         await loop_manager.delete_loop(loop.loop_id)
@@ -387,22 +279,32 @@ class TestLoopManagerDelete:
             loop_manager.get_loop(loop.loop_id)
 
     @pytest.mark.asyncio
-    async def test_delete_running_loop_fails(self, loop_manager, valid_nodes):
-        """删除 RUNNING Loop 失败"""
-        loop = await loop_manager.create_loop(
+    async def test_delete_loop_cascades_executions(self, temp_project_path, valid_nodes):
+        """删除 Loop 时级联删除关联的 executions"""
+        from agents_hub.core.orchestration.loop_execution_manager import LoopExecutionManager
+
+        group_chat_id = f"test_gc_{uuid4().hex[:8]}"
+        manager = LoopManager(group_chat_id, temp_project_path)
+        loop = await manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
 
-        # 更新为 RUNNING
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
+        # 创建关联的 execution
+        exec_manager = LoopExecutionManager(group_chat_id, temp_project_path)
+        execution = await exec_manager.create_execution(loop.loop_id, "测试任务")
 
-        # 尝试删除
-        with pytest.raises(LoopStateError) as exc_info:
-            await loop_manager.delete_loop(loop.loop_id)
+        # 删除 Loop（传入 exec_manager 以级联删除）
+        await manager.delete_loop(loop.loop_id, loop_execution_manager=exec_manager)
 
-        assert "不支持操作" in str(exc_info.value)
+        # Loop 应该不存在
+        with pytest.raises(LoopNotFoundError):
+            manager.get_loop(loop.loop_id)
+
+        # Execution 也应该被级联删除
+        # list_executions 应该返回空（因为墓碑记录）
+        execs = exec_manager.list_executions(loop_id=loop.loop_id)
+        assert len(execs) == 0
 
 
 class TestLoopManagerPersistence:
@@ -418,7 +320,6 @@ class TestLoopManagerPersistence:
         loop = await manager1.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
 
         # 第二个 Manager：从持久化恢复
@@ -426,33 +327,8 @@ class TestLoopManagerPersistence:
         recovered_loop = manager2.get_loop_with_lazy_load(loop.loop_id)
 
         assert recovered_loop.loop_id == loop.loop_id
-        assert recovered_loop.status == loop.status
+        assert recovered_loop.max_iterations == loop.max_iterations
         assert len(recovered_loop.nodes) == len(loop.nodes)
-
-    @pytest.mark.asyncio
-    async def test_persistence_same_id_takes_latest(
-        self, temp_project_path, valid_nodes
-    ):
-        """同一 loop_id 多条记录取最新"""
-        group_chat_id = f"test_gc_{uuid4().hex[:8]}"
-
-        manager1 = LoopManager(group_chat_id, temp_project_path)
-        loop = await manager1.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-
-        # 更新状态（追加新记录）
-        await manager1.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-        await manager1.update_loop_status(loop.loop_id, LoopStatus.COMPLETED.value)
-
-        # 重新加载（使用懒加载）
-        manager2 = LoopManager(group_chat_id, temp_project_path)
-        recovered_loop = manager2.get_loop_with_lazy_load(loop.loop_id)
-
-        # 应该取最新状态
-        assert recovered_loop.status == LoopStatus.COMPLETED.value
 
     @pytest.mark.asyncio
     async def test_delete_persists_across_restart(self, temp_project_path, valid_nodes):
@@ -463,7 +339,6 @@ class TestLoopManagerPersistence:
         loop = await manager1.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
         await manager1.delete_loop(loop.loop_id)
 
@@ -474,7 +349,7 @@ class TestLoopManagerPersistence:
 
 
 class TestLoopNodeFields:
-    """测试 LoopNode PRD 字段完整性"""
+    """测试 LoopNode 字段完整性"""
 
     @pytest.mark.asyncio
     async def test_node_id_auto_generated(self, loop_manager, valid_nodes):
@@ -482,7 +357,6 @@ class TestLoopNodeFields:
         loop = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
         for node in loop.nodes:
             assert node.node_id is not None
@@ -499,7 +373,6 @@ class TestLoopNodeFields:
         loop = await manager1.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
         original_ids = [n.node_id for n in loop.nodes]
 
@@ -515,7 +388,6 @@ class TestLoopNodeFields:
         loop = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
         for node in loop.nodes:
             assert node.max_retries == 3
@@ -539,7 +411,6 @@ class TestLoopNodeFields:
         loop = await loop_manager.create_loop(
             nodes=nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
         assert loop.nodes[0].max_retries == 5
         assert loop.nodes[1].max_retries == 3  # 默认值
@@ -568,7 +439,6 @@ class TestLoopNodeFields:
         loop = await manager1.create_loop(
             nodes=nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
 
         manager2 = LoopManager(group_chat_id, temp_project_path)
@@ -599,7 +469,6 @@ class TestLoopNodeFields:
         loop = await manager1.create_loop(
             nodes=nodes,
             max_iterations=10,
-            initial_task="测试任务",
         )
 
         manager2 = LoopManager(group_chat_id, temp_project_path)
@@ -608,121 +477,46 @@ class TestLoopNodeFields:
         assert recovered.nodes[1].output_schema_fields is None  # 默认 None
 
 
-class TestLoopStateMachine:
-    """测试 Loop 状态机校验"""
+class TestLoopCompatibility:
+    """测试向后兼容性"""
 
     @pytest.mark.asyncio
-    async def test_invalid_transition_completed_to_running(
-        self, loop_manager, valid_nodes
-    ):
-        """COMPLETED 不能转为 RUNNING"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.COMPLETED.value)
+    async def test_from_dict_ignores_old_status_fields(self):
+        """Loop.from_dict 忽略旧版本的执行状态字段"""
+        from agents_hub.core.context.loop_models import Loop
+        from datetime import datetime
 
-        with pytest.raises(LoopStateError):
-            await loop_manager.update_loop_status(
-                loop.loop_id, LoopStatus.RUNNING.value
-            )
+        now = datetime.now().isoformat()
+        old_data = {
+            "loop_id": "loop-1",
+            "group_chat_id": "group-1",
+            "nodes": [
+                {
+                    "node_type": "normal",
+                    "agent_name": "executor",
+                    "role_description": "执行任务",
+                },
+                {
+                    "node_type": "terminator",
+                    "agent_name": "reviewer",
+                    "role_description": "审查",
+                },
+            ],
+            "max_iterations": 5,
+            "created_at": now,
+            "updated_at": now,
+            # 旧版本字段（应被忽略）
+            "status": "running",
+            "current_iteration": 2,
+            "current_node_index": 1,
+            "initial_task": "旧任务",
+            "error_message": None,
+        }
 
-    @pytest.mark.asyncio
-    async def test_invalid_transition_failed_to_running(
-        self, loop_manager, valid_nodes
-    ):
-        """FAILED 不能转为 RUNNING"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.FAILED.value)
+        loop = Loop.from_dict(old_data)
 
-        with pytest.raises(LoopStateError):
-            await loop_manager.update_loop_status(
-                loop.loop_id, LoopStatus.RUNNING.value
-            )
-
-    @pytest.mark.asyncio
-    async def test_valid_transition_created_to_running(self, loop_manager, valid_nodes):
-        """CREATED 可以转为 RUNNING"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-        updated = await loop_manager.update_loop_status(
-            loop.loop_id, LoopStatus.RUNNING.value
-        )
-        assert updated.status == LoopStatus.RUNNING.value
-
-    @pytest.mark.asyncio
-    async def test_valid_transition_running_to_completed(
-        self, loop_manager, valid_nodes
-    ):
-        """RUNNING 可以转为 COMPLETED"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-        updated = await loop_manager.update_loop_status(
-            loop.loop_id, LoopStatus.COMPLETED.value
-        )
-        assert updated.status == LoopStatus.COMPLETED.value
-
-    @pytest.mark.asyncio
-    async def test_same_status_update_is_idempotent_persistence(
-        self, loop_manager, valid_nodes
-    ):
-        """同状态更新用于持久化当前字段，不视为非法状态转换"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-
-        updated = await loop_manager.update_loop_status(
-            loop.loop_id,
-            LoopStatus.RUNNING.value,
-            current_iteration=2,
-            current_node_index=1,
-        )
-
-        assert updated.status == LoopStatus.RUNNING.value
-        assert updated.current_iteration == 2
-        assert updated.current_node_index == 1
-
-    @pytest.mark.asyncio
-    async def test_valid_transition_running_to_failed(self, loop_manager, valid_nodes):
-        """RUNNING 可以转为 FAILED"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-        updated = await loop_manager.update_loop_status(
-            loop.loop_id, LoopStatus.FAILED.value, error_message="超时"
-        )
-        assert updated.status == LoopStatus.FAILED.value
-
-    @pytest.mark.asyncio
-    async def test_valid_transition_running_to_paused(self, loop_manager, valid_nodes):
-        """RUNNING 可以转为 PAUSED"""
-        loop = await loop_manager.create_loop(
-            nodes=valid_nodes,
-            max_iterations=10,
-            initial_task="测试任务",
-        )
-        await loop_manager.update_loop_status(loop.loop_id, LoopStatus.RUNNING.value)
-        updated = await loop_manager.update_loop_status(
-            loop.loop_id, LoopStatus.PAUSED.value
-        )
-        assert updated.status == LoopStatus.PAUSED.value
+        assert loop.loop_id == "loop-1"
+        assert loop.max_iterations == 5
+        assert len(loop.nodes) == 2
+        # 确认旧字段不会导致错误
+        assert not hasattr(loop, "status") or loop.__dataclass_fields__.get("status") is None

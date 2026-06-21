@@ -25,7 +25,12 @@ __all__ = [
     "DockerNotAvailableError",
     "DockerStartError",
     "ForkError",
+    "LoopNotFoundError",
+    "LoopValidationError",
+    "LoopStateError",
     "LoopExecutionError",
+    "LoopExecutionNotFoundError",
+    "LoopExecutionStateError",
 ]
 
 
@@ -297,5 +302,31 @@ class LoopExecutionError(AgentsHubError):
                 "node_id": node_id,
                 "agent_name": agent_name,
                 "reason": reason,
+            },
+        )
+
+
+class LoopExecutionNotFoundError(AgentsHubError):
+    """Loop 执行实例不存在"""
+
+    def __init__(self, execution_id: str):
+        super().__init__(
+            message=f"Loop execution '{execution_id}' 不存在",
+            error_code="LOOP_EXECUTION_NOT_FOUND",
+            details={"execution_id": execution_id},
+        )
+
+
+class LoopExecutionStateError(AgentsHubError):
+    """Loop 执行实例状态转换非法"""
+
+    def __init__(self, execution_id: str, current_status: str, target_status: str):
+        super().__init__(
+            message=f"Loop execution '{execution_id}' 状态转换非法: 从 '{current_status}' 到 '{target_status}'",
+            error_code="LOOP_EXECUTION_STATE_ERROR",
+            details={
+                "execution_id": execution_id,
+                "current_status": current_status,
+                "target_status": target_status,
             },
         )

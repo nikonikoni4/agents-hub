@@ -23,8 +23,9 @@ from agents_hub.core.foundation import (
     SessionType,
     StateError,
 )
-from agents_hub.core.foundation.models import LoopStatus, SystemRoles
+from agents_hub.core.foundation.models import LoopExecutionStatus, SystemRoles
 from agents_hub.core.foundation.token import generate_token
+from agents_hub.core.orchestration.loop_execution_manager import LoopExecutionManager
 from agents_hub.core.orchestration.loop_executor import LoopExecutor
 from agents_hub.core.orchestration.loop_manager import LoopManager
 from agents_hub.realtime import broadcast_group_chat_refresh
@@ -93,12 +94,19 @@ class GroupChat:
         self.task_manager = TaskManager(self.group_chat_id, project_path)
 
         # Loop 相关组件
-        self.loop_manager: LoopManager | None = None  # Loop CRUD 和持久化管理器（懒加载）
+        self.loop_manager: LoopManager | None = None  # Loop 定义 CRUD 管理器（懒加载）
+        self.loop_execution_manager: LoopExecutionManager | None = (
+            None  # Loop 执行实例管理器（懒加载）
+        )
         self.active_loops: dict[
             str, LoopExecutor
-        ] = {}  # 活跃的 LoopExecutor 实例映射 {loop_id: executor}
-        self._loop_tasks: dict[str, asyncio.Task] = {}  # LoopExecutor 后台任务映射 {loop_id: task}
-        self._loop_queues: dict[str, asyncio.Queue] = {}  # Loop 完成通知队列映射 {loop_id: queue}
+        ] = {}  # 活跃的 LoopExecutor 实例映射 {execution_id: executor}
+        self._loop_tasks: dict[
+            str, asyncio.Task
+        ] = {}  # LoopExecutor 后台任务映射 {execution_id: task}
+        self._loop_queues: dict[
+            str, asyncio.Queue
+        ] = {}  # Loop 完成通知队列映射 {execution_id: queue}
         self._loop_completion_queue: asyncio.Queue | None = (
             asyncio.Queue()
         )  # 全局完成通知队列（用于 Agent 注入）
@@ -113,7 +121,7 @@ class GroupChat:
     def _get_loop_manager(self) -> LoopManager:
         """获取 LoopManager 实例（懒加载）。
 
-        LoopManager 负责 Loop 的 CRUD 操作和持久化管理。
+        LoopManager 负责 Loop 定义的 CRUD 操作和持久化管理。
         首次调用时创建实例，后续调用返回缓存的实例。
 
         Returns:
@@ -123,6 +131,22 @@ class GroupChat:
         if self.loop_manager is None:
             self.loop_manager = LoopManager(self.group_chat_id, self.runtime.project_path)
         return self.loop_manager
+
+    def _get_loop_execution_manager(self) -> LoopExecutionManager:
+        """获取 LoopExecutionManager 实例（懒加载）。
+
+        LoopExecutionManager 负责 LoopExecution 执行实例的 CRUD 操作和持久化管理。
+        首次调用时创建实例，后续调用返回缓存的实例。
+
+        Returns:
+            LoopExecutionManager 实例
+        """
+        # 懒加载：首次调用时创建 LoopExecutionManager
+        if self.loop_execution_manager is None:
+            self.loop_execution_manager = LoopExecutionManager(
+                self.group_chat_id, self.runtime.project_path
+            )
+        return self.loop_execution_manager
 
     def _get_member_lifecycle_lock(self, agent_name: str) -> asyncio.Lock:
         """获取单个成员 stop/start 生命周期锁。"""
@@ -393,34 +417,32 @@ class GroupChat:
         self,
         nodes: list[dict],
         max_iterations: int,
-        initial_task: str,
     ):
-        """创建 Loop 定义，暂不启动执行。
+        """创建 Loop 定义（可复用模板）。
 
-        创建一个 Loop 定义，包含节点列表、最大循环次数和初始任务描述。
-        创建后状态为 CREATED，需要调用 create_and_start_loop() 启动执行。
+        创建一个 Loop 定义，包含节点列表和最大循环次数。
+        Loop 定义可以多次启动，每次启动时传入不同的 initial_task。
 
         Args:
             nodes: 节点定义列表，每个节点包含:
                 - node_id: 节点唯一标识
                 - node_type: 节点类型 ("normal" / "terminator")
                 - agent_name: 执行该节点的 Agent 名称
-                - node_prompt: 节点职责描述
+                - role_description: 节点职责描述
                 - output_schema_prompt: 输出格式提示词
                 - output_schema_fields: 必需字段列表
                 - max_retries: 输出校验失败的最大重试次数（默认 3）
             max_iterations: 最大循环次数，防止死循环
-            initial_task: 初始任务描述，发送给第一个节点
 
         Returns:
-            Loop: 创建的 Loop 对象
+            Loop: 创建的 Loop 定义对象
 
         Raises:
             LoopValidationError: 节点校验失败（少于 2 个节点、无 TERMINATOR 节点等）
             AgentNotFoundError: 节点引用的 Agent 不存在
         """
         logger.info(
-            "创建 Loop: group=%s, nodes=%d, max_iterations=%d",
+            "创建 Loop 定义: group=%s, nodes=%d, max_iterations=%d",
             self.group_chat_id,
             len(nodes) if nodes else 0,
             max_iterations,
@@ -428,49 +450,50 @@ class GroupChat:
         return await self._get_loop_manager().create_loop(
             nodes=nodes,
             max_iterations=max_iterations,
-            initial_task=initial_task,
         )
 
-    async def create_and_start_loop(self, loop_id: str):
-        """启动已创建的 Loop，并在后台运行执行器。
+    async def create_and_start_loop(self, loop_id: str, initial_task: str):
+        """启动已创建的 Loop 定义，创建执行实例并在后台运行。
 
         执行流程：
-        1. 懒加载目标 Loop（如果不在内存）
-        2. 清空其他 Loop（单 Loop 保持策略）
-        3. 验证 Loop 状态必须为 CREATED
+        1. 懒加载目标 Loop 定义（如果不在内存）
+        2. 创建 LoopExecution 执行实例（关联 Loop 定义）
+        3. 清空其他 execution（单 execution 保持策略）
         4. 创建完成通知队列（completion_queue）
         5. 将参与的 Agent 状态设置为 IN_LOOP（隔离外部消息）
         6. 为参与的 Agent 注入完成通知队列
-        7. 更新 Loop 状态为 RUNNING
+        7. 更新 execution 状态为 RUNNING
         8. 创建 LoopExecutor 并在后台启动执行
 
         Args:
-            loop_id: 要启动的 Loop ID
+            loop_id: 要启动的 Loop 定义 ID
+            initial_task: 本次执行的初始任务描述，发送给第一个节点
 
         Returns:
-            Loop: 启动的 Loop 对象
+            dict: 包含 execution_id 和 loop_id 的字典
 
         Raises:
-            LoopNotFoundError: Loop 不存在
-            LoopStateError: Loop 状态不是 CREATED
+            LoopNotFoundError: Loop 定义不存在
         """
         loop_manager = self._get_loop_manager()
+        loop_execution_manager = self._get_loop_execution_manager()
 
-        # 懒加载目标 Loop（如果不在内存，从 JSONL 加载）
+        # 懒加载目标 Loop 定义（如果不在内存，从 JSONL 加载）
         loop = loop_manager.get_loop_with_lazy_load(loop_id)
 
-        # 清空其他 Loop（单 Loop 保持策略）
-        loop_manager.clear_other_loops(loop_id)
+        # 创建 LoopExecution 执行实例
+        execution = await loop_execution_manager.create_execution(
+            loop_id=loop_id,
+            initial_task=initial_task,
+        )
 
-        # 状态校验：只能启动 CREATED 状态的 Loop
-        if loop.status != LoopStatus.CREATED.value:
-            from agents_hub.core.foundation.exceptions import LoopStateError
-
-            raise LoopStateError(loop_id, loop.status, "start")
+        # 清空其他 execution（单 execution 保持策略）
+        loop_execution_manager.clear_other_executions(execution.execution_id)
 
         logger.info(
-            "启动 Loop: loop_id=%s, group=%s, nodes=%d",
+            "启动 Loop: loop_id=%s, execution_id=%s, group=%s, nodes=%d",
             loop_id,
+            execution.execution_id,
             self.group_chat_id,
             len(loop.nodes),
         )
@@ -492,23 +515,28 @@ class GroupChat:
                 agent.set_loop_completion_queue(completion_queue)
 
         # 持久化 Agent 状态变更
-        await self.runtime.save_agent_members(context=f"Start loop {loop.loop_id}")
+        await self.runtime.save_agent_members(
+            context=f"Start loop {loop.loop_id}, execution {execution.execution_id}"
+        )
 
-        # 更新 Loop 状态为 RUNNING
-        await loop_manager.update_loop_status(loop_id, LoopStatus.RUNNING.value)
+        # 更新 execution 状态为 RUNNING
+        await loop_execution_manager.update_execution_status(
+            execution.execution_id, LoopExecutionStatus.RUNNING.value
+        )
 
         # 注册 "loop" 系统身份到 MessageRouter，用于 LoopExecutor 发送循环消息
-        # 一个群聊同时只能有一个 RUNNING 状态的 Loop，所以不会有冲突
+        # 一个群聊同时只能有一个 RUNNING 状态的 execution，所以不会有冲突
         self.message_router.register(SystemRoles.LOOP, asyncio.Queue())
 
         # 创建 LoopExecutor：循环执行引擎，负责节点调度、输出校验、退出判断
         executor = LoopExecutor(
             loop=loop,
+            execution=execution,
             runtime=self.runtime,
             completion_queue=completion_queue,
             send_message_callback=self.send_message_to_agent,
             agent_call_manager=self.agent_call_manager,
-            loop_manager=loop_manager,
+            loop_execution_manager=loop_execution_manager,
             agents=agents,
         )
 
@@ -516,25 +544,29 @@ class GroupChat:
         task = asyncio.create_task(executor.run())
 
         # 注册完成回调：Loop 结束时清理运行时索引
-        def _on_done(t: asyncio.Task, lid: str = loop_id) -> None:
+        def _on_done(t: asyncio.Task, eid: str = execution.execution_id) -> None:
             """在 Loop 任务完成后转交统一清理逻辑。
 
             Args:
                 t: 已完成的后台任务。
-                lid: 对应的 Loop ID。
+                eid: 对应的 execution ID。
             """
-            self._on_loop_task_done(lid, t)
+            self._on_loop_task_done(eid, t)
 
         task.add_done_callback(_on_done)
 
-        # 记录运行时引用
-        self.active_loops[loop_id] = executor
-        self._loop_tasks[loop_id] = task
-        self._loop_queues[loop_id] = completion_queue
+        # 记录运行时引用（使用 execution_id 作为 key）
+        self.active_loops[execution.execution_id] = executor
+        self._loop_tasks[execution.execution_id] = task
+        self._loop_queues[execution.execution_id] = completion_queue
 
-        return loop
+        return {
+            "execution_id": execution.execution_id,
+            "loop_id": loop_id,
+            "status": execution.status,
+        }
 
-    def _on_loop_task_done(self, loop_id: str, task: asyncio.Task) -> None:
+    def _on_loop_task_done(self, execution_id: str, task: asyncio.Task) -> None:
         """LoopExecutor 后台任务结束后清理运行时索引。
 
         此方法作为 asyncio.Task 的 done_callback 被调用，
@@ -545,18 +577,18 @@ class GroupChat:
         2. 清理 active_loops、_loop_tasks、_loop_queues 字典
 
         Args:
-            loop_id: 完成的 Loop ID
+            execution_id: 完成的 execution ID
             task: 完成的 asyncio.Task 对象
         """
         # 安全检查：确保要清理的是同一个 task（防止并发场景下的误删）
-        if self._loop_tasks.get(loop_id) is task:
+        if self._loop_tasks.get(execution_id) is task:
             # 从 MessageRouter 注销 "loop" 系统身份
             self.message_router.unregister(SystemRoles.LOOP)
 
             # 清理运行时引用
-            self._loop_tasks.pop(loop_id, None)
-            self.active_loops.pop(loop_id, None)
-            self._loop_queues.pop(loop_id, None)
+            self._loop_tasks.pop(execution_id, None)
+            self.active_loops.pop(execution_id, None)
+            self._loop_queues.pop(execution_id, None)
 
     def _loop_agents(self, loop) -> dict[str, Agent]:
         """获取循环中所有 Agent 实例的映射。
@@ -577,59 +609,54 @@ class GroupChat:
                 agents[node.agent_name] = agent
         return agents
 
-    async def stop_loop(self, loop_id: str):
-        """停止 RUNNING Loop，并恢复参与 Agent。
+    async def stop_loop(self, execution_id: str):
+        """停止 RUNNING 的 Loop 执行实例，并恢复参与 Agent。
 
         执行流程：
-        1. 验证 Loop 状态必须为 RUNNING
+        1. 验证 execution 状态必须为 RUNNING
         2. 向完成通知队列发送终止信号
         3. 取消 LoopExecutor 的后台任务
-        4. 恢复所有参与 Agent 的状态（IN_LOOP -> IDLE）
-        5. 清除 Agent 的完成通知队列引用
-        6. 更新 Loop 状态为 PAUSED
+        4. 恢复参与 Agent 的状态（IN_LOOP → idle）
+        5. 更新 execution 状态为 PAUSED
 
         Args:
-            loop_id: 要停止的 Loop ID
+            execution_id: 要停止的 execution ID
 
         Returns:
-            Loop: 更新后的 Loop 对象
+            LoopExecution: 更新后的执行实例
 
         Raises:
-            LoopNotFoundError: Loop 不存在
-            LoopStateError: Loop 状态不是 RUNNING
+            LoopExecutionNotFoundError: execution 不存在
+            LoopExecutionStateError: execution 状态不是 RUNNING
         """
+        loop_execution_manager = self._get_loop_execution_manager()
         loop_manager = self._get_loop_manager()
-        loop = loop_manager.get_loop(loop_id)
 
-        # 状态校验：只能停止 RUNNING 状态的 Loop
-        if loop.status != LoopStatus.RUNNING.value:
-            from agents_hub.core.foundation.exceptions import LoopStateError
+        # 获取 execution 和 loop 定义
+        execution = loop_execution_manager.get_execution(execution_id)
+        loop = loop_manager.get_loop(execution.loop_id)
 
-            raise LoopStateError(loop_id, loop.status, "stop")
+        # 状态校验：只能停止 RUNNING 状态的 execution
+        if execution.status != LoopExecutionStatus.RUNNING.value:
+            from agents_hub.core.foundation.exceptions import LoopExecutionStateError
+
+            raise LoopExecutionStateError(execution_id, execution.status, "stop")
 
         logger.info(
-            "停止 Loop: loop_id=%s, group=%s",
-            loop_id,
+            "停止 Loop: execution_id=%s, loop_id=%s, group=%s",
+            execution_id,
+            execution.loop_id,
             self.group_chat_id,
         )
 
-        # 发送终止信号到完成通知队列，通知 LoopExecutor 停止
-        queue = self._loop_queues.get(loop_id)
-        if queue is not None:
-            await queue.put({"loop_id": loop_id, "is_termination_signal": True})
-
         # 取消 LoopExecutor 的后台任务
-        task = self._loop_tasks.pop(loop_id, None)
+        task = self._loop_tasks.get(execution_id)
         if task is not None and not task.done():
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
-        # 注销 "loop" 系统身份（_on_loop_task_done 的守卫因 pop 先于回调触发会跳过，这里显式注销）
-        self.message_router.unregister(SystemRoles.LOOP)
-
-        # 恢复所有参与 Agent 的状态
-        # 使用 seen_agents 去重，避免同一 Agent 在多个节点时重复处理
+        # 恢复参与 Agent 的状态（IN_LOOP → idle）
         seen_agents: set[str] = set()
         for node in loop.nodes:
             if node.agent_name in seen_agents:
@@ -641,7 +668,7 @@ class GroupChat:
             if agent is not None:
                 agent.set_loop_completion_queue(None)
 
-            # 恢复 Agent 状态：IN_LOOP -> stopped -> idle
+            # 恢复 Agent 状态：IN_LOOP → stopped → idle
             # 先 stop 再 start，确保 Agent 重新进入正常运行状态
             agent_info = self.runtime.get_agent_member_info(node.agent_name)
             if agent_info is not None:
@@ -655,17 +682,19 @@ class GroupChat:
                     agent_info.current_loop_id = None
 
         # 持久化 Agent 状态变更
-        await self.runtime.save_agent_members(context=f"Stop loop {loop_id}")
+        await self.runtime.save_agent_members(context=f"Stop loop execution {execution_id}")
 
         # 清理运行时引用
-        self.active_loops.pop(loop_id, None)
-        self._loop_queues.pop(loop_id, None)
+        self.active_loops.pop(execution_id, None)
+        self._loop_queues.pop(execution_id, None)
 
-        # 更新 Loop 状态为 PAUSED
-        return await loop_manager.update_loop_status(loop_id, LoopStatus.PAUSED.value)
+        # 更新 execution 状态为 PAUSED
+        return await loop_execution_manager.update_execution_status(
+            execution_id, LoopExecutionStatus.PAUSED.value
+        )
 
-    async def cleanup_loop(self, loop_id: str) -> None:
-        """清理已结束 Loop 的运行时引用。
+    async def cleanup_loop(self, execution_id: str) -> None:
+        """清理已结束 Loop 执行实例的运行时引用。
 
         此方法清理 GroupChat 中维护的 Loop 运行时索引，
         包括活跃执行器、完成通知队列和后台任务。
@@ -673,16 +702,16 @@ class GroupChat:
         通常在 Loop 执行完成（COMPLETED/FAILED）后调用。
 
         Args:
-            loop_id: 要清理的 Loop ID
+            execution_id: 要清理的 execution ID
         """
         # 清理活跃执行器引用
-        self.active_loops.pop(loop_id, None)
+        self.active_loops.pop(execution_id, None)
 
         # 清理完成通知队列
-        self._loop_queues.pop(loop_id, None)
+        self._loop_queues.pop(execution_id, None)
 
         # 取消并清理后台任务（如果仍在运行）
-        task = self._loop_tasks.pop(loop_id, None)
+        task = self._loop_tasks.pop(execution_id, None)
         if task is not None and not task.done():
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -692,64 +721,90 @@ class GroupChat:
         self.message_router.unregister(SystemRoles.LOOP)
 
     async def delete_loop(self, loop_id: str) -> None:
-        """删除非 RUNNING Loop。
+        """删除 Loop 定义及其所有关联的执行实例。
 
-        只能删除非 RUNNING 状态的 Loop（CREATED/PAUSED/COMPLETED/FAILED）。
-        删除前会先清理运行时引用，然后从 LoopManager 中删除记录。
+        删除 Loop 定义时会级联删除所有关联的 execution。
+        如果有 RUNNING 状态的 execution，需要先停止。
 
         Args:
-            loop_id: 要删除的 Loop ID
+            loop_id: 要删除的 Loop 定义 ID
 
         Raises:
-            LoopNotFoundError: Loop 不存在
-            LoopStateError: Loop 状态为 RUNNING（不能删除运行中的 Loop）
+            LoopNotFoundError: Loop 定义不存在
         """
         logger.info(
-            "删除 Loop: loop_id=%s, group=%s",
+            "删除 Loop 定义: loop_id=%s, group=%s",
             loop_id,
             self.group_chat_id,
         )
 
-        # 先清理运行时引用
-        await self.cleanup_loop(loop_id)
+        loop_execution_manager = self._get_loop_execution_manager()
 
-        # 从 LoopManager 删除记录（会校验状态，RUNNING 状态会抛出 LoopStateError）
-        await self._get_loop_manager().delete_loop(loop_id)
+        # 查找该 Loop 的所有 RUNNING 状态的 execution
+        running_executions = [
+            ex
+            for ex in loop_execution_manager.list_executions(loop_id=loop_id)
+            if ex.get("status") == LoopExecutionStatus.RUNNING.value
+        ]
 
-    def get_loop_status(self, loop_id: str) -> dict:
-        """查询 Loop 状态。
+        # 停止所有 RUNNING 的 execution
+        for ex in running_executions:
+            execution_id = ex.get("execution_id")
+            if execution_id:
+                try:
+                    await self.stop_loop(execution_id)
+                except Exception as e:
+                    logger.warning(
+                        "停止 execution 失败: execution_id=%s, error=%s",
+                        execution_id,
+                        e,
+                    )
 
-        获取 Loop 的当前执行状态，包括循环轮次、当前节点、错误信息等。
+        # 从 LoopManager 删除 Loop 定义（会级联删除所有 executions）
+        await self._get_loop_manager().delete_loop(
+            loop_id, loop_execution_manager=loop_execution_manager
+        )
+
+    def get_loop_status(self, execution_id: str) -> dict:
+        """查询 Loop 执行状态。
+
+        获取 Loop 执行实例的当前状态，包括循环轮次、当前节点、错误信息等。
 
         Args:
-            loop_id: 要查询的 Loop ID
+            execution_id: 要查询的 execution ID
 
         Returns:
-            dict: Loop 状态信息，包含以下字段:
-                - loop_id: Loop 唯一标识
-                - status: 循环状态 ("created"/"running"/"paused"/"completed"/"failed")
+            dict: Loop 执行状态信息，包含以下字段:
+                - execution_id: 执行实例唯一标识
+                - loop_id: Loop 定义唯一标识
+                - status: 执行状态 ("created"/"running"/"paused"/"completed"/"failed")
                 - current_iteration: 当前循环轮次
                 - max_iterations: 最大循环次数
                 - current_node: 当前执行节点的 Agent 名称（可能为 None）
                 - error: 错误信息（失败时有值，否则为 None）
 
         Raises:
-            LoopNotFoundError: Loop 不存在
+            LoopExecutionNotFoundError: execution 不存在
         """
-        loop = self._get_loop_manager().get_loop(loop_id)
+        loop_execution_manager = self._get_loop_execution_manager()
+        loop_manager = self._get_loop_manager()
+
+        execution = loop_execution_manager.get_execution_with_lazy_load(execution_id)
+        loop = loop_manager.get_loop(execution.loop_id)
 
         # 获取当前执行节点的 Agent 名称
         current_node = None
-        if 0 <= loop.current_node_index < len(loop.nodes):
-            current_node = loop.nodes[loop.current_node_index].agent_name
+        if 0 <= execution.current_node_index < len(loop.nodes):
+            current_node = loop.nodes[execution.current_node_index].agent_name
 
         return {
-            "loop_id": loop.loop_id,
-            "status": loop.status,
-            "current_iteration": loop.current_iteration,
+            "execution_id": execution.execution_id,
+            "loop_id": execution.loop_id,
+            "status": execution.status,
+            "current_iteration": execution.current_iteration,
             "max_iterations": loop.max_iterations,
             "current_node": current_node,
-            "error": loop.error_message,
+            "error": execution.error_message,
         }
 
     async def _initialize_single_member(self, agent: Agent) -> None:

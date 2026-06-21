@@ -19,7 +19,7 @@ from typing import Any
 
 from agents_hub.agent_bridge.models import AgentResult
 from agents_hub.core.context import GroupChatRuntime
-from agents_hub.core.context.loop_models import Loop, LoopNode, LoopNodeType
+from agents_hub.core.context.loop_models import Loop, LoopExecution, LoopNode, LoopNodeType
 from agents_hub.core.foundation import (
     AgentMessage,
     CallStatus,
@@ -27,7 +27,7 @@ from agents_hub.core.foundation import (
     SessionType,
 )
 from agents_hub.core.foundation.exceptions import LoopExecutionError
-from agents_hub.core.foundation.models import LoopStatus, SystemRoles
+from agents_hub.core.foundation.models import LoopExecutionStatus, SystemRoles
 from agents_hub.core.foundation.renderer import Tag, render_for_chat, wrap_xml
 
 
@@ -78,11 +78,12 @@ class LoopExecutor:
 
     Attributes:
         loop: 循环定义对象。
+        execution: 执行实例对象，包含 initial_task、status、current_iteration 等执行状态。
         runtime: 群聊运行时，用于保存消息和查询 Agent 状态。
         completion_queue: 完成通知队列，Agent 处理完消息后投递通知。
         send_message_callback: 发送消息的回调函数，通过 GroupChat.send_message_to_agent() 注入。
         agent_call_manager: Agent 调用管理器，用于创建和更新 AgentCall。
-        loop_manager: 循环管理器，用于持久化状态变更。
+        loop_execution_manager: 执行实例管理器，用于持久化状态变更。
         agents: Agent 实例字典，用于清理 completion_queue 引用。
         logger: 日志器。
         node_result_timeout_seconds: 等待节点完成通知的超时时间（秒）。
@@ -102,11 +103,12 @@ class LoopExecutor:
     def __init__(
         self,
         loop: Loop,
+        execution: LoopExecution,
         runtime: GroupChatRuntime | None = None,
         completion_queue: asyncio.Queue | None = None,
         send_message_callback: Callable[[AgentMessage], Awaitable[None]] | None = None,
         agent_call_manager=None,
-        loop_manager=None,
+        loop_execution_manager=None,
         agents: dict[str, Any] | None = None,
         logger: logging.Logger | None = None,
         node_result_timeout_seconds: float = 300.0,
@@ -114,26 +116,28 @@ class LoopExecutor:
         """初始化 LoopExecutor。
 
         Args:
-            loop: 循环定义对象，包含节点列表、状态、迭代计数等。
+            loop: 循环定义对象，包含节点列表、最大迭代次数等。
+            execution: 执行实例对象，包含 initial_task、status、current_iteration 等执行状态。
             runtime: 群聊运行时，用于保存消息和查询 Agent 状态。
             completion_queue: 完成通知队列，Agent 处理完消息后投递通知。
             send_message_callback: 发送消息的回调函数，解耦 GroupChat 依赖。
             agent_call_manager: Agent 调用管理器，用于创建和更新 AgentCall。
-            loop_manager: 循环管理器，用于持久化状态变更。
+            loop_execution_manager: 执行实例管理器，用于持久化状态变更。
             agents: Agent 实例字典，键为 agent_name，用于清理 completion_queue 引用。
             logger: 日志器，如果为 None 则使用模块默认日志器。
             node_result_timeout_seconds: 等待节点完成通知的超时时间（秒），默认 300 秒。
         """
         self.loop = loop
+        self.execution = execution
         self.runtime = runtime
         self.completion_queue = completion_queue
         self.send_message_callback = send_message_callback
         self.agent_call_manager = agent_call_manager
-        self.loop_manager = loop_manager
+        self.loop_execution_manager = loop_execution_manager
         self.agents = agents or {}
         self.logger = logger or logging.getLogger(__name__)
         self.node_result_timeout_seconds = node_result_timeout_seconds
-        self._last_node_output = loop.initial_task
+        self._last_node_output = execution.initial_task
 
     def _build_loop_context(self, node: LoopNode, previous_output: str) -> str:
         """构造循环专用上下文，隔离群聊历史。
@@ -175,7 +179,7 @@ class LoopExecutor:
         """
         loop_context = self._build_loop_context(node, previous_output)
         return AgentMessage(
-            call_id=f"{self.loop.loop_id}:{node.node_id}:{self.loop.current_iteration}",
+            call_id=f"{self.loop.loop_id}:{node.node_id}:{self.execution.current_iteration}",
             content=loop_context,
             send_from=node.agent_name,
             send_to=node.agent_name,
@@ -183,7 +187,7 @@ class LoopExecutor:
             message_type=MessageType.LOOP_MESSAGE,
             metadata={
                 "loop_id": self.loop.loop_id,
-                "loop_iteration": self.loop.current_iteration,
+                "loop_iteration": self.execution.current_iteration,
             },
         )
 
@@ -214,9 +218,7 @@ class LoopExecutor:
             if message.metadata is None:
                 message.metadata = {}
             message.metadata["loop_retry_count"] = retry_count
-            retry_prefix = (
-                f"[循环-节点{node.agent_name}-第{self.loop.current_iteration}轮-重试{retry_count}]"
-            )
+            retry_prefix = f"[循环-节点{node.agent_name}-第{self.execution.current_iteration}轮-重试{retry_count}]"
             message.content = f"{retry_prefix}\n{message.content}"
         return message
 
@@ -437,7 +439,7 @@ class LoopExecutor:
             await self._emergency_stop("节点完成通知缺少 agent_result")
             return
 
-        node = self.loop.nodes[self.loop.current_node_index]
+        node = self.loop.nodes[self.execution.current_node_index]
         if node.agent_name != result.agent_name:
             await self._emergency_stop(
                 f"节点完成通知来源不匹配: expected={node.agent_name}, actual={result.agent_name}"
@@ -478,10 +480,11 @@ class LoopExecutor:
 
         if self._check_exit_condition(node, should_continue):
             self.logger.info(
-                "Loop 完成: loop_id=%s, status=%s, iteration=%d",
+                "Loop 完成: loop_id=%s, execution_id=%s, status=%s, iteration=%d",
                 self.loop.loop_id,
-                self.loop.status,
-                self.loop.current_iteration,
+                self.execution.execution_id,
+                self.execution.status,
+                self.execution.current_iteration,
             )
             await self._cleanup()
             return
@@ -489,16 +492,17 @@ class LoopExecutor:
         self._advance_to_next_node()
         if self._check_exit_condition():
             self.logger.info(
-                "Loop 达到最大循环次数: loop_id=%s, iteration=%d, max=%d",
+                "Loop 达到最大循环次数: loop_id=%s, execution_id=%s, iteration=%d, max=%d",
                 self.loop.loop_id,
-                self.loop.current_iteration,
+                self.execution.execution_id,
+                self.execution.current_iteration,
                 self.loop.max_iterations,
             )
             await self._cleanup()
             return
 
         await self._send_to_node(
-            self.loop.nodes[self.loop.current_node_index],
+            self.loop.nodes[self.execution.current_node_index],
             self._last_node_output,
         )
 
@@ -523,26 +527,27 @@ class LoopExecutor:
         - 异常时调用 _emergency_stop() 清理资源并记录错误
         """
         try:
-            if self.loop.status != LoopStatus.RUNNING.value:
-                self.loop.status = LoopStatus.RUNNING.value
+            if self.execution.status != LoopExecutionStatus.RUNNING.value:
+                self.execution.status = LoopExecutionStatus.RUNNING.value
 
             self.logger.info(
-                "Loop 启动: loop_id=%s, nodes=%d, max_iterations=%d",
+                "Loop 启动: loop_id=%s, execution_id=%s, nodes=%d, max_iterations=%d",
                 self.loop.loop_id,
+                self.execution.execution_id,
                 len(self.loop.nodes),
                 self.loop.max_iterations,
             )
             await self._send_to_node(
-                self.loop.nodes[self.loop.current_node_index],
-                self.loop.initial_task,
+                self.loop.nodes[self.execution.current_node_index],
+                self.execution.initial_task,
             )
-            while self.loop.status == LoopStatus.RUNNING.value:
+            while self.execution.status == LoopExecutionStatus.RUNNING.value:
                 try:
                     await self.receive_node_completion()
                 except TimeoutError:
                     await self._handle_node_timeout()
         except Exception as exc:
-            if self.loop.status == LoopStatus.RUNNING.value:
+            if self.execution.status == LoopExecutionStatus.RUNNING.value:
                 await self._emergency_stop(str(exc))
             else:
                 raise
@@ -578,10 +583,11 @@ class LoopExecutor:
             message.call_id = call.call_id
 
         self.logger.info(
-            "发送循环消息: loop_id=%s, node=%s, iteration=%d",
+            "发送循环消息: loop_id=%s, execution_id=%s, node=%s, iteration=%d",
             self.loop.loop_id,
+            self.execution.execution_id,
             node.agent_name,
-            self.loop.current_iteration,
+            self.execution.current_iteration,
         )
         await self.send_message_callback(message)
         return message
@@ -593,11 +599,11 @@ class LoopExecutor:
         - 当前节点是最后一个节点时，下一个节点是第一个节点（index=0）
         - 此时 current_iteration 递增，表示完成一轮
         """
-        next_index = (self.loop.current_node_index + 1) % len(self.loop.nodes)
-        self.loop.current_node_index = next_index
+        next_index = (self.execution.current_node_index + 1) % len(self.loop.nodes)
+        self.execution.current_node_index = next_index
         if next_index == 0:
-            self.loop.current_iteration += 1
-        self.loop.updated_at = datetime.now()
+            self.execution.current_iteration += 1
+        self.execution.updated_at = datetime.now()
 
     def _check_exit_condition(
         self,
@@ -622,14 +628,14 @@ class LoopExecutor:
             and node.node_type == LoopNodeType.TERMINATOR.value
             and should_continue is False
         ):
-            self.loop.status = LoopStatus.COMPLETED.value
-            self.loop.updated_at = datetime.now()
+            self.execution.status = LoopExecutionStatus.COMPLETED.value
+            self.execution.updated_at = datetime.now()
             return True
 
-        if self.loop.current_iteration > self.loop.max_iterations:
-            self.loop.status = LoopStatus.FAILED.value
-            self.loop.error_message = "达到最大循环次数"
-            self.loop.updated_at = datetime.now()
+        if self.execution.current_iteration > self.loop.max_iterations:
+            self.execution.status = LoopExecutionStatus.FAILED.value
+            self.execution.error_message = "达到最大循环次数"
+            self.execution.updated_at = datetime.now()
             return True
 
         return False
@@ -641,7 +647,7 @@ class LoopExecutor:
         - 如果 Agent 状态为 "error"，说明 Agent CLI 执行失败
         - 否则说明节点执行超时
         """
-        node = self.loop.nodes[self.loop.current_node_index]
+        node = self.loop.nodes[self.execution.current_node_index]
         status = None
         if self.runtime is not None:
             agent_info = self.runtime.get_agent_member_info(node.agent_name)
@@ -655,12 +661,17 @@ class LoopExecutor:
         将循环状态设置为 FAILED，记录错误原因，然后调用 _cleanup() 清理资源。
 
         Args:
-            reason: 失败原因，记录到 loop.error_message。
+            reason: 失败原因，记录到 execution.error_message。
         """
-        self.loop.status = LoopStatus.FAILED.value
-        self.loop.error_message = reason
-        self.loop.updated_at = datetime.now()
-        self.logger.error("Loop 执行失败: loop_id=%s, reason=%s", self.loop.loop_id, reason)
+        self.execution.status = LoopExecutionStatus.FAILED.value
+        self.execution.error_message = reason
+        self.execution.updated_at = datetime.now()
+        self.logger.error(
+            "Loop 执行失败: loop_id=%s, execution_id=%s, reason=%s",
+            self.loop.loop_id,
+            self.execution.execution_id,
+            reason,
+        )
         await self._cleanup()
 
     async def _cleanup(self) -> None:
@@ -669,7 +680,7 @@ class LoopExecutor:
         清理流程：
         1. 恢复参与 Agent 的状态（IN_LOOP → IDLE，清除 current_loop_id）
         2. 清除 Agent 的 completion_queue 引用
-        3. 通过 loop_manager 持久化循环最终状态
+        3. 通过 loop_execution_manager 持久化执行实例最终状态
         """
         if self.runtime is not None:
             get_agent_member_info = getattr(self.runtime, "get_agent_member_info", None)
@@ -682,7 +693,9 @@ class LoopExecutor:
                             agent_info.current_loop_id = None
             save_agent_members = getattr(self.runtime, "save_agent_members", None)
             if save_agent_members is not None:
-                await save_agent_members(context=f"Loop cleanup: {self.loop.loop_id}")
+                await save_agent_members(
+                    context=f"Loop cleanup: {self.loop.loop_id}, execution: {self.execution.execution_id}"
+                )
 
         for node in self.loop.nodes:
             agent = self.agents.get(node.agent_name)
@@ -695,13 +708,13 @@ class LoopExecutor:
             if inspect.isawaitable(result):
                 await result
 
-        if self.loop_manager is not None:
-            await self.loop_manager.update_loop_status(
-                self.loop.loop_id,
-                self.loop.status,
-                current_iteration=self.loop.current_iteration,
-                current_node_index=self.loop.current_node_index,
-                error_message=self.loop.error_message,
+        if self.loop_execution_manager is not None:
+            await self.loop_execution_manager.update_execution_status(
+                self.execution.execution_id,
+                self.execution.status,
+                current_iteration=self.execution.current_iteration,
+                current_node_index=self.execution.current_node_index,
+                error_message=self.execution.error_message,
             )
 
     async def _execute_node_with_retry(
@@ -811,6 +824,7 @@ class LoopExecutor:
             SystemRoles.LOOP,
             result.text,
             is_loop_message=True,
-            loop_iteration=self.loop.current_iteration,
+            loop_iteration=self.execution.current_iteration,
+            execution_id=self.execution.execution_id,
         )
         await self.runtime.add_message(result)

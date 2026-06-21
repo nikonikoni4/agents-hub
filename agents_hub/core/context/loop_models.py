@@ -3,9 +3,13 @@
 定义 Loop 循环执行功能的核心数据结构，包括：
 - LoopNodeType: 节点类型枚举（普通节点/结束节点）
 - LoopNode: 循环节点定义，包含节点类型、Agent 名称、职责描述、输出格式要求
-- Loop: 循环定义，包含节点列表、状态、迭代计数等
+- Loop: 循环定义（可复用模板），包含节点列表、最大迭代次数
+- LoopExecution: 循环执行实例（一次性），包含初始任务、状态、迭代计数等
 
-设计决策参考：PRD 中的"数据模型"章节和"关键设计决策"章节。
+设计决策：
+- Loop 定义与执行实例分离，Loop 作为可复用模板，LoopExecution 作为一次性执行
+- initial_task 从 Loop 移到 LoopExecution，作为执行参数而非定义属性
+- 支持同一 Loop 定义多次启动，每次传入不同的 initial_task
 """
 
 from dataclasses import dataclass, field
@@ -120,68 +124,47 @@ class LoopNode:
 
 @dataclass
 class Loop:
-    """Loop 循环定义。
+    """Loop 循环定义（可复用模板）。
 
-    表示一个完整的循环执行实例，包含节点列表、状态、迭代计数等。
-    循环由 Manager 创建，通过 LoopExecutor 执行，状态变更通过 LoopManager 持久化。
-
-    状态机转换规则：
-    - CREATED -> RUNNING（启动循环）
-    - RUNNING -> PAUSED / COMPLETED / FAILED（暂停/正常完成/失败）
-    - PAUSED -> RUNNING / FAILED（恢复/失败）
+    表示一个可复用的循环定义，包含节点列表和最大迭代次数。
+    Loop 定义由 Manager 创建后，可以多次启动，每次启动创建一个新的 LoopExecution 实例。
 
     Attributes:
-        loop_id: 循环唯一标识，自动生成 UUID。
+        loop_id: 循环定义唯一标识，自动生成 UUID。
         group_chat_id: 所属群聊 ID。
         nodes: 节点列表，至少 2 个节点，有且仅有 1 个 TERMINATOR 节点。
-        status: 循环状态，取值为 "created"/"running"/"paused"/"completed"/"failed"。
         max_iterations: 最大循环次数，防止死循环。
-        current_iteration: 当前循环轮次，从 1 开始。
-        current_node_index: 当前节点索引，指向 nodes 列表中的位置。
-        initial_task: 初始任务描述，发送给第一个节点的任务内容。
         created_at: 创建时间。
         updated_at: 最后更新时间。
-        error_message: 错误信息，仅在 FAILED 状态时有值。
     """
 
     loop_id: str  # UUID
     group_chat_id: str  # 所属群聊
     nodes: list[LoopNode]  # 节点列表
-    status: str  # "created"/"running"/"paused"/"completed"/"failed"
     max_iterations: int  # 最大循环次数
-    current_iteration: int  # 当前循环轮次
-    current_node_index: int  # 当前节点索引
-    initial_task: str  # 初始任务描述
     created_at: datetime
     updated_at: datetime
-    error_message: str | None = None  # 失败原因
 
     def to_dict(self) -> dict[str, Any]:
         """将 Loop 序列化为字典。
 
-        将循环及其所有节点序列化为可 JSON 持久化的字典格式。
+        将循环定义及其所有节点序列化为可 JSON 持久化的字典格式。
         datetime 字段使用 ISO 8601 格式。
 
         序列化逻辑：
         - 调用每个 LoopNode 的 to_dict() 方法序列化节点列表
         - 使用 datetime.isoformat() 将 datetime 转换为 ISO 8601 字符串
-        - error_message 可能为 None，直接复制
 
         Returns:
-            包含所有循环属性的字典，用于 JSON 持久化。
+            包含所有循环定义属性的字典，用于 JSON 持久化。
         """
         return {
             "loop_id": self.loop_id,
             "group_chat_id": self.group_chat_id,
             "nodes": [node.to_dict() for node in self.nodes],
-            "status": self.status,
             "max_iterations": self.max_iterations,
-            "current_iteration": self.current_iteration,
-            "current_node_index": self.current_node_index,
-            "initial_task": self.initial_task,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
-            "error_message": self.error_message,
         }
 
     @classmethod
@@ -189,13 +172,16 @@ class Loop:
         """从字典反序列化为 Loop。
 
         反序列化逻辑：
-        - 直接从字典读取必需字段（loop_id、group_chat_id、status 等）
+        - 直接从字典读取必需字段（loop_id、group_chat_id、nodes、max_iterations）
         - 调用 LoopNode.from_dict() 反序列化节点列表
         - 使用 datetime.fromisoformat() 将 ISO 8601 字符串转换为 datetime
-        - error_message 使用 data.get() 提供默认值 None
+
+        兼容性处理：
+        - 如果字典包含旧版本的执行状态字段（status, current_iteration 等），忽略它们
+        - 这样可以从旧的 loops.jsonl 文件加载为新的 Loop 定义
 
         Args:
-            data: 包含循环属性的字典，必须包含 loop_id、group_chat_id、nodes、status 等字段。
+            data: 包含循环定义属性的字典，必须包含 loop_id、group_chat_id、nodes、max_iterations。
 
         Returns:
             反序列化后的 Loop 实例。
@@ -204,11 +190,93 @@ class Loop:
             loop_id=data["loop_id"],
             group_chat_id=data["group_chat_id"],
             nodes=[LoopNode.from_dict(n) for n in data["nodes"]],
-            status=data["status"],
             max_iterations=data["max_iterations"],
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
+        )
+
+
+@dataclass
+class LoopExecution:
+    """Loop 执行实例（一次性）。
+
+    表示 Loop 定义的一次具体执行，包含初始任务、状态、迭代计数等执行状态。
+    每次调用 start_loop() 时创建一个新的 LoopExecution 实例。
+
+    状态机转换规则：
+    - CREATED -> RUNNING（启动执行）
+    - RUNNING -> PAUSED / COMPLETED / FAILED（暂停/正常完成/失败）
+    - PAUSED -> RUNNING / FAILED（恢复/失败）
+
+    Attributes:
+        execution_id: 执行实例唯一标识，自动生成 UUID。
+        loop_id: 关联的 Loop 定义 ID。
+        initial_task: 本次执行的初始任务描述，发送给第一个节点。
+        status: 执行状态，取值为 "created"/"running"/"paused"/"completed"/"failed"。
+        current_iteration: 当前循环轮次，从 1 开始。
+        current_node_index: 当前节点索引，指向 Loop.nodes 列表中的位置。
+        created_at: 创建时间。
+        updated_at: 最后更新时间。
+        error_message: 错误信息，仅在 FAILED 状态时有值。
+    """
+
+    execution_id: str  # UUID
+    loop_id: str  # 关联的 Loop 定义 ID
+    initial_task: str  # 本次执行的初始任务
+    status: str  # "created"/"running"/"paused"/"completed"/"failed"
+    current_iteration: int  # 当前循环轮次
+    current_node_index: int  # 当前节点索引
+    created_at: datetime
+    updated_at: datetime
+    error_message: str | None = None  # 失败原因
+
+    def to_dict(self) -> dict[str, Any]:
+        """将 LoopExecution 序列化为字典。
+
+        将执行实例序列化为可 JSON 持久化的字典格式。
+        datetime 字段使用 ISO 8601 格式。
+
+        序列化逻辑：
+        - 使用 datetime.isoformat() 将 datetime 转换为 ISO 8601 字符串
+        - error_message 可能为 None，直接复制
+
+        Returns:
+            包含所有执行实例属性的字典，用于 JSON 持久化。
+        """
+        return {
+            "execution_id": self.execution_id,
+            "loop_id": self.loop_id,
+            "initial_task": self.initial_task,
+            "status": self.status,
+            "current_iteration": self.current_iteration,
+            "current_node_index": self.current_node_index,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+            "error_message": self.error_message,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "LoopExecution":
+        """从字典反序列化为 LoopExecution。
+
+        反序列化逻辑：
+        - 直接从字典读取必需字段（execution_id、loop_id、initial_task、status 等）
+        - 使用 datetime.fromisoformat() 将 ISO 8601 字符串转换为 datetime
+        - error_message 使用 data.get() 提供默认值 None
+
+        Args:
+            data: 包含执行实例属性的字典，必须包含 execution_id、loop_id、initial_task、status 等字段。
+
+        Returns:
+            反序列化后的 LoopExecution 实例。
+        """
+        return cls(
+            execution_id=data["execution_id"],
+            loop_id=data["loop_id"],
+            initial_task=data["initial_task"],
+            status=data["status"],
             current_iteration=data["current_iteration"],
             current_node_index=data["current_node_index"],
-            initial_task=data["initial_task"],
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
             error_message=data.get("error_message"),

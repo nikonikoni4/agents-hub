@@ -52,6 +52,12 @@
  - 触发规则：bridge.py parser 单例改为每次创建的代码审查
  - 内容摘要：8 维度并行审查（安全/性能/架构/质量/最佳实践/测试/文档/注释），无高置信度问题（>=80），2 个低置信度发现（缺少 unsupported platform 边界测试 75 分、冗余注释 50 分）
 
+## Loop 重构文件清单审查 021
+ - updated_at : 2026-06-21
+ - path: generated/021/
+ - 触发规则：local-code-review 审查 docs/temp/loop-refactor-file-list.md
+ - 内容摘要：文档准确性+完整性+结构质量审查，发现 3 个高置信度问题（>=80）：Phase 5 测试 checklist 严重过时（100）、废弃工具未记录（85）、group_chat.py 文档字符串遗留旧字段名 node_prompt（80）
+
 ## Loop 懒加载机制代码审查 020
  - updated_at : 2026-06-21
  - path: generated/020/

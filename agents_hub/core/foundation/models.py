@@ -65,8 +65,10 @@ class TaskListStatus(str, Enum):
     ARCHIVED = "archived"
 
 
-class LoopStatus(str, Enum):
-    """Loop 循环状态
+class LoopExecutionStatus(str, Enum):
+    """Loop 执行实例状态
+
+    Loop 定义本身无状态，只有执行实例（LoopExecution）有状态。
 
     - CREATED: 已创建，待启动
     - RUNNING: 运行中
@@ -80,6 +82,10 @@ class LoopStatus(str, Enum):
     PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+# 向后兼容别名（将在下一版本移除）
+LoopStatus = LoopExecutionStatus
 
 
 class SystemRoles:

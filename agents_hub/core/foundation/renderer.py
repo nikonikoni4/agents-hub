@@ -72,6 +72,7 @@ def render_for_chat(
     content: str,
     is_loop_message: bool = False,
     loop_iteration: int | None = None,
+    execution_id: str | None = None,
 ) -> str:
     """Agent 输出 → 写入 jsonl/UI 的群聊字符串
 
@@ -81,10 +82,17 @@ def render_for_chat(
         content: 原始内容
         is_loop_message: 是否为循环内部消息
         loop_iteration: 循环轮次
+        execution_id: 执行实例 ID（可选，用于区分不同执行实例）
     """
     if is_loop_message:
         if loop_iteration is None:
             raise ValueError("loop_iteration is required when is_loop_message=True")
+
+        # 如果有 execution_id，包含在标记中以便区分不同执行实例
+        if execution_id:
+            exec_short = execution_id[:8]  # 只显示前 8 位
+            return f"[循环{exec_short}-节点{send_from}-第{loop_iteration}轮] @{send_to} {content}"
+
         return f"[循环-节点{send_from}-第{loop_iteration}轮] @{send_to} {content}"
     return f"@{send_to} {content}"
 

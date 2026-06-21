@@ -1,5 +1,5 @@
 """
-MCP Server 和 13 个工具
+MCP Server 和 14 个工具
 
 提供 Manager 编排团队协作的能力：
 1. call_agent: 派活给团队成员
@@ -9,12 +9,13 @@ MCP Server 和 13 个工具
 5. create_group_chat: 创建新群聊（系统助手专用）
 6. create_agent: 创建新的成员角色（系统助手专用）
 7. create_loop: 创建循环定义（Leader-only）
-8. start_loop: 启动已创建的循环（Leader-only）
-9. stop_loop: 停止运行中的循环（Leader-only）
-10. delete_loop: 删除循环（Leader-only）
-11. get_loop_status: 查询循环状态（任意 Agent）
-12. list_loops: 查询所有历史循环（任意 Agent）
-13. health_check: 健康检查端点
+8. start_loop: 启动循环执行（Leader-only）
+9. stop_loop: 停止运行中的循环执行（Leader-only）
+10. delete_loop: 删除循环定义（Leader-only）
+11. get_loop_status: 查询循环执行状态（任意 Agent）
+12. list_loops: 查询所有 Loop 定义（任意 Agent）
+13. list_loop_executions: 查询 Loop 执行历史（任意 Agent）
+14. health_check: 健康检查端点
 
 维护说明：
 - 当前 tool 数量少，且共享同一套 token 解析、GroupChat 获取和错误响应约定，
@@ -77,6 +78,8 @@ from agents_hub.core.foundation import (  # noqa: E402
 )
 from agents_hub.core.foundation.exceptions import (  # noqa: E402
     FileSystemError,
+    LoopExecutionNotFoundError,
+    LoopExecutionStateError,
     LoopNotFoundError,
     LoopStateError,
     LoopValidationError,
@@ -1106,7 +1109,6 @@ async def create_loop(
     agent_token: str,
     nodes: list[dict],
     max_iterations: int,
-    initial_task: str,
 ) -> dict:
     """创建循环定义（Leader-only）。
 
@@ -1122,10 +1124,9 @@ async def create_loop(
             - output_schema_fields: 必需字段列表
             - max_retries: 重试次数（可选，默认 3）
         max_iterations: 最大循环轮数。
-        initial_task: 第一轮执行时的任务内容。
 
     Returns:
-        成功: {"loop_id": "...", "status": "created"}
+        成功: {"loop_id": "...", "created_at": "..."}
         失败: {"error": {"code": "...", "message": "..."}}
     """
     logger.info(
@@ -1145,9 +1146,8 @@ async def create_loop(
         loop = await group_chat.create_loop(
             nodes=nodes,
             max_iterations=max_iterations,
-            initial_task=initial_task,
         )
-        return {"loop_id": loop.loop_id, "status": loop.status}
+        return {"loop_id": loop.loop_id, "created_at": loop.created_at.isoformat()}
 
     except (LoopValidationError, ValueError) as e:
         logger.warning("create_loop 参数校验失败: %s", str(e))
@@ -1165,17 +1165,19 @@ async def create_loop(
         )
 
 
-async def start_loop(agent_token: str, loop_id: str) -> dict:
+async def start_loop(agent_token: str, loop_id: str, initial_task: str) -> dict:
     """启动循环执行（Leader-only）。
 
-    启动一个已创建的循环，参与的 Agent 将进入循环状态，自动执行任务流转。
+    启动一个已创建的循环定义，创建新的执行实例。
+    同一个循环定义可以多次启动，每次传入不同的 initial_task。
 
     Args:
         agent_token: Leader 的身份令牌。
-        loop_id: 要启动的循环 ID（从 create_loop 返回值获取）。
+        loop_id: 要启动的循环定义 ID（从 create_loop 返回值获取）。
+        initial_task: 本次执行的初始任务内容，发送给第一个节点。
 
     Returns:
-        成功: {"loop_id": "...", "status": "running"}
+        成功: {"execution_id": "...", "loop_id": "...", "status": "running"}
         失败: {"error": {"code": "...", "message": "..."}}
     """
     logger.info("MCP 调用: start_loop, loop_id=%s", loop_id)
@@ -1188,10 +1190,10 @@ async def start_loop(agent_token: str, loop_id: str) -> dict:
         if not _is_leader(group_chat, agent_name):
             return _permission_denied(agent_name, "启动循环")
 
-        loop = await group_chat.create_and_start_loop(loop_id)
-        return {"loop_id": loop.loop_id, "status": loop.status}
+        result = await group_chat.create_and_start_loop(loop_id, initial_task)
+        return result
 
-    except LoopStateError as e:
+    except LoopExecutionStateError as e:
         logger.warning("start_loop 状态错误: %s", str(e))
         return make_error_response(VALIDATION_ERROR, str(e), details=e.details)
     except Exception as e:
@@ -1203,20 +1205,20 @@ async def start_loop(agent_token: str, loop_id: str) -> dict:
         )
 
 
-async def stop_loop(agent_token: str, loop_id: str) -> dict:
-    """停止正在运行的循环（Leader-only）。
+async def stop_loop(agent_token: str, execution_id: str) -> dict:
+    """停止正在运行的循环执行实例（Leader-only）。
 
     停止循环后，参与的 Agent 将恢复为普通状态，可以接收其他任务。
 
     Args:
         agent_token: Leader 的身份令牌。
-        loop_id: 要停止的循环 ID。
+        execution_id: 要停止的执行实例 ID。
 
     Returns:
-        成功: {"loop_id": "...", "status": "paused"}
+        成功: {"execution_id": "...", "status": "paused"}
         失败: {"error": {"code": "...", "message": "..."}}
     """
-    logger.info("MCP 调用: stop_loop, loop_id=%s", loop_id)
+    logger.info("MCP 调用: stop_loop, execution_id=%s", execution_id)
     try:
         resolved = await _resolve_group_chat(agent_token)
         if isinstance(resolved, dict):
@@ -1226,10 +1228,10 @@ async def stop_loop(agent_token: str, loop_id: str) -> dict:
         if not _is_leader(group_chat, agent_name):
             return _permission_denied(agent_name, "停止循环")
 
-        loop = await group_chat.stop_loop(loop_id)
-        return {"loop_id": loop.loop_id, "status": loop.status}
+        execution = await group_chat.stop_loop(execution_id)
+        return {"execution_id": execution.execution_id, "status": execution.status}
 
-    except (LoopNotFoundError, LoopStateError) as e:
+    except (LoopExecutionNotFoundError, LoopExecutionStateError) as e:
         logger.warning("stop_loop 状态错误: %s", str(e))
         return make_error_response(VALIDATION_ERROR, str(e), details=e.details)
     except Exception as e:
@@ -1279,18 +1281,19 @@ async def delete_loop(agent_token: str, loop_id: str) -> dict:
         )
 
 
-async def get_loop_status(agent_token: str, loop_id: str) -> dict:
-    """查询循环状态（任意 Agent 可调用）。
+async def get_loop_status(agent_token: str, execution_id: str) -> dict:
+    """查询循环执行状态（任意 Agent 可调用）。
 
-    查询循环的执行进度，包括当前轮次、当前节点、是否出错等。
+    查询执行实例的当前状态，包括循环进度、当前节点、错误信息等。
 
     Args:
         agent_token: 调用者的身份令牌。
-        loop_id: 要查询的循环 ID。
+        execution_id: 要查询的执行实例 ID。
 
     Returns:
         成功: {
-            "loop_id": "循环 ID",
+            "execution_id": "执行实例 ID",
+            "loop_id": "循环定义 ID",
             "status": "created/running/paused/completed/failed",
             "current_iteration": 当前轮次,
             "max_iterations": 最大轮次,
@@ -1299,17 +1302,17 @@ async def get_loop_status(agent_token: str, loop_id: str) -> dict:
         }
         失败: {"error": {"code": "...", "message": "..."}}
     """
-    logger.info("MCP 调用: get_loop_status, loop_id=%s", loop_id)
+    logger.info("MCP 调用: get_loop_status, execution_id=%s", execution_id)
     try:
         resolved = await _resolve_group_chat(agent_token)
         if isinstance(resolved, dict):
             return resolved
 
         _agent_name, _group_chat_id, group_chat = resolved
-        return group_chat.get_loop_status(loop_id)
+        return group_chat.get_loop_status(execution_id)
 
-    except LoopNotFoundError as e:
-        logger.warning("get_loop_status Loop 不存在: %s", str(e))
+    except LoopExecutionNotFoundError as e:
+        logger.warning("get_loop_status LoopExecution 不存在: %s", str(e))
         return make_error_response(VALIDATION_ERROR, str(e), details=e.details)
     except Exception as e:
         logger.error("get_loop_status 失败: %s", str(e), exc_info=True)
@@ -1324,25 +1327,27 @@ async def list_loops(
     agent_token: str,
     status: str | None = None,
 ) -> dict:
-    """查询所有历史 Loop（任意 Agent 可调用）。
+    """查询所有 Loop 定义（任意 Agent 可调用）。
 
-    查询当前群聊的所有历史 Loop，返回摘要信息。
+    查询当前群聊的所有 Loop 定义，返回摘要信息。
     不依赖内存，直接读取 JSONL 文件。
+
+    注意：status 参数已废弃，Loop 定义本身没有状态。
+    保留此参数仅为向后兼容，实际不进行过滤。
 
     Args:
         agent_token: 调用者的身份令牌。
-        status: 可选的状态过滤（"created"/"running"/"paused"/"completed"/"failed"）。
+        status: （已废弃）状态过滤参数，Loop 定义无状态，此参数被忽略。
 
     Returns:
         成功: {
             "loops": [
                 {
-                    "loop_id": "循环 ID",
-                    "status": "循环状态",
+                    "loop_id": "循环定义 ID",
                     "created_at": "创建时间",
                     "updated_at": "更新时间",
                     "max_iterations": 最大轮次,
-                    "current_iteration": 当前轮次,
+                    "nodes_count": 节点数量,
                     "in_memory": true/false
                 },
                 ...
@@ -1372,6 +1377,68 @@ async def list_loops(
         )
     except Exception as e:
         logger.error("list_loops 失败: %s", str(e), exc_info=True)
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+async def list_loop_executions(
+    agent_token: str,
+    loop_id: str | None = None,
+    status: str | None = None,
+) -> dict:
+    """查询 Loop 执行历史（任意 Agent 可调用）。
+
+    查询当前群聊的所有 Loop 执行实例，返回摘要信息。
+    不依赖内存，直接读取 JSONL 文件。
+
+    Args:
+        agent_token: 调用者的身份令牌。
+        loop_id: 可选的 Loop ID 过滤，只返回该 Loop 的执行历史。
+        status: 可选的状态过滤（"created"/"running"/"paused"/"completed"/"failed"）。
+
+    Returns:
+        成功: {
+            "executions": [
+                {
+                    "execution_id": "执行实例 ID",
+                    "loop_id": "关联的 Loop ID",
+                    "initial_task": "初始任务",
+                    "status": "执行状态",
+                    "created_at": "创建时间",
+                    "updated_at": "更新时间",
+                    "current_iteration": 当前轮次,
+                    "in_memory": true/false
+                },
+                ...
+            ]
+        }
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    logger.info("MCP 调用: list_loop_executions, loop_id=%s, status=%s", loop_id, status)
+    try:
+        resolved = await _resolve_group_chat(agent_token)
+        if isinstance(resolved, dict):
+            return resolved
+
+        _agent_name, _group_chat_id, group_chat = resolved
+        loop_execution_manager = group_chat._get_loop_execution_manager()
+
+        executions = loop_execution_manager.list_executions(loop_id=loop_id, status=status)
+
+        return {"executions": executions}
+
+    except FileSystemError as e:
+        logger.warning("list_loop_executions 文件读取失败: %s", str(e))
+        return make_error_response(
+            FILE_SYSTEM_ERROR,
+            str(e),
+            details=e.details,
+        )
+    except Exception as e:
+        logger.error("list_loop_executions 失败: %s", str(e), exc_info=True)
         return make_error_response(
             INTERNAL_ERROR,
             f"内部错误: {str(e)}",
@@ -1423,4 +1490,5 @@ _register_tool_with_docstring(stop_loop)
 _register_tool_with_docstring(delete_loop)
 _register_tool_with_docstring(get_loop_status)
 _register_tool_with_docstring(list_loops)
+_register_tool_with_docstring(list_loop_executions)
 _register_tool_with_docstring(health_check)

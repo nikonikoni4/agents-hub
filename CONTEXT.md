@@ -65,33 +65,48 @@
 - 核心方法：get_active_task_list()、assign_tasks()、update_task_status()
 - 位于 `agents_hub/core/communication/task_manager.py`
 
-### Loop（循环）
-- 一种特殊的编排模式，将多个 Agent 串联成固定序列，反复执行直到满足退出条件
-- 属性：loop_id、group_chat_id、nodes、status、current_iteration、max_iterations、initial_task、created_at、error_message
-- **不变量**：一个 GroupChat 同时只能有一个 RUNNING 状态的 Loop
+### Loop（循环定义）
+- 一种特殊的编排模式，定义了多个 Agent 串联成固定序列的可复用模板
+- 属性：loop_id、group_chat_id、nodes、max_iterations、created_at、updated_at
+- **复用性**：Loop 是可复用的模板，同一个 Loop 可以多次启动，每次传入不同的 initial_task
+- **无状态**：Loop 本身不包含执行状态（status、current_iteration 等），这些状态属于 LoopExecution
+- **持久化**：Loop 定义可以长期保留在内存和 JSONL 文件中，不受执行次数限制
+
+### LoopExecution（循环执行实例）
+- Loop 的一次具体执行，包含执行状态和初始任务
+- 属性：execution_id、loop_id、initial_task、status、current_iteration、current_node_index、created_at、updated_at、error_message
+- **一次性**：每次启动 Loop 都会创建新的 LoopExecution 实例，完成后成为历史记录
+- **不变量**：一个 GroupChat 同时只能有一个 RUNNING 状态的 LoopExecution
 - **生命周期**：CREATED（已创建）→ RUNNING（运行中）→ PAUSED（已暂停）/ COMPLETED（正常完成）/ FAILED（失败）
-- **隔离性**：Loop 运行期间，参与的 Agent 进入 `IN_LOOP` 状态，只接收来自该 Loop 的消息和 Manager 控制信号
+- **隔离性**：LoopExecution 运行期间，参与的 Agent 进入 `in_loop` 状态，只接收来自该执行实例的消息和 Manager 控制信号
 - **退出条件**：通过 TERMINATOR 节点输出 `<loop_decision>` 标签决定是否继续循环，或达到 `max_iterations`
 
 ### LoopNode（循环节点）
 - 循环中的一个执行单元
-- 属性：node_id、node_type、agent_name、node_prompt、output_schema_prompt、output_schema_fields、max_retries
+- 属性：node_id、node_type、agent_name、role_description、output_schema_prompt、output_schema_fields、max_retries
 - **节点类型**：NORMAL（普通节点，执行任务）或 TERMINATOR（结束节点，判断循环是否继续）
-- **职责描述**：`node_prompt` 定义节点的角色、输入、输出和职责（由 Manager 创建时定义）
+- **职责描述**：`role_description` 定义节点的角色、输入、输出和职责（由 Manager 创建时定义）
 - **输出校验**：`output_schema_fields` 列出必需字段（如 `["# 执行结果", "**任务状态**"]`），用于简单字符串匹配校验
 - **重试机制**：输出校验失败时自动重试，最多 `max_retries` 次（默认 3）
 
 ### LoopExecutor（循环执行器）
 - 循环执行引擎，负责节点调度、输出校验、退出判断、错误处理
 - 职责：发送消息给节点、监听完成通知、校验输出格式、检查退出条件、处理异常
-- 持有：Loop 状态、send_message_callback（回调函数）、agent_call_manager、completion_queue（完成通知队列）
+- 持有：Loop 定义、LoopExecution 实例、send_message_callback（回调函数）、agent_call_manager、loop_execution_manager、completion_queue（完成通知队列）
 - 位于 `agents_hub/core/orchestration/loop_executor.py`
 
-### LoopManager（循环管理器）
-- 循环 CRUD 和持久化管理
-- 职责：创建 Loop、查询 Loop 状态、删除 Loop、持久化 Loop 状态变更
-- 持久化文件：`local_data/teams/<team_name>/<project_path>/<group_chat_id>/loops.jsonl`
+### LoopManager（循环定义管理器）
+- Loop 定义的 CRUD 和持久化管理
+- 职责：创建 Loop 定义、查询 Loop、删除 Loop（级联删除所有 executions）
+- 持久化文件：`local_data/teams/<sanitized_project>/<group_chat_id>/loops.jsonl`
 - 位于 `agents_hub/core/orchestration/loop_manager.py`
+
+### LoopExecutionManager（循环执行管理器）
+- LoopExecution 执行实例的 CRUD 和持久化管理
+- 职责：创建执行实例、查询执行状态、更新执行状态、删除执行实例、查询执行历史
+- 持久化文件：`local_data/teams/<sanitized_project>/<group_chat_id>/loop_executions.jsonl`
+- **单 execution 保持策略**：内存中同时只保持一个活跃的 execution，启动新 execution 时清空其他
+- 位于 `agents_hub/core/orchestration/loop_execution_manager.py`
 
 ## 通信系统
 
