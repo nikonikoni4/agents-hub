@@ -27,7 +27,11 @@ from agents_hub.core.foundation import (
     SessionType,
 )
 from agents_hub.core.foundation.exceptions import LoopExecutionError
-from agents_hub.core.foundation.models import LoopExecutionStatus, SystemRoles
+from agents_hub.core.foundation.models import (
+    LOOP_NODE_TIMEOUT_SECONDS,
+    LoopExecutionStatus,
+    SystemRoles,
+)
 from agents_hub.core.foundation.renderer import Tag, render_for_chat, wrap_xml
 
 
@@ -111,7 +115,8 @@ class LoopExecutor:
         loop_execution_manager=None,
         agents: dict[str, Any] | None = None,
         logger: logging.Logger | None = None,
-        node_result_timeout_seconds: float = 300.0,
+        node_result_timeout_seconds: float = LOOP_NODE_TIMEOUT_SECONDS,
+        manager_name: str | None = None,
     ):
         """初始化 LoopExecutor。
 
@@ -125,7 +130,8 @@ class LoopExecutor:
             loop_execution_manager: 执行实例管理器，用于持久化状态变更。
             agents: Agent 实例字典，键为 agent_name，用于清理 completion_queue 引用。
             logger: 日志器，如果为 None 则使用模块默认日志器。
-            node_result_timeout_seconds: 等待节点完成通知的超时时间（秒），默认 300 秒。
+            node_result_timeout_seconds: 等待节点完成通知的超时时间（秒），默认 2400 秒（40 分钟）。
+            manager_name: Manager Agent 名称，用于 loop 结束时发送通知。
         """
         self.loop = loop
         self.execution = execution
@@ -137,6 +143,7 @@ class LoopExecutor:
         self.agents = agents or {}
         self.logger = logger or logging.getLogger(__name__)
         self.node_result_timeout_seconds = node_result_timeout_seconds
+        self.manager_name = manager_name
         self._last_node_output = execution.initial_task
 
     def _build_loop_context(self, node: LoopNode, previous_output: str) -> str:
@@ -578,7 +585,7 @@ class LoopExecutor:
                 send_to=node.agent_name,
                 content=message.content,
                 message_type=MessageType.LOOP_MESSAGE,
-                timeout_seconds=300,
+                timeout_seconds=int(LOOP_NODE_TIMEOUT_SECONDS),
             )
             message.call_id = call.call_id
 
@@ -681,6 +688,7 @@ class LoopExecutor:
         1. 恢复参与 Agent 的状态（IN_LOOP → IDLE，清除 current_loop_id）
         2. 清除 Agent 的 completion_queue 引用
         3. 通过 loop_execution_manager 持久化执行实例最终状态
+        4. 通知 Manager 循环已结束
         """
         if self.runtime is not None:
             get_agent_member_info = getattr(self.runtime, "get_agent_member_info", None)
@@ -715,6 +723,52 @@ class LoopExecutor:
                 current_iteration=self.execution.current_iteration,
                 current_node_index=self.execution.current_node_index,
                 error_message=self.execution.error_message,
+            )
+
+        # 通知 Manager 循环已结束
+        await self._notify_manager_loop_ended()
+
+    async def _notify_manager_loop_ended(self) -> None:
+        """通知 Manager 循环已结束。
+
+        以 loop 系统身份发送 NOTIFICATION 给 Manager，告知循环结束。
+        消息中包含循环结束状态，并提醒不要使用 call_agent 向 loop 发送消息。
+        """
+        if self.manager_name is None or self.send_message_callback is None:
+            return
+
+        status = "完成" if self.execution.status == LoopExecutionStatus.COMPLETED.value else "失败"
+        error_info = (
+            f"，原因：{self.execution.error_message}" if self.execution.error_message else ""
+        )
+        content = (
+            f"Loop 已{status}（execution_id={self.execution.execution_id}，"
+            f"loop_id={self.loop.loop_id}，第 {self.execution.current_iteration} 轮）{error_info}。\n\n"
+            f"群聊历史中包含完整的循环输出记录，无需额外查询。\n\n"
+            f"注意：loop 是虚拟系统身份，请勿使用 call_agent 向 loop 发送消息。"
+            f"如需重新启用循环，请使用 MCP 的 start_loop 工具。"
+        )
+
+        message = AgentMessage(
+            call_id=f"loop-notify-{self.execution.execution_id[:8]}",
+            content=content,
+            send_from=SystemRoles.LOOP,
+            send_to=self.manager_name,
+            message_type=MessageType.NOTIFICATION,
+        )
+        try:
+            await self.send_message_callback(message)
+            self.logger.info(
+                "已通知 Manager 循环结束: manager=%s, execution_id=%s, status=%s",
+                self.manager_name,
+                self.execution.execution_id,
+                self.execution.status,
+            )
+        except Exception as exc:
+            self.logger.warning(
+                "通知 Manager 循环结束失败: manager=%s, error=%s",
+                self.manager_name,
+                str(exc),
             )
 
     async def _execute_node_with_retry(

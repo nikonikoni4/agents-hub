@@ -23,7 +23,11 @@ from agents_hub.core.foundation import (
     SessionType,
     StateError,
 )
-from agents_hub.core.foundation.models import LoopExecutionStatus, SystemRoles
+from agents_hub.core.foundation.models import (
+    HEARTBEAT_INTERVAL_SECONDS,
+    LoopExecutionStatus,
+    SystemRoles,
+)
 from agents_hub.core.foundation.token import generate_token
 from agents_hub.core.orchestration.loop_execution_manager import LoopExecutionManager
 from agents_hub.core.orchestration.loop_executor import LoopExecutor
@@ -113,7 +117,7 @@ class GroupChat:
 
         # Heartbeat 定时任务
         self._heartbeat_task: asyncio.Task | None = None
-        self._heartbeat_interval: int = 1200  # 20 分钟 = 1200 秒
+        self._heartbeat_interval: int = HEARTBEAT_INTERVAL_SECONDS
 
         # 懒加载标记
         self._activated = False
@@ -542,6 +546,7 @@ class GroupChat:
             agent_call_manager=self.agent_call_manager,
             loop_execution_manager=loop_execution_manager,
             agents=agents,
+            manager_name=self.manager.name if self.manager else None,
         )
 
         # 在后台启动 LoopExecutor

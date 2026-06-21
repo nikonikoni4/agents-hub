@@ -355,7 +355,7 @@ class Agent:
                 result.git_head_before = git_head_before
                 result.status_before = status_before
             if msg.message_type != MessageType.TASK:
-                await self.agent_call_manager.update_status(msg.call_id, CallStatus.COMPLETED)
+                await self.agent_call_manager.set_result(msg.call_id, result)
             self.logger.debug(
                 "执行完成: agent=%s, call_id=%s, result_len=%d",
                 self.name,
