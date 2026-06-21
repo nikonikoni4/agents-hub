@@ -21,6 +21,21 @@ from agents_hub.utils import get_logger
 
 logger = get_logger(__name__)
 
+# Worker 角色禁用的工具列表
+# 这些工具是 Leader 专属，Worker 不需要也不能使用
+WORKER_DISABLED_TOOLS = [
+    "call_agent",  # 派活给团队成员
+    "create_group_chat",  # 创建新群聊
+    "assign_tasks_to_team",  # 覆盖式更新任务列表
+    "archive_task_list",  # 归档当前 ACTIVE 列表
+    "create_agent",  # 创建新的成员角色
+    "create_loop",  # 创建循环定义
+    "start_loop",  # 启动循环
+    "stop_loop",  # 停止循环
+    "delete_loop",  # 删除循环
+    "get_loop_status",  # 查询循环状态
+]
+
 
 class RoleManager:
     """角色生命周期管理。
@@ -333,6 +348,10 @@ class RoleManager:
             "type": type.value if isinstance(type, RoleType) else type,
             "scope": scope,
         }
+
+        # Worker 角色自动禁用 Leader 专属工具
+        if role_type == RoleType.TEAM_MEMBER:
+            role_json["disabled_tools"] = WORKER_DISABLED_TOOLS
         (role_dir / "role.json").write_text(
             json.dumps(role_json, ensure_ascii=False, indent=2), encoding="utf-8"
         )

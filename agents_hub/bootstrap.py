@@ -13,6 +13,20 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Manager 角色禁用的工具列表
+# 这些工具是 Agents Hub 助手专属，Manager 不需要
+MANAGER_DISABLED_TOOLS = [
+    "create_group_chat",  # 创建新群聊（助手专属）
+    "create_agent",  # 创建新的成员角色（助手专属）
+]
+
+# Agents Hub 助手启用的工具列表
+# 助手只需要这两个工具，其他全部禁用
+ASSISTANT_ENABLED_TOOLS = [
+    "create_group_chat",  # 创建新群聊
+    "create_agent",  # 创建新的成员角色
+]
+
 
 def _get_template_dir() -> Path:
     """获取模板目录路径。
@@ -95,6 +109,7 @@ def initialize_default_roles() -> None:
     from agents_hub.config import RoleType, config
     from agents_hub.config.types import AgentPlatform
     from agents_hub.roles.role_manager import RoleManager
+    from agents_hub.tools.catalog import get_all_tool_names
 
     role_manager = RoleManager()
 
@@ -111,6 +126,14 @@ def initialize_default_roles() -> None:
             logger.info(f"已创建默认角色: {manager_role_name}")
         except Exception as e:
             logger.warning(f"创建默认角色 {manager_role_name} 失败: {e}")
+
+    # 为 manager 角色设置禁用列表（无论角色是否已存在，确保禁用列表是最新的）
+    try:
+        manager_role = role_manager.get_role(manager_role_name)
+        manager_role.update_disabled_tools(MANAGER_DISABLED_TOOLS)
+        logger.info(f"已更新 {manager_role_name} 禁用工具列表: {MANAGER_DISABLED_TOOLS}")
+    except Exception as e:
+        logger.warning(f"更新 {manager_role_name} 禁用工具列表失败: {e}")
 
     # 为 manager 角色复制 loop-design skill（无论角色是否已存在，确保 skill 是最新的）
     try:
@@ -131,3 +154,13 @@ def initialize_default_roles() -> None:
             logger.info(f"已创建系统角色: {assistant_role_name}")
         except Exception as e:
             logger.warning(f"创建系统角色 {assistant_role_name} 失败: {e}")
+
+    # 为 Agents-Hub-Assistant 设置禁用列表（只保留 create_group_chat 和 create_agent）
+    try:
+        all_tools = get_all_tool_names()
+        assistant_disabled_tools = [t for t in all_tools if t not in ASSISTANT_ENABLED_TOOLS]
+        assistant_role = role_manager.get_role(assistant_role_name)
+        assistant_role.update_disabled_tools(assistant_disabled_tools)
+        logger.info(f"已更新 {assistant_role_name} 禁用工具列表: {assistant_disabled_tools}")
+    except Exception as e:
+        logger.warning(f"更新 {assistant_role_name} 禁用工具列表失败: {e}")
