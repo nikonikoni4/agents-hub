@@ -27,7 +27,7 @@ from agents_hub.core.foundation import (
     SessionType,
 )
 from agents_hub.core.foundation.exceptions import LoopExecutionError
-from agents_hub.core.foundation.models import LoopStatus
+from agents_hub.core.foundation.models import LoopStatus, SystemRoles
 from agents_hub.core.foundation.renderer import Tag, render_for_chat, wrap_xml
 
 
@@ -808,7 +808,7 @@ class LoopExecutor:
             raise ValueError("LoopExecutor 未注入 runtime，无法保存循环结果")
         result.text = render_for_chat(
             node.agent_name,
-            "loop",
+            SystemRoles.LOOP,
             result.text,
             is_loop_message=True,
             loop_iteration=self.loop.current_iteration,

@@ -21,7 +21,7 @@ from .exceptions import (
     MessageDeliveryError,
 )
 from .message import AgentMessage
-from .models import CallStatus, GroupChatType, MessageType, SessionType
+from .models import CallStatus, GroupChatType, MessageType, SessionType, SystemRoles
 from .paths import GroupChatPaths, group_chat_paths
 from .renderer import Tag, parse_chat_input, render_for_chat, render_for_llm, wrap_xml
 from .types import FileMetadata
@@ -32,6 +32,7 @@ __all__ = [
     "MessageType",
     "CallStatus",
     "GroupChatType",
+    "SystemRoles",
     # message
     "AgentMessage",
     # exceptions

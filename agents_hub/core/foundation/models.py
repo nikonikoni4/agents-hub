@@ -80,3 +80,15 @@ class LoopStatus(str, Enum):
     PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class SystemRoles:
+    """系统身份常量
+
+    定义 MessageRouter 中使用的系统级身份名称，
+    避免硬编码字符串散布在多个模块中。
+    """
+
+    HEARTBEAT = "__HEARTBEAT__"  # 定时唤醒 Manager 的心跳身份
+    LOOP = "loop"  # LoopExecutor 向节点投递消息的身份
+    SYSTEM = "__SYSTEM__"  # 系统内部消息的发送方身份（哨兵、系统通知）

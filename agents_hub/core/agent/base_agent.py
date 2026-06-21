@@ -28,6 +28,7 @@ from agents_hub.core.foundation import (
     render_for_llm,
 )
 from agents_hub.core.foundation.exceptions import DockerConfigError
+from agents_hub.core.foundation.models import SystemRoles
 from agents_hub.core.foundation.token import redact_token
 from agents_hub.roles import Role, RoleConfig
 from agents_hub.utils.logger import get_logger
@@ -163,7 +164,7 @@ class Agent:
         try:
             sentinel = AgentMessage(
                 call_id="__STOP__",
-                send_from="__SYSTEM__",
+                send_from=SystemRoles.SYSTEM,
                 send_to=self.name,
                 content="__STOP__",
                 session_type=SessionType.MAIN,
@@ -629,7 +630,7 @@ call_id: {msg.call_id}
 </leader_note>"""
         reminder = AgentMessage(
             call_id=msg.call_id,
-            send_from="__SYSTEM__",
+            send_from=SystemRoles.SYSTEM,
             send_to=self.name,
             content=base_content,
             session_type=SessionType.MAIN,

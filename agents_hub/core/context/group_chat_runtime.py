@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Any
 
 from agents_hub.core.foundation import GroupChatType
+from agents_hub.core.foundation.models import SystemRoles
 from agents_hub.utils import get_logger
 
 from .group_chat_repository import GroupChatRepository
@@ -346,7 +347,7 @@ class GroupChatRuntime:
             text=content,
             session_id="",
             timestamp=datetime.now().isoformat(),
-            agent_name="__SYSTEM__",
+            agent_name=SystemRoles.SYSTEM,
             platform=AgentPlatform.CLAUDE,
             role_type=RoleType.SYSTEM,
         )

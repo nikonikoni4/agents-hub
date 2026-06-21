@@ -23,7 +23,7 @@ from agents_hub.core.foundation import (
     SessionType,
     StateError,
 )
-from agents_hub.core.foundation.models import LoopStatus
+from agents_hub.core.foundation.models import LoopStatus, SystemRoles
 from agents_hub.core.foundation.token import generate_token
 from agents_hub.core.orchestration.loop_executor import LoopExecutor
 from agents_hub.core.orchestration.loop_manager import LoopManager
@@ -58,6 +58,16 @@ class GroupChat:
         group_chat_name: str | None = None,
         fork_from_sessions: dict[str, str] | None = None,
     ):
+        """初始化群聊编排实例。
+
+        Args:
+            team_members_name: 群聊成员名称列表。
+            group_type: 群聊类型。
+            project_path: 项目路径。
+            group_chat_id: 群聊 ID。
+            group_chat_name: 群聊展示名称。
+            fork_from_sessions: fork 模式下的源 session 映射。
+        """
         self.group_chat_id = group_chat_id
         self.group_chat_name = group_chat_name or group_chat_id
         self.team_members_name = team_members_name
@@ -303,10 +313,10 @@ class GroupChat:
         self.message_router.register(config.default_user_name, asyncio.Queue())
 
         # 注册 heartbeat 系统身份，用于定时唤醒 manager
-        self.message_router.register("__HEARTBEAT__", asyncio.Queue())
+        self.message_router.register(SystemRoles.HEARTBEAT, asyncio.Queue())
 
-        # 注册 loop 系统身份，用于循环执行器向节点投递 LOOP_MESSAGE
-        self.message_router.register("loop", asyncio.Queue())
+        # 注意：loop 系统身份在循环开始时动态注册（create_and_start_loop），
+        # 循环结束时自动注销（_on_loop_task_done），不在这里静态注册
 
         logger.info(
             "agents 注册完成: group=%s, 已注册agents=%s, MessageRouter_id=%s",
@@ -480,6 +490,10 @@ class GroupChat:
         # 更新 Loop 状态为 RUNNING
         await loop_manager.update_loop_status(loop_id, LoopStatus.RUNNING.value)
 
+        # 注册 "loop" 系统身份到 MessageRouter，用于 LoopExecutor 发送循环消息
+        # 一个群聊同时只能有一个 RUNNING 状态的 Loop，所以不会有冲突
+        self.message_router.register(SystemRoles.LOOP, asyncio.Queue())
+
         # 创建 LoopExecutor：循环执行引擎，负责节点调度、输出校验、退出判断
         executor = LoopExecutor(
             loop=loop,
@@ -496,6 +510,12 @@ class GroupChat:
 
         # 注册完成回调：Loop 结束时清理运行时索引
         def _on_done(t: asyncio.Task, lid: str = loop_id) -> None:
+            """在 Loop 任务完成后转交统一清理逻辑。
+
+            Args:
+                t: 已完成的后台任务。
+                lid: 对应的 Loop ID。
+            """
             self._on_loop_task_done(lid, t)
 
         task.add_done_callback(_on_done)
@@ -513,12 +533,20 @@ class GroupChat:
         此方法作为 asyncio.Task 的 done_callback 被调用，
         负责清理 GroupChat 中维护的 Loop 运行时引用。
 
+        清理内容：
+        1. 从 MessageRouter 注销 "loop" 系统身份
+        2. 清理 active_loops、_loop_tasks、_loop_queues 字典
+
         Args:
             loop_id: 完成的 Loop ID
             task: 完成的 asyncio.Task 对象
         """
         # 安全检查：确保要清理的是同一个 task（防止并发场景下的误删）
         if self._loop_tasks.get(loop_id) is task:
+            # 从 MessageRouter 注销 "loop" 系统身份
+            self.message_router.unregister(SystemRoles.LOOP)
+
+            # 清理运行时引用
             self._loop_tasks.pop(loop_id, None)
             self.active_loops.pop(loop_id, None)
             self._loop_queues.pop(loop_id, None)
@@ -590,6 +618,9 @@ class GroupChat:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
+        # 注销 "loop" 系统身份（_on_loop_task_done 的守卫因 pop 先于回调触发会跳过，这里显式注销）
+        self.message_router.unregister(SystemRoles.LOOP)
+
         # 恢复所有参与 Agent 的状态
         # 使用 seen_agents 去重，避免同一 Agent 在多个节点时重复处理
         seen_agents: set[str] = set()
@@ -649,6 +680,9 @@ class GroupChat:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+
+        # 注销 "loop" 系统身份（与 stop_loop 同理，显式注销防止泄露）
+        self.message_router.unregister(SystemRoles.LOOP)
 
     async def delete_loop(self, loop_id: str) -> None:
         """删除非 RUNNING Loop。
@@ -764,6 +798,14 @@ class GroupChat:
         )
 
         async def start_conversation(agent: Agent):
+            """初始化单个新成员的主会话。
+
+            Args:
+                agent: 需要初始化的 Agent。
+
+            Returns:
+                Agent 执行或 fork 初始化后的结果。
+            """
             # 构建提示词
             if agent.role_type == RoleType.LEADER:
                 prompt = f"你好，我是这个团队的boss,当前团队成员有{self.team_members_name},你将指挥他们完成我的任务。你使用一句话简单介绍一下自己"
@@ -1589,7 +1631,7 @@ class GroupChat:
                     content = "[Heartbeat] 定时检查：请查看当前任务进度。"
                 heartbeat_msg = AgentMessage(
                     call_id=f"heartbeat_{self.group_chat_id}",
-                    send_from="__HEARTBEAT__",
+                    send_from=SystemRoles.HEARTBEAT,
                     send_to=self.manager.name,
                     content=content,
                     session_type=SessionType.MAIN,

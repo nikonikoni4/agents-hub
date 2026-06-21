@@ -39,6 +39,14 @@ _original_model_dump_json = JSONRPCMessage.model_dump_json
 
 
 def _model_dump_json_utf8(self, **kwargs):
+    """使用 UTF-8 输出 JSONRPCMessage 的 JSON 字符串。
+
+    Args:
+        **kwargs: 传递给原始 model_dump_json 的参数。
+
+    Returns:
+        JSON 字符串。
+    """
     kwargs.setdefault("ensure_ascii", False)
     return _original_model_dump_json(self, **kwargs)
 
@@ -130,6 +138,20 @@ def _make_chat_result(
     git_diff_range: str | None = None,
     web_preview: dict | None = None,
 ) -> AgentResult:
+    """构造用于写入群聊的 AgentResult。
+
+    Args:
+        group_chat: 当前群聊实例。
+        agent_name: 发言 Agent 名称。
+        content: 消息内容。
+        cwd: Agent 当前工作目录。
+        modified_files: 修改文件列表。
+        git_diff_range: Git diff 范围。
+        web_preview: 网页预览信息。
+
+    Returns:
+        群聊消息结果对象。
+    """
     agent = _find_agent(group_chat, agent_name)
     platform = getattr(getattr(agent, "role_config", None), "platform", AgentPlatform.CLAUDE)
     role_type = getattr(agent, "role_type", RoleType.TEAM_MEMBER)
@@ -182,6 +204,14 @@ async def _send_agent_call_completion_notification(
 
 
 async def _resolve_group_chat(agent_token: str) -> tuple[str, str, GroupChat] | dict:
+    """通过 Agent token 解析并加载群聊。
+
+    Args:
+        agent_token: Agent 身份令牌。
+
+    Returns:
+        成功时返回 Agent 名称、群聊 ID 和群聊实例；失败时返回错误响应。
+    """
     identity = group_chat_manager.resolve_token(agent_token)
     if identity is None:
         return make_error_response(
@@ -204,10 +234,28 @@ async def _resolve_group_chat(agent_token: str) -> tuple[str, str, GroupChat] | 
 
 
 def _is_leader(group_chat: GroupChat, agent_name: str) -> bool:
+    """判断指定 Agent 是否为当前群聊 Leader。
+
+    Args:
+        group_chat: 当前群聊实例。
+        agent_name: Agent 名称。
+
+    Returns:
+        是 Leader 时返回 True。
+    """
     return group_chat.manager is not None and agent_name == group_chat.manager.name
 
 
 def _permission_denied(agent_name: str, action: str) -> dict:
+    """构造 Leader 权限不足的错误响应。
+
+    Args:
+        agent_name: 当前 Agent 名称。
+        action: 被拒绝的操作描述。
+
+    Returns:
+        MCP 错误响应。
+    """
     return make_error_response(
         PERMISSION_DENIED,
         f"权限不足：只有 Leader 可以{action}，当前 Agent {agent_name} 不是 Leader",

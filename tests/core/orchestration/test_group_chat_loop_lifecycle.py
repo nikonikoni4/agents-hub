@@ -10,7 +10,7 @@ from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.core.communication import MessageRouter
 from agents_hub.core.foundation import AgentMessage, MessageType, SessionType
 from agents_hub.core.context.loop_models import Loop, LoopNode, LoopNodeType
-from agents_hub.core.foundation.models import LoopStatus
+from agents_hub.core.foundation.models import LoopStatus, SystemRoles
 from agents_hub.core.orchestration.group_chat import GroupChat
 
 
@@ -106,6 +106,8 @@ async def test_loop_system_sender_can_deliver_loop_message_through_group_chat_ro
     group_chat.message_router = MessageRouter()
 
     group_chat._register_agents_to_router()
+    # 动态注册 "loop" 系统身份（与 create_and_start_loop 行为一致）
+    group_chat.message_router.register(SystemRoles.LOOP, asyncio.Queue())
 
     await group_chat.message_router.send_message(
         AgentMessage(
