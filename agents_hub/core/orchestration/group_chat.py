@@ -417,6 +417,7 @@ class GroupChat:
         self,
         nodes: list[dict],
         max_iterations: int,
+        name: str | None = None,
     ):
         """创建 Loop 定义（可复用模板）。
 
@@ -433,6 +434,7 @@ class GroupChat:
                 - output_schema_fields: 必需字段列表
                 - max_retries: 输出校验失败的最大重试次数（默认 3）
             max_iterations: 最大循环次数，防止死循环
+            name: 循环名称（可选），用于识别和管理
 
         Returns:
             Loop: 创建的 Loop 定义对象
@@ -442,14 +444,16 @@ class GroupChat:
             AgentNotFoundError: 节点引用的 Agent 不存在
         """
         logger.info(
-            "创建 Loop 定义: group=%s, nodes=%d, max_iterations=%d",
+            "创建 Loop 定义: group=%s, name=%s, nodes=%d, max_iterations=%d",
             self.group_chat_id,
+            name,
             len(nodes) if nodes else 0,
             max_iterations,
         )
         return await self._get_loop_manager().create_loop(
             nodes=nodes,
             max_iterations=max_iterations,
+            name=name,
         )
 
     async def create_and_start_loop(self, loop_id: str, initial_task: str):

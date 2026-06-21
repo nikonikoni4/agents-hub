@@ -1109,6 +1109,7 @@ async def create_loop(
     agent_token: str,
     nodes: list[dict],
     max_iterations: int,
+    name: str | None = None,
 ) -> dict:
     """创建循环定义（Leader-only）。
 
@@ -1124,13 +1125,15 @@ async def create_loop(
             - output_schema_fields: 必需字段列表
             - max_retries: 重试次数（可选，默认 3）
         max_iterations: 最大循环轮数。
+        name: 循环名称（可选），用于识别和管理。
 
     Returns:
         成功: {"loop_id": "...", "created_at": "..."}
         失败: {"error": {"code": "...", "message": "..."}}
     """
     logger.info(
-        "MCP 调用: create_loop, nodes=%d, max_iterations=%d",
+        "MCP 调用: create_loop, name=%s, nodes=%d, max_iterations=%d",
+        name,
         len(nodes) if nodes else 0,
         max_iterations,
     )
@@ -1146,6 +1149,7 @@ async def create_loop(
         loop = await group_chat.create_loop(
             nodes=nodes,
             max_iterations=max_iterations,
+            name=name,
         )
         return {"loop_id": loop.loop_id, "created_at": loop.created_at.isoformat()}
 
@@ -1344,6 +1348,7 @@ async def list_loops(
             "loops": [
                 {
                     "loop_id": "循环定义 ID",
+                    "name": "循环名称（可选）",
                     "created_at": "创建时间",
                     "updated_at": "更新时间",
                     "max_iterations": 最大轮次,

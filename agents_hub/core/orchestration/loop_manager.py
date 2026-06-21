@@ -85,6 +85,7 @@ class LoopManager:
         self,
         nodes: list[dict[str, Any]],
         max_iterations: int,
+        name: str | None = None,
     ) -> Loop:
         """创建 Loop 循环定义。
 
@@ -108,6 +109,7 @@ class LoopManager:
                 - output_schema_fields: 必需字段列表（可选）
                 - max_retries: 最大重试次数（可选，默认 3）
             max_iterations: 最大循环次数，必须大于 0。
+            name: 循环名称（可选），用于识别和管理。
 
         Returns:
             创建的 Loop 实例。
@@ -134,6 +136,7 @@ class LoopManager:
                 max_iterations=max_iterations,
                 created_at=datetime.now(),
                 updated_at=datetime.now(),
+                name=name,
             )
 
             # 保存到内存和持久化
@@ -141,8 +144,9 @@ class LoopManager:
             self._persist_loop(loop)
 
             self.logger.info(
-                "创建 Loop 定义: loop_id=%s, nodes=%d, max_iterations=%d",
+                "创建 Loop 定义: loop_id=%s, name=%s, nodes=%d, max_iterations=%d",
                 loop.loop_id,
+                loop.name,
                 len(loop.nodes),
                 loop.max_iterations,
             )
@@ -290,6 +294,7 @@ class LoopManager:
         Returns:
             循环定义摘要列表，每个元素包含：
             - loop_id: 循环 ID
+            - name: 循环名称（可选）
             - created_at: 创建时间
             - updated_at: 更新时间
             - max_iterations: 最大循环次数
@@ -303,6 +308,7 @@ class LoopManager:
         for loop_id, data in loop_records.items():
             summary = {
                 "loop_id": loop_id,
+                "name": data.get("name"),
                 "created_at": data.get("created_at"),
                 "updated_at": data.get("updated_at"),
                 "max_iterations": data.get("max_iterations"),
@@ -320,16 +326,43 @@ class LoopManager:
         """删除 Loop 定义。
 
         删除指定的循环定义，同时级联删除所有关联的执行实例。
+        不会将 JSONL 中的 Loop 加载到内存，直接检查后删除。
+
+        查找顺序：
+        1. 检查内存缓存
+        2. 检查 JSONL 文件
+        3. 都不存在则抛出 LoopNotFoundError
 
         Args:
             loop_id: 循环唯一标识。
             loop_execution_manager: LoopExecutionManager 实例，用于级联删除 executions。
 
         Raises:
-            LoopNotFoundError: 循环不存在时抛出。
+            LoopNotFoundError: 循环在内存和 JSONL 中都不存在时抛出。
         """
-        # 验证 Loop 存在（不存在则抛出 LoopNotFoundError）
-        self.get_loop(loop_id)
+        # 1. 检查内存
+        found_in_memory = loop_id in self._loops
+
+        # 2. 内存没有，检查 JSONL
+        found_in_jsonl = False
+        if not found_in_memory:
+            loop_records = self._read_jsonl_loops()
+            found_in_jsonl = loop_id in loop_records
+
+        # 3. 都没有，抛出异常
+        if not found_in_memory and not found_in_jsonl:
+            self.logger.error(
+                "删除 Loop 失败: loop_id=%s 在内存和 JSONL 中均不存在",
+                loop_id,
+            )
+            raise LoopNotFoundError(loop_id)
+
+        # 从内存清除（如果存在）
+        if found_in_memory:
+            del self._loops[loop_id]
+
+        # 写墓碑记录
+        self._persist_deletion(loop_id)
 
         # 级联删除关联的 executions
         if loop_execution_manager:
@@ -340,13 +373,9 @@ class LoopManager:
                 deleted_count,
             )
 
-        # 从内存删除
-        del self._loops[loop_id]
-
-        # 持久化删除标记（墓碑记录）
-        self._persist_deletion(loop_id)
-
-        self.logger.info("删除 Loop 定义: loop_id=%s", loop_id)
+        self.logger.info(
+            "删除 Loop 定义: loop_id=%s, 来源=%s", loop_id, "内存" if found_in_memory else "JSONL"
+        )
 
     def _validate_create_request(self, nodes: list[LoopNode], max_iterations: int) -> None:
         """校验创建 Loop 的请求。

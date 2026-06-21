@@ -132,6 +132,7 @@ class Loop:
     Attributes:
         loop_id: 循环定义唯一标识，自动生成 UUID。
         group_chat_id: 所属群聊 ID。
+        name: 循环名称（可选），用于识别和管理。
         nodes: 节点列表，至少 2 个节点，有且仅有 1 个 TERMINATOR 节点。
         max_iterations: 最大循环次数，防止死循环。
         created_at: 创建时间。
@@ -144,6 +145,7 @@ class Loop:
     max_iterations: int  # 最大循环次数
     created_at: datetime
     updated_at: datetime
+    name: str | None = None  # 循环名称（可选）
 
     def to_dict(self) -> dict[str, Any]:
         """将 Loop 序列化为字典。
@@ -161,6 +163,7 @@ class Loop:
         return {
             "loop_id": self.loop_id,
             "group_chat_id": self.group_chat_id,
+            "name": self.name,
             "nodes": [node.to_dict() for node in self.nodes],
             "max_iterations": self.max_iterations,
             "created_at": self.created_at.isoformat(),
@@ -179,6 +182,7 @@ class Loop:
         兼容性处理：
         - 如果字典包含旧版本的执行状态字段（status, current_iteration 等），忽略它们
         - 这样可以从旧的 loops.jsonl 文件加载为新的 Loop 定义
+        - name 字段可选，不存在时默认为 None
 
         Args:
             data: 包含循环定义属性的字典，必须包含 loop_id、group_chat_id、nodes、max_iterations。
@@ -193,6 +197,7 @@ class Loop:
             max_iterations=data["max_iterations"],
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
+            name=data.get("name"),
         )
 
 
