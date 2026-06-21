@@ -70,7 +70,7 @@ contract_refs:
 
 ### API 端点
 
-<key_function last_update="2026-06-21T12:57:42+08:00">
+<key_function last_update="2026-06-21T17:23:54+08:00">
 - agents_hub/api/routes/group_chat.py
   - group_chat.get_pinned_messages:183
   - group_chat.pin_message:199

@@ -65,7 +65,7 @@ contract_refs:
 
 ### API 端点
 
-<key_function last_update="2026-06-21T12:57:42+08:00">
+<key_function last_update="2026-06-21T17:23:54+08:00">
 - agents_hub/api/routes/single_chat.py
   - single_chat.list_single_chats:25
   - single_chat.get_single_chat:33

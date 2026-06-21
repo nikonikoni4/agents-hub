@@ -67,7 +67,7 @@ contract_refs:
 
 ### GroupChatRuntime（运行时 Facade）
 
-<key_function last_update="2026-06-21T12:57:42+08:00">
+<key_function last_update="2026-06-21T17:23:54+08:00">
 - agents_hub/core/context/group_chat_runtime.py
   - group_chat_runtime.GroupChatRuntime.load:57
   - group_chat_runtime.GroupChatRuntime.add_message:320
