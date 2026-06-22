@@ -93,7 +93,7 @@
 API Routes (group_chat.py)
   └── API Service (group_chat_service.py)
       ├── loops.jsonl (直接读取文件，只读)
-      ├── LoopManager._loop (只读查询激活状态)
+      ├── LoopManager.get_active_loop() (只读查询激活状态)
       └── LoopExecutionManager (只读查询执行状态)
 
 LoopExecutor (loop_executor.py)
