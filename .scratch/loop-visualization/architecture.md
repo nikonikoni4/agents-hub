@@ -7,12 +7,12 @@
 | 模块 | 职责 | 变更类型 |
 |------|------|---------|
 | `agents_hub/core/context/loop_models.py` | Loop/LoopNode 数据结构定义 | 无变更（`name` 字段已存在，spec 描述过时） |
-| `agents_hub/core/orchestration/loop_manager.py` | Loop 定义的 CRUD 和持久化 | 无变更（已支持 `name` 字段） |
-| `agents_hub/core/orchestration/loop_execution_manager.py` | LoopExecution 执行实例的 CRUD 和内存管理 | 无变更（供 API Service 查询执行状态） |
+| `agents_hub/core/orchestration/loop_manager.py` | Loop 定义的 CRUD 和持久化 | **重构**：`self._loops` 改为 `self._loop`（单例模式，参考 ADR-2026-06-23） |
+| `agents_hub/core/orchestration/loop_execution_manager.py` | LoopExecution 执行实例的 CRUD 和内存管理 | 无变更（供 API Service 只读查询执行状态） |
 | `agents_hub/core/orchestration/loop_executor.py` | Loop 执行逻辑 | **修改**：在状态变化时调用 WebSocket 广播 |
 | `agents_hub/api/routes/group_chat.py` | Loop API 路由 | **新增**：3 个 Loop API 端点 |
 | `agents_hub/api/schemas/group_chats.py` | Loop API Schema | **新增**：LoopDetail、LoopNode、LoopExecution Schema |
-| `agents_hub/api/services/group_chat_service.py` | Loop API 服务层 | **新增**：Loop 查询逻辑（从 LoopManager 读定义 + 从 LoopExecutionManager 读状态） |
+| `agents_hub/api/services/group_chat_service.py` | Loop API 服务层 | **新增**：Loop 查询逻辑（直接读取文件，只读访问 core） |
 | `agents_hub/realtime/manager.py` | WebSocket 广播 | 无变更（复用现有机制） |
 | `agents_hub/realtime/dependencies.py` | 广播便捷函数 | 无变更 |
 
@@ -66,14 +66,16 @@
 │                        后端 (FastAPI)                           │
 │                                                                  │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
-│  │ API Routes   │───→│ API Service  │───→│ LoopManager  │      │
-│  │ (group_chat) │    │              │    │              │      │
-│  └──────────────┘    └──────────────┘    └──────┬───────┘      │
-│                                                  │               │
-│                                         ┌────────▼────────┐    │
-│                                         │ loops.jsonl     │    │
-│                                         │ (文件持久化)     │    │
-│                                         └─────────────────┘    │
+│  │ API Routes   │───→│ API Service  │───→│ loops.jsonl  │      │
+│  │ (group_chat) │    │ (只读辅助函数)│    │ (直接读取)   │      │
+│  └──────────────┘    └──────────────┘    └──────────────┘      │
+│                             │                                    │
+│                             │ 只读查询执行状态                    │
+│                             ▼                                    │
+│                      ┌──────────────┐                           │
+│                      │ LoopManager  │                           │
+│                      │ (单例模式)    │                           │
+│                      └──────────────┘                           │
 │                                                                  │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
 │  │ LoopExecutor │───→│ WebSocket    │───→│ 前端刷新      │      │
@@ -89,12 +91,20 @@
 
 ```
 API Routes (group_chat.py)
-  ├── API Service (group_chat_service.py)
-  │   ├── LoopManager (loop_manager.py)
-  │   │   └── loop_models.py (数据结构)
-  │   └── LoopExecutionManager (loop_execution_manager.py)
-  └── WebSocketManager (realtime/manager.py)
+  └── API Service (group_chat_service.py)
+      ├── loops.jsonl (直接读取文件，只读)
+      ├── LoopManager._loop (只读查询激活状态)
+      └── LoopExecutionManager (只读查询执行状态)
+
+LoopExecutor (loop_executor.py)
+  └── on_state_change 回调 (注入)
+      └── broadcast_group_chat_refresh (realtime/dependencies.py)
 ```
+
+**重要约束**：
+- API Service **只读**访问 core 模块，不修改任何状态
+- API Service 直接读取 loops.jsonl 文件，不调用 LoopManager 的查询方法
+- API Service 通过 `LoopManager.get_active_loop()` 公开方法查询激活状态，不直接访问私有属性
 
 ### 前端依赖
 
@@ -198,9 +208,11 @@ interface LoopExecution {
    - 无变更（`name` 字段已存在，spec 描述过时）
    - 验证：`name: str | None = None` 在第 148 行
 
-2. **LoopManager**：`agents_hub/core/orchestration/loop_manager.py`
-   - 无变更（已支持 `name` 字段的创建和查询）
-   - 验证：`create_loop()` 参数中有 `name`，`list_loops()` 返回中包含 `name`
+2. **LoopManager 单例重构**：`agents_hub/core/orchestration/loop_manager.py`
+   - **重构**：`self._loops: dict[str, Loop] = {}` 改为 `self._loop: Loop | None = None`
+   - 修改 `create_loop()`、`get_loop()`、`get_loop_with_lazy_load()`、`delete_loop()` 等方法
+   - **新增** `get_active_loop() -> Loop | None` 方法：返回当前激活的 Loop，供 API Service 只读查询
+   - 更新相关测试用例
 
 3. **MCP 工具**：`agents_hub/mcp/server.py`
    - 无变更（`create_loop` 工具已支持 `name` 参数）
@@ -218,16 +230,20 @@ interface LoopExecution {
    - `get_active_loop()` - 获取激活的 Loop
    - `get_loop()` - 获取指定 Loop
 
-6. **新增 API 服务**：`agents_hub/api/services/group_chat_service.py`
-   - `get_loops()` - 从文件读取 Loop 定义
-   - `get_active_loop()` - 从文件读取定义 + 从 core 获取执行状态
-   - `get_loop()` - 同上
+6. **新增 API 服务（只读设计）**：`agents_hub/api/services/group_chat_service.py`
+   - 新增辅助函数 `_read_loops_from_file(group_chat_id: str) -> list[dict]`
+     - 功能：从 JSONL 文件读取所有非墓碑的 Loop 定义
+     - 注释：说明"为什么不使用 core 的已有功能"（解耦设计）
+   - `get_loops()` - 直接调用 `_read_loops_from_file()`，不调用 LoopManager
+   - `get_active_loop()` - 从文件读取定义 + 调用 `LoopManager.get_active_loop()` + 只读查询 `LoopExecutionManager`
+   - `get_loop()` - 从文件读取定义 + 调用 `LoopManager.get_active_loop()` + 只读查询 `LoopExecutionManager`
 
 7. **WebSocket 通知**：`agents_hub/core/orchestration/loop_executor.py`
-   - **新增**：在 `_cleanup()` 方法中调用 `broadcast_group_chat_refresh()`
-   - **新增**：在 `_emergency_stop()` 方法中调用 `broadcast_group_chat_refresh()`
-   - **新增**：在 `_handle_node_completion()` 方法中调用 `broadcast_group_chat_refresh()`（当 current_node_index 变化时）
-   - 验证：当前 LoopExecutor 没有 WebSocket 广播调用，需要新增
+   - **新增**：`LoopExecutor.__init__()` 增加 `on_state_change: Callable | None = None` 参数
+   - **新增**：在 `_cleanup()` 方法中调用 `self._on_state_change(group_chat_id)`
+   - **新增**：在 `_emergency_stop()` 方法中调用 `self._on_state_change(group_chat_id)`（try/except 包裹）
+   - **新增**：在 `_handle_node_completion()` 方法中调用 `self._on_state_change(group_chat_id)`
+   - 修改 `GroupChat.create_and_start_loop()` 传入回调
 
 ### 前端文件新增/修改
 
@@ -259,6 +275,9 @@ interface LoopExecution {
 
 ## 相关文档
 
+### ADR 文档
+- **Loop 内存单例策略**：`docs/adr/2026-06-23-loop-memory-singleton.md` - 决定内存中同时只能保持一个 Loop
+
 ### Spec 文档
 - **Loop 循环执行**：`docs/specs/2026-06-21-loop.md` - Loop 功能的完整规格定义
 - **Realtime 模块**：`docs/specs/2026-06-06-realtime.md` - WebSocket 连接管理和广播机制
@@ -275,22 +294,46 @@ interface LoopExecution {
 
 ## 设计决策
 
-### 1. Loop 数据结构 name 字段（已存在）
+### 1. API 层解耦设计（只读、不依赖 core 模块）
 
-**现状**：Loop 数据结构已有 `name: str | None = None` 字段（loop_models.py 第 148 行）。
+**决策**：API 层直接读取 loops.jsonl 文件，不调用 LoopManager 的查询方法。
 
-**验证结果**：
-- Loop.to_dict() 包含 name 字段
-- Loop.from_dict() 支持 name 字段（向后兼容旧数据）
-- LoopManager.create_loop() 支持 name 参数
-- LoopManager.list_loops() 返回 name 字段
-- MCP create_loop 工具支持 name 参数
+**理由**：
+- **解耦**：避免 API 层与 core 模块耦合，降低出错概率
+- **只读安全**：API 层只需要读取 Loop 定义，不需要修改 core 状态
+- **AI 安全**：耦合在一起时，AI 容易出错（如误调用会修改状态的方法）
+- **有意设计**：这不是重复编写代码，而是有意的分层隔离
+
+**实现方式**：
+- 在 `group_chat_service.py` 中增加辅助函数 `_read_loops_from_file(group_chat_id: str) -> list[dict]`
+- 辅助函数有注释说明"为什么不使用 core 的已有功能"
+- 通过 `LoopManager.get_active_loop()` 公开方法查询激活状态，不直接访问私有属性
 
 **约束**：
-- `name` 字段可选，为 `None` 时前端显示 loop_id
-- 无需修改后端代码，spec 描述过时
+- API 层**不能**修改 core loop 本身的状态
+- API 层通过 `LoopManager.get_active_loop()` 公开方法查询激活状态
+- API 层**只读**访问 `LoopExecutionManager`（查询执行状态）
 
-### 2. 分离 Loop 定义和执行状态
+**相关 ADR**：`docs/adr/2026-06-23-loop-memory-singleton.md`
+
+### 2. LoopManager 单例模式
+
+**决策**：将 `self._loops: dict[str, Loop] = {}` 改为 `self._loop: Loop | None = None`。
+
+**理由**：
+- 内存中同时只能保持一个 Loop 实例
+- 避免内存无限扩大
+- 避免文件修改冲突
+- 与现有的"单execution保持策略"一致
+
+**约束**：
+- 只有通过 `start_loop` 启动的 Loop 才会加载到内存
+- `create_loop` 只创建 Loop 定义并保存到文件，不会加载到内存
+- 激活的 Loop 可以是任何状态（RUNNING、PAUSED、COMPLETED、FAILED）
+
+**相关 ADR**：`docs/adr/2026-06-23-loop-memory-singleton.md`
+
+### 3. 分离 Loop 定义和执行状态
 
 **决策**：API 返回的数据包含两部分，定义部分从文件读取，状态部分从 core 获取。
 
@@ -303,7 +346,7 @@ interface LoopExecution {
 - 只有激活的 Loop 才有执行状态
 - 没有激活的 Loop 时，返回第一个 Loop 的定义（无执行状态）
 
-### 3. WebSocket 通知机制（需要新增）
+### 4. WebSocket 通知机制（需要新增）
 
 **现状**：LoopExecutor 当前没有 WebSocket 广播调用。
 
@@ -320,17 +363,22 @@ interface LoopExecution {
 3. `_handle_node_completion()` - 当 current_node_index 变化时（节点执行完成）
 
 **约束**：
-- 需要注入 `broadcast_group_chat_refresh` 回调或直接调用
+- 采用回调注入方案（与 `_notify_manager_loop_ended` 模式一致）
+- `_emergency_stop()` 中广播调用包裹在 try/except 中
 - 前端需要保持当前选中的 Loop（如果是通过下拉菜单选择的）
 
 ## 已知风险
 
-1. **spec 描述过时**：Loop spec 中没有列出 `name` 字段，但实际代码已有。需要更新 spec 文档。
+1. **LoopManager 单例重构**：将 `self._loops` 改为 `self._loop` 是一个影响范围较大的重构，需要全面测试。
 
-2. **WebSocket 通知新增**：LoopExecutor 当前没有 WebSocket 广播调用，需要在关键位置新增。需要确保广播调用不会阻塞主循环。
+2. **spec 描述过时**：Loop spec 中没有列出 `name` 字段，但实际代码已有。需要更新 spec 文档。
 
-3. **前端状态管理**：下拉菜单切换 Loop 时，需要正确管理当前选中的 Loop，避免状态混乱。
+3. **API 层解耦**：API 层直接读取文件，可能与 core 模块的读取逻辑不一致。需要确保两者读取的是同一个文件。
 
-4. **空状态处理**：当群聊没有 Loop 时，需要显示空状态提示。
+4. **WebSocket 通知新增**：LoopExecutor 当前没有 WebSocket 广播调用，需要在关键位置新增。需要确保广播调用不会阻塞主循环。
 
-5. **数据分离一致性**：Loop 定义从文件读取，执行状态从 core 获取，需要确保两者的数据一致性。
+5. **前端状态管理**：下拉菜单切换 Loop 时，需要正确管理当前选中的 Loop，避免状态混乱。
+
+6. **空状态处理**：当群聊没有 Loop 时，需要显示空状态提示。
+
+7. **数据分离一致性**：Loop 定义从文件读取，执行状态从 core 获取，需要确保两者的数据一致性。

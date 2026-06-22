@@ -16,6 +16,8 @@
 - **当前群聊同时只能有一个激活的Loop**
 - **create_loop不会激活Loop**：`create_loop`只创建Loop定义并保存到文件，不会加载到内存
 
+**相关决策**：详见 `docs/adr/2026-06-23-loop-memory-singleton.md`
+
 ### Loop状态说明
 
 Loop有5种状态（定义在CONTEXT.md中）：

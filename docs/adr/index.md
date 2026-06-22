@@ -119,6 +119,13 @@
 - 触发规则：当设计或修改 call_agent MCP 工具参数、AgentCall 消息类型策略、AI 动作空间约束时阅读
 - 内容摘要：移除 call_agent 的 need_response 参数，固定所有调用为 TASK 类型。根因是 AI 频繁误设 NOTIFICATION 导致后续 check_agent_call 失败。核心判断：缩小动作空间（移除选择权）优于延长保留时间（延迟问题暴露）
 
+## loop-memory-singleton
+- updated_at: 2026-06-23
+- path: `docs/ADR/2026-06-23-loop-memory-singleton.md`
+- 状态：decided
+- 触发规则：当设计或修改 Loop 内存管理策略、Loop 加载/清除机制、或评估一个群聊中同时执行多个 Loop 的可行性时阅读
+- 内容摘要：决定内存中同时只能保持一个 Loop，且只有通过 start_loop 启动的 Loop 才会加载到内存。解决之前全量加载导致的内存无限扩大问题，避免 loops.jsonl 文件被多个执行实例修改导致数据不一致
+
 ## user-design-summary
 - updated_at: 2026-06-04
 - path: `docs/ADR/user-design-summary.md`
