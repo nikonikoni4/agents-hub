@@ -117,6 +117,7 @@ class LoopExecutor:
         logger: logging.Logger | None = None,
         node_result_timeout_seconds: float = LOOP_NODE_TIMEOUT_SECONDS,
         manager_name: str | None = None,
+        on_state_change: Callable[[str], None] | None = None,
     ):
         """初始化 LoopExecutor。
 
@@ -132,6 +133,7 @@ class LoopExecutor:
             logger: 日志器，如果为 None 则使用模块默认日志器。
             node_result_timeout_seconds: 等待节点完成通知的超时时间（秒），默认 2400 秒（40 分钟）。
             manager_name: Manager Agent 名称，用于 loop 结束时发送通知。
+            on_state_change: 状态变化回调函数，用于 WebSocket 通知。接收 loop_id 参数。
         """
         self.loop = loop
         self.execution = execution
@@ -144,6 +146,7 @@ class LoopExecutor:
         self.logger = logger or logging.getLogger(__name__)
         self.node_result_timeout_seconds = node_result_timeout_seconds
         self.manager_name = manager_name
+        self.on_state_change = on_state_change
         self._last_node_output = execution.initial_task
 
     def _build_loop_context(self, node: LoopNode, previous_output: str) -> str:
@@ -497,6 +500,8 @@ class LoopExecutor:
             return
 
         self._advance_to_next_node()
+        # 节点切换时通知前端刷新 Loop 状态
+        self._notify_state_change()
         if self._check_exit_condition():
             self.logger.info(
                 "Loop 达到最大循环次数: loop_id=%s, execution_id=%s, iteration=%d, max=%d",
@@ -647,6 +652,15 @@ class LoopExecutor:
 
         return False
 
+    def _notify_state_change(self) -> None:
+        """通知前端 Loop 状态变化。
+
+        调用 on_state_change 回调，传入 loop_id。
+        如果回调为 None，则跳过。
+        """
+        if self.on_state_change is not None:
+            self.on_state_change(self.loop.loop_id)
+
     async def _handle_node_timeout(self) -> None:
         """处理等待节点完成通知超时。
 
@@ -679,6 +693,17 @@ class LoopExecutor:
             self.execution.execution_id,
             reason,
         )
+
+        # 通知前端刷新 Loop 状态（包裹在 try/except 中，避免阻止清理逻辑）
+        try:
+            self._notify_state_change()
+        except Exception as exc:
+            self.logger.warning(
+                "通知前端 Loop 状态变化失败: loop_id=%s, error=%s",
+                self.loop.loop_id,
+                str(exc),
+            )
+
         await self._cleanup()
 
     async def _cleanup(self) -> None:
@@ -723,6 +748,16 @@ class LoopExecutor:
                 current_iteration=self.execution.current_iteration,
                 current_node_index=self.execution.current_node_index,
                 error_message=self.execution.error_message,
+            )
+
+        # 通知前端刷新 Loop 状态（包裹在 try/except 中，避免阻止清理逻辑）
+        try:
+            self._notify_state_change()
+        except Exception as exc:
+            self.logger.warning(
+                "通知前端 Loop 状态变化失败: loop_id=%s, error=%s",
+                self.loop.loop_id,
+                str(exc),
             )
 
         # 通知 Manager 循环已结束

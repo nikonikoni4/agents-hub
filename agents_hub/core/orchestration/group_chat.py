@@ -536,6 +536,13 @@ class GroupChat:
         # 一个群聊同时只能有一个 RUNNING 状态的 execution，所以不会有冲突
         self.message_router.register(SystemRoles.LOOP, asyncio.Queue())
 
+        # 创建 on_state_change 回调：Loop 状态变化时通知前端刷新
+        def _on_loop_state_change(loop_id: str) -> None:
+            """Loop 状态变化时发送 WebSocket 通知。"""
+            import asyncio
+
+            asyncio.get_running_loop().create_task(broadcast_group_chat_refresh(self.group_chat_id))
+
         # 创建 LoopExecutor：循环执行引擎，负责节点调度、输出校验、退出判断
         executor = LoopExecutor(
             loop=loop,
@@ -547,6 +554,7 @@ class GroupChat:
             loop_execution_manager=loop_execution_manager,
             agents=agents,
             manager_name=self.manager.name if self.manager else None,
+            on_state_change=_on_loop_state_change,
         )
 
         # 在后台启动 LoopExecutor
