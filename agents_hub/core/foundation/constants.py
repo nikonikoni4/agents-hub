@@ -17,6 +17,5 @@ LOCAL_DATA_PATH = "local_data"
 
 # Heartbeat 和清理配置常量
 HEARTBEAT_INTERVAL_SECONDS: int = 1200  # Heartbeat 间隔（20 分钟）
-NOTIFICATION_RETENTION_SECONDS: int = (
-    HEARTBEAT_INTERVAL_SECONDS + 600
-)  # Notification 清理时间（heartbeat + 10 分钟）
+# 确保心跳检测时Manager能够查询到NOTIFICATION类型的AgentCall
+NOTIFICATION_RETENTION_SECONDS: int = HEARTBEAT_INTERVAL_SECONDS * 2 + 60

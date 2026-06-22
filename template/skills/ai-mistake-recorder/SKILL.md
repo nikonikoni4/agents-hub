@@ -1,6 +1,6 @@
 ---
 name: ai-mistake-recorder
-description: 记录 AI 犯错或可改进点，生成可复用的学习资产。支持两种模式：(1) 当前会话 - 会话结束时触发，引导用户回顾本次会话中的纠正和可改进点；(2) 指定会话 - 通过 session_id 或 JSONL 文件路径分析历史会话。存储位置：D:\desktop\quackDocs\my_notes\ai_mistake\（index.md 索引 + records.md 实体）。触发词：记录错误、记录问题、AI 错误记录、会话总结、记录教训、record mistakes。
+description: 记录 AI 犯错或可改进点，生成可复用的学习资产。支持两种模式：(1) 当前会话 - 会话结束时触发，引导用户回顾本次会话中的纠正和可改进点；(2) 指定会话 - 通过 session_id 或 JSONL 文件路径分析历史会话。存储位置：D:\desktop\quackDocs\my_notes\ai_bug_history\（index.md 索引 + records.md 实体）。触发词：记录错误、记录问题、AI 错误记录、会话总结、记录教训、record mistakes。
 ---
 
 # AI 错误记录器
@@ -9,7 +9,7 @@ description: 记录 AI 犯错或可改进点，生成可复用的学习资产。
 
 ## 存储位置
 
-- **目录**：`D:\desktop\quackDocs\my_notes\ai_mistake\`
+- **目录**：`D:\desktop\quackDocs\my_notes\ai_bug_history\`
 - **索引文件**：`index.md` — 列出所有错误条目（日期、简要描述、分类）
 - **实体文件**：`records.md` — 每个错误的完整记录
 
