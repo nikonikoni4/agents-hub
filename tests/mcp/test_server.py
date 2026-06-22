@@ -99,8 +99,6 @@ class TestCallAgent:
             agent_token=token,
             send_to=send_to,
             content=content,
-            need_response=True,
-            timeout_seconds=300,
         )
 
         assert result == {"call_id": "call_456"}
@@ -129,7 +127,6 @@ class TestCallAgent:
             agent_token="invalid_token",
             send_to="worker2",
             content="test",
-            need_response=True,
         )
 
         assert "error" in result
@@ -158,7 +155,6 @@ class TestCallAgent:
             agent_token="test_token",
             send_to="worker2",
             content="test",
-            need_response=True,
         )
 
         assert "error" in result
@@ -188,21 +184,20 @@ class TestCallAgent:
             agent_token="test_token",
             send_to="worker2",
             content="test",
-            need_response=True,
         )
 
         assert "error" in result
         assert result["error"]["code"] == AGENT_NOT_FOUND
 
     @pytest.mark.asyncio
-    async def test_call_agent_notification_type(self, mock_group_chat_manager, mock_group_chat):
+    async def test_call_agent_always_task_type(self, mock_group_chat_manager, mock_group_chat):
         """
-        契约：need_response=False 时使用 NOTIFICATION 类型
+        契约：call_agent 固定使用 TASK 类型（不再支持 need_response 参数）
 
         验证方式：
         1. Mock resolve_token 返回有效身份
-        2. 调用 call_agent(need_response=False)
-        3. 验证 create_call 使用 MessageType.NOTIFICATION
+        2. 调用 call_agent()
+        3. 验证 create_call 使用 MessageType.TASK
 
         如果失败，说明：消息类型判断逻辑错误
         """
@@ -219,12 +214,11 @@ class TestCallAgent:
             agent_token="test_token",
             send_to="worker2",
             content="test",
-            need_response=False,
         )
 
         assert result == {"call_id": "call_789"}
         call_args = mock_group_chat.agent_call_manager.create_call.call_args
-        assert call_args.kwargs["message_type"] == MessageType.NOTIFICATION
+        assert call_args.kwargs["message_type"] == MessageType.TASK
 
 
 # ============================================================================

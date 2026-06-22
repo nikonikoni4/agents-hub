@@ -112,6 +112,13 @@
 - 触发规则：当设计或修改 Loop 数据模型、LoopManager/LoopExecutionManager 职责、MCP Loop 工具接口、或前端 Loop 执行进度展示时阅读
 - 内容摘要：Loop 定义与执行状态分离——将 Loop 拆为无状态模板（Loop）和有状态执行实例（LoopExecution），支持同一定义多次启动。明确"Loop 无状态"指定义模型不含执行状态字段，不等于"执行过程无状态"。`current_node_index` 在 LoopExecution 上，前端通过 `get_loop_status(execution_id)` 获取
 
+## call-agent-remove-need-response
+- updated_at: 2026-06-22
+- path: `docs/ADR/2026-06-22-remove-call-agent-need-response.md`
+- 状态：decided
+- 触发规则：当设计或修改 call_agent MCP 工具参数、AgentCall 消息类型策略、AI 动作空间约束时阅读
+- 内容摘要：移除 call_agent 的 need_response 参数，固定所有调用为 TASK 类型。根因是 AI 频繁误设 NOTIFICATION 导致后续 check_agent_call 失败。核心判断：缩小动作空间（移除选择权）优于延长保留时间（延迟问题暴露）
+
 ## user-design-summary
 - updated_at: 2026-06-04
 - path: `docs/ADR/user-design-summary.md`

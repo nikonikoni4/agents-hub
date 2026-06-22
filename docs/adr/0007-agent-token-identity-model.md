@@ -168,7 +168,6 @@ def call_agent(
     agent_token: str,
     send_to: str,
     content: str,
-    need_response: bool,
     timeout_seconds: int | None = None,
 ) -> str: ...
 

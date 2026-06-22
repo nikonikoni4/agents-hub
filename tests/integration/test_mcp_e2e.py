@@ -120,8 +120,6 @@ class TestScenario2CallAgent:
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 A",
-            need_response=True,
-            timeout_seconds=300,
         )
 
         # 验证返回 call_id
@@ -150,7 +148,7 @@ class TestScenario2CallAgent:
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 B",
-            need_response=True,
+
         )
 
         call_id = result["call_id"]
@@ -188,7 +186,7 @@ class TestScenario3WorkerResponse:
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 C",
-            need_response=True,
+
         )
 
         call_id = result["call_id"]
@@ -239,7 +237,7 @@ class TestScenario4CheckAgentCall:
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 D",
-            need_response=True,
+
         )
 
         call_id = call_result["call_id"]
@@ -438,7 +436,7 @@ class TestCompleteWorkflow:
             agent_token=manager_token,
             send_to="小王",
             content="请帮我完成任务 E",
-            need_response=True,
+
         )
         assert "call_id" in call_result, "应该返回 call_id"
         call_id = call_result["call_id"]

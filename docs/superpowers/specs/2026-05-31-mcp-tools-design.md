@@ -122,9 +122,9 @@ from fastmcp import FastMCP
 mcp = FastMCP("agents-hub")
 
 @mcp.tool()
-def call_agent(agent_token: str, send_to: str, content: str, 
-               need_response: bool, timeout_seconds: int | None = None) -> str:
-    """派活给团队成员。权限：仅 Leader。永不复述 agent_token。"""
+def call_agent(agent_token: str, send_to: str, content: str,
+               timeout_seconds: int | None = None) -> str:
+    """派活给团队成员。固定 TASK 类型。永不复述 agent_token。"""
     # 实现...
 
 # 启动（在 FastAPI app 启动时调用）
@@ -141,11 +141,10 @@ def call_agent(
     agent_token: str,
     send_to: str,
     content: str,
-    need_response: bool,
     timeout_seconds: int | None = None,
 ) -> str:
     """
-    派活给团队成员。
+    派活给团队成员。固定创建 TASK 类型消息。
     
     权限：仅 Leader（测试阶段）
     返回：call_id（用于后续 check_agent_call）
@@ -162,7 +161,7 @@ def call_agent(
 5. 构造 AgentMessage：
    - send_from = agent_name
    - send_to = send_to
-   - message_type = TASK if need_response else NOTIFICATION
+   - message_type = TASK（固定）
    - session_type = MAIN
 6. 调用 MessageRouter.send_message()
 7. 返回 call_id
@@ -667,8 +666,7 @@ def call_agent(agent_token: str, send_to: str, ...):
      call_agent(
          agent_token="tok_abc123...",
          send_to="ArchWorker",
-         content="分析项目架构，重点关注模块依赖关系",
-         need_response=True
+         content="分析项目架构，重点关注模块依赖关系"
      )
      ```
    - MCP Server 解析 token → (Manager, gc_123)
@@ -744,8 +742,8 @@ def call_agent(agent_token: str, send_to: str, ...):
 
 5. **Manager 逐个派活**：
    ```python
-   call_agent(agent_token="tok_abc123...", send_to="BackendWorker", content="开始任务 t1：实现 JWT 认证逻辑", need_response=True)
-   call_agent(agent_token="tok_abc123...", send_to="FrontendWorker", content="开始任务 t2：实现登录页面", need_response=True)
+   call_agent(agent_token="tok_abc123...", send_to="BackendWorker", content="开始任务 t1：实现 JWT 认证逻辑")
+   call_agent(agent_token="tok_abc123...", send_to="FrontendWorker", content="开始任务 t2：实现登录页面")
    ```
 
 6. **Worker 完成后，Manager 更新任务状态**：

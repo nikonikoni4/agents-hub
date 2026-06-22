@@ -104,7 +104,7 @@
 4. Agent 不存在：返回 AGENT_NOT_FOUND 错误
 
 **边界情况**：
-- need_response=False 时使用 NOTIFICATION 类型
+- 固定使用 TASK 类型（need_response 参数已移除）
 
 ---
 

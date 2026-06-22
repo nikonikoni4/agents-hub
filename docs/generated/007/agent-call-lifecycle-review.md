@@ -166,7 +166,7 @@ create_call(NOTIFICATION) → PENDING → 投递到队列
 #### 3.2.1 显式闭环流程
 
 ```
-A call_agent(B, need_response=True) 
+A call_agent(B)
   → create_call(TASK) → PENDING
   → 投递到 B 队列
   → B 取出 → RUNNING → 执行

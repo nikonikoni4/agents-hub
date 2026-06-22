@@ -787,7 +787,7 @@ feat(mcp): 新增 MCP 错误响应工具
 - Create: `tests/mcp/test_server.py`
 
 实现 FastMCP Server 和 4 个工具：
-- `call_agent(agent_token, send_to, content, need_response, timeout_seconds)`
+- `call_agent(agent_token, send_to, content, timeout_seconds)`
 - `assign_tasks_to_team(agent_token, tasks)`
 - `archive_task_list(agent_token)`
 - `check_agent_call(agent_token, call_id)`

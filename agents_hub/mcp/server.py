@@ -275,8 +275,6 @@ async def call_agent(
     agent_token: str,
     send_to: str,
     content: str,
-    need_response: bool = True,
-    timeout_seconds: int | None = None,
 ) -> dict:
     """
     派活给团队成员
@@ -285,7 +283,6 @@ async def call_agent(
         agent_token: 调用者的身份令牌
         send_to: 目标 Agent 名称
         content: 消息内容
-        need_response: 是否需要响应（默认 True）
 
     Returns:
         成功: {"call_id": "..."}
@@ -316,14 +313,13 @@ async def call_agent(
                 details={"group_chat_id": group_chat_id},
             )
 
-        # 3. 创建 AgentCall
-        message_type = MessageType.TASK if need_response else MessageType.NOTIFICATION
+        # 3. 创建 AgentCall（固定 TASK 类型，避免 AI 误设 NOTIFICATION 导致后续 check_agent_call 失败）
         call = await group_chat.agent_call_manager.create_call(
             send_from=agent_name,
             send_to=send_to,
             content=content,
-            message_type=message_type,
-            timeout_seconds=timeout_seconds,
+            message_type=MessageType.TASK,
+            timeout_seconds=None,
         )
         logger.info(
             "AgentCall 创建: call_id=%s, sender=%s, receiver=%s",
@@ -337,7 +333,7 @@ async def call_agent(
             send_from=agent_name,
             send_to=send_to,
             content=content,
-            message_type=message_type,
+            message_type=MessageType.TASK,
             call_id=call.call_id,
         )
 
@@ -377,9 +373,16 @@ async def assign_tasks_to_team(agent_token: str, tasks: list[dict]) -> dict:
     """
     覆盖式更新任务列表（Leader-only）
 
+    按 task_id 匹配：已有任务更新，新任务创建，旧列表中不在新列表的任务保留不变。
+    当前任务列表见 runtime 中的 <team_workboard>。
+
     Args:
         agent_token: 调用者的身份令牌
-        tasks: 任务列表 [{"task_id": "...", "owner": "...", "content": "...", "status": "..."}]
+        tasks: 任务列表，每项包含：
+            - task_id: 任务标识（已有任务必须使用 <team_workboard> 中的原值）
+            - owner: 负责人（必须是 <team_members> 中的成员名）
+            - content: 任务描述
+            - status: "PENDING"（待执行）/ "RUNNING"（执行中）/ "COMPLETED"（已完成）
 
     Returns:
         成功: {"created": int, "updated": int, "unchanged": int}
@@ -1025,7 +1028,7 @@ async def create_group_chat(
 async def create_agent(
     agent_token: str,
     name: str,
-    platform: Literal["claude", "codex", "opencode"],
+    platform: Literal["claude", "codex"],
     description: str | None = None,
 ) -> dict:
     """
@@ -1104,11 +1107,11 @@ async def create_loop(
     Args:
         agent_token: Leader 的身份令牌。
         nodes: 循环节点列表，每个节点包含：
-            - node_type: "normal" 或 "terminator"
+            - node_type: "normal"（执行节点）或 "terminator"（判断节点，决定是否退出循环）
             - agent_name: 执行该节点的 Agent 名称
             - role_description: 节点职责描述
             - output_schema_prompt: 输出格式要求（Markdown 格式）
-            - output_schema_fields: 必需字段列表
+            - output_schema_fields: 必需字段列表，每个元素是 Markdown 标题，如 ["## 实现代码", "## 修改说明"]，用于系统校验输出格式
             - max_retries: 重试次数（可选，默认 3）
         max_iterations: 最大循环轮数。
         name: 循环名称（可选），用于识别和管理。
@@ -1315,19 +1318,14 @@ async def get_loop_status(agent_token: str, execution_id: str) -> dict:
 
 async def list_loops(
     agent_token: str,
-    status: str | None = None,
 ) -> dict:
     """查询所有 Loop 定义（任意 Agent 可调用）。
 
     查询当前群聊的所有 Loop 定义，返回摘要信息。
     不依赖内存，直接读取 JSONL 文件。
 
-    注意：status 参数已废弃，Loop 定义本身没有状态。
-    保留此参数仅为向后兼容，实际不进行过滤。
-
     Args:
         agent_token: 调用者的身份令牌。
-        status: （已废弃）状态过滤参数，Loop 定义无状态，此参数被忽略。
 
     Returns:
         成功: {
@@ -1346,7 +1344,7 @@ async def list_loops(
         }
         失败: {"error": {"code": "...", "message": "..."}}
     """
-    logger.info("MCP 调用: list_loops, status=%s", status)
+    logger.info("MCP 调用: list_loops")
     try:
         resolved = await _resolve_group_chat(agent_token)
         if isinstance(resolved, dict):
@@ -1355,7 +1353,7 @@ async def list_loops(
         _agent_name, _group_chat_id, group_chat = resolved
         loop_manager = group_chat._get_loop_manager()
 
-        loops = loop_manager.list_loops(status=status)
+        loops = loop_manager.list_loops()
 
         return {"loops": loops}
 
