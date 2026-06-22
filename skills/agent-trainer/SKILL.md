@@ -1,407 +1,400 @@
 ---
 name: agent-trainer
-description: Guide users to create domain-specific training content for AI agents when they lack expertise in the target domain. Searches best practices, filters quality sources, and generates structured knowledge base and constraints.
+description: 为 AI Agent 创建元规则和领域知识，帮助用户在不熟悉领域建立 Agent 的思考方式和行为准则。专注于抽象的行事风格而非具体技术约束。适用场景：(1) 创建新 Agent 缺少行为准则，(2) 更新现有 Agent 的元规则或知识，(3) 用户不熟悉目标领域需要搜索最佳实践，(4) 希望 Agent 跨项目保持一致工作风格。
 ---
 
-# Agent Trainer Skill
+# Agent 训练营
 
-## Overview
+## 概述
 
-`agent-trainer` helps users create training content for AI agents in domains where the user lacks expertise. Instead of leaving agents with blank configuration, this skill searches domain best practices, evaluates source quality, and generates structured training materials (knowledge base + constraints).
+帮助用户为 AI Agent 创建**元规则**（思考方式、行为准则）和**领域知识库**（参考文档），而非具体技术约束。
 
-## When to Use
+**核心理念**：
+- **元规则** → Agent 的行事风格、Checklist、决策准则（抽象、跨项目）
+- **领域知识** → 最佳实践参考文档（软约束、按需加载）
+- **具体约束** → 应该写在项目仓库的 `CLAUDE.md`，不在这里重复
 
-- User wants to create or improve an agent for a domain they're unfamiliar with (video editing, legal consultation, content creation, etc.)
-- Agent currently has no domain-specific constraints, leading to unstable output
-- User wants the agent to maintain consistent style/behavior across multiple projects
-- User explicitly requests "training" or "configuring" an agent
+**平台说明**：
+- Codex 平台加载 `AGENTS.md`，Claude Code 平台加载 `CLAUDE.md`
+- 本文档统一用 `CLAUDE.md` 代指，实际使用时根据平台选择对应文件
 
-## When Not to Use
+## 核心原则
 
-- User already knows exactly what rules to write and just needs file editing help
-- Agent is for a domain the user is expert in (they should write rules directly)
-- User wants to modify an existing well-configured agent (direct editing is faster)
-- Request is about debugging agent behavior, not initial training
+将分散的领域知识转化为**结构化的元规则和知识库**，重点是培养 Agent 的**思考方式**，而非堆砌技术规则。
 
-## Core Principle
+**避免重复项目规则**：项目 `CLAUDE.md` 的技术约束（TypeScript 规范、测试要求等）会被 Agent 自动加载，不应在 Agent 配置中重复。
 
-This skill exists to **transform scattered domain knowledge into structured agent configuration** when the user cannot do it themselves. Every invocation should clarify the agent's role boundaries, search credible best practices, filter low-quality sources, and output production-ready training materials.
+---
 
-## Workflow Stages
-
-### Stage 1: Agent Role Definition
-
-**Goal:** Clarify the agent's domain, core responsibilities, and operational boundaries.
-
-**Actions:**
-- Ask the user: What is this agent's primary function?
-- Identify the agent's domain (programming, video editing, content creation, legal, finance, etc.)
-- Define what the agent **should do** and what it **should not do**
-- Determine who the agent will collaborate with (developers, creators, clients, etc.)
-- Identify the target platform (Claude Code / Codex / OpenCode)
-
-**Deliverable:** `Agent Role Definition` containing:
-- Agent name
-- Target platform
-- Primary domain
-- Core responsibilities (3-5 bullet points)
-- Out-of-scope activities
-- Expected collaboration context
-- Success criteria (what makes this agent "good"?)
-
-**User confirmation required:** Present the role definition and get explicit approval before proceeding.
-
-### Stage 2: Knowledge Requirements Analysis
-
-**Goal:** Determine what types of knowledge and constraints this agent needs.
-
-**Actions:**
-- Based on the domain, identify knowledge categories needed:
-  - **Domain fundamentals:** Core concepts, terminology, common workflows
-  - **Best practices:** Industry standards, proven patterns, quality criteria
-  - **Style guidelines:** Output format, tone, aesthetic preferences (if applicable)
-  - **Tool/technology constraints:** Specific tools, libraries, frameworks to use/avoid
-  - **Quality standards:** How to evaluate the agent's output
-  - **Common pitfalls:** Mistakes to avoid, anti-patterns
-
-- Classify each requirement as:
-  - **Hard constraint:** Must be enforced (goes in AGENTS.md/CLAUDE.md)
-  - **Soft constraint:** Guideline or preference (goes in knowledge/)
-
-**Deliverable:** `Knowledge Requirements Map` listing:
-- Knowledge categories needed for this domain
-- For each category: hard vs soft classification
-- Search keywords for finding quality sources
-- Minimum information needed to make the agent functional
-
-### Stage 3: Knowledge Search & Quality Filtering
-
-**Goal:** Gather structured evidence from credible sources, filtered by quality tier.
-
-**Actions:**
-- Execute web searches using the keywords from Stage 2
-- For each search result, evaluate source quality using the Source Quality Gate (below)
-- Extract relevant information: best practices, standards, guidelines, examples
-- Track source URLs and quality tier for each piece of information
-- **Stop after 2 ReAct rounds** — no infinite searching
-
-**Source Quality Gate:**
-
-- **Tier A:** Official documentation, industry standards, academic research, technical specifications, primary sources (e.g., official React docs, W3C standards, IEEE papers)
-- **Tier B:** High-quality professional articles, expert analysis with concrete examples, reputable industry publications, established practitioner guides (e.g., thoughtful engineering blogs, conference talks from recognized experts)
-- **Tier C:** General tutorials, community discussions, forum posts, aggregator sites, personal blogs without verification (e.g., Medium posts, Reddit threads, generic how-to guides)
-- **Tier D:** Marketing content, clickbait, unverifiable claims, anonymous sources, content farms
-
-**Use Rules:**
-- Build core constraints from **Tier A/B sources only**
-- Tier C sources may suggest **leads or keywords**, but cannot stand alone as evidence for hard constraints
-- **Exclude Tier D sources** from the evidence base
-- Any hard constraint must be supported by **either** two independent Tier A/B sources **or** one Tier A source plus one Tier B validation
-- If evidence quality is weak, **downgrade to soft constraint** or mark as "unverified guideline"
-
-**ReAct Iteration Cap:**
-1. **Round 1:** Gather initial evidence across all knowledge categories, identify major information gaps
-2. **Round 2:** Fill the highest-priority gaps or verify contested claims, then stop and proceed to synthesis
-
-**Deliverable:** `Evidence Collection` containing:
-- For each knowledge category: collected information with source URLs and quality tier
-- High-confidence findings (Tier A/B supported)
-- Conditional findings (single source or Tier C supported)
-- Information gaps (categories where quality evidence is missing)
-
-### Stage 4: Rule Extraction & Classification
-
-**Goal:** Synthesize collected evidence into concrete, actionable rules.
-
-**Actions:**
-- Review all high-confidence findings from Stage 3
-- Extract specific, actionable rules (not vague advice)
-- For each rule, determine:
-  - Is this a **hard constraint** (must follow) or **soft guideline** (should consider)?
-  - Is this supported by Tier A/B evidence?
-  - Is this applicable across projects or context-specific?
-- Group rules by category (workflow, style, tools, quality, pitfalls)
-- Deduplicate and resolve conflicts
-- Mark any rule based on weak evidence as "suggested practice (unverified)"
-
-**Classification criteria:**
-- **Hard constraint** → AGENTS.md/CLAUDE.md:
-  - Tier A/B supported
-  - Prevents common critical errors
-  - Enforces essential quality standards
-  - Specifies required tools/technologies
-  
-- **Soft guideline** → knowledge/:
-  - Tier B/C supported or single-source
-  - Style preferences, not correctness
-  - Contextual best practices
-  - Background knowledge, examples, references
-
-**Deliverable:** `Extracted Rules` containing:
-- Hard constraints list (each with source tier and rationale)
-- Soft guidelines list (grouped by knowledge category)
-- Rules excluded due to weak evidence (moved to information gaps)
-- Conflict resolutions (if sources disagreed)
-
-**User confirmation required:** Present the extracted rules and get feedback before generating files.
-
-### Stage 5: Training Material Generation
-
-**Goal:** Generate production-ready training files in the agent's work_root.
-
-**Actions:**
-- Determine target platform and system prompt file:
-  - Codex → `AGENTS.md`
-  - Claude Code → `CLAUDE.md`
-  - OpenCode → `AGENTS.md`
-
-- Generate system prompt file structure:
-  ```markdown
-  # Agent Training Content
-  
-  ## Role Definition
-  [From Stage 1]
-  
-  ## Hard Constraints
-  [From Stage 4 - hard constraints]
-  
-  ## Knowledge Base
-  See the following documents for domain knowledge and best practices:
-  - [Domain Fundamentals](./knowledge/domain-fundamentals.md)
-  - [Best Practices](./knowledge/best-practices.md)
-  - [Style Guide](./knowledge/style-guide.md) [if applicable]
-  ```
-
-- Generate knowledge base files in `knowledge/`:
-  - `domain-fundamentals.md`: Core concepts, terminology, workflows
-  - `best-practices.md`: Proven patterns, quality criteria, examples
-  - `style-guide.md`: Output format, tone, aesthetic guidelines (if applicable)
-  - Each file includes source references at the bottom
-
-- Write files to `local_data/agents/<agent_name>/work_root/`
-
-**File format standards:**
-- Use clear headers and bullet points
-- Include concrete examples where possible
-- Cite sources (Tier A/B) at the end of each section
-- Mark unverified content with "(suggested practice, not verified)"
-- Keep hard constraints concise and enforceable
-
-**Deliverable:** Generated files written to disk:
-- `work_root/AGENTS.md` or `CLAUDE.md`
-- `work_root/knowledge/domain-fundamentals.md`
-- `work_root/knowledge/best-practices.md`
-- `work_root/knowledge/style-guide.md` (if applicable)
-
-### Stage 6: Validation & Iteration
-
-**Goal:** Ensure the training materials meet user expectations and are immediately usable.
-
-**Actions:**
-- Show the user what was generated (file paths and key content summary)
-- Ask: "Does this match your expectations? Any adjustments needed?"
-- If user requests changes:
-  - Make specific edits (don't regenerate everything)
-  - Update only the affected sections
-  - Preserve source citations
-- If user approves:
-  - Confirm the agent is ready to use
-  - Suggest testing the agent in a real scenario
-
-**Deliverable:** `Training Summary` containing:
-- Agent name and platform
-- Files created (with paths)
-- Key constraints enforced
-- Knowledge areas covered
-- Information gaps (what the training doesn't cover yet)
-- Suggested next steps (test scenarios, manual refinements)
-
-### Stage 7: Downgrade Escalation
-
-**Trigger:** Cannot complete training (web search unavailable, user declines search, evidence stalled)
-
-**Response:**
-- Preserve current progress (role definition, knowledge requirements)
-- Provide a manual research guide:
-  - Specific search keywords
-  - Quality evaluation checklist
-  - Template files to fill in
-  - Example rules from similar domains
-- Document what was attempted and what's missing
-
-**Downgrade handoff checklist:**
-- Role definition (from Stage 1)
-- Knowledge requirements map (from Stage 2)
-- Search keywords and quality criteria
-- Template files for manual editing
-- Information gaps list
-
-## Output Contract
-
-Every successful training session must produce:
-
-### 1. Agent Role Definition
-- Agent name
-- Target platform
-- Primary domain
-- Core responsibilities
-- Out-of-scope activities
-- Collaboration context
-- Success criteria
-
-### 2. Evidence Quality Report
-- High-confidence findings (Tier A/B)
-- Conditional findings (weaker evidence)
-- Information gaps
-- Source summary (number of sources per tier)
-
-### 3. Generated Training Files
-- System prompt file (AGENTS.md or CLAUDE.md)
-- Knowledge base files (knowledge/*.md)
-- Source citations included
-
-### 4. Training Summary
-- Files created
-- Key constraints
-- Knowledge coverage
-- Known limitations
-- Next steps
-
-## Anti-Pattern Guards
-
-1. **Accepting Tier C/D sources as evidence for hard constraints:** Must filter quality before making rules; weak sources can only suggest leads
-2. **Searching indefinitely:** Must stop after 2 ReAct rounds and synthesize what was found
-3. **Generating vague rules:** Must extract specific, actionable constraints (e.g., "Use TypeScript with strict mode" not "Write good code")
-4. **Skipping user confirmation:** Must get approval after Stage 1 (role definition) and Stage 4 (extracted rules) before generating files
-5. **Mixing hard and soft constraints:** Must clearly separate "must follow" rules (in system prompt) from "should consider" guidelines (in knowledge/)
-6. **Ignoring information gaps:** Must document what couldn't be found with quality evidence, don't pretend everything is covered
-7. **Creating agent without clear scope:** Must complete Stage 1 role definition before any research; no generic "helpful assistant" agents
-
-## Quality Checklist
-
-- Did I get user confirmation on the role definition (Stage 1)?
-- Did I filter sources by quality tier and exclude Tier C/D from hard constraints?
-- Did I stop research after 2 ReAct rounds?
-- Did I separate hard constraints (system prompt) from soft guidelines (knowledge/)?
-- Did I cite Tier A/B sources for all hard constraints?
-- Did I document information gaps rather than filling them with speculation?
-- Did I get user approval on extracted rules (Stage 4) before generating files?
-- Did the final output include all required sections (role definition, evidence report, files, training summary)?
-
-## Domain-Specific Adaptations
-
-The workflow is domain-agnostic, but different domains may emphasize different knowledge categories:
-
-**Programming/Development:**
-- Focus on: tools/frameworks, code quality, security, performance
-- Hard constraints: language/framework choice, security practices, required testing
-- Soft guidelines: style preferences, architecture patterns, naming conventions
-
-**Content Creation (writing, video, design):**
-- Focus on: style guidelines, audience targeting, format specifications
-- Hard constraints: format requirements, legal/ethical boundaries, brand guidelines
-- Soft guidelines: tone, aesthetic preferences, storytelling techniques
-
-**Professional Services (legal, finance, consulting):**
-- Focus on: regulatory compliance, terminology precision, documentation standards
-- Hard constraints: legal requirements, industry regulations, ethical standards
-- Soft guidelines: client communication style, report formats, analysis frameworks
-
-**Creative/Artistic (video editing, music, design):**
-- Focus on: aesthetic principles, technical tools, workflow efficiency
-- Hard constraints: technical specifications (resolution, format, export settings)
-- Soft guidelines: composition rules, color theory, pacing/rhythm preferences
-
-## Example Interaction Flow
-
-```
-User: "I want to create a video editing agent but I don't know anything about video editing."
-
-Agent: [Starts Stage 1]
-"Let's define this agent's role. I need to understand:
-1. What type of videos will this agent help edit? (e.g., YouTube tutorials, short-form social media, documentary-style)
-2. What should the agent do? (e.g., suggest cuts, recommend transitions, optimize pacing)
-3. What should it NOT do? (e.g., make final creative decisions, handle audio mixing)
-4. Who will use this agent? (you as a beginner, or will you collaborate with others?)"
-
-User: [Answers questions]
-
-Agent: [Presents Role Definition]
-"Here's what I understood:
-- Agent name: Video Editing Assistant
-- Platform: Codex
-- Domain: Video editing for YouTube tutorials
-- Core responsibilities:
-  - Suggest cut points based on pacing best practices
-  - Recommend transitions that maintain flow
-  - Identify technical issues (lighting, audio sync)
-- Out of scope:
-  - Final creative direction (user decides)
-  - Audio mixing/mastering
-  - Motion graphics creation
-- Collaboration: Works with you (beginner editor) to learn editing fundamentals
-
-Does this match your needs?"
-
-User: "Yes, that's right."
-
-Agent: [Stage 2 - Knowledge Requirements Analysis]
-"For a video editing agent, I'll search for:
-- Hard constraints: Technical standards (resolution, frame rate, export formats)
-- Hard constraints: Common editing mistakes to avoid
-- Soft guidelines: Pacing best practices for tutorials
-- Soft guidelines: Transition selection guidance
-- Soft guidelines: Storytelling structure for instructional content
-
-Starting research..."
-
-Agent: [Stage 3 - Searches and evaluates sources]
-[After 2 ReAct rounds]
-"Research complete. Found:
-- 8 Tier A/B sources (official editing software docs, professional editor guides)
-- 12 Tier C sources (useful for context, but not used for hard rules)
-- Information gaps: Color grading standards (couldn't find authoritative source)
-
-Moving to rule extraction..."
-
-Agent: [Stage 4 - Presents extracted rules]
-"I've extracted these rules:
-
-Hard Constraints (will enforce):
-1. Export settings: 1080p minimum, H.264 codec, 60fps for screen recordings [Source: YouTube Creator Standards]
-2. Avoid jump cuts within 0.5s of each other (creates jarring effect) [Source: Film Editing Pro Guide + Video Production Handbook]
-3. Use L-cuts and J-cuts for dialogue transitions (audio leads/follows video) [Source: Professional Editing Techniques]
-
-Soft Guidelines (for knowledge base):
-- Tutorial pacing: 1.5-2x speed for demonstrations, slow for key explanations
-- Transition usage: Limit to 2-3 types per video for consistency
-- Opening: Hook viewer in first 10 seconds with problem statement
-
-Information gaps:
-- Color grading: Found only generic advice, no authoritative standards for tutorials
-
-Approve these rules?"
-
-User: "Yes, but add a constraint about keeping videos under 15 minutes."
-
-Agent: [Updates rules]
-"Added: Maximum video length 15 minutes (tutorial retention best practice)
-
-Generating training files..."
-
-Agent: [Stage 5 - Generates files]
-"Created training materials:
-- work_root/AGENTS.md (system prompt with hard constraints)
-- work_root/knowledge/editing-fundamentals.md
-- work_root/knowledge/tutorial-best-practices.md
-
-Your Video Editing Assistant is ready. Suggested test: Ask it to review a rough cut and suggest improvements."
-```
-
-## Notes for Implementation
-
-- This skill should be assigned to the **Agents-Hub Assistant** (the system helper agent)
-- User triggers it via a "Training" button in the frontend, which sends a message like: "/train-agent <agent_name>"
-- The skill automatically detects whether the agent already exists (update mode) or needs to be created
-- All file writes go to `local_data/agents/<agent_name>/work_root/`, which is outside any project repository
-- Training content is **cross-project**: same agent can be used in multiple projects with consistent behavior
+## 工作流程总览
+
+### 创建流程（8 个阶段）
+0. **模式选择** → 判断 Agent 是否存在
+1. **训练模式** → 通用领域 vs 项目专用
+2. **角色定义** → 职责、边界、成功标准（需用户确认）
+3. **项目分析** → 提取行为风格（仅模式 B）
+4. **知识需求** → 确定元规则和知识类别
+5. **搜索过滤** → 2 轮 ReAct，Tier A/B/C/D 质量分级
+6. **规则提取** → 元规则 vs 领域知识（需用户确认）
+7. **生成文件** → CLAUDE.md + knowledge/
+8. **验证迭代** → 确认或调整
+
+### 更新流程（7 个阶段）
+U1. **配置分析** → 读取现有状态
+U2. **更新类型** → 增量/重构/修正
+U3. **目标确认** → 影响范围
+U4. **差量搜索** → 只获取需更新的部分
+U5. **合并冲突** → 解决冲突，展示变更
+U6. **增量更新** → 自动备份，只修改受影响部分
+U7. **验证回滚** → 确认或回滚
+
+---
+
+## 创建流程详解
+
+### Stage 0: 模式选择
+
+检查 Agent 目录是否存在：
+- 不存在 → 创建流程（Stage 1）
+- 已存在 → 更新流程（Stage U1）
+
+---
+
+### Stage 1: 训练模式选择
+
+**模式 A：通用领域 Agent**
+- 适用于多个项目的通用角色
+- 从网络搜索领域最佳实践
+- 例如："通用 React UI 设计师"
+
+**模式 B：项目专用 Agent**
+- 绑定到特定项目，学习项目风格
+- 分析项目规则 + 网络最佳实践
+- 例如："agents-hub 专属维护者"
+
+**用户确认**：选择模式，模式 B 需提供项目路径
+
+---
+
+### Stage 2: Agent 角色定义
+
+询问用户：
+- 主要职能是什么？
+- 属于哪个领域？
+- 应该做什么？不应该做什么？
+- 会与谁协作？
+- 目标平台？
+
+**交付物格式**：参见 `references/output-templates.md` 的"Agent 角色定义"章节
+
+**用户确认**：展示角色定义，获得明确批准后继续
+
+---
+
+### Stage 3: 项目风格分析（仅模式 B）
+
+**分析内容**：
+- **行为风格**：文档风格、注释密度、代码风格
+- **决策倾向**：保守 vs 激进、简洁 vs 完备、询问 vs 自主
+- **关键术语**：从 `CONTEXT.md` 提取
+
+**不提取**：
+- ❌ 具体技术约束（TypeScript 规范等）→ Agent 会自动加载
+- ❌ 架构规则 → 同上
+- ❌ 命名规范 → 同上
+
+**交付物格式**：参见 `references/output-templates.md` 的"项目风格摘要"章节
+
+---
+
+### Stage 4: 知识需求分析
+
+**分类**：
+
+**A. 元规则**（放入 `CLAUDE.md`）：
+- **执行前 Checklist**：上下文理解、约束确认、目标明确
+- **决策风格**：遇到歧义时的行为、技术选型倾向、沟通方式
+- **执行后自检**：回归检查、可理解性、架构合理性
+
+**B. 领域知识**（放入 `knowledge/`）：
+- 最佳实践文档
+- 工作流程指南
+- 常见模式和反模式
+- 工具使用参考
+
+**领域适配**：不同领域的重点不同，参见 `references/domain-adaptations.md`
+
+**交付物格式**：参见 `references/output-templates.md` 的"知识需求清单"章节
+
+---
+
+### Stage 5: 知识搜索与质量过滤
+
+**执行**：
+- 使用 Stage 4 的关键词进行网络搜索
+- 评估每个来源的质量（Tier A/B/C/D）
+- 提取相关信息
+- **限制 2 轮 ReAct**，不无限搜索
+
+**来源质量分级**：
+- **Tier A**：官方文档、行业标准、学术研究
+- **Tier B**：高质量专业文章、专家分析
+- **Tier C**：一般教程、社区讨论（只能作为线索）
+- **Tier D**：营销内容、点击诱饵（排除）
+
+**详细标准和使用规则**：参见 `references/source-quality-guide.md`
+
+**ReAct 上限**：
+1. **第 1 轮**：收集初步证据，识别信息缺口
+2. **第 2 轮**：填补最关键缺口，然后立即进入综合阶段
+
+**交付物格式**：参见 `references/output-templates.md` 的"证据收集报告"章节
+
+---
+
+### Stage 6: 元规则提取与用户确认
+
+**提取元规则**（放入 `CLAUDE.md`）：
+1. **执行前 Checklist**（基于搜索结果 + 项目风格）
+2. **决策风格**
+3. **执行后自检**
+4. **角色定位声明**
+
+**提取领域知识**（放入 `knowledge/`）：
+- 按类别分组（基础知识、最佳实践、工具指南、常见陷阱）
+- 保留来源引用
+- 标注可信度
+
+**冲突检测**（仅模式 B）：
+- 如果搜索到的最佳实践与项目风格冲突
+- 询问用户：遵循项目风格 or 采纳最佳实践？
+
+**用户确认**：展示提取的元规则和知识库结构，获得明确批准
+
+**交付物格式**：参见 `references/output-templates.md` 的"提取的规则清单"章节
+
+---
+
+### Stage 7: 生成训练文件
+
+**生成文件**：
+
+1. **系统提示词文件**（`work_root/CLAUDE.md` 或 `AGENTS.md`）：
+   ```markdown
+   # Agent 角色：[名称]
+   
+   ## 角色定位
+   [从 Stage 2，3-5 句话]
+   
+   ## 执行前 Checklist
+   [从 Stage 6]
+   
+   ## 决策风格
+   [从 Stage 6]
+   
+   ## 执行后自检
+   [从 Stage 6]
+   
+   ## 领域知识库
+   参考以下文档了解领域知识和最佳实践：
+   - [领域基础](./knowledge/fundamentals.md)
+   - [最佳实践](./knowledge/best-practices.md)
+   - [常见陷阱](./knowledge/pitfalls.md)
+   ```
+
+2. **知识库文件**（`work_root/knowledge/*.md`）
+3. **训练元数据**（`work_root/.training-metadata.json`）
+
+**文件格式详细说明**：参见 `references/output-templates.md` 的".training-metadata.json 格式"章节
+
+**写入位置**：`local_data/agents/<agent_name>/work_root/`
+
+---
+
+### Stage 8: 验证与迭代
+
+**展示给用户**：
+- 生成的文件路径
+- 核心元规则摘要
+- 知识库覆盖范围
+- 信息缺口
+
+**询问用户**：是否符合预期？需要调整？
+
+**如果需要调整**：仅修改受影响的部分
+
+**如果用户批准**：确认 Agent 已就绪，建议测试场景
+
+**交付物格式**：参见 `references/output-templates.md` 的"训练总结"章节
+
+---
+
+## 更新流程详解
+
+### Stage U1: 现有配置分析
+
+**读取**：
+- `CLAUDE.md` / `AGENTS.md`
+- `knowledge/` 所有文件
+- `.training-metadata.json`
+
+**展示给用户**：
+- 当前训练模式（通用 vs 项目专用）
+- 绑定的项目路径（如果有）
+- 现有元规则类型
+- 知识库文档数量
+- 版本号和上次更新时间
+
+**项目变更检测**（仅模式 B）：
+- 读取项目 `CLAUDE.md` 的最后修改时间
+- 如果比 Agent `updated_at` 新，提示用户是否重新学习项目风格
+
+---
+
+### Stage U2: 更新类型选择
+
+**增量更新**：添加新的元规则或知识，不改变现有内容
+
+**重构更新**：重新训练某个领域，替换旧的元规则或知识
+
+**修正更新**：修复错误的规则或知识
+
+**用户确认**：选择更新类型
+
+---
+
+### Stage U3: 更新目标确认
+
+询问用户：
+- 想要更新什么内容？
+- 是否需要重新分析项目？（仅模式 B）
+- 是否要改变训练模式？（A ↔ B）
+
+确定影响范围：
+- 需要重新搜索的知识类别
+- 需要修改的文件和章节
+- 保持不变的部分
+
+---
+
+### Stage U4: 差量知识获取
+
+**策略**：
+- **增量更新**：只搜索新增的知识类别
+- **重构更新**：重新搜索指定领域
+- **修正更新**：验证有问题的内容，找替代方案
+
+**如果需要重新分析项目**（模式 B）：重新执行 Stage 3，对比差异
+
+**使用相同的质量标准**（Tier A/B/C/D）
+
+---
+
+### Stage U5: 规则合并与冲突解决
+
+**合并策略**：
+- **增量更新**：追加新规则到对应章节
+- **重构更新**：替换指定章节/文档，保留其他部分
+- **修正更新**：删除错误规则，替换为正确版本
+
+**冲突检测**：
+- 新规则 vs 旧规则冲突
+- 网络最佳实践 vs 项目风格冲突（项目优先）
+- 新知识 vs 旧知识矛盾
+
+**展示变更对比**：变更前后的 diff、冲突项及建议解决方案
+
+**用户确认**：批准合并方案
+
+---
+
+### Stage U6: 增量更新文件
+
+**执行**：
+- 自动备份当前版本到 `work_root/.training-history/v{N}-backup/`
+- 只更新受影响的文件和章节
+- 保留原有的来源引用
+- 添加新内容时标注来源和更新时间
+- 更新 `.training-metadata.json`
+
+---
+
+### Stage U7: 验证与回滚
+
+**展示给用户**：更新的文件和章节、关键变更摘要、新版本号
+
+**询问用户**：更新后的内容符合预期吗？
+
+**回滚机制**：如果用户不满意，提供一键回滚，从 `.training-history/v{N-1}-backup/` 恢复
+
+**交付物格式**：参见 `references/output-templates.md` 的"更新总结"章节
+
+---
+
+## 降级处理
+
+**触发条件**：无法完成训练（网络搜索不可用、用户拒绝搜索、证据停滞）
+
+**响应**：
+- 保留当前进度（角色定义、知识需求清单）
+- 提供手动研究指南（搜索关键词、质量评估清单、模板文件、类似领域示例）
+
+---
+
+## 输出契约
+
+每次成功的训练必须产出：
+
+1. **Agent 角色定义**
+2. **证据质量报告**
+3. **生成的训练文件**
+4. **训练总结**
+
+详细格式参见 `references/output-templates.md`
+
+---
+
+## 反模式防护
+
+1. **用 Tier C/D 来源作为元规则依据**：必须过滤质量，弱来源只能提供线索
+2. **无限搜索**：必须在 2 轮 ReAct 后停止
+3. **生成模糊规则**：必须提取具体、可执行的元规则
+4. **跳过用户确认**：必须在 Stage 2 和 Stage 6 后获得批准
+5. **混淆元规则和具体约束**：必须将技术约束指向项目 `CLAUDE.md`
+6. **忽略信息缺口**：必须记录缺少高质量证据的部分
+7. **创建没有边界的 Agent**：必须明确"不做什么"
+8. **重复项目规则**：必须检测项目已有的约束，避免冗余
+
+---
+
+## 质量清单
+
+- [ ] 获得了角色定义的用户确认（Stage 2）？
+- [ ] 过滤了来源质量，排除了 Tier C/D 作为硬依据？
+- [ ] 在 2 轮 ReAct 后停止了搜索？
+- [ ] 区分了元规则（系统提示词）和领域知识（knowledge/）？
+- [ ] 为所有元规则标注了 Tier A/B 来源？
+- [ ] 记录了信息缺口而非填充推测？
+- [ ] 获得了提取规则的用户确认（Stage 6）？
+- [ ] 输出包含所有必需章节？
+- [ ] 模式 B 时，避免了重复项目 `CLAUDE.md` 的具体约束？
+
+---
+
+## 参考资料
+
+- **输出模板**：`references/output-templates.md` - 各阶段交付物的详细格式
+- **来源质量指南**：`references/source-quality-guide.md` - Tier A/B/C/D 定义和使用规则
+- **领域适配**：`references/domain-adaptations.md` - 不同领域的元规则和知识重点
+- **交互示例**：`references/example-interaction.md` - 完整的训练流程示例
+
+---
+
+## 实现注意事项
+
+- 此 Skill 应分配给 **Agents-Hub Assistant**（系统助手 Agent）
+- 用户通过前端"训练"按钮触发，发送消息如：`/train-agent <agent_name>`
+- Skill 自动检测 Agent 是否已存在（创建 vs 更新模式）
+- 所有文件写入 `local_data/agents/<agent_name>/work_root/`，位于项目仓库外
+- 训练内容**跨项目有效**：同一 Agent 可在多个项目中使用，行为一致
+- 更新时自动备份到 `.training-history/`，支持回滚

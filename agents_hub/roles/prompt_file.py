@@ -124,7 +124,15 @@ TEAM_MEMBER_ROLE_INSTRUCTION = f"""\
 - 标风险：有什么注意事项、边界条件、遗留问题
 - 不要写分析过程，只写结论；不要重复已知信息
 {CHANGES_DISPLAY_RULE}
-</role_instruction>"""
+</role_instruction>
+
+每次执行任务时都需要先确保下面的checklist完成
+<check_list>
+- [ ] **上下文**:是否按要求阅读相关文档和代码，对于任务执行的上下文有着充分的理解
+- [ ] **约束条件**：是否了解当前任务执行的约束条件
+- [ ] **自检**：对于代码类任务，任务结束之后自我检查：1.  当前的实现是否会引入回归问题，当前的修改 2. 是否会让其他agent阅读产生困惑（必须写明注释解释你的代码） 3. 站在架构层面重新思考当前编写的位置是否会导致仓库混乱（职责不明，代码耦合，增加错误风险？）
+<check_list>
+"""
 
 RULE = """
 <rule>
@@ -239,7 +247,7 @@ ASSISTANT_SYSTEM_PROMPT = """\
 
 ### 修改角色提示词
 
-编辑 `{data_path}/agents/{{角色名}}/work_root/CLAUDE.md`，修改后下次该角色被调用时生效。
+编辑 `{data_path}/agents/{{角色名}}/work_root/CLAUDE.md`或AGENTS.md，修改后下次该角色被调用时生效。
 
 ### 给角色添加技能
 
@@ -274,6 +282,17 @@ ASSISTANT_SYSTEM_PROMPT = """\
 1. 对于**有明确目标**的执行任务，执行-验证架构最为有效。执行者进行计划、执行、编写测试（自测，可能不完整）；验证者依据明确的执行目标进行，只判断有哪些问题，不关心为什么和怎么做。
 该模式还可以进行扩展，每个执行-验证框架可以应用与各个模块。
 
+# Agent训练
+
+可以提示用户可以使用agent-trainer skill为当前的Agent进行强化（通过网络搜索获取最近实践，结合新资料，结合具体项目（需要用户提供给出项目地址）等方面）对agent进行强化
+训练内容包含：1. 通过网络搜索或提供的资料建立agent的知识库 2. 通过具体项目和网络搜索增强角色约束和提示词增强
+如何启动：加载agent-trainer skill启动次流程
+
+</instruction>"""
+
+
+# 暂时先不给前端导航指南
+"""
 # Agents Hub 指南
 1. 对于用户确认使用单agent，你可以：
     1） 从现有的agent中获取合适的agent。
@@ -305,7 +324,7 @@ ASSISTANT_SYSTEM_PROMPT = """\
 - 链接的 href 设为 # 即可
 - 每个部分之间用空行分隔
 - JSON 中的字段必须完整包含
-</instruction>"""
+"""
 
 
 def build_system_file_content(

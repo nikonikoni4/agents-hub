@@ -164,3 +164,9 @@ def initialize_default_roles() -> None:
         logger.info(f"已更新 {assistant_role_name} 禁用工具列表: {assistant_disabled_tools}")
     except Exception as e:
         logger.warning(f"更新 {assistant_role_name} 禁用工具列表失败: {e}")
+
+    # 为 Agents-Hub-Assistant 复制 agent-trainer skill（无论角色是否已存在，确保 skill 是最新的）
+    try:
+        _copy_skill_to_role("agent-trainer", assistant_role_name)
+    except Exception as e:
+        logger.warning(f"复制 agent-trainer skill 到 {assistant_role_name} 失败: {e}")
