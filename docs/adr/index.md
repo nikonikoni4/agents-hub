@@ -93,17 +93,24 @@
 
 ## mcp-tools-to-direct-output
 - updated_at: 2026-06-16
-- path: `docs/ADR/2026-06-16-mcp-tools-to-direct-output.md`
+- path: `docs/ADR/0017-mcp-tools-to-direct-output.md`
 - 状态：decided
 - 触发规则：当设计或修改 MCP 工具、Agent 输出行为、成功展示策略时阅读
 - 内容摘要：暂时取消 MCP 工具 complete_task 和 report_progress，改为直接使用 agentbridge 输出作为回复；成功展示改为 XML 标签 + git status 兜底的两步策略
 
 ## context-layer-removal
 - updated_at: 2026-06-18
-- path: `docs/ADR/2026-06-16-context-layer-removal.md`
+- path: `docs/ADR/0016-context-layer-removal.md`
 - 状态：decided
 - 触发规则：当设计或修改 GroupChat/Agent/Runtime 的依赖关系、评估中间层存在的必要性、或进行渐进式架构重构时阅读
 - 内容摘要：补记 GroupChatContext 中间层的四次演进——v1 Context 持有 Repository（状态混乱）→ v2 引入 Runtime 由 Context 持有（透传层无价值）→ v3 删除 Context（Agent 直接持有 Runtime）→ v4 简化 Runtime 持久化接口（统一 save_agent_members 入口）。核心教训：渐进式重构中"为了快速修改"保留的中间层或冗余方法，在新抽象稳定后应及时清理
+
+## loop-definition-execution-separation
+- updated_at: 2026-06-21
+- path: `docs/ADR/0015-loop-definition-execution-separation.md`
+- 状态：decided
+- 触发规则：当设计或修改 Loop 数据模型、LoopManager/LoopExecutionManager 职责、MCP Loop 工具接口、或前端 Loop 执行进度展示时阅读
+- 内容摘要：Loop 定义与执行状态分离——将 Loop 拆为无状态模板（Loop）和有状态执行实例（LoopExecution），支持同一定义多次启动。明确"Loop 无状态"指定义模型不含执行状态字段，不等于"执行过程无状态"。`current_node_index` 在 LoopExecution 上，前端通过 `get_loop_status(execution_id)` 获取
 
 ## user-design-summary
 - updated_at: 2026-06-04
