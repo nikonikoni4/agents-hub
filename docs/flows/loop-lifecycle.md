@@ -1,8 +1,8 @@
 ---
-version: 1.1
+version: 1.2
 created_at: 2026-06-21
-updated_at: 2026-06-21
-last_updated: 2026-06-21T12:00:00+08:00
+updated_at: 2026-06-23
+last_updated: 2026-06-23T05:00:00+08:00
 abstract: Loop 循环执行功能的数据流文档，记录 Loop 的生命周期、状态变化、节点执行、内存管理和资源清理的完整链路
 ---
 
@@ -12,6 +12,7 @@ abstract: Loop 循环执行功能的数据流文档，记录 Loop 的生命周�
 | ---- | -------- |
 | 1.0 | 创建 Loop Flow 初稿 |
 | 1.1 | 添加内存管理策略说明 |
+| 1.2 | 添加 WebSocket 通知集成说明 |
 
 # 数据流：Loop 生命周期
 
@@ -76,7 +77,7 @@ class Loop:
 - Agent 的 `current_loop_id` 字段记录当前所在的循环 ID
 - `stop_loop()` 的 Agent 恢复机制：先调用 `stop_member()` 再调用 `start_member()`，最后手动设置 status 为 "idle"（stop-then-start 模式）
 
-<key_function last_update="2026-06-22T20:27:51+08:00">
+<key_function last_update="2026-06-23T05:41:09+08:00">
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent._should_accept_message:104
   - base_agent.Agent.set_loop_completion_queue:100
@@ -384,21 +385,31 @@ stateDiagram-v2
 1. LoopExecutor._cleanup()
    清理循环资源
    状态: Agent 状态恢复为 idle | 持久化: ✅ | 跨模块: ❌ core 内
-   步骤: 恢复 Agent 状态 → 清除 completion_queue 引用 → 持久化最终状态
+   步骤: 恢复 Agent 状态 → 清除 completion_queue 引用 → 持久化最终状态 → 通知前端刷新
 
-2. GroupChat._on_loop_task_done()
+2. LoopExecutor._notify_state_change()
+   通知前端 Loop 状态变化
+   状态: 无变化 | 持久化: ❌ | 跨模块: core→realtime
+   步骤: 调用 on_state_change 回调 → 回调实现调用 broadcast_group_chat_refresh(group_chat_id)
+
+3. GroupChat._on_loop_task_done()
    群聊层清理循环注册信息
    状态: 无变化 | 持久化: ❌ | 跨模块: ❌ core 内
    步骤: 注销 "loop" 系统身份 → 清理 active_loops → 清理 _loop_tasks → 清理 _loop_queues
 ```
+
+**WebSocket 通知触发时机**：
+- `_cleanup()`：Loop 完成或失败时（try/except 包裹，避免阻止清理逻辑）
+- `_emergency_stop()`：Loop 紧急停止时（try/except 包裹）
+- `_handle_node_completion()`：节点切换时（current_node_index 变化）
 
 ## 异常与清理
 
 ```
 1. LoopExecutor._emergency_stop()
    执行异常时紧急停止循环
-   状态: RUNNING→FAILED | 持久化: ✅ | 跨模块: ❌ core 内
-   步骤: 设置错误信息 → 调用 _cleanup()
+   状态: RUNNING→FAILED | 持久化: ✅ | 跨模块: core→realtime
+   步骤: 设置错误信息 → 通知前端刷新（try/except 包裹） → 调用 _cleanup()
 
 2. LoopExecutor._handle_node_timeout()
    节点执行超时处理
