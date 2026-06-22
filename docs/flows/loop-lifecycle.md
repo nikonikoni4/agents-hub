@@ -76,11 +76,11 @@ class Loop:
 - Agent 的 `current_loop_id` 字段记录当前所在的循环 ID
 - `stop_loop()` 的 Agent 恢复机制：先调用 `stop_member()` 再调用 `start_member()`，最后手动设置 status 为 "idle"（stop-then-start 模式）
 
-<key_function last_update="2026-06-21T21:19:58+08:00">
+<key_function last_update="2026-06-22T10:33:29+08:00">
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent._should_accept_message:104
   - base_agent.Agent.set_loop_completion_queue:100
-  - base_agent.Agent._notify_message_completion:967
+  - base_agent.Agent._notify_message_completion:969
 </key_function>
 
 ### Loop ↔ AgentCall

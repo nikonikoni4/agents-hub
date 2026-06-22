@@ -62,9 +62,9 @@ contract_refs:
 
 ### GroupChat 统一包装方法
 
-<key_function last_update="2026-06-21T21:19:58+08:00">
+<key_function last_update="2026-06-22T10:33:29+08:00">
 - agents_hub/core/orchestration/group_chat.py
-  - group_chat.GroupChat.send_message_to_agent:1044
+  - group_chat.GroupChat.send_message_to_agent:1049
 </key_function>
 
 **对外接口**：
@@ -97,8 +97,9 @@ contract_refs:
 | agent_token | 身份令牌 | 必须有效 |
 | send_to | 目标 Agent 名称 | 必须已注册 |
 | content | 消息内容 | 非空 |
-| need_response | 是否需要响应 | 默认 True；True → TASK，False → NOTIFICATION |
 | timeout_seconds | 超时时间 | 整数秒，默认 300 |
+
+**注意**：`need_response` 参数已移除，所有 `call_agent` 调用固定创建 TASK 类型消息。
 
 **行为契约**：验证令牌 → 获取 GroupChat → 创建 AgentCall → 通过 `send_message_to_agent()` 投递并保存 → 返回 call_id
 
