@@ -62,7 +62,7 @@ contract_refs:
 
 ### GroupChat 统一包装方法
 
-<key_function last_update="2026-06-22T10:33:29+08:00">
+<key_function last_update="2026-06-22T20:27:51+08:00">
 - agents_hub/core/orchestration/group_chat.py
   - group_chat.GroupChat.send_message_to_agent:1049
 </key_function>

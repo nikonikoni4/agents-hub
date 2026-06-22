@@ -1,6 +1,7 @@
 """Claude CLI 执行器"""
 
 import asyncio
+import codecs
 import os
 import re
 from collections.abc import AsyncIterator
@@ -75,6 +76,7 @@ class ClaudeExecutor:
             )
             buffer = ""
             line_count = 0
+            decoder = codecs.getincrementaldecoder("utf-8")()
             while True:
                 logger.debug(
                     "[ClaudeExecutor] read 等待: pid=%s, session_id=%s, line_count=%d",
@@ -91,7 +93,7 @@ class ClaudeExecutor:
                         line_count,
                     )
                     break
-                buffer += chunk.decode("utf-8")
+                buffer += decoder.decode(chunk)
                 while "\n" in buffer:
                     line, buffer = buffer.split("\n", 1)
                     decoded = line.strip()
@@ -99,6 +101,7 @@ class ClaudeExecutor:
                         line_count += 1
                         logger.debug("[ClaudeExecutor] raw line: %s", decoded[:200])
                         yield decoded
+            buffer += decoder.decode(b"", final=True)
             if buffer.strip():
                 yield buffer.strip()
 

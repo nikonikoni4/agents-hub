@@ -16,15 +16,25 @@ logger = logging.getLogger(__name__)
 # Manager 角色禁用的工具列表
 # 这些工具是 Agents Hub 助手专属，Manager 不需要
 MANAGER_DISABLED_TOOLS = [
+    "AskUserQuestion",  # 禁止 agent 直接向用户提问
     "create_group_chat",  # 创建新群聊（助手专属）
     "create_agent",  # 创建新的成员角色（助手专属）
 ]
 
-# Agents Hub 助手启用的工具列表
-# 助手只需要这两个工具，其他全部禁用
-ASSISTANT_ENABLED_TOOLS = [
-    "create_group_chat",  # 创建新群聊
-    "create_agent",  # 创建新的成员角色
+# Agents Hub 助手禁用的 MCP 工具黑名单
+# 只禁用 MCP (agents-hub) 工具组中的工具，保留 create_group_chat 和 create_agent
+ASSISTANT_DISABLED_MCP_TOOLS = [
+    "AskUserQuestion",  # 禁止 agent 直接向用户提问
+    "call_agent",
+    "health_check",
+    "check_agent_call",
+    "assign_tasks_to_team",
+    "archive_task_list",
+    "create_loop",
+    "start_loop",
+    "stop_loop",
+    "delete_loop",
+    "get_loop_status",
 ]
 
 
@@ -109,7 +119,6 @@ def initialize_default_roles() -> None:
     from agents_hub.config import RoleType, config
     from agents_hub.config.types import AgentPlatform
     from agents_hub.roles.role_manager import RoleManager
-    from agents_hub.tools.catalog import get_all_tool_names
 
     role_manager = RoleManager()
 
@@ -149,19 +158,17 @@ def initialize_default_roles() -> None:
                 name=assistant_role_name,
                 platform=AgentPlatform.CLAUDE,
                 type=RoleType.SYSTEM,
-                description=f"Agents Hub 系统助手，你可以帮助用户创建agents hub的agent和群聊，你的agent token 是{config.assistant_token}",
+                description="Agents Hub 系统助手，你可以帮助用户创建agents hub的agent和群聊",
             )
             logger.info(f"已创建系统角色: {assistant_role_name}")
         except Exception as e:
             logger.warning(f"创建系统角色 {assistant_role_name} 失败: {e}")
 
-    # 为 Agents-Hub-Assistant 设置禁用列表（只保留 create_group_chat 和 create_agent）
+    # 为 Agents-Hub-Assistant 设置禁用列表（禁用 MCP 工具中除 create_group_chat 和 create_agent 外的所有工具）
     try:
-        all_tools = get_all_tool_names()
-        assistant_disabled_tools = [t for t in all_tools if t not in ASSISTANT_ENABLED_TOOLS]
         assistant_role = role_manager.get_role(assistant_role_name)
-        assistant_role.update_disabled_tools(assistant_disabled_tools)
-        logger.info(f"已更新 {assistant_role_name} 禁用工具列表: {assistant_disabled_tools}")
+        assistant_role.update_disabled_tools(ASSISTANT_DISABLED_MCP_TOOLS)
+        logger.info(f"已更新 {assistant_role_name} 禁用工具列表: {ASSISTANT_DISABLED_MCP_TOOLS}")
     except Exception as e:
         logger.warning(f"更新 {assistant_role_name} 禁用工具列表失败: {e}")
 

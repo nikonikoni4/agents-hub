@@ -280,6 +280,25 @@ class SingleChatManager:
 
         return json.dumps(dataclasses.asdict(event), default=_default, ensure_ascii=False)
 
+    @staticmethod
+    def _build_prompt(agent_name: str, content: str) -> str:
+        """构建发送给 agent 的 prompt
+
+        如果之后单聊需要更复杂的 prompt 构建逻辑（如多轮 context 注入、
+        动态 system_prompt 等），应将此方法抽取为独立的 PromptBuilder 类。
+
+        Args:
+            agent_name: agent 名称
+            content: 用户原始消息
+
+        Returns:
+            str: 处理后的 prompt
+        """
+        # Agents-Hub-Assistant：附加 agent token 以便调用 MCP 工具时验证身份
+        if agent_name == "Agents-Hub-Assistant":
+            return f"{content}\n\n[系统提示] 你的 agent token 是: {config.assistant_token}"
+        return content
+
     async def send_message_stream(self, single_chat_id: str, content: str) -> AsyncIterator[str]:
         """发送消息（流式）
 
@@ -317,8 +336,11 @@ class SingleChatManager:
             if agent_info:
                 fork_from = agent_info.main_session
 
+        # 构建 prompt（如附加 agent token 等）
+        prompt = self._build_prompt(index.agent_name, content)
+
         async for event in agent_platform_client.execute_stream(
-            prompt=content,
+            prompt=prompt,
             config=role_config,
             session_id=session_id,
             cwd=index.cwd,
@@ -381,6 +403,21 @@ class SingleChatManager:
         if single_chat_id in self._cache:
             self._cache.move_to_end(single_chat_id)
             return self._cache[single_chat_id]
+
+        # 兜底：session_path 为空但 session_id 有值时，自动解析并回填
+        if not index.session_path and index.session_id:
+            role = self._role_manager.get_role(index.agent_name)
+            role_config = role.get_role_config()
+            index.session_path = self._resolve_session_path(
+                index.session_id, index.platform, role_config.work_root
+            )
+            if index.session_path:
+                self._save_index()
+                logger.info(
+                    "兜底回填 session_path: single_chat_id=%s, session_path=%s",
+                    single_chat_id,
+                    index.session_path,
+                )
 
         if not index.session_path:
             return []

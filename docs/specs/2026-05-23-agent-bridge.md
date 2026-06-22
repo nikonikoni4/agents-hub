@@ -66,14 +66,14 @@ contract_refs:
 
 ### 对外接口
 
-<key_function last_update="2026-06-22T10:33:29+08:00">
+<key_function last_update="2026-06-22T20:27:51+08:00">
 - agents_hub/agent_bridge/bridge.py
   - bridge.AgentBridge.execute_stream:112
   - bridge.AgentBridge.execute:231
   - bridge.AgentBridge.bare_claude_call:320
 - agents_hub/roles/role_manager.py
-  - role_manager.RoleManager.create_role:261
-  - role_manager.RoleManager.get_role:206
+  - role_manager.RoleManager.create_role:266
+  - role_manager.RoleManager.get_role:211
 </key_function>
 
 **接口说明**：

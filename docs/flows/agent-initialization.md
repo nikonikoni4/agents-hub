@@ -80,7 +80,7 @@ _run: bool                           # 运行标志（控制 run() 循环）
 - 注册后，其他 Agent 可通过 `send_message(send_to=name)` 投递消息
 - 注销后，投递到该 Agent 的消息会抛出 AgentNotFoundError
 
-<key_function last_update="2026-06-22T10:33:29+08:00">
+<key_function last_update="2026-06-22T20:27:51+08:00">
 - agents_hub/core/orchestration/group_chat.py
   - GroupChat._init_agents:278
   - GroupChat._register_agents_to_router:324

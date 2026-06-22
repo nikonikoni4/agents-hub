@@ -21,6 +21,11 @@ from agents_hub.utils import get_logger
 
 logger = get_logger(__name__)
 
+# 所有角色默认禁用的工具列表
+DEFAULT_DISABLED_TOOLS = [
+    "AskUserQuestion",  # 禁止 agent 直接向用户提问，应通过群聊消息机制
+]
+
 # Worker 角色禁用的工具列表
 # 这些工具是 Leader 专属，Worker 不需要也不能使用
 WORKER_DISABLED_TOOLS = [
@@ -349,9 +354,11 @@ class RoleManager:
             "scope": scope,
         }
 
-        # Worker 角色自动禁用 Leader 专属工具
+        # 所有角色默认禁用 AskUserQuestion，Worker 额外禁用 Leader 专属工具
+        disabled_tools = list(DEFAULT_DISABLED_TOOLS)
         if role_type == RoleType.TEAM_MEMBER:
-            role_json["disabled_tools"] = WORKER_DISABLED_TOOLS
+            disabled_tools.extend(WORKER_DISABLED_TOOLS)
+        role_json["disabled_tools"] = disabled_tools
         (role_dir / "role.json").write_text(
             json.dumps(role_json, ensure_ascii=False, indent=2), encoding="utf-8"
         )

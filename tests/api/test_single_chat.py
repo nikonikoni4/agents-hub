@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from agents_hub.api.routes.single_chat import get_single_chat_manager, router
 from agents_hub.api.services.single_chat_service import SingleChatManager
+from agents_hub.config import config
 from agents_hub.config.types import AgentPlatform, RoleType
 from agents_hub.exceptions import AgentsHubError, ResourceNotFoundError, ValidationError
 from agents_hub.roles.exceptions import RoleNotFoundError
@@ -240,3 +241,61 @@ def test_send_message_auto_create_missing_agent(client):
     # 没有 single_chat_id 也没有 agent_name，应该用 "default" 创建
     # 这取决于是否允许 "default" agent，这里测试不报 422
     # 具体行为取决于 RoleManager 是否有 "default" agent
+
+
+# ============ _build_prompt 测试 ============
+
+
+def test_build_prompt_assistant_agent():
+    """Agents-Hub-Assistant 应附加 agent token"""
+    result = SingleChatManager._build_prompt("Agents-Hub-Assistant", "帮我创建群聊")
+    assert "帮我创建群聊" in result
+    assert config.assistant_token in result
+    assert "[系统提示]" in result
+
+
+def test_build_prompt_other_agent():
+    """其他 agent 应原样返回 content"""
+    result = SingleChatManager._build_prompt("test_agent", "hello")
+    assert result == "hello"
+
+
+# ============ session_path 兜底回填测试 ============
+
+
+def test_get_messages_backfills_session_path(manager, tmp_path):
+    """session_path 为空但 session_id 有值时，应自动解析并回填"""
+    from agents_hub.api.schemas.single_chat import CreateSingleChatRequest, SingleChatType
+    import asyncio
+
+    # 创建单聊（此时 session_id 和 session_path 都为空）
+    req = CreateSingleChatRequest(
+        type=SingleChatType.NEW,
+        single_chat_name="回填测试",
+        agent_name="test_agent",
+        cwd="/tmp/test",
+    )
+    resp = asyncio.get_event_loop().run_until_complete(manager.create_single_chat(req))
+    chat_id = resp.single_chat_id
+
+    # 手动设置 session_id，模拟"之前保存了 session_id 但没保存 session_path"的情况
+    index = manager._index[chat_id]
+    index.session_id = "fake-session-id"
+    index.session_path = None
+    manager._save_index()
+
+    # mock resolve_session_path 返回一个假路径
+    with patch(
+        "agents_hub.api.services.single_chat_service.SingleChatManager._resolve_session_path",
+        return_value="/fake/session/path.jsonl",
+    ):
+        # 调用 get_messages 触发兜底逻辑
+        asyncio.get_event_loop().run_until_complete(manager.get_messages(chat_id))
+
+    # 验证 session_path 已回填
+    assert index.session_path == "/fake/session/path.jsonl"
+
+    # 验证已持久化到 index.json
+    manager._load_index()
+    persisted = manager._index[chat_id]
+    assert persisted.session_path == "/fake/session/path.jsonl"

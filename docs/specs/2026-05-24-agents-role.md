@@ -83,13 +83,13 @@ contract_refs:
 
 ### 领域层
 
-<key_function last_update="2026-06-22T10:33:29+08:00">
+<key_function last_update="2026-06-22T20:27:51+08:00">
 - agents_hub/roles/role_manager.py
-  - role_manager.RoleManager.list_roles:141
-  - role_manager.RoleManager.get_role:206
-  - role_manager.RoleManager.create_role:261
-  - role_manager.RoleManager.delete_role:362
-  - role_manager.RoleManager.list_avatars:187
+  - role_manager.RoleManager.list_roles:146
+  - role_manager.RoleManager.get_role:211
+  - role_manager.RoleManager.create_role:266
+  - role_manager.RoleManager.delete_role:369
+  - role_manager.RoleManager.list_avatars:192
 </key_function>
 
 **对外接口**：

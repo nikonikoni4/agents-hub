@@ -1,6 +1,7 @@
 """OpenCode CLI 执行器"""
 
 import asyncio
+import codecs
 import json
 import logging
 import os
@@ -68,11 +69,12 @@ class OpenCodeExecutor:
         try:
             assert process.stdout is not None
             buffer = ""
+            decoder = codecs.getincrementaldecoder("utf-8")()
             while True:
                 chunk = await process.stdout.read(256 * 1024)  # 256KB
                 if not chunk:
                     break
-                buffer += chunk.decode("utf-8")
+                buffer += decoder.decode(chunk)
                 while "\n" in buffer:
                     line, buffer = buffer.split("\n", 1)
                     decoded = line.strip()
@@ -83,6 +85,7 @@ class OpenCodeExecutor:
                         except json.JSONDecodeError:
                             logger.warning(f"Failed to parse JSON: {decoded}")
                             yield {"type": "text", "text": decoded}
+            buffer += decoder.decode(b"", final=True)
             if buffer.strip():
                 try:
                     event = json.loads(buffer.strip())
