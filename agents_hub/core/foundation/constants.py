@@ -14,3 +14,9 @@ AUTO_COMPACT_THRESHOLD = 200
 
 # 本地数据存储路径（保留用于向后兼容，新代码应使用 group_chat_paths）
 LOCAL_DATA_PATH = "local_data"
+
+# Heartbeat 和清理配置常量
+HEARTBEAT_INTERVAL_SECONDS: int = 1200  # Heartbeat 间隔（20 分钟）
+NOTIFICATION_RETENTION_SECONDS: int = (
+    HEARTBEAT_INTERVAL_SECONDS + 600
+)  # Notification 清理时间（heartbeat + 10 分钟）

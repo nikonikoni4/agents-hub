@@ -91,12 +91,6 @@ LoopStatus = LoopExecutionStatus
 # Loop 配置常量
 LOOP_NODE_TIMEOUT_SECONDS: float = 2400.0  # Loop 节点执行超时（40 分钟）
 
-# Heartbeat 和清理配置常量
-HEARTBEAT_INTERVAL_SECONDS: int = 1200  # Heartbeat 间隔（20 分钟）
-NOTIFICATION_RETENTION_SECONDS: int = (
-    HEARTBEAT_INTERVAL_SECONDS + 600
-)  # Notification 清理时间（heartbeat + 10 分钟）
-
 
 class SystemRoles:
     """系统身份常量

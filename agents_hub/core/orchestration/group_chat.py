@@ -23,8 +23,8 @@ from agents_hub.core.foundation import (
     SessionType,
     StateError,
 )
+from agents_hub.core.foundation.constants import HEARTBEAT_INTERVAL_SECONDS
 from agents_hub.core.foundation.models import (
-    HEARTBEAT_INTERVAL_SECONDS,
     LoopExecutionStatus,
     SystemRoles,
 )

@@ -6,7 +6,7 @@ Agent 基类
 渲染分工（参见 foundation/renderer.py）：
 - 入站 LLM prompt：render_for_llm（msg.content 始终为原始内容，不被改写）
 - 对外公开发言：通过 MCP 工具显式写入群聊
-- 任务闭环回复：通过 complete_task 显式完成调用
+- 任务闭环回复：通过_fallback_close_task闭环
 """
 
 import asyncio
@@ -355,7 +355,9 @@ class Agent:
                 result.git_head_before = git_head_before
                 result.status_before = status_before
             if msg.message_type != MessageType.TASK:
-                await self.agent_call_manager.set_result(msg.call_id, result)
+                await self.agent_call_manager.set_result(
+                    msg.call_id, result.text if result else None
+                )
             self.logger.debug(
                 "执行完成: agent=%s, call_id=%s, result_len=%d",
                 self.name,

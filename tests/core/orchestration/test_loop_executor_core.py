@@ -270,6 +270,244 @@ async def test_cleanup_restores_agent_state_clears_queue_reference_and_persists_
     )
 
 
+@pytest.mark.asyncio
+async def test_cleanup_sends_notification_to_manager_on_completion():
+    send_message = AsyncMock()
+    runtime = _FakeRuntime(agent_status="in_loop")
+    loop_execution_manager = SimpleNamespace(update_execution_status=AsyncMock())
+    agents = {
+        "executor": SimpleNamespace(set_loop_completion_queue=AsyncMock()),
+    }
+    loop = _make_loop(max_iterations=1)
+    execution = _make_execution()
+    execution.status = LoopExecutionStatus.COMPLETED.value
+    executor = LoopExecutor(
+        loop=loop,
+        execution=execution,
+        runtime=runtime,
+        send_message_callback=send_message,
+        loop_execution_manager=loop_execution_manager,
+        agents=agents,
+        manager_name="manager",
+    )
+
+    await executor._cleanup()
+
+    send_message.assert_awaited_once()
+    msg = send_message.call_args[0][0]
+    assert msg.send_from == "loop"
+    assert msg.send_to == "manager"
+    assert msg.message_type == MessageType.NOTIFICATION
+    assert "已完成" in msg.content
+    assert "exec-1" in msg.content
+    assert "call_agent" in msg.content
+    assert "start_loop" in msg.content
+
+
+@pytest.mark.asyncio
+async def test_cleanup_sends_notification_to_manager_on_failure_with_error():
+    send_message = AsyncMock()
+    runtime = _FakeRuntime(agent_status="in_loop")
+    loop_execution_manager = SimpleNamespace(update_execution_status=AsyncMock())
+    agents = {
+        "executor": SimpleNamespace(set_loop_completion_queue=AsyncMock()),
+    }
+    loop = _make_loop(max_iterations=1)
+    execution = _make_execution()
+    execution.status = LoopExecutionStatus.FAILED.value
+    execution.error_message = "节点执行超时"
+    executor = LoopExecutor(
+        loop=loop,
+        execution=execution,
+        runtime=runtime,
+        send_message_callback=send_message,
+        loop_execution_manager=loop_execution_manager,
+        agents=agents,
+        manager_name="manager",
+    )
+
+    await executor._cleanup()
+
+    send_message.assert_awaited_once()
+    msg = send_message.call_args[0][0]
+    assert "已失败" in msg.content
+    assert "节点执行超时" in msg.content
+
+
+@pytest.mark.asyncio
+async def test_cleanup_skips_notification_when_manager_name_is_none():
+    send_message = AsyncMock()
+    runtime = _FakeRuntime(agent_status="in_loop")
+    loop_execution_manager = SimpleNamespace(update_execution_status=AsyncMock())
+    agents = {
+        "executor": SimpleNamespace(set_loop_completion_queue=AsyncMock()),
+    }
+    loop = _make_loop(max_iterations=1)
+    execution = _make_execution()
+    execution.status = LoopExecutionStatus.COMPLETED.value
+    executor = LoopExecutor(
+        loop=loop,
+        execution=execution,
+        runtime=runtime,
+        send_message_callback=send_message,
+        loop_execution_manager=loop_execution_manager,
+        agents=agents,
+        manager_name=None,
+    )
+
+    await executor._cleanup()
+
+    send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_cleanup_skips_notification_when_send_message_callback_is_none():
+    runtime = _FakeRuntime(agent_status="in_loop")
+    loop_execution_manager = SimpleNamespace(update_execution_status=AsyncMock())
+    agents = {
+        "executor": SimpleNamespace(set_loop_completion_queue=AsyncMock()),
+    }
+    loop = _make_loop(max_iterations=1)
+    execution = _make_execution()
+    execution.status = LoopExecutionStatus.COMPLETED.value
+    executor = LoopExecutor(
+        loop=loop,
+        execution=execution,
+        runtime=runtime,
+        send_message_callback=None,
+        loop_execution_manager=loop_execution_manager,
+        agents=agents,
+        manager_name="manager",
+    )
+
+    # 不应抛出异常，其他清理操作正常完成
+    await executor._cleanup()
+
+    agents["executor"].set_loop_completion_queue.assert_awaited_once_with(None)
+    loop_execution_manager.update_execution_status.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_cleanup_handles_send_failure_gracefully():
+    async def send_message_raises(_msg):
+        raise RuntimeError("router down")
+
+    runtime = _FakeRuntime(agent_status="in_loop")
+    loop_execution_manager = SimpleNamespace(update_execution_status=AsyncMock())
+    agents = {
+        "executor": SimpleNamespace(set_loop_completion_queue=AsyncMock()),
+    }
+    loop = _make_loop(max_iterations=1)
+    execution = _make_execution()
+    execution.status = LoopExecutionStatus.COMPLETED.value
+    executor = LoopExecutor(
+        loop=loop,
+        execution=execution,
+        runtime=runtime,
+        send_message_callback=send_message_raises,
+        loop_execution_manager=loop_execution_manager,
+        agents=agents,
+        manager_name="manager",
+    )
+
+    # 不应抛出异常
+    await executor._cleanup()
+
+    # 其他清理操作仍然完成
+    agents["executor"].set_loop_completion_queue.assert_awaited_once_with(None)
+    loop_execution_manager.update_execution_status.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_sends_manager_notification_after_loop_completes():
+    queue = asyncio.Queue()
+    sent_messages = []
+
+    async def send_message(message):
+        sent_messages.append(message)
+        if message.send_to == "executor":
+            await queue.put(
+                {
+                    "loop_id": "loop-1",
+                    "call_id": message.call_id,
+                    "agent_result": _make_agent_result(
+                        agent_name="executor",
+                        text="# 执行结果\n已完成\n**任务状态**：完成",
+                    ),
+                }
+            )
+        elif message.send_to == "reviewer":
+            await queue.put(
+                {
+                    "loop_id": "loop-1",
+                    "call_id": message.call_id,
+                    "agent_result": _make_agent_result(
+                        agent_name="reviewer",
+                        text=(
+                            "# 审查结果\n通过\n"
+                            "<loop_decision><should_continue>false</should_continue>"
+                            "<reason>通过</reason></loop_decision>"
+                        ),
+                    ),
+                }
+            )
+
+    loop = _make_loop(max_iterations=3)
+    execution = _make_execution()
+    executor = LoopExecutor(
+        loop=loop,
+        execution=execution,
+        runtime=SimpleNamespace(add_message=AsyncMock()),
+        completion_queue=queue,
+        send_message_callback=send_message,
+        agent_call_manager=_FakeAgentCallManager(),
+        manager_name="manager",
+    )
+
+    await executor.run()
+
+    assert execution.status == LoopExecutionStatus.COMPLETED.value
+    # 最后一条消息是发给 manager 的通知
+    notification = sent_messages[-1]
+    assert notification.send_from == "loop"
+    assert notification.send_to == "manager"
+    assert notification.message_type == MessageType.NOTIFICATION
+    assert "已完成" in notification.content
+
+
+@pytest.mark.asyncio
+async def test_run_sends_manager_notification_after_timeout():
+    async def send_message(_message):
+        return None
+
+    loop = _make_loop(max_iterations=3)
+    execution = _make_execution()
+    runtime = _FakeRuntime(agent_status="busy")
+    sent_messages = []
+
+    async def send_message_capture(message):
+        sent_messages.append(message)
+
+    executor = LoopExecutor(
+        loop=loop,
+        execution=execution,
+        runtime=runtime,
+        completion_queue=asyncio.Queue(),
+        send_message_callback=send_message_capture,
+        agent_call_manager=_FakeAgentCallManager(),
+        manager_name="manager",
+    )
+    executor.receive_node_completion = AsyncMock(side_effect=TimeoutError)
+
+    await executor.run()
+
+    assert execution.status == LoopExecutionStatus.FAILED.value
+    notification = sent_messages[-1]
+    assert notification.send_to == "manager"
+    assert "已失败" in notification.content
+    assert "节点执行超时" in notification.content
+
+
 class _FakeAgentCallManager:
     def __init__(self):
         self.created_calls = []

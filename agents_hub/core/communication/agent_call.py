@@ -9,7 +9,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from agents_hub.core.foundation import CallStatus, MessageType
-from agents_hub.core.foundation.models import NOTIFICATION_RETENTION_SECONDS
+from agents_hub.core.foundation.constants import NOTIFICATION_RETENTION_SECONDS
 
 
 @dataclass

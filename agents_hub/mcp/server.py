@@ -34,7 +34,6 @@ MCP Server 和 14 个工具
 
 import inspect
 from datetime import datetime
-from pathlib import Path
 
 from fastmcp import FastMCP
 from mcp.types import JSONRPCMessage
@@ -71,10 +70,8 @@ from agents_hub.config.types import AgentPlatform, RoleType  # noqa: E402
 from agents_hub.core.foundation import (  # noqa: E402
     AgentMessage,
     AgentNotFoundError,
-    CallStatus,
     GroupChatNotFoundError,
     MessageType,
-    render_for_chat,
 )
 from agents_hub.core.foundation.exceptions import (  # noqa: E402
     FileSystemError,
@@ -84,9 +81,6 @@ from agents_hub.core.foundation.exceptions import (  # noqa: E402
     LoopStateError,
     LoopValidationError,
 )
-from agents_hub.core.foundation.file_snapshot import create_file_snapshot  # noqa: E402
-from agents_hub.core.foundation.paths import group_chat_paths  # noqa: E402
-from agents_hub.core.foundation.token import redact_token  # noqa: E402
 from agents_hub.core.orchestration import group_chat_manager  # noqa: E402
 from agents_hub.core.orchestration.group_chat import GroupChat  # noqa: E402
 from agents_hub.exceptions import ResourceNotFoundError, StateError, ValidationError  # noqa: E402
@@ -97,7 +91,6 @@ from agents_hub.mcp.errors import (  # noqa: E402  # noqa: E402
     FILE_SYSTEM_ERROR,
     GROUP_CHAT_NOT_FOUND,
     INTERNAL_ERROR,
-    INVALID_AGENT_CALL_STATE,
     INVALID_TOKEN,
     PERMISSION_DENIED,
     VALIDATION_ERROR,
@@ -592,277 +585,270 @@ async def check_agent_call(agent_token: str, call_id: str) -> dict:
 
 
 # ============================================================================
-# Tool 5: report_progress
+# Tool 5: report_progress [DEPRECATED]
 # ============================================================================
 
-
-async def report_progress(agent_token: str, content: str, send_to: str | None = None) -> dict:
-    """
-    复杂任务过程汇报：在你执行复杂任务（需要花费1min以上的任务）时调用该工具进行汇报说明。
-    使用时机：
-    - 任务开始前：收到，我将执行<任务名称>
-    - 任务中间：已完成XX，接下来将进行XX
-
-    Args:
-        agent_token: 调用者的身份令牌
-        content: 简短的进展汇报
-        send_to: 可选的 @ 对象；为空时表示普通群聊发言
-
-    Returns:
-        成功: {"ok": True}
-        失败: {"error": {"code": "...", "message": "..."}}
-    """
-    # 已弃用
-    logger.info(
-        "MCP 调用: report_progress, send_to=%s, content_len=%d",
-        send_to,
-        len(content) if content else 0,
-    )
-    try:
-        identity = group_chat_manager.resolve_token(agent_token)
-        if identity is None:
-            return make_error_response(
-                INVALID_TOKEN,
-                "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
-            )
-
-        agent_name, group_chat_id = identity
-        try:
-            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
-        except GroupChatNotFoundError:
-            logger.warning("report_progress 群聊不存在: group_chat_id=%s", group_chat_id)
-            return make_error_response(
-                GROUP_CHAT_NOT_FOUND,
-                f"群聊 {group_chat_id} 不存在",
-                details={"group_chat_id": group_chat_id},
-            )
-
-        safe_content = redact_token(content)
-        chat_content = (
-            render_for_chat(agent_name, send_to, safe_content) if send_to else safe_content
-        )
-        # TODO : [DESIGN] 当前在agent_Context中使用了_get_filtered_messages，会忽略掉所有@agent或agent发起的信息，
-        # 所以如果这里的群聊信息如果是使用了speak_in_the_group@某个agent，这个agent实际上是不会收到这个消息的
-        # 需要某个机制去区分complete_task 和 report_progress的区别
-        # 这里暂时不做处理
-        await group_chat.runtime.add_message(
-            _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)
-        )
-        await broadcast_group_chat_refresh(group_chat_id)
-        return {"ok": True}
-
-    except Exception as e:
-        logger.error("report_progress 失败: %s", str(e), exc_info=True)
-        return make_error_response(
-            INTERNAL_ERROR,
-            f"内部错误: {str(e)}",
-            details={"exception": str(e)},
-        )
+# [deprecated] 已弃用，保留代码供参考
+# async def report_progress(agent_token: str, content: str, send_to: str | None = None) -> dict:
+#     """
+#     复杂任务过程汇报：在你执行复杂任务（需要花费1min以上的任务）时调用该工具进行汇报说明。
+#     使用时机：
+#     - 任务开始前：收到，我将执行<任务名称>
+#     - 任务中间：已完成XX，接下来将进行XX
+#
+#     Args:
+#         agent_token: 调用者的身份令牌
+#         content: 简短的进展汇报
+#         send_to: 可选的 @ 对象；为空时表示普通群聊发言
+#
+#     Returns:
+#         成功: {"ok": True}
+#         失败: {"error": {"code": "...", "message": "..."}}
+#     """
+#     # 已弃用
+#     logger.info(
+#         "MCP 调用: report_progress, send_to=%s, content_len=%d",
+#         send_to,
+#         len(content) if content else 0,
+#     )
+#     try:
+#         identity = group_chat_manager.resolve_token(agent_token)
+#         if identity is None:
+#             return make_error_response(
+#                 INVALID_TOKEN,
+#                 "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
+#             )
+#
+#         agent_name, group_chat_id = identity
+#         try:
+#             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
+#         except GroupChatNotFoundError:
+#             logger.warning("report_progress 群聊不存在: group_chat_id=%s", group_chat_id)
+#             return make_error_response(
+#                 GROUP_CHAT_NOT_FOUND,
+#                 f"群聊 {group_chat_id} 不存在",
+#                 details={"group_chat_id": group_chat_id},
+#             )
+#
+#         safe_content = redact_token(content)
+#         chat_content = (
+#             render_for_chat(agent_name, send_to, safe_content) if send_to else safe_content
+#         )
+#         await group_chat.runtime.add_message(
+#             _make_chat_result(group_chat=group_chat, agent_name=agent_name, content=chat_content)
+#         )
+#         await broadcast_group_chat_refresh(group_chat_id)
+#         return {"ok": True}
+#
+#     except Exception as e:
+#         logger.error("report_progress 失败: %s", str(e), exc_info=True)
+#         return make_error_response(
+#             INTERNAL_ERROR,
+#             f"内部错误: {str(e)}",
+#             details={"exception": str(e)},
+#         )
 
 
 # ============================================================================
-# Tool 6: complete_task
+# Tool 6: complete_task [DEPRECATED]，已被agents_hub\core\agent\base_agent.py的_fallback_close_task替代
 # ============================================================================
 
-
-async def complete_task(
-    agent_token: str,
-    call_id: str,
-    content: str,
-    modified_files: list[str] | None = None,
-    git_diff_range: str | None = None,
-    web_preview_url: str | None = None,
-    web_preview_title: str | None = None,
-    success: bool = True,
-) -> dict:
-    """
-    最终任务总结：当你结束这一轮对话之前，必须调用该工具进行任务汇报。
-    若有改动的文件必须使用modified_files和git_diff_range
-    若有HTML或网页需要用于预览，必须使用web_preview_url
-    Args:
-        agent_token: 调用者的身份令牌
-        call_id: 要结束的 AgentCall ID
-        content: 成果汇报（结果、修改文件、注意事项等）
-        success: True 表示完成，False 表示阻塞或失败
-        modified_files: 修改的文件列表（相对路径）
-        git_diff_range: Git diff 范围（格式：commit..commit）
-        web_preview_url: 网页预览 URL（可选）。当完成了一个网页（HTML 文件）时，需要传入此参数让用户预览。
-                        格式:
-                          - 静态 HTML 文件: 文件相对路径，如 "index.html"、"dist/index.html"
-                          - 本地服务器: 完整 URL，如 "http://localhost:3000"、"http://localhost:8000/api"
-        web_preview_title: 网页预览标题（可选），如 "首页"、"登录页面" 等
-
-    Returns:
-        成功: {"call_id": "...", "status": "completed|failed"}
-        失败: {"error": {"code": "...", "message": "..."}}
-    """
-    # 已弃用
-    logger.info(
-        "MCP 调用: complete_task, call_id=%s, success=%s, content_len=%d",
-        call_id,
-        success,
-        len(content) if content else 0,
-    )
-    try:
-        # 1. 验证token
-        identity = group_chat_manager.resolve_token(agent_token)
-        if identity is None:
-            return make_error_response(
-                INVALID_TOKEN,
-                "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
-            )
-
-        agent_name, group_chat_id = identity
-        # 2. 验证群聊，agent call id, 当前是否是被调用方，call id 是否是TASK若不是不能调用，判断是否重复处理
-        try:
-            group_chat = await group_chat_manager.load_group_chat(group_chat_id)
-        except GroupChatNotFoundError:
-            logger.warning("complete_task 群聊不存在: group_chat_id=%s", group_chat_id)
-            return make_error_response(
-                GROUP_CHAT_NOT_FOUND,
-                f"群聊 {group_chat_id} 不存在",
-                details={"group_chat_id": group_chat_id},
-            )
-
-        call = await group_chat.agent_call_manager.get_call(call_id)
-        if call is None:
-            return make_error_response(
-                AGENT_CALL_NOT_FOUND,
-                f"AgentCall {call_id} 不存在，可能已被清理或系统重启导致数据丢失",
-                details={"call_id": call_id},
-            )
-
-        if call.send_to != agent_name:
-            return make_error_response(
-                PERMISSION_DENIED,
-                f"权限不足：只有调用接收者 {call.send_to} 可以结束该调用",
-                details={"call_id": call_id, "agent_name": agent_name},
-            )
-
-        if call.message_type != MessageType.TASK:
-            return make_error_response(
-                INVALID_AGENT_CALL_STATE,
-                "该 AgentCall 是 notification，不需要回复，不能调用 complete_task,可以使用speak_in_the_group在群聊进行非正式回复",
-                details={"call_id": call_id, "message_type": call.message_type.value},
-            )
-
-        if call.has_agent_response:
-            return make_error_response(
-                INVALID_AGENT_CALL_STATE,
-                "该 AgentCall 已经通过 complete_task 闭环，不能重复结束",
-                details={"call_id": call_id},
-            )
-        # 3. 将token信息从返回的信息中剥离
-        safe_content = redact_token(content)
-
-        # 4. 参数校验：空值时跳过对应处理
-        file_metadata_list = None
-        agent_cwd: str | None = None
-        has_modified_files = modified_files is not None and len(modified_files) > 0
-        has_web_preview = web_preview_url is not None and web_preview_url.strip() != ""
-
-        # 获取 Agent 工作目录（modified_files 和 web_preview_url 都需要）
-        if has_modified_files or has_web_preview:
-            agent = _find_agent(group_chat, agent_name)
-            agent_cwd = (
-                agent.cwd if agent and hasattr(agent, "cwd") else group_chat.runtime.project_path
-            )
-
-        if has_modified_files:
-            # 构造快照目录
-            snapshot_dir = group_chat_paths.file_snapshots_dir(
-                group_chat_id, group_chat.runtime.project_path
-            )
-
-            # 为每个文件创建快照
-            file_metadata_list = []
-            assert modified_files is not None, (
-                "has_modified_files 为 True 时 modified_files 必须非空"
-            )
-            assert agent_cwd is not None, "modified_files 存在时 agent_cwd 必须已初始化"
-            snapshot_failures = []
-            for index, file_path in enumerate(modified_files):
-                try:
-                    metadata = create_file_snapshot(
-                        snapshot_dir=snapshot_dir,
-                        call_id=call_id,
-                        file_path=file_path,
-                        index=index,
-                        cwd=agent_cwd,
-                        git_diff_range=git_diff_range,
-                    )
-                    file_metadata_list.append(metadata)
-                except Exception as e:
-                    # 单个文件失败不影响整体
-                    snapshot_failures.append((file_path, str(e)))
-            if snapshot_failures:
-                logger.warning(
-                    "complete_task: %d 个文件快照创建失败: %s",
-                    len(snapshot_failures),
-                    snapshot_failures,
-                )
-
-        # 5. 完成call闭环
-        # TODO : [DESIGN] 这里会把结果发在result中，但是当前也会在直接发送给agent信息，
-        # 如果agent调用check_agent_call，实际上会得到2份结果，但是这里先不管
-        # 一个可行的方法是使用 "agent call结束，具体内容{agent_name}会直接发送信息给你"
-        logger.info(
-            "complete_task: call_id=%s, success=%s, safe_content_len=%d",
-            call_id,
-            success,
-            len(safe_content) if safe_content else 0,
-        )
-        await group_chat.agent_call_manager.mark_agent_response(
-            call_id=call_id,
-            content=safe_content,  #  "agent call结束，具体内容{agent_name}会直接发送信息给你"
-            success=success,
-        )
-        logger.info("AgentCall 完成: call_id=%s", call_id)
-        # 6. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
-        web_preview = None
-        if has_web_preview:
-            assert web_preview_url is not None, (
-                "has_web_preview 为 True 时 web_preview_url 必须非空"
-            )
-            assert agent_cwd is not None, "web_preview_url 存在时 agent_cwd 必须已初始化"
-            # 只对相对路径转换为 file:/// 绝对路径，HTTP/HTTPS URL 保持不变
-            if not web_preview_url.startswith(("file:///", "http://", "https://")):
-                abs_path = Path(agent_cwd) / web_preview_url
-                web_preview_url = f"file:///{abs_path.as_posix()}"
-            web_preview = {"url": web_preview_url, "title": web_preview_title}
-
-        if config.is_user_name(call.send_from):
-            await group_chat.runtime.add_message(
-                _make_chat_result(
-                    group_chat=group_chat,
-                    agent_name=agent_name,
-                    content=render_for_chat(agent_name, call.send_from, safe_content),
-                    cwd=agent_cwd,
-                    modified_files=file_metadata_list,
-                    git_diff_range=git_diff_range,
-                    web_preview=web_preview,
-                )
-            )
-            await broadcast_group_chat_refresh(group_chat_id)
-        else:
-            await _send_agent_call_completion_notification(
-                group_chat=group_chat,
-                group_chat_id=group_chat_id,
-                send_from=agent_name,
-                send_to=call.send_from,
-                content=safe_content,
-            )
-
-        status = CallStatus.COMPLETED if success else CallStatus.FAILED
-        return {"call_id": call_id, "status": status.value}
-
-    except Exception as e:
-        logger.error("complete_task 失败: %s", str(e), exc_info=True)
-        return make_error_response(
-            INTERNAL_ERROR,
-            f"内部错误: {str(e)}",
-            details={"exception": str(e)},
-        )
+# [deprecated] 已弃用，保留代码供参考
+# async def complete_task(
+#     agent_token: str,
+#     call_id: str,
+#     content: str,
+#     modified_files: list[str] | None = None,
+#     git_diff_range: str | None = None,
+#     web_preview_url: str | None = None,
+#     web_preview_title: str | None = None,
+#     success: bool = True,
+# ) -> dict:
+#     """
+#     最终任务总结：当你结束这一轮对话之前，必须调用该工具进行任务汇报。
+#     若有改动的文件必须使用modified_files和git_diff_range
+#     若有HTML或网页需要用于预览，必须使用web_preview_url
+#     Args:
+#         agent_token: 调用者的身份令牌
+#         call_id: 要结束的 AgentCall ID
+#         content: 成果汇报（结果、修改文件、注意事项等）
+#         success: True 表示完成，False 表示阻塞或失败
+#         modified_files: 修改的文件列表（相对路径）
+#         git_diff_range: Git diff 范围（格式：commit..commit）
+#         web_preview_url: 网页预览 URL（可选）。当完成了一个网页（HTML 文件）时，需要传入此参数让用户预览。
+#                         格式:
+#                           - 静态 HTML 文件: 文件相对路径，如 "index.html"、"dist/index.html"
+#                           - 本地服务器: 完整 URL，如 "http://localhost:3000"、"http://localhost:8000/api"
+#         web_preview_title: 网页预览标题（可选），如 "首页"、"登录页面" 等
+#
+#     Returns:
+#         成功: {"call_id": "...", "status": "completed|failed"}
+#         失败: {"error": {"code": "...", "message": "..."}}
+#     """
+#     # 已弃用
+#     logger.info(
+#         "MCP 调用: complete_task, call_id=%s, success=%s, content_len=%d",
+#         call_id,
+#         success,
+#         len(content) if content else 0,
+#     )
+#     try:
+#         # 1. 验证token
+#         identity = group_chat_manager.resolve_token(agent_token)
+#         if identity is None:
+#             return make_error_response(
+#                 INVALID_TOKEN,
+#                 "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
+#             )
+#
+#         agent_name, group_chat_id = identity
+#         # 2. 验证群聊，agent call id, 当前是否是被调用方，call id 是否是TASK若不是不能调用，判断是否重复处理
+#         try:
+#             group_chat = await group_chat_manager.load_group_chat(group_chat_id)
+#         except GroupChatNotFoundError:
+#             logger.warning("complete_task 群聊不存在: group_chat_id=%s", group_chat_id)
+#             return make_error_response(
+#                 GROUP_CHAT_NOT_FOUND,
+#                 f"群聊 {group_chat_id} 不存在",
+#                 details={"group_chat_id": group_chat_id},
+#             )
+#
+#         call = await group_chat.agent_call_manager.get_call(call_id)
+#         if call is None:
+#             return make_error_response(
+#                 AGENT_CALL_NOT_FOUND,
+#                 f"AgentCall {call_id} 不存在，可能已被清理或系统重启导致数据丢失",
+#                 details={"call_id": call_id},
+#             )
+#
+#         if call.send_to != agent_name:
+#             return make_error_response(
+#                 PERMISSION_DENIED,
+#                 f"权限不足：只有调用接收者 {call.send_to} 可以结束该调用",
+#                 details={"call_id": call_id, "agent_name": agent_name},
+#             )
+#
+#         if call.message_type != MessageType.TASK:
+#             return make_error_response(
+#                 INVALID_AGENT_CALL_STATE,
+#                 "该 AgentCall 是 notification，不需要回复，不能调用 complete_task,可以使用speak_in_the_group在群聊进行非正式回复",
+#                 details={"call_id": call_id, "message_type": call.message_type.value},
+#             )
+#
+#         if call.has_agent_response:
+#             return make_error_response(
+#                 INVALID_AGENT_CALL_STATE,
+#                 "该 AgentCall 已经通过 complete_task 闭环，不能重复结束",
+#                 details={"call_id": call_id},
+#             )
+#         # 3. 将token信息从返回的信息中剥离
+#         safe_content = redact_token(content)
+#
+#         # 4. 参数校验：空值时跳过对应处理
+#         file_metadata_list = None
+#         agent_cwd: str | None = None
+#         has_modified_files = modified_files is not None and len(modified_files) > 0
+#         has_web_preview = web_preview_url is not None and web_preview_url.strip() != ""
+#
+#         # 获取 Agent 工作目录（modified_files 和 web_preview_url 都需要）
+#         if has_modified_files or has_web_preview:
+#             agent = _find_agent(group_chat, agent_name)
+#             agent_cwd = (
+#                 agent.cwd if agent and hasattr(agent, "cwd") else group_chat.runtime.project_path
+#             )
+#
+#         if has_modified_files:
+#             # 构造快照目录
+#             snapshot_dir = group_chat_paths.file_snapshots_dir(
+#                 group_chat_id, group_chat.runtime.project_path
+#             )
+#
+#             # 为每个文件创建快照
+#             file_metadata_list = []
+#             assert modified_files is not None, (
+#                 "has_modified_files 为 True 时 modified_files 必须非空"
+#             )
+#             assert agent_cwd is not None, "modified_files 存在时 agent_cwd 必须已初始化"
+#             snapshot_failures = []
+#             for index, file_path in enumerate(modified_files):
+#                 try:
+#                     metadata = create_file_snapshot(
+#                         snapshot_dir=snapshot_dir,
+#                         call_id=call_id,
+#                         file_path=file_path,
+#                         index=index,
+#                         cwd=agent_cwd,
+#                         git_diff_range=git_diff_range,
+#                     )
+#                     file_metadata_list.append(metadata)
+#                 except Exception as e:
+#                     # 单个文件失败不影响整体
+#                     snapshot_failures.append((file_path, str(e)))
+#             if snapshot_failures:
+#                 logger.warning(
+#                     "complete_task: %d 个文件快照创建失败: %s",
+#                     len(snapshot_failures),
+#                     snapshot_failures,
+#                 )
+#
+#         # 5. 完成call闭环
+#         logger.info(
+#             "complete_task: call_id=%s, success=%s, safe_content_len=%d",
+#             call_id,
+#             success,
+#             len(safe_content) if safe_content else 0,
+#         )
+#         await group_chat.agent_call_manager.mark_agent_response(
+#             call_id=call_id,
+#             content=safe_content,
+#             success=success,
+#         )
+#         logger.info("AgentCall 完成: call_id=%s", call_id)
+#         # 6. Agent 调用方走私有通知；user 调用方写入群聊，由前端通过 refresh 拉取。
+#         web_preview = None
+#         if has_web_preview:
+#             assert web_preview_url is not None, (
+#                 "has_web_preview 为 True 时 web_preview_url 必须非空"
+#             )
+#             assert agent_cwd is not None, "web_preview_url 存在时 agent_cwd 必须已初始化"
+#             # 只对相对路径转换为 file:/// 绝对路径，HTTP/HTTPS URL 保持不变
+#             if not web_preview_url.startswith(("file:///", "http://", "https://")):
+#                 abs_path = Path(agent_cwd) / web_preview_url
+#                 web_preview_url = f"file:///{abs_path.as_posix()}"
+#             web_preview = {"url": web_preview_url, "title": web_preview_title}
+#
+#         if config.is_user_name(call.send_from):
+#             await group_chat.runtime.add_message(
+#                 _make_chat_result(
+#                     group_chat=group_chat,
+#                     agent_name=agent_name,
+#                     content=render_for_chat(agent_name, call.send_from, safe_content),
+#                     cwd=agent_cwd,
+#                     modified_files=file_metadata_list,
+#                     git_diff_range=git_diff_range,
+#                     web_preview=web_preview,
+#                 )
+#             )
+#             await broadcast_group_chat_refresh(group_chat_id)
+#         else:
+#             await _send_agent_call_completion_notification(
+#                 group_chat=group_chat,
+#                 group_chat_id=group_chat_id,
+#                 send_from=agent_name,
+#                 send_to=call.send_from,
+#                 content=safe_content,
+#             )
+#
+#         status = CallStatus.COMPLETED if success else CallStatus.FAILED
+#         return {"call_id": call_id, "status": status.value}
+#
+#     except Exception as e:
+#         logger.error("complete_task 失败: %s", str(e), exc_info=True)
+#         return make_error_response(
+#             INTERNAL_ERROR,
+#             f"内部错误: {str(e)}",
+#             details={"exception": str(e)},
+#         )
 
 
 # ============================================================================
