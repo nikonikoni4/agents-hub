@@ -35,3 +35,15 @@
  - 触发规则：编写前端测试代码时
  - 内容摘要：测试文件必须共置在源码旁边（`xxx.test.ts`），禁止集中放 `tests/` 目录或 `__tests__/` 子目录。全局 setup 和跨模块集成测试除外
 
+## 后端并发与状态管理规则
+ - updated_at: 2026-06-22
+ - path: docs/coding-rules/backend-concurrency.md
+ - 触发规则：编写后端异步代码、修改状态管理、操作 MessageRouter 时
+ - 内容摘要：并发安全优先级（隔离 > 锁 > 共享）、状态变更必须立即持久化、注册/注销必须对称、asyncio.create_task 必须添加异常监控
+
+## 测试规则
+ - updated_at: 2026-06-22
+ - path: docs/coding-rules/testing.md
+ - 触发规则：编写测试代码时
+ - 内容摘要：Mock 只用于外部依赖、核心业务逻辑必须真实测试、关键路径必须有集成测试
+
