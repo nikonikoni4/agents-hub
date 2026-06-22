@@ -240,3 +240,4 @@ worktrees
 .last_sync_time
 .codex_pytest_tmp
 ast_scan_result.json
+*.png
