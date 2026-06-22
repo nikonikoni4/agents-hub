@@ -1,8 +1,8 @@
 ---
-version: 2.4
+version: 2.5
 created_at: 2026-05-20
-updated_at: 2026-06-11
-last_updated: 补充 channels、tools、core/utils 模块，新增 OpenCode 平台支持
+updated_at: 2026-06-22
+last_updated: 补充弃用说明（MCP 两个废弃 tool、OpenCode 前端禁用），更新前端 styles/tests 目录、MCP 展开、parsers 展开、新增 Loop/Realtime/Teams 模块及 spec 引用
 abstract: 项目架构地图，概述仓库物理结构、抽象分层、前后端架构、主干数据流和关键依赖方向。
 ---
 
@@ -17,11 +17,11 @@ agents-hub 是一个以 Claude Code / Codex 为基础的多 Agent IM 聊天对�
 - **后端**：Python + FastAPI + WebSocket
 - **前端**：React + Electron
 - **Agent 通信**：MCP (Model Context Protocol)
-- **Agent 平台**：Claude Code、Codex、OpenCode
+- **Agent 平台**：Claude Code、Codex（OpenCode 前端已禁用，代码保留）
 
 ## 整体架构
 
-agents-hub 是一个**中间层平台**，连接不同的 Agent 平台（Claude Code、Codex、OpenCode 等），实现多 Agent 协作。
+agents-hub 是一个**中间层平台**，连接不同的 Agent 平台（Claude Code、Codex），实现多 Agent 协作。
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -60,13 +60,17 @@ agents-hub 是一个**中间层平台**，连接不同的 Agent 平台（Claude 
         ↓                               ↓
 ┌──────────────────┐          ┌──────────────────┐          ┌──────────────────┐
 │  Claude Code CLI │          │   Codex CLI      │          │   OpenCode CLI   │
-│  (本地进程)       │          │   (本地进程)      │          │   (本地进程)      │
+│  (本地进程)       │          │   (本地进程)      │          │   (前端已禁用)    │
 └──────────────────┘          └──────────────────┘          └──────────────────┘
 ```
 
+**弃用说明**：
+- **MCP Tools**：`report_progress` 和 `complete_task` 已弃用（代码保留供参考），当前不再暴露给 Agent 平台
+- **OpenCode 平台**：前端已禁用 OpenCode 选项，后端执行器代码保留但不可选
+
 **关键理解**：
 - **agents-hub 是中间层**：连接不同的 Agent 平台，实现跨平台协作
-- **向上（MCP Server）**：暴露 MCP tools 给 Agent 平台（Claude Code、Codex、OpenCode 作为 MCP Client）
+- **向上（MCP Server）**：暴露 MCP tools 给 Agent 平台（Claude Code、Codex 作为 MCP Client）
 - **向下（Agent Bridge）**：调用不同 Agent 平台的 CLI（通过子进程）
 - **核心层（Core）**：管理消息路由、群聊、上下文等业务逻辑
 
@@ -86,7 +90,7 @@ agents_hub/
 │   ├── orchestration/             # 编排层（依赖所有下层）
 │   └── utils/                     # 核心工具层（markdown_injector、path_utils）
 │
-├── mcp/                           # MCP Server
+├── mcp/                           # MCP Server（server.py 主逻辑、errors.py 错误定义）
 ├── api/                           # API Server（REST + WebSocket）
 │   ├── routes/
 │   ├── schemas/
@@ -109,7 +113,10 @@ agents_hub/
 │   │   ├── docker_base.py         # Docker 执行器基类
 │   │   ├── docker_claude.py       # Docker 环境下的 Claude 执行器
 │   │   └── docker_codex.py        # Docker 环境下的 Codex 执行器
-│   ├── parsers/                   # 各平台响应解析器（claude、codex、opencode）
+│   ├── parsers/                   # 各平台响应解析器
+│   │   ├── claude.py              # Claude 响应解析
+│   │   ├── codex.py               # Codex 响应解析
+│   │   └── opencode.py            # OpenCode 响应解析
 │   └── docker/                    # Docker 容器支持
 │
 ├── roles/                         # Role 管理
@@ -166,7 +173,7 @@ orchestration → agent → communication → foundation
 
 ### MCP Server
 
-**职责**：向上暴露 MCP Tools，让 Agent 平台（Claude Code、Codex、OpenCode）可以调用 agents-hub 的功能
+**职责**：向上暴露 MCP Tools，让 Agent 平台（Claude Code、Codex）可以调用 agents-hub 的功能
 
 **通信方式**：STDIO（标准输入/输出），JSON-RPC 协议。详见 [core-agent-orchestration](specs/2026-05-31-core-agent-orchestration.md)。
 
@@ -174,13 +181,16 @@ orchestration → agent → communication → foundation
 
 | 模块 | 职责 | 通信方式 | Spec |
 |------|------|---------|------|
-| API Server | 提供 REST API 和 WebSocket | HTTP + WebSocket | [group-chat-api](specs/2026-06-03-group-chat-api.md)、[roles](specs/2026-05-24-agents-role.md)、[skills-api](specs/2026-06-03-skills-api.md)、[websocket-backend](specs/2026-06-03-websocket-backend.md) |
+| API Server | 提供 REST API 和 WebSocket | HTTP + WebSocket | [group-chat-api](specs/2026-06-03-group-chat-api.md)、[roles](specs/2026-05-24-agents-role.md)、[skills-api](specs/2026-06-03-skills-api.md)、[websocket-backend](specs/2026-06-03-websocket-backend.md)、[chat-history](specs/2026-06-19-chat-history.md) |
 | Single Chat | 用户与单个 Agent 直接对话的轻量级通道，支持 SSE 流式消息 | SSE | [single-chat](specs/2026-06-08-single-chat.md) |
-| Agent Bridge | 向下调用不同 Agent 平台的 CLI，适配接口差异 | 子进程调用本地 CLI | [agent-bridge](specs/2026-05-23-agent-bridge.md) |
+| Agent Bridge | 向下调用不同 Agent 平台的 CLI，适配接口差异 | 子进程调用本地 CLI | [agent-bridge](specs/2026-05-23-agent-bridge.md)、[docker-executor](specs/2026-06-03-docker-executor.md) |
 | Channels | 外部渠道适配（微信等），负责消息收发和用户交互 | HTTP 轮询 | - |
-| Tools | 工具目录，硬编码所有可用工具的分组、名称和描述 | - | - |
+| Tools | 工具目录，定义工具分组和描述（catalog.py） | - | - |
 | Config | 管理系统配置和类型定义 | - | [config](specs/2026-06-06-config.md) |
 | Roles | 管理 Agent 的角色配置 | - | [roles](specs/2026-05-24-agents-role.md) |
+| Loop | 多节点循环编排，支持迭代执行和终止判断 | MCP Tools | [loop](specs/2026-06-21-loop.md) |
+| Realtime | 实时通信，连接管理、房间、广播 | WebSocket | [realtime](specs/2026-06-06-realtime.md) |
+| Teams | 团队管理 | - | [teams](specs/2026-06-06-teams.md) |
 
 ## 数据流
 
@@ -310,6 +320,8 @@ frontend/src/
 ├── features/                   # 功能模块（chat、session、roles、skills）
 ├── shared/                     # 共享资源（components、adapters、types）
 ├── layouts/                    # 布局组件
+├── styles/                     # 全局样式（global、reset、theme）
+├── tests/                      # 测试
 └── App.tsx
 ```
 
