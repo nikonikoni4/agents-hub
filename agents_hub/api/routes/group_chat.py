@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import FileResponse
 
 from agents_hub.api.schemas.group_chats import (
+    ActiveLoopResponseSchema,
     AddMembersRequest,
     AgentCallInfo,
     GroupChatCreate,
@@ -14,6 +15,7 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatListResponse,
     GroupChatMember,
     LoopDetailSchema,
+    LoopExecutionSchema,
     LoopListResponseSchema,
     MemberHistoryResponse,
     MessageCreate,
@@ -472,3 +474,41 @@ async def get_loops(
     loops_data = await service.get_loops(group_chat_id)
     loops = [LoopDetailSchema(**loop) for loop in loops_data]
     return LoopListResponseSchema(loops=loops)
+
+
+@router.get(
+    "/{group_chat_id}/loops/active",
+    response_model=ActiveLoopResponseSchema,
+)
+async def get_active_loop(
+    group_chat_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取当前激活的 Loop（定义 + 执行状态）"""
+    result = await service.get_active_loop(group_chat_id)
+    if result is None:
+        return ActiveLoopResponseSchema(
+            loop=LoopDetailSchema(loop_id="", name=None, nodes=[], max_iterations=0),
+            execution=None,
+        )
+    return ActiveLoopResponseSchema(
+        loop=LoopDetailSchema(**result["loop"]),
+        execution=LoopExecutionSchema(**result["execution"]) if result["execution"] else None,
+    )
+
+
+@router.get(
+    "/{group_chat_id}/loops/{loop_id}",
+    response_model=ActiveLoopResponseSchema,
+)
+async def get_loop(
+    group_chat_id: str,
+    loop_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取指定 Loop（定义 + 执行状态）"""
+    result = await service.get_loop(group_chat_id, loop_id)
+    return ActiveLoopResponseSchema(
+        loop=LoopDetailSchema(**result["loop"]),
+        execution=LoopExecutionSchema(**result["execution"]) if result["execution"] else None,
+    )

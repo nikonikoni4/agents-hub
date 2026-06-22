@@ -833,3 +833,283 @@ async def test_get_loops_not_found_raises_error(service, mock_group_chat_manager
 
     with pytest.raises(ResourceNotFoundError):
         await service.get_loops("gc_nonexistent")
+
+
+# ==================== Active Loop Tests ====================
+
+
+async def test_get_active_loop_returns_first_loop_when_no_active(service, mock_group_chat_manager):
+    """测试没有激活 Loop 时返回第一个 Loop 的定义（execution 为 null）"""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_active_none"
+    project_path = tempfile.mkdtemp()
+
+    # 创建 loops.jsonl 文件
+    loops_file = Path(project_path) / "loops.jsonl"
+    loop_data = {
+        "loop_id": "loop-001",
+        "group_chat_id": group_chat_id,
+        "name": "测试循环",
+        "nodes": [
+            {"node_id": "node-1", "node_type": "normal", "agent_name": "executor", "role_description": "执行", "max_retries": 3},
+            {"node_id": "node-2", "node_type": "terminator", "agent_name": "manager", "role_description": "判断", "max_retries": 3},
+        ],
+        "max_iterations": 10,
+        "created_at": "2026-06-23T10:00:00",
+        "updated_at": "2026-06-23T10:00:00",
+    }
+    with open(loops_file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(loop_data, ensure_ascii=False) + "\n")
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+    mock_loop_manager = Mock()
+    mock_loop_manager.get_active_loop.return_value = None
+    mock_group_chat._get_loop_manager.return_value = mock_loop_manager
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = loops_file
+
+        # Act
+        result = await service.get_active_loop(group_chat_id)
+
+    # Assert
+    assert result is not None
+    assert result["loop"]["loop_id"] == "loop-001"
+    assert result["execution"] is None
+
+
+async def test_get_active_loop_returns_active_loop_with_execution(service, mock_group_chat_manager):
+    """测试有激活 Loop 时返回定义 + 执行状态"""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_active_has"
+    project_path = tempfile.mkdtemp()
+
+    # 创建 loops.jsonl 文件
+    loops_file = Path(project_path) / "loops.jsonl"
+    loop_data = {
+        "loop_id": "loop-001",
+        "group_chat_id": group_chat_id,
+        "name": "测试循环",
+        "nodes": [
+            {"node_id": "node-1", "node_type": "normal", "agent_name": "executor", "role_description": "执行", "max_retries": 3},
+            {"node_id": "node-2", "node_type": "terminator", "agent_name": "manager", "role_description": "判断", "max_retries": 3},
+        ],
+        "max_iterations": 10,
+        "created_at": "2026-06-23T10:00:00",
+        "updated_at": "2026-06-23T10:00:00",
+    }
+    with open(loops_file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(loop_data, ensure_ascii=False) + "\n")
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+
+    # Mock active loop
+    mock_active_loop = Mock()
+    mock_active_loop.loop_id = "loop-001"
+    mock_loop_manager = Mock()
+    mock_loop_manager.get_active_loop.return_value = mock_active_loop
+    mock_group_chat._get_loop_manager.return_value = mock_loop_manager
+
+    # Mock execution manager
+    mock_exec_manager = Mock()
+    mock_exec_manager.list_executions.return_value = [
+        {
+            "execution_id": "exec-001",
+            "loop_id": "loop-001",
+            "status": "running",
+            "current_iteration": 2,
+            "current_node_index": 0,
+            "error_message": None,
+        }
+    ]
+    mock_group_chat._get_loop_execution_manager.return_value = mock_exec_manager
+
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = loops_file
+
+        # Act
+        result = await service.get_active_loop(group_chat_id)
+
+    # Assert
+    assert result is not None
+    assert result["loop"]["loop_id"] == "loop-001"
+    assert result["execution"] is not None
+    assert result["execution"]["execution_id"] == "exec-001"
+    assert result["execution"]["status"] == "running"
+
+
+async def test_get_active_loop_returns_none_when_no_loops(service, mock_group_chat_manager):
+    """测试没有 Loop 定义时返回 None"""
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_no_loops"
+    project_path = tempfile.mkdtemp()
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = Path(project_path) / "nonexistent.jsonl"
+
+        # Act
+        result = await service.get_active_loop(group_chat_id)
+
+    # Assert
+    assert result is None
+
+
+# ==================== Get Loop Tests ====================
+
+
+async def test_get_loop_returns_loop_with_no_execution(service, mock_group_chat_manager):
+    """测试获取指定 Loop（未激活时 execution 为 null）"""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_get_loop"
+    project_path = tempfile.mkdtemp()
+
+    # 创建 loops.jsonl 文件
+    loops_file = Path(project_path) / "loops.jsonl"
+    loop_data = {
+        "loop_id": "loop-001",
+        "group_chat_id": group_chat_id,
+        "name": "测试循环",
+        "nodes": [
+            {"node_id": "node-1", "node_type": "normal", "agent_name": "executor", "role_description": "执行", "max_retries": 3},
+        ],
+        "max_iterations": 5,
+        "created_at": "2026-06-23T10:00:00",
+        "updated_at": "2026-06-23T10:00:00",
+    }
+    with open(loops_file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(loop_data, ensure_ascii=False) + "\n")
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+    mock_loop_manager = Mock()
+    mock_loop_manager.get_active_loop.return_value = None  # 没有激活的 Loop
+    mock_group_chat._get_loop_manager.return_value = mock_loop_manager
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = loops_file
+
+        # Act
+        result = await service.get_loop(group_chat_id, "loop-001")
+
+    # Assert
+    assert result is not None
+    assert result["loop"]["loop_id"] == "loop-001"
+    assert result["execution"] is None
+
+
+async def test_get_loop_returns_loop_with_execution(service, mock_group_chat_manager):
+    """测试获取指定 Loop（激活时返回执行状态）"""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_get_loop_active"
+    project_path = tempfile.mkdtemp()
+
+    # 创建 loops.jsonl 文件
+    loops_file = Path(project_path) / "loops.jsonl"
+    loop_data = {
+        "loop_id": "loop-001",
+        "group_chat_id": group_chat_id,
+        "name": "测试循环",
+        "nodes": [
+            {"node_id": "node-1", "node_type": "normal", "agent_name": "executor", "role_description": "执行", "max_retries": 3},
+        ],
+        "max_iterations": 5,
+        "created_at": "2026-06-23T10:00:00",
+        "updated_at": "2026-06-23T10:00:00",
+    }
+    with open(loops_file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(loop_data, ensure_ascii=False) + "\n")
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+
+    # Mock active loop
+    mock_active_loop = Mock()
+    mock_active_loop.loop_id = "loop-001"
+    mock_loop_manager = Mock()
+    mock_loop_manager.get_active_loop.return_value = mock_active_loop
+    mock_group_chat._get_loop_manager.return_value = mock_loop_manager
+
+    # Mock execution manager
+    mock_exec_manager = Mock()
+    mock_exec_manager.list_executions.return_value = [
+        {
+            "execution_id": "exec-001",
+            "loop_id": "loop-001",
+            "status": "completed",
+            "current_iteration": 3,
+            "current_node_index": 1,
+            "error_message": None,
+        }
+    ]
+    mock_group_chat._get_loop_execution_manager.return_value = mock_exec_manager
+
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = loops_file
+
+        # Act
+        result = await service.get_loop(group_chat_id, "loop-001")
+
+    # Assert
+    assert result is not None
+    assert result["loop"]["loop_id"] == "loop-001"
+    assert result["execution"] is not None
+    assert result["execution"]["status"] == "completed"
+
+
+async def test_get_loop_raises_error_when_not_found(service, mock_group_chat_manager):
+    """测试获取不存在的 Loop 抛出 ResourceNotFoundError"""
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_get_loop_404"
+    project_path = tempfile.mkdtemp()
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = Path(project_path) / "nonexistent.jsonl"
+
+        # Act & Assert
+        with pytest.raises(ResourceNotFoundError) as exc_info:
+            await service.get_loop(group_chat_id, "nonexistent-loop")
+        assert "nonexistent-loop" in str(exc_info.value)

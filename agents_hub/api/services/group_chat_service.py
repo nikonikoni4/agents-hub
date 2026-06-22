@@ -1861,3 +1861,202 @@ class GroupChatService:
             )
 
         return result
+
+    def _get_loop_execution(self, group_chat: GroupChat, loop_id: str) -> dict | None:
+        """获取指定 Loop 的执行状态（只读）。
+
+        通过 LoopExecutionManager 查询执行状态，不修改任何状态。
+
+        Args:
+            group_chat: GroupChat 实例
+            loop_id: Loop ID
+
+        Returns:
+            执行状态字典，如果没有执行实例则返回 None
+        """
+        loop_execution_manager = group_chat._get_loop_execution_manager()
+        executions = loop_execution_manager.list_executions(loop_id=loop_id)
+
+        # 获取最新的执行实例（list_executions 按创建时间降序排列）
+        if not executions:
+            return None
+
+        latest = executions[0]
+        return {
+            "execution_id": latest["execution_id"],
+            "status": latest["status"],
+            "current_iteration": latest.get("current_iteration", 0),
+            "current_node_index": latest.get("current_node_index", 0),
+            "error_message": latest.get("error_message"),
+        }
+
+    async def get_active_loop(self, group_chat_id: str) -> dict | None:
+        """获取当前激活的 Loop（定义 + 执行状态）。
+
+        数据来源分离：
+        - Loop 定义：从 loops.jsonl 文件读取
+        - Loop 执行状态：从 LoopExecutionManager 只读查询
+
+        如果没有激活的 Loop，返回文件中第一个 Loop 的定义（execution 为 null）。
+        如果文件中没有 Loop，返回 None。
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            { loop: LoopDetail, execution: LoopExecution | None } 或 None
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        logger.debug("获取激活的 Loop: group_chat_id=%s", group_chat_id)
+
+        # 验证群聊存在
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            logger.error("获取激活 Loop 失败: 群聊不存在, id=%s", group_chat_id)
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 从文件读取所有 Loop 定义
+        loops_data = self._read_loops_from_file(group_chat_id)
+        if not loops_data:
+            return None
+
+        # 获取当前激活的 Loop
+        loop_manager = group_chat._get_loop_manager()
+        active_loop = loop_manager.get_active_loop()
+
+        if active_loop is not None:
+            # 激活的 Loop：从文件中查找定义，从 core 获取执行状态
+            loop_def = None
+            for loop_data in loops_data:
+                if loop_data["loop_id"] == active_loop.loop_id:
+                    loop_def = loop_data
+                    break
+
+            if loop_def is None:
+                # 激活的 Loop 不在文件中（异常情况），使用 active_loop 对象
+                loop_def = {
+                    "loop_id": active_loop.loop_id,
+                    "name": active_loop.name,
+                    "nodes": [
+                        {
+                            "node_id": node.node_id,
+                            "node_type": node.node_type,
+                            "agent_name": node.agent_name,
+                            "role_description": node.role_description,
+                            "output_schema_prompt": node.output_schema_prompt,
+                            "output_schema_fields": node.output_schema_fields,
+                            "max_retries": node.max_retries,
+                        }
+                        for node in active_loop.nodes
+                    ],
+                    "max_iterations": active_loop.max_iterations,
+                }
+
+            execution = self._get_loop_execution(group_chat, active_loop.loop_id)
+
+            return {
+                "loop": self._format_loop_detail(loop_def),
+                "execution": execution,
+            }
+        else:
+            # 没有激活的 Loop：返回第一个 Loop 的定义（无执行状态）
+            first_loop = loops_data[0]
+            return {
+                "loop": self._format_loop_detail(first_loop),
+                "execution": None,
+            }
+
+    async def get_loop(self, group_chat_id: str, loop_id: str) -> dict:
+        """获取指定 Loop（定义 + 执行状态）。
+
+        数据来源分离：
+        - Loop 定义：从 loops.jsonl 文件读取
+        - Loop 执行状态：从 LoopExecutionManager 只读查询（仅当 Loop 激活时）
+
+        Args:
+            group_chat_id: 群聊 ID
+            loop_id: Loop ID
+
+        Returns:
+            { loop: LoopDetail, execution: LoopExecution | None }
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在或 Loop 不存在
+        """
+        logger.debug("获取指定 Loop: group_chat_id=%s, loop_id=%s", group_chat_id, loop_id)
+
+        # 验证群聊存在
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            logger.error("获取 Loop 失败: 群聊不存在, id=%s", group_chat_id)
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 从文件读取所有 Loop 定义
+        loops_data = self._read_loops_from_file(group_chat_id)
+
+        # 查找指定 loop_id 的 Loop
+        loop_def = None
+        for loop_data in loops_data:
+            if loop_data["loop_id"] == loop_id:
+                loop_def = loop_data
+                break
+
+        if loop_def is None:
+            raise ResourceNotFoundError(
+                f"Loop '{loop_id}' 不存在",
+                details={"group_chat_id": group_chat_id, "loop_id": loop_id},
+            )
+
+        # 检查是否是当前激活的 Loop
+        loop_manager = group_chat._get_loop_manager()
+        active_loop = loop_manager.get_active_loop()
+
+        execution = None
+        if active_loop is not None and active_loop.loop_id == loop_id:
+            # 是激活的 Loop，获取执行状态
+            execution = self._get_loop_execution(group_chat, loop_id)
+
+        return {
+            "loop": self._format_loop_detail(loop_def),
+            "execution": execution,
+        }
+
+    def _format_loop_detail(self, loop_data: dict) -> dict:
+        """将 Loop 数据格式化为 API Schema 格式。
+
+        Args:
+            loop_data: Loop 原始数据
+
+        Returns:
+            格式化后的 LoopDetail 字典
+        """
+        nodes = []
+        for node_data in loop_data.get("nodes", []):
+            nodes.append(
+                {
+                    "node_id": node_data.get("node_id", ""),
+                    "node_type": node_data.get("node_type", "normal"),
+                    "agent_name": node_data.get("agent_name", ""),
+                    "role_description": node_data.get("role_description", ""),
+                    "output_schema_prompt": node_data.get("output_schema_prompt"),
+                    "output_schema_fields": node_data.get("output_schema_fields"),
+                    "max_retries": node_data.get("max_retries", 3),
+                }
+            )
+
+        return {
+            "loop_id": loop_data["loop_id"],
+            "name": loop_data.get("name"),
+            "nodes": nodes,
+            "max_iterations": loop_data.get("max_iterations", 1),
+        }
