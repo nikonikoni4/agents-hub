@@ -2,7 +2,39 @@
 
 ## Problem Statement
 
-用户在使用Agents Hub的Loop功能时，无法直观地看到当前群聊中Loop的执行状态和节点进度。Loop的执行状态（RUNNING/PAUSED/COMPLETED/FAILED）和当前执行到哪个节点，这些信息对于监控和管理循环任务至关重要。目前用户只能通过MCP工具查询Loop状态，缺乏可视化的界面来实时监控。
+用户在使用Agents Hub的Loop功能时，无法直观地看到当前群聊中Loop的执行状态和节点进度。Loop的执行状态（CREATED/RUNNING/PAUSED/COMPLETED/FAILED）和当前执行到哪个节点，这些信息对于监控和管理循环任务至关重要。目前用户只能通过MCP工具查询Loop状态，缺乏可视化的界面来实时监控。
+
+## 关键概念澄清
+
+### "激活"的定义
+
+**激活（Active）**：指Loop存在于内存中，而不是指RUNNING状态。
+
+- **激活条件**：只有通过`start_loop`工具启动的Loop才会被加载到内存中
+- **激活状态**：Loop在内存中，可以是RUNNING、PAUSED、COMPLETED、FAILED中的任何状态
+- **未激活状态**：Loop不在内存中，只有节点定义（从文件获取），没有执行状态
+- **当前群聊同时只能有一个激活的Loop**
+- **create_loop不会激活Loop**：`create_loop`只创建Loop定义并保存到文件，不会加载到内存
+
+### Loop状态说明
+
+Loop有5种状态（定义在CONTEXT.md中）：
+1. **CREATED**：已创建，未启动（在内存中，但没有执行实例）
+2. **RUNNING**：运行中（有执行实例，正在执行）
+3. **PAUSED**：已暂停（有执行实例，已暂停）
+4. **COMPLETED**：正常完成（有执行实例，已完成）
+5. **FAILED**：失败（超时/出错/达到最大循环次数）
+
+**重要区分**：
+- **激活 ≠ RUNNING**：激活是指Loop在内存中，可以是任何状态（包括CREATED）
+- **执行状态**：只有RUNNING、PAUSED、COMPLETED、FAILED有执行实例（execution不为null）
+- **CREATED状态**：Loop是激活的（在内存中），但没有执行状态（execution为null）
+
+### 前端显示逻辑
+
+1. **未激活**：Loop不在内存中，显示灰色状态标识，节点正常显示
+2. **激活但无执行状态**（CREATED）：显示"已创建"状态标识，节点正常显示
+3. **激活且有执行状态**（RUNNING/PAUSED/COMPLETED/FAILED）：显示对应状态标识，节点根据执行状态显示不同样式
 
 ## Solution
 
