@@ -40,7 +40,7 @@ Agents Hub 是一个以 Claude Code / Codex / OpenCode 为基础的多 Agent 聊
 
 <div align="center">
 
-![agentshub助手](gifs/agentshub助手.gif)
+![agentshub助手](gifs/agents-hub-助手.png)
 
 </div>
 
@@ -66,6 +66,11 @@ Agents Hub 是一个以 Claude Code / Codex / OpenCode 为基础的多 Agent 聊
 - **Docker 隔离**：支持为每个 Agent 开启独立的 Docker 隔离环境
 - **消息置顶**：支持 PIM/PIN 群消息置顶
 - **产物预览**：支持预览网页、文档、代码 diff
+- **群聊生命周期控制**：支持停止、启动、重置群聊，随时掌控协作节奏
+- **上下文压缩**：支持手动压缩群聊上下文，降低 token 消耗
+- **Agent Session 查看**：查看任意 Agent 的 session 内容，掌握 Agent 的具体动向
+- **群聊 Fork / 删除**：Fork 群聊保留上下文继续新方向，或删除不再需要的群聊
+- **Agent 循环（Loop）**：Manager 帮助用户创建多 Agent 循环执行流程，通过代码级约束驱动任务自动完成
 
 <div align="center">
 
@@ -93,6 +98,10 @@ Agents Hub 是一个以 Claude Code / Codex / OpenCode 为基础的多 Agent 聊
 
 </div>
 
+### Agents Hub 助手
+
+- **Agent Trainer**：为每个 Agent 进行专属训练优化。通过搜索领域最佳实践，为 Agent 创建元规则（思考方式、行为准则）和领域知识库，支持通用领域和项目专用两种训练模式。详见 `template/skills/agent-trainer/`
+
 ### 其他功能
 
 - 通过聊天创建成员和群聊
@@ -104,7 +113,7 @@ Agents Hub 是一个以 Claude Code / Codex / OpenCode 为基础的多 Agent 聊
 
 </div>
 
-## 下一步计划：编排机制更新，与专业agent培养
+## 下一步计划
 
 ### Agent 生命周期 Hook
 
@@ -118,10 +127,6 @@ Agents Hub 是一个以 Claude Code / Codex / OpenCode 为基础的多 Agent 聊
 ### 桌面端配置
 
 支持通过桌面端（Electron）进行可视化配置，包括 Agent 参数、Hook 规则、团队模板等。
-
-### 提示词优化
-
-加强 Agent 约束机制，通过结构化提示词规范 Agent 行为边界、输出格式和协作协议。
 
 ### 记忆助手与专业化Agent体系
 
@@ -147,14 +152,6 @@ Agents Hub 是一个以 Claude Code / Codex / OpenCode 为基础的多 Agent 聊
 - 写入端：`ai-mistake-recorder`、`write-decisions`
 - 读取端：`write-project-rules`、`ai-decision-making`
 
-#### 三个特殊AI
-
-| AI角色 | 职责 |
-|--------|------|
-| **记忆助手** | 跨群收集数据，产出两个记忆库 |
-| **规则编写助手** | 依据AI犯错记录 + 项目架构，搭配架构师设计规则（独立的专业化agent） |
-| **用户决策记忆库** | 供Manager做决策时参考 |
-
 #### Manager的额外Skill
 
 | Skill | 用途 |
@@ -177,14 +174,6 @@ Agents Hub 是一个以 Claude Code / Codex / OpenCode 为基础的多 Agent 聊
 | `hand-on` | 接手（从交接文档恢复上下文） |
 
 全局指令可让所有agent进行任务交接。交接对象是自己，因为agent无法通过CLI工具进行compact，只能通过显式交接实现上下文压缩。
-
-#### 强制性多 Agent Loop
-
-设计一个代码级强制约束的多 Agent 循环架构，替代自由度较高的 Manager 调度：
-
-- Manager 只负责处理任务报错和初始 Loop 建立
-- 通过代码强制约束的 Loop 驱动任务完成
-- 比单独的 Manager 协调安排更可靠、更可预测
 
 #### 完整链路
 

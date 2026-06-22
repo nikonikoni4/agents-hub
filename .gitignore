@@ -232,7 +232,7 @@ docker-experiment/
 worktrees
 .codex
 prompts
-*.png
+scripts/webapp-test/截图
 视频
 *.mp4
 start_branch.ps1
