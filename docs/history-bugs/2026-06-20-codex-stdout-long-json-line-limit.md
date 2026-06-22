@@ -87,6 +87,8 @@ await process.stdout.readuntil(separator=b"\n")
 
 使用固定大小 chunk 读取 stdout，并在业务层维护 buffer 手动按 `\n` 切分：
 
+> **注意**：`errors="ignore"` 会静默丢弃截断的多字节字符。更安全的方案是使用 `codecs.getincrementaldecoder("utf-8")()` 增量解码器，参见 `2026-06-22-stream-decoder-unicode-split-multibyte.md`。
+
 ```python
 buffer = ""
 while True:

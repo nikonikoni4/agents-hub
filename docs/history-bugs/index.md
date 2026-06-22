@@ -201,3 +201,9 @@
  - path: docs/history-bugs/2026-06-20-group-chat-stop-member-missing-member-info.md
  - 触发规则：快速重复停止/启动群聊成员时，停止接口报 `KeyError: '<agent_name>'` 或 API 返回 500
  - 内容摘要：运行态 Agent 对象存在，但 `runtime.agent_member_infos` 中对应成员状态短暂缺失，`stop_member()` 读取状态时抛 KeyError。修复：在 stop 流程中把缺失状态视为可恢复不一致，使用 `get_or_create_agent_member_info()` 恢复状态记录后继续停止和清理
+
+## CLI stdout 流式解码跨块多字节字符截断导致 UnicodeDecodeError
+ - updated_at : 2026-06-22
+ - path: docs/history-bugs/2026-06-22-stream-decoder-unicode-split-multibyte.md
+ - 触发规则：Claude/OpenCode Agent 执行任务，stdout 输出包含多字节 UTF-8 字符（如中文）且字符恰好跨 chunk 边界时
+ - 内容摘要：`process.stdout.read(256KB)` 按固定字节数读取后直接 `chunk.decode("utf-8")`，多字节字符被截断在块边界导致 UnicodeDecodeError。位置 131070-131071 是 3 字节中文字符的截断点。修复：用 `codecs.getincrementaldecoder("utf-8")()` 增量解码器替代，自动处理跨块多字节序列。ClaudeExecutor 和 OpenCodeExecutor 已修复
