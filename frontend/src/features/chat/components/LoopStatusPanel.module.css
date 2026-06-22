@@ -1,0 +1,171 @@
+/* Loop 状态面板 */
+.loopPanel {
+  margin: 8px 12px;
+  padding: 14px 16px;
+  background: var(--bg-right-base);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.loopPanelHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.loopPanelIcon {
+  font-size: 14px;
+}
+
+.loopPanelTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.loopStatusBadge {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.statusRunning {
+  background: var(--status-running-bg-light);
+  color: var(--status-running);
+}
+
+.statusPaused {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--status-busy);
+}
+
+.statusCompleted {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--status-idle);
+}
+
+.statusFailed {
+  background: var(--status-error-bg-light);
+  color: var(--status-error);
+}
+
+.statusInactive {
+  background: rgba(156, 163, 175, 0.15);
+  color: var(--text-tertiary);
+}
+
+.loopSelectWrapper {
+  margin-bottom: 10px;
+}
+
+.loopSelect {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.loopSelect:focus {
+  border-color: var(--accent-color);
+}
+
+.loopProgress {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+}
+
+.loopNodeList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.loopNode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: background-color 0.15s;
+}
+
+.loopNode:hover {
+  background: var(--bg-hover);
+}
+
+.loopNodeIndicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.loopNodeCompleted .loopNodeIndicator {
+  background: var(--status-idle);
+}
+
+.loopNodeCurrent .loopNodeIndicator {
+  background: var(--status-running);
+  box-shadow: 0 0 0 2px var(--status-running-shadow);
+}
+
+.loopNodePending .loopNodeIndicator {
+  background: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.loopNodeInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.loopNodeName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loopNodeRole {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loopNodeType {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-bubble);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.loopEmptyState {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.loopLoading {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 8px 0;
+}

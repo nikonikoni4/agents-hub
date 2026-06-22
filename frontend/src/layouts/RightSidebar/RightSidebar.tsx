@@ -18,6 +18,7 @@ import { RightSidebarContent } from '@/shared/types/layout';
 import { ChatHistoryPanel } from '@/features/chat-history';
 import { AgentCallsPanel } from './AgentCallsPanel';
 import { TasksPanel } from './TasksPanel';
+import { LoopStatusPanel } from '@/features/chat/components/LoopStatusPanel';
 import styles from './RightSidebar.module.css';
 
 type SidebarTab = 'single-chat' | 'chat' | 'tasks' | 'preview' | 'diff' | 'web' | 'history';
@@ -507,6 +508,8 @@ export function RightSidebar({
               </div>
             )}
           </div>
+
+          <LoopStatusPanel chatId={groupChatId} />
         </>
       )}
 

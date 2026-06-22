@@ -26,6 +26,9 @@ export * from './teamAdapter';
 // Session 相关 Adapter
 export * from './sessionAdapter';
 
+// Loop 相关 Adapter
+export * from './loopAdapter';
+
 // 转发导出 API Schemas（作为统一入口）
 export type {
   // 枚举类型
@@ -54,4 +57,10 @@ export type {
   LastViewRecord,
   // 配置相关
   SystemConfigApiResponse,
+  // Loop 相关
+  LoopNodeApiItem,
+  LoopDetailApiResponse,
+  LoopExecutionApiItem,
+  LoopListApiResponse,
+  ActiveLoopApiResponse,
 } from '@/shared/types/api-schemas';

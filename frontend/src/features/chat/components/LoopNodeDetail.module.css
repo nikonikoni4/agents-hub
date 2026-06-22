@@ -1,0 +1,69 @@
+/* Loop 节点详情面板 */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.nodeName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.nodeType {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-bubble);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sectionContent {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.fieldList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldItem {
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-bubble);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+}

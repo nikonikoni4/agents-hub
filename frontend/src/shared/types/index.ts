@@ -46,6 +46,11 @@ export type {
   CompressAllResultItem,
   MemberHistoryMessage,
   MemberHistoryResponse,
+  LoopNodeApiItem,
+  LoopDetailApiResponse,
+  LoopExecutionApiItem,
+  LoopListApiResponse,
+  ActiveLoopApiResponse,
 } from './api-schemas';
 
 // API 请求类型

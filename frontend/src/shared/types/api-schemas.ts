@@ -640,3 +640,78 @@ export interface MemberHistoryResponse {
   main_session_id: string | null;
   messages: MemberHistoryMessage[];
 }
+
+// ==================== Loop 相关 ====================
+
+/**
+ * Loop 节点信息
+ * 对应后端: LoopNodeSchema
+ */
+export interface LoopNodeApiItem {
+  /** 节点唯一标识 */
+  node_id: string;
+  /** 节点类型：normal 或 terminator */
+  node_type: 'normal' | 'terminator';
+  /** 执行节点的 Agent 名称 */
+  agent_name: string;
+  /** 节点职责描述 */
+  role_description: string;
+  /** 输出格式提示词 */
+  output_schema_prompt: string | null;
+  /** 必需字段列表 */
+  output_schema_fields: string[] | null;
+  /** 输出校验失败的最大重试次数 */
+  max_retries: number;
+}
+
+/**
+ * Loop 定义详情
+ * 对应后端: LoopDetailSchema
+ */
+export interface LoopDetailApiResponse {
+  /** 循环定义唯一标识 */
+  loop_id: string;
+  /** 循环名称 */
+  name: string | null;
+  /** 节点列表 */
+  nodes: LoopNodeApiItem[];
+  /** 最大循环次数 */
+  max_iterations: number;
+}
+
+/**
+ * Loop 执行实例状态
+ * 对应后端: LoopExecutionSchema
+ */
+export interface LoopExecutionApiItem {
+  /** 执行实例唯一标识 */
+  execution_id: string;
+  /** 执行状态：created/running/paused/completed/failed */
+  status: 'created' | 'running' | 'paused' | 'completed' | 'failed';
+  /** 当前循环轮次 */
+  current_iteration: number;
+  /** 当前节点索引 */
+  current_node_index: number;
+  /** 错误信息 */
+  error_message: string | null;
+}
+
+/**
+ * Loop 列表响应
+ * 对应后端: LoopListResponseSchema
+ */
+export interface LoopListApiResponse {
+  /** Loop 定义列表 */
+  loops: LoopDetailApiResponse[];
+}
+
+/**
+ * 激活的 Loop 响应
+ * 对应后端: ActiveLoopResponseSchema
+ */
+export interface ActiveLoopApiResponse {
+  /** Loop 定义 */
+  loop: LoopDetailApiResponse;
+  /** 执行状态（无激活 Loop 时为 null） */
+  execution: LoopExecutionApiItem | null;
+}

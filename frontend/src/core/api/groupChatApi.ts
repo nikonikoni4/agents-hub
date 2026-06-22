@@ -24,6 +24,8 @@ import type {
   CompressApiResponse,
   CompressAllApiResponse,
   MemberHistoryResponse,
+  LoopListApiResponse,
+  ActiveLoopApiResponse,
 } from '@/shared/types';
 
 // ==================== Mock 数据 ====================
@@ -942,5 +944,63 @@ export async function getMemberHistory(
     () =>
       apiClient.get<MemberHistoryResponse>(`/group-chats/${chatId}/members/${agentName}/history`),
     { agent_name: agentName, main_session_id: null, messages: [] }
+  );
+}
+
+/**
+ * 获取群聊的所有 Loop 定义列表
+ */
+export async function getLoops(chatId: string, signal?: AbortSignal): Promise<LoopListApiResponse> {
+  return mockableRequest(
+    () => apiClient.get<LoopListApiResponse>(`/group-chats/${chatId}/loops`, { signal }),
+    {
+      loops: [],
+    }
+  );
+}
+
+/**
+ * 获取激活的 Loop（定义 + 执行状态）
+ *
+ * 如果没有激活的 Loop，返回第一个 Loop 的节点定义（execution 为 null）
+ */
+export async function getActiveLoop(
+  chatId: string,
+  signal?: AbortSignal
+): Promise<ActiveLoopApiResponse> {
+  return mockableRequest(
+    () => apiClient.get<ActiveLoopApiResponse>(`/group-chats/${chatId}/loops/active`, { signal }),
+    {
+      loop: {
+        loop_id: 'mock-loop-001',
+        name: 'Mock Loop',
+        nodes: [],
+        max_iterations: 5,
+      },
+      execution: null,
+    }
+  );
+}
+
+/**
+ * 获取指定 Loop（定义 + 执行状态）
+ */
+export async function getLoop(
+  chatId: string,
+  loopId: string,
+  signal?: AbortSignal
+): Promise<ActiveLoopApiResponse> {
+  return mockableRequest(
+    () =>
+      apiClient.get<ActiveLoopApiResponse>(`/group-chats/${chatId}/loops/${loopId}`, { signal }),
+    {
+      loop: {
+        loop_id: loopId,
+        name: 'Mock Loop',
+        nodes: [],
+        max_iterations: 5,
+      },
+      execution: null,
+    }
   );
 }
