@@ -270,16 +270,26 @@ class TestLoopManagerDelete:
 
     @pytest.mark.asyncio
     async def test_delete_loop_success(self, loop_manager, valid_nodes):
-        """删除 Loop 定义"""
+        """删除 Loop 定义（先激活再删除，验证内存和文件都清除）"""
         loop = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
         )
 
+        # 先激活 Loop 到内存
+        loop_manager.get_loop_with_lazy_load(loop.loop_id)
+        assert loop_manager.get_active_loop() is not None
+
+        # 删除 Loop
         await loop_manager.delete_loop(loop.loop_id)
 
-        with pytest.raises(LoopNotFoundError):
-            loop_manager.get_loop(loop.loop_id)
+        # 验证内存中已清除
+        assert loop_manager.get_active_loop() is None
+
+        # 验证文件中也已清除（通过 list_loops）
+        loops = loop_manager.list_loops()
+        loop_ids = [l["loop_id"] for l in loops]
+        assert loop.loop_id not in loop_ids
 
     @pytest.mark.asyncio
     async def test_delete_loop_cascades_executions(self, temp_project_path, valid_nodes):

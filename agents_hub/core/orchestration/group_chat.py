@@ -643,7 +643,8 @@ class GroupChat:
 
         # 获取 execution 和 loop 定义
         execution = loop_execution_manager.get_execution(execution_id)
-        loop = loop_manager.get_loop(execution.loop_id)
+        # 使用 get_loop_with_lazy_load 而非 get_loop，避免单例模式下 Loop 被驱逐后找不到
+        loop = loop_manager.get_loop_with_lazy_load(execution.loop_id)
 
         # 状态校验：只能停止 RUNNING 状态的 execution
         if execution.status != LoopExecutionStatus.RUNNING.value:
@@ -799,7 +800,8 @@ class GroupChat:
         loop_manager = self._get_loop_manager()
 
         execution = loop_execution_manager.get_execution_with_lazy_load(execution_id)
-        loop = loop_manager.get_loop(execution.loop_id)
+        # 使用 get_loop_with_lazy_load 而非 get_loop，避免单例模式下 Loop 被驱逐后找不到
+        loop = loop_manager.get_loop_with_lazy_load(execution.loop_id)
 
         # 获取当前执行节点的 Agent 名称
         current_node = None
