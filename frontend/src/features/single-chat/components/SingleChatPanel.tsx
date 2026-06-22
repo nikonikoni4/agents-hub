@@ -17,6 +17,7 @@ import { useSingleChatStore } from '../store/singleChatStore';
 import { useSingleChatMessages } from '../hooks/useSingleChatMessages';
 import { useSingleChatMembers } from '../hooks/useSingleChatMembers';
 import { useNavigationHandler } from '../hooks/useNavigationHandler';
+import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea';
 import { ToolCallCard } from '@/shared/components';
 import type { SingleChatMessageApiItem } from '@/shared/types';
 import styles from './SingleChatPanel.module.css';
@@ -80,6 +81,7 @@ export function SingleChatPanel() {
 
   const { messages, loading, streaming, streamingText, sendMessage } = useSingleChatMessages();
   const { handleNavigation } = useNavigationHandler();
+  const { textareaRef, adjustHeight } = useAutoResizeTextarea();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -124,6 +126,10 @@ export function SingleChatPanel() {
     const trimmed = input.trim();
     if (!trimmed || streaming) return;
     setInput('');
+    // 重置 textarea 高度
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     await sendMessage(trimmed);
   };
 
@@ -200,9 +206,13 @@ export function SingleChatPanel() {
       {/* 输入框 */}
       <div className={styles.inputArea}>
         <textarea
+          ref={textareaRef}
           className={styles.input}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            adjustHeight();
+          }}
           onKeyDown={handleKeyDown}
           placeholder="输入消息..."
           rows={1}

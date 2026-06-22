@@ -165,6 +165,7 @@
 
 .inputArea {
   display: flex;
+  align-items: flex-end;
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--border-color);
@@ -184,6 +185,8 @@
   font-family: inherit;
   line-height: 1.5;
   transition: border-color 0.2s;
+  min-height: 36px;
+  max-height: 150px;
 }
 
 .input:focus {
@@ -191,7 +194,8 @@
 }
 
 .input::placeholder {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
+  opacity: 0.7;
 }
 
 .sendBtn {
@@ -205,6 +209,7 @@
   cursor: pointer;
   transition: opacity 0.15s;
   flex-shrink: 0;
+  height: 36px;
 }
 
 .sendBtn:hover:not(:disabled) {

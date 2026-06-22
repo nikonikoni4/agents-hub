@@ -1,0 +1,43 @@
+/**
+ * AssistantSkillCards 样式
+ *
+ * 遵循项目设计规范：
+ * - 使用 CSS 变量确保双主题支持
+ * - 圆角使用 radius-md (6px)
+ * - 间距使用 4px 基础单位
+ */
+
+.container {
+  display: flex;
+  gap: 8px;
+  padding: 0;
+}
+
+.skillCard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-bubble);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.skillCard:hover {
+  background: var(--bg-shadow);
+  border-color: var(--accent-color);
+}
+
+.skillIcon {
+  font-size: 14px;
+  line-height: 1;
+}

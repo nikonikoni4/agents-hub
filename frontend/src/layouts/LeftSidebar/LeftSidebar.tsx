@@ -10,6 +10,7 @@ import {
 import { SessionList, CreateGroupChatDialog } from '@/features/session';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
+import { AgentsHubAssistantModal } from '@/features/single-chat/components/AgentsHubAssistantModal';
 import styles from './LeftSidebar.module.css';
 
 export interface LeftSidebarProps {
@@ -38,7 +39,7 @@ export function LeftSidebar({
   onToggleTheme,
 }: LeftSidebarProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const openDraftChat = useSingleChatStore((s) => s.openDraftChat);
+  const [isAssistantModalOpen, setIsAssistantModalOpen] = useState(false);
 
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
@@ -52,11 +53,7 @@ export function LeftSidebar({
   }, [activeSessionId, activeSingleChatId, lastSelectedAt, onViewModeChange]);
 
   const handleCreateAssistantChat = () => {
-    openDraftChat({
-      type: 'new',
-      single_chat_name: 'Agents Hub 助手',
-      agent_name: 'Agents-Hub-Assistant',
-    });
+    setIsAssistantModalOpen(true);
     onViewModeChange?.('chat');
   };
 
@@ -158,6 +155,11 @@ export function LeftSidebar({
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSuccess={() => onViewModeChange?.('chat')}
+      />
+
+      <AgentsHubAssistantModal
+        isOpen={isAssistantModalOpen}
+        onClose={() => setIsAssistantModalOpen(false)}
       />
     </div>
   );
