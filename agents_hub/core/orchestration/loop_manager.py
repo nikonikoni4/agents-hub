@@ -11,7 +11,9 @@ CRUD 入口，负责：
 设计决策：
 - Loop 定义与执行实例分离，Loop 作为可复用模板
 - 执行状态管理委托给 LoopExecutionManager
-- Loop 定义可以长期保留在内存（不再需要单 Loop 保持）
+- 内存单例策略：同时只能保持一个 Loop 在内存中（ADR-2026-06-23）
+- 只有通过 get_loop_with_lazy_load 加载的 Loop 才会进入内存
+- create_loop 只创建定义并保存到文件，不加载到内存
 """
 
 import asyncio
@@ -73,8 +75,9 @@ class LoopManager:
         self._persistence_path = group_chat_paths.loops_data(group_chat_id, project_path)
         self._persistence_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # 内存缓存（Loop 定义可以长期保留）
-        self._loops: dict[str, Loop] = {}
+        # 内存缓存（单例模式：同时只能保持一个 Loop）
+        # 参考 ADR-2026-06-23-loop-memory-singleton.md
+        self._loop: Loop | None = None
 
         # 并发控制锁
         self._lock = asyncio.Lock()
@@ -139,8 +142,8 @@ class LoopManager:
                 name=name,
             )
 
-            # 保存到内存和持久化
-            self._loops[loop.loop_id] = loop
+            # 保存到持久化文件（不加载到内存，遵循单例策略）
+            # create_loop 只创建定义，不激活 Loop；激活由 get_loop_with_lazy_load 负责
             self._persist_loop(loop)
 
             self.logger.info(
@@ -153,8 +156,21 @@ class LoopManager:
 
             return loop
 
+    def get_active_loop(self) -> Loop | None:
+        """返回当前激活的 Loop（供 API Service 只读查询）。
+
+        单例模式下，内存中同时只能保持一个 Loop。
+        此方法用于 API 层查询当前激活状态，不触发懒加载。
+
+        Returns:
+            当前激活的 Loop 实例，如果没有激活的 Loop 则返回 None。
+        """
+        return self._loop
+
     def get_loop(self, loop_id: str) -> Loop:
-        """查询单个 Loop。
+        """查询单个 Loop（必须已激活在内存中）。
+
+        仅查询当前激活的 Loop。如需从文件加载，请使用 get_loop_with_lazy_load。
 
         Args:
             loop_id: 循环唯一标识。
@@ -163,17 +179,17 @@ class LoopManager:
             Loop 实例。
 
         Raises:
-            LoopNotFoundError: 循环不存在时抛出。
+            LoopNotFoundError: 当前激活的 Loop 不匹配或无激活 Loop 时抛出。
         """
-        if loop_id not in self._loops:
+        if self._loop is None or self._loop.loop_id != loop_id:
             self.logger.error(
-                "Loop 不存在: loop_id=%s, 可用=%s",
+                "Loop 未激活: loop_id=%s, 当前激活=%s",
                 loop_id,
-                list(self._loops.keys()),
+                self._loop.loop_id if self._loop else None,
             )
             raise LoopNotFoundError(loop_id)
 
-        return self._loops[loop_id]
+        return self._loop
 
     def _read_jsonl_loops(self) -> dict[str, dict]:
         """从 JSONL 文件读取所有 Loop 记录（内部辅助方法）。
@@ -231,9 +247,11 @@ class LoopManager:
             ) from e
 
     def get_loop_with_lazy_load(self, loop_id: str) -> Loop:
-        """查询单个 Loop，支持懒加载。
+        """查询单个 Loop，支持懒加载（激活 Loop 到内存）。
 
-        如果 Loop 在内存中，直接返回；如果不在内存中，从 JSONL 加载。
+        如果 Loop 已激活在内存中且 ID 匹配，直接返回；否则从 JSONL 加载并激活。
+        激活时会替换之前的 Loop（单例约束：内存中同时只能有一个 Loop）。
+
         用于 start_loop() 和 get_loop_status() 等需要懒加载的场景。
 
         Args:
@@ -245,10 +263,10 @@ class LoopManager:
         Raises:
             LoopNotFoundError: 循环在 JSONL 中也不存在时抛出。
         """
-        # 1. 检查内存
-        if loop_id in self._loops:
+        # 1. 检查内存（已激活且 ID 匹配）
+        if self._loop is not None and self._loop.loop_id == loop_id:
             self.logger.debug("Loop 命中内存: loop_id=%s", loop_id)
-            return self._loops[loop_id]
+            return self._loop
 
         # 2. 从 JSONL 加载
         self.logger.info(
@@ -267,9 +285,9 @@ class LoopManager:
             )
             raise LoopNotFoundError(loop_id)
 
-        # 3. 反序列化并加载到内存
+        # 3. 反序列化并激活到内存（替换旧的 Loop）
         loop = Loop.from_dict(loop_record)
-        self._loops[loop_id] = loop
+        self._loop = loop
 
         self.logger.info(
             "Loop 懒加载成功: loop_id=%s, max_iterations=%d",
@@ -313,7 +331,8 @@ class LoopManager:
                 "updated_at": data.get("updated_at"),
                 "max_iterations": data.get("max_iterations"),
                 "nodes_count": len(data.get("nodes", [])),
-                "in_memory": loop_id in self._loops,  # 标记是否在内存
+                "in_memory": self._loop is not None
+                and self._loop.loop_id == loop_id,  # 单例：是否为当前激活的 Loop
             }
             result.append(summary)
 
@@ -340,8 +359,8 @@ class LoopManager:
         Raises:
             LoopNotFoundError: 循环在内存和 JSONL 中都不存在时抛出。
         """
-        # 1. 检查内存
-        found_in_memory = loop_id in self._loops
+        # 1. 检查内存（单例模式：检查是否为当前激活的 Loop）
+        found_in_memory = self._loop is not None and self._loop.loop_id == loop_id
 
         # 2. 内存没有，检查 JSONL
         found_in_jsonl = False
@@ -357,9 +376,9 @@ class LoopManager:
             )
             raise LoopNotFoundError(loop_id)
 
-        # 从内存清除（如果存在）
+        # 从内存清除（如果是当前激活的 Loop）
         if found_in_memory:
-            del self._loops[loop_id]
+            self._loop = None
 
         # 写墓碑记录
         self._persist_deletion(loop_id)
@@ -458,7 +477,11 @@ class LoopManager:
     def _load_from_persistence(self) -> None:
         """从 JSONL 文件加载历史 Loop 数据。
 
-        启动时调用，从持久化文件恢复循环状态。采用容错处理策略：
+        启动时调用，从持久化文件恢复循环状态。
+        单例模式下不自动加载到内存，仅记录日志。
+        Loop 需要通过 get_loop_with_lazy_load 按需激活。
+
+        采用容错处理策略：
         - 跳过空行
         - 跳过损坏行（记录 WARNING 日志）
         - 同一 loop_id 多条记录取最新（自动去重）
@@ -469,12 +492,8 @@ class LoopManager:
         """
         loop_records = self._read_jsonl_loops()
 
-        # 反序列化并加载到内存
-        for loop_id, data in loop_records.items():
-            loop = Loop.from_dict(data)
-            self._loops[loop_id] = loop
-
-        self.logger.info("加载了 %d 个 Loop", len(loop_records))
+        # 单例模式：不自动加载到内存，由 get_loop_with_lazy_load 按需激活
+        self.logger.info("发现 %d 个 Loop 定义（单例模式，不自动加载到内存）", len(loop_records))
 
     def _persist_loop(self, loop: Loop) -> None:
         """持久化单个 Loop（追加模式）。

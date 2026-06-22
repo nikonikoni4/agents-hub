@@ -203,12 +203,15 @@ class TestLoopManagerQuery:
 
     @pytest.mark.asyncio
     async def test_get_loop_success(self, loop_manager, valid_nodes):
-        """查询已存在的 Loop"""
+        """查询已激活的 Loop（需先通过懒加载激活）"""
         created_loop = await loop_manager.create_loop(
             nodes=valid_nodes,
             max_iterations=10,
         )
 
+        # 单例模式下 get_loop 只能查询已激活的 Loop
+        # 需要先通过懒加载激活
+        loop_manager.get_loop_with_lazy_load(created_loop.loop_id)
         retrieved_loop = loop_manager.get_loop(created_loop.loop_id)
 
         assert retrieved_loop.loop_id == created_loop.loop_id
@@ -475,6 +478,176 @@ class TestLoopNodeFields:
         recovered = manager2.get_loop_with_lazy_load(loop.loop_id)
         assert recovered.nodes[0].output_schema_fields == ["# 执行结果", "**任务状态**"]
         assert recovered.nodes[1].output_schema_fields is None  # 默认 None
+
+
+class TestLoopManagerSingleton:
+    """测试 LoopManager 单例模式（内存中同时只能保持一个 Loop）"""
+
+    def test_get_active_loop_returns_none_initially(self, loop_manager):
+        """初始化时 get_active_loop() 返回 None"""
+        assert loop_manager.get_active_loop() is None
+
+    @pytest.mark.asyncio
+    async def test_create_loop_does_not_activate(self, loop_manager, valid_nodes):
+        """create_loop 不会将 Loop 加载到内存（不影响激活状态）"""
+        await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+        )
+
+        # create_loop 只保存定义到文件，不加载到内存
+        assert loop_manager.get_active_loop() is None
+
+    @pytest.mark.asyncio
+    async def test_lazy_load_activates_loop(self, loop_manager, valid_nodes):
+        """get_loop_with_lazy_load 会将 Loop 激活到内存"""
+        loop = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+        )
+
+        # 懒加载后 Loop 被激活
+        loaded = loop_manager.get_loop_with_lazy_load(loop.loop_id)
+        assert loaded.loop_id == loop.loop_id
+
+        # get_active_loop 应返回该 Loop
+        active = loop_manager.get_active_loop()
+        assert active is not None
+        assert active.loop_id == loop.loop_id
+
+    @pytest.mark.asyncio
+    async def test_lazy_load_replaces_active_loop(self, loop_manager, valid_nodes):
+        """懒加载新 Loop 时替换当前激活的 Loop（单例约束）"""
+        loop1 = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+        )
+        loop2 = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=5,
+        )
+
+        # 激活第一个 Loop
+        loop_manager.get_loop_with_lazy_load(loop1.loop_id)
+        assert loop_manager.get_active_loop().loop_id == loop1.loop_id
+
+        # 激活第二个 Loop，替换第一个
+        loop_manager.get_loop_with_lazy_load(loop2.loop_id)
+        active = loop_manager.get_active_loop()
+        assert active is not None
+        assert active.loop_id == loop2.loop_id
+
+    @pytest.mark.asyncio
+    async def test_delete_active_loop_clears_memory(self, loop_manager, valid_nodes):
+        """删除当前激活的 Loop 时，清空内存中的 self._loop"""
+        loop = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+        )
+
+        # 激活 Loop
+        loop_manager.get_loop_with_lazy_load(loop.loop_id)
+        assert loop_manager.get_active_loop() is not None
+
+        # 删除 Loop
+        await loop_manager.delete_loop(loop.loop_id)
+
+        # 内存中应无激活 Loop
+        assert loop_manager.get_active_loop() is None
+
+    @pytest.mark.asyncio
+    async def test_delete_non_active_loop_keeps_active(self, loop_manager, valid_nodes):
+        """删除非激活的 Loop 时，不影响当前激活的 Loop"""
+        loop1 = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+        )
+        loop2 = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=5,
+        )
+
+        # 激活第一个 Loop
+        loop_manager.get_loop_with_lazy_load(loop1.loop_id)
+
+        # 删除第二个 Loop（非激活）
+        await loop_manager.delete_loop(loop2.loop_id)
+
+        # 第一个 Loop 仍然激活
+        active = loop_manager.get_active_loop()
+        assert active is not None
+        assert active.loop_id == loop1.loop_id
+
+    @pytest.mark.asyncio
+    async def test_get_loop_with_lazy_load_not_found(self, loop_manager):
+        """懒加载不存在的 Loop 时抛出 LoopNotFoundError"""
+        with pytest.raises(LoopNotFoundError):
+            loop_manager.get_loop_with_lazy_load("non_existent_id")
+
+    @pytest.mark.asyncio
+    async def test_get_loop_checks_active_loop(self, loop_manager, valid_nodes):
+        """get_loop 在 Loop 激活时直接从内存返回"""
+        loop = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+        )
+
+        # 未激活时 get_loop 应抛出异常
+        with pytest.raises(LoopNotFoundError):
+            loop_manager.get_loop(loop.loop_id)
+
+        # 激活后 get_loop 应成功返回
+        loop_manager.get_loop_with_lazy_load(loop.loop_id)
+        retrieved = loop_manager.get_loop(loop.loop_id)
+        assert retrieved.loop_id == loop.loop_id
+
+    @pytest.mark.asyncio
+    async def test_list_loops_in_memory_marker(self, loop_manager, valid_nodes):
+        """list_loops 的 in_memory 标记反映单例激活状态"""
+        loop1 = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+        )
+        loop2 = await loop_manager.create_loop(
+            nodes=valid_nodes,
+            max_iterations=5,
+        )
+
+        # 未激活时，两个 Loop 都不在内存
+        loops = loop_manager.list_loops()
+        for loop_summary in loops:
+            assert loop_summary["in_memory"] is False
+
+        # 激活第一个 Loop
+        loop_manager.get_loop_with_lazy_load(loop1.loop_id)
+        loops = loop_manager.list_loops()
+        loop1_summary = next(l for l in loops if l["loop_id"] == loop1.loop_id)
+        loop2_summary = next(l for l in loops if l["loop_id"] == loop2.loop_id)
+        assert loop1_summary["in_memory"] is True
+        assert loop2_summary["in_memory"] is False
+
+    @pytest.mark.asyncio
+    async def test_singleton_persistence_across_restart(self, temp_project_path, valid_nodes):
+        """单例模式下的持久化和恢复"""
+        group_chat_id = f"test_gc_{uuid4().hex[:8]}"
+
+        # 第一个 Manager：创建并激活 Loop
+        manager1 = LoopManager(group_chat_id, temp_project_path)
+        loop = await manager1.create_loop(
+            nodes=valid_nodes,
+            max_iterations=10,
+        )
+        manager1.get_loop_with_lazy_load(loop.loop_id)
+        assert manager1.get_active_loop() is not None
+
+        # 第二个 Manager：重启后内存为空
+        manager2 = LoopManager(group_chat_id, temp_project_path)
+        assert manager2.get_active_loop() is None
+
+        # 懒加载后可以恢复
+        recovered = manager2.get_loop_with_lazy_load(loop.loop_id)
+        assert recovered.loop_id == loop.loop_id
+        assert manager2.get_active_loop() is not None
 
 
 class TestLoopCompatibility:
