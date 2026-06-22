@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loop Status v4 - Combined</title>
+  <style>
+    :root {
+      --bg-sidebar: rgb(246, 246, 246);
+      --bg-main: rgb(255, 255, 255);
+      --bg-right-base: rgb(255, 255, 255);
+      --bg-hover: rgba(0, 0, 0, 0.04);
+      --bg-active: rgba(0, 0, 0, 0.06);
+      --bg-overlay: rgba(0, 0, 0, 0.4);
+
+      --text-primary: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+
+      --accent-color: rgb(74, 158, 255);
+      --accent-bg: rgba(74, 158, 255, 0.1);
+
+      --border-color: rgba(0, 0, 0, 0.08);
+
+      --status-running: rgb(74, 158, 255);
+      --status-running-bg: rgba(74, 158, 255, 0.12);
+      --status-paused: rgb(232, 176, 46);
+      --status-paused-bg: rgba(232, 176, 46, 0.12);
+      --status-completed: rgb(76, 175, 80);
+      --status-completed-bg: rgba(76, 175, 80, 0.12);
+      --status-failed: rgb(234, 67, 53);
+      --status-failed-bg: rgba(234, 67, 53, 0.12);
+      --status-created: rgba(0, 0, 0, 0.45);
+      --status-created-bg: rgba(0, 0, 0, 0.06);
+
+      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-sidebar);
+      color: var(--text-primary);
+      padding: 32px;
+    }
+
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .demo-row {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    /* ===== Sidebar Mock ===== */
+    .sidebar-mock {
+      width: 280px;
+      background: var(--bg-right-base);
+      border-radius: 12px;
+      padding: 16px 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.04);
+    }
+
+    .rightModule {
+      margin: 8px 12px;
+      padding: 14px 16px;
+      background: var(--bg-right-base);
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+    }
+
+    .moduleTitle {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 12px;
+    }
+
+    /* ===== Status Badge ===== */
+    .statusBadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .statusBadge--running { background: var(--status-running-bg); color: var(--status-running); }
+    .statusBadge--paused { background: var(--status-paused-bg); color: var(--status-paused); }
+    .statusBadge--completed { background: var(--status-completed-bg); color: var(--status-completed); }
+    .statusBadge--failed { background: var(--status-failed-bg); color: var(--status-failed); }
+
+    .statusDot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .statusBadge--running .statusDot {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ===== Thumbnail: vertical blocks (v2 style) ===== */
+    .loopThumbnail {
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.15s ease;
+    }
+
+    .loopThumbnail:hover {
+      background: var(--bg-hover);
+    }
+
+    .thumbHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+
+    .thumbProgress {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .thumbNodes {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .thumbNode {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .thumbNode--prev {
+      background: var(--status-completed-bg);
+      color: var(--status-completed);
+    }
+
+    .thumbNode--current {
+      background: var(--accent-bg);
+      color: var(--accent-color);
+      font-weight: 600;
+      box-shadow: inset 3px 0 0 var(--accent-color);
+    }
+
+    .thumbNode--next {
+      background: var(--bg-hover);
+      color: var(--text-tertiary);
+    }
+
+    .thumbNodeDot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .thumbNode--prev .thumbNodeDot { background: var(--status-completed); }
+    .thumbNode--current .thumbNodeDot {
+      background: var(--accent-color);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .thumbNode--next .thumbNodeDot { background: var(--text-tertiary); opacity: 0.4; }
+
+    .thumbNodeLabel {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .thumbNodeIter {
+      font-size: 10px;
+      opacity: 0.6;
+      flex-shrink: 0;
+    }
+
+    /* ===== Pinned Mock ===== */
+    .pinnedItem {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+    }
+
+    .pinnedIcon { font-size: 14px; color: var(--text-tertiary); }
+    .pinnedText {
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pinnedText em { font-style: normal; color: var(--text-primary); font-weight: 500; }
+
+    /* ===== Empty State ===== */
+    .emptyState { text-align: center; padding: 12px 0; }
+    .emptyStateIcon { font-size: 18px; margin-bottom: 4px; opacity: 0.25; }
+    .emptyStateText { font-size: 12px; color: var(--text-tertiary); }
+
+    /* ===== Modal ===== */
+    .modal {
+      background: var(--bg-main);
+      border-radius: 16px;
+      width: 640px;
+      max-width: 90vw;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.12);
+    }
+
+    .modalHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modalTitle { font-size: 16px; font-weight: 600; }
+
+    .modalClose {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--text-tertiary);
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .modalClose:hover { background: var(--bg-hover); }
+
+    .modalBody { padding: 24px; }
+
+    .modalStatus {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .modalIteration {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .modalIteration strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* ===== Horizontal Node Graph (v3 style) ===== */
+    .nodeGraph {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 20px 0;
+    }
+
+    .nodeBox {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 80px;
+    }
+
+    .nodeCircle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 600;
+      border: 2px solid var(--border-color);
+      background: var(--bg-main);
+    }
+
+    .nodeCircle--active {
+      border-color: var(--accent-color);
+      background: var(--accent-bg);
+      color: var(--accent-color);
+      box-shadow: 0 0 0 4px var(--accent-bg);
+    }
+
+    .nodeCircle--done {
+      border-color: var(--status-completed);
+      background: var(--status-completed);
+      color: white;
+    }
+
+    .nodeCircle--failed {
+      border-color: var(--status-failed);
+      background: var(--status-failed);
+      color: white;
+    }
+
+    .nodeCircle--pending {
+      color: var(--text-tertiary);
+    }
+
+    .nodeLabel {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    .nodeLabel--pending { color: var(--text-tertiary); }
+
+    .nodeSublabel {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-align: center;
+    }
+
+    .nodeTypeTag {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 100px;
+      background: var(--bg-hover);
+      color: var(--text-tertiary);
+    }
+
+    .nodeTypeTag--terminator {
+      background: rgba(232, 176, 46, 0.1);
+      color: var(--status-paused);
+    }
+
+    .nodeArrow {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 32px;
+    }
+
+    .nodeArrowLine {
+      flex: 1;
+      height: 2px;
+      background: var(--border-color);
+    }
+
+    .nodeArrowLine--done { background: var(--status-completed); }
+    .nodeArrowLine--active { background: var(--accent-color); }
+
+    .nodeArrowHead {
+      width: 0;
+      height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 6px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .nodeArrowHead--done { border-left-color: var(--status-completed); }
+    .nodeArrowHead--active { border-left-color: var(--accent-color); }
+
+    .loopBack {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 12px 0;
+      color: var(--text-tertiary);
+      font-size: 12px;
+    }
+
+    .loopBackLine {
+      flex: 1;
+      max-width: 200px;
+      height: 1px;
+      border-top: 2px dashed var(--border-color);
+    }
+
+    .loopBackIcon { font-size: 16px; }
+
+    .modalError {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--status-failed-bg);
+      border-radius: 10px;
+      border: 1px solid rgba(234, 67, 53, 0.15);
+    }
+
+    .modalErrorTitle {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--status-failed);
+      margin-bottom: 4px;
+    }
+
+    .modalErrorText {
+      font-size: 12px;
+      color: var(--status-failed);
+      opacity: 0.8;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Row 1: Sidebar Thumbnails -->
+  <h2>Sidebar Thumbnails (v2 vertical blocks)</h2>
+  <div class="demo-row">
+
+    <!-- Running -->
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - requirements</span>
+        </div>
+      </div>
+      <div class="rightModule">
+        <div class="moduleTitle">Loop</div>
+        <div class="loopThumbnail">
+          <div class="thumbHeader">
+            <span class="statusBadge statusBadge--running">
+              <span class="statusDot"></span>
+              Running
+            </span>
+            <span class="thumbProgress">2 / 5</span>
+          </div>
+          <div class="thumbNodes">
+            <div class="thumbNode thumbNode--prev">
+              <span class="thumbNodeDot"></span>
+              <span class="thumbNodeLabel">researcher</span>
+            </div>
+            <div class="thumbNode thumbNode--current">
+              <span class="thumbNodeDot"></span>
+              <span class="thumbNodeLabel">coder</span>
+            </div>
+            <div class="thumbNode thumbNode--next">
+              <span class="thumbNodeDot"></span>
+              <span class="thumbNodeLabel">reviewer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paused -->
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - requirements</span>
+        </div>
+      </div>
+      <div class="rightModule">
+        <div class="moduleTitle">Loop</div>
+        <div class="loopThumbnail">
+          <div class="thumbHeader">
+            <span class="statusBadge statusBadge--paused">
+              <span class="statusDot"></span>
+              Paused
+            </span>
+            <span class="thumbProgress">1 / 5</span>
+          </div>
+          <div class="thumbNodes">
+            <div class="thumbNode thumbNode--prev">
+              <span class="thumbNodeDot"></span>
+              <span class="thumbNodeLabel">researcher</span>
+            </div>
+            <div class="thumbNode thumbNode--current" style="background: var(--status-paused-bg); color: var(--status-paused); box-shadow: inset 3px 0 0 var(--status-paused);">
+              <span class="thumbNodeDot" style="background: var(--status-paused);"></span>
+              <span class="thumbNodeLabel">coder</span>
+            </div>
+            <div class="thumbNode thumbNode--next">
+              <span class="thumbNodeDot"></span>
+              <span class="thumbNodeLabel">reviewer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Failed -->
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - requirements</span>
+        </div>
+      </div>
+      <div class="rightModule">
+        <div class="moduleTitle">Loop</div>
+        <div class="loopThumbnail">
+          <div class="thumbHeader">
+            <span class="statusBadge statusBadge--failed">
+              <span class="statusDot"></span>
+              Failed
+            </span>
+            <span class="thumbProgress">2 / 5</span>
+          </div>
+          <div class="thumbNodes">
+            <div class="thumbNode thumbNode--prev">
+              <span class="thumbNodeDot"></span>
+              <span class="thumbNodeLabel">researcher</span>
+            </div>
+            <div class="thumbNode thumbNode--current" style="background: var(--status-failed-bg); color: var(--status-failed); box-shadow: inset 3px 0 0 var(--status-failed);">
+              <span class="thumbNodeDot" style="background: var(--status-failed);"></span>
+              <span class="thumbNodeLabel">coder</span>
+            </div>
+            <div class="thumbNode thumbNode--next">
+              <span class="thumbNodeDot"></span>
+              <span class="thumbNodeLabel">reviewer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- No Loop -->
+    <div class="sidebar-mock">
+      <div class="rightModule">
+        <div class="moduleTitle">Pinned</div>
+        <div class="pinnedItem">
+          <span class="pinnedIcon">&#128204;</span>
+          <span class="pinnedText"><em>Task spec</em> - requirements</span>
+        </div>
+      </div>
+      <div class="rightModule">
+        <div class="moduleTitle">Loop</div>
+        <div class="emptyState">
+          <div class="emptyStateIcon">&#8634;</div>
+          <div class="emptyStateText">No active loop</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Row 2: Expanded Modal - Running -->
+  <h2>Expanded Modal - Running (v3 horizontal graph)</h2>
+  <div class="demo-row">
+    <div class="modal" style="position: relative;">
+      <div class="modalHeader">
+        <div class="modalTitle">Loop Status</div>
+        <button class="modalClose">&#10005;</button>
+      </div>
+      <div class="modalBody">
+        <div class="modalStatus">
+          <span class="statusBadge statusBadge--running">
+            <span class="statusDot"></span>
+            Running
+          </span>
+          <span class="modalIteration">Iteration <strong>2</strong> / 5</span>
+        </div>
+
+        <div class="nodeGraph">
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--done">&#10003;</div>
+            <div class="nodeLabel">researcher</div>
+            <div class="nodeSublabel">Research</div>
+          </div>
+
+          <div class="nodeArrow">
+            <div class="nodeArrowLine nodeArrowLine--done"></div>
+            <div class="nodeArrowHead nodeArrowHead--done"></div>
+          </div>
+
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--active">2</div>
+            <div class="nodeLabel">coder</div>
+            <div class="nodeSublabel">Implementation</div>
+          </div>
+
+          <div class="nodeArrow">
+            <div class="nodeArrowLine nodeArrowLine--active"></div>
+            <div class="nodeArrowHead nodeArrowHead--active"></div>
+          </div>
+
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--pending">3</div>
+            <div class="nodeLabel nodeLabel--pending">reviewer</div>
+            <div class="nodeSublabel">
+              <span class="nodeTypeTag nodeTypeTag--terminator">terminator</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="loopBack">
+          <div class="loopBackLine"></div>
+          <span class="loopBackIcon">&#8634;</span>
+          <span>Loop to researcher</span>
+          <div class="loopBackLine"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: Expanded Modal - Failed -->
+  <h2>Expanded Modal - Failed</h2>
+  <div class="demo-row">
+    <div class="modal" style="position: relative;">
+      <div class="modalHeader">
+        <div class="modalTitle">Loop Status</div>
+        <button class="modalClose">&#10005;</button>
+      </div>
+      <div class="modalBody">
+        <div class="modalStatus">
+          <span class="statusBadge statusBadge--failed">
+            <span class="statusDot"></span>
+            Failed
+          </span>
+          <span class="modalIteration">Iteration <strong>2</strong> / 5</span>
+        </div>
+
+        <div class="nodeGraph">
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--done">&#10003;</div>
+            <div class="nodeLabel">researcher</div>
+            <div class="nodeSublabel">Research</div>
+          </div>
+
+          <div class="nodeArrow">
+            <div class="nodeArrowLine nodeArrowLine--done"></div>
+            <div class="nodeArrowHead nodeArrowHead--done"></div>
+          </div>
+
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--failed">!</div>
+            <div class="nodeLabel" style="color: var(--status-failed);">coder</div>
+            <div class="nodeSublabel">Implementation</div>
+          </div>
+
+          <div class="nodeArrow">
+            <div class="nodeArrowLine"></div>
+            <div class="nodeArrowHead"></div>
+          </div>
+
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--pending">3</div>
+            <div class="nodeLabel nodeLabel--pending">reviewer</div>
+            <div class="nodeSublabel">
+              <span class="nodeTypeTag nodeTypeTag--terminator">terminator</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modalError">
+          <div class="modalErrorTitle">Error</div>
+          <div class="modalErrorText">Agent timeout after 3 retries: coder node failed to respond within 60s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 4: Expanded Modal - Completed -->
+  <h2>Expanded Modal - Completed</h2>
+  <div class="demo-row">
+    <div class="modal" style="position: relative;">
+      <div class="modalHeader">
+        <div class="modalTitle">Loop Status</div>
+        <button class="modalClose">&#10005;</button>
+      </div>
+      <div class="modalBody">
+        <div class="modalStatus">
+          <span class="statusBadge statusBadge--completed">
+            <span class="statusDot"></span>
+            Completed
+          </span>
+          <span class="modalIteration">Iteration <strong>3</strong> / 5</span>
+        </div>
+
+        <div class="nodeGraph">
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--done">&#10003;</div>
+            <div class="nodeLabel">researcher</div>
+            <div class="nodeSublabel">Research</div>
+          </div>
+
+          <div class="nodeArrow">
+            <div class="nodeArrowLine nodeArrowLine--done"></div>
+            <div class="nodeArrowHead nodeArrowHead--done"></div>
+          </div>
+
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--done">&#10003;</div>
+            <div class="nodeLabel">coder</div>
+            <div class="nodeSublabel">Implementation</div>
+          </div>
+
+          <div class="nodeArrow">
+            <div class="nodeArrowLine nodeArrowLine--done"></div>
+            <div class="nodeArrowHead nodeArrowHead--done"></div>
+          </div>
+
+          <div class="nodeBox">
+            <div class="nodeCircle nodeCircle--done">&#10003;</div>
+            <div class="nodeLabel">reviewer</div>
+            <div class="nodeSublabel">
+              <span class="nodeTypeTag nodeTypeTag--terminator">terminator</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="loopBack">
+          <div class="loopBackLine"></div>
+          <span class="loopBackIcon">&#10003;</span>
+          <span>Completed after 3 iterations</span>
+          <div class="loopBackLine"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
