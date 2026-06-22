@@ -1738,3 +1738,126 @@ class GroupChatService:
                 details={"file_path": file_path},
             )
         return full_path
+
+    # ==================== Loop Methods ====================
+
+    def _read_loops_from_file(self, group_chat_id: str) -> list[dict]:
+        """从 loops.jsonl 文件读取所有非墓碑的 Loop 定义。
+
+        为什么不使用 core 的已有功能（LoopManager.list_loops）？
+        - **解耦设计**：API 层直接读取文件，避免与 core 模块耦合
+        - **避免干扰**：core 模块的 LoopManager 可能有副作用（如内存管理），API 层只需要只读访问
+        - **有意设计**：这不是重复编写代码，而是有意的分层隔离，确保 API 层不会意外修改 core 状态
+        - **AI 安全**：耦合在一起时，AI 容易出错（如误调用会修改状态的方法）
+
+        Args:
+            group_chat_id: 群聊 ID，用于定位文件路径
+
+        Returns:
+            Loop 定义列表（已过滤墓碑记录）
+        """
+        # 获取 project_path（从已加载的群聊中获取）
+        group_chat = self.group_chat_manager._group_chats.get(group_chat_id)
+        if not group_chat:
+            raise ResourceNotFoundError(
+                f"群聊不存在或未加载: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            )
+
+        project_path = group_chat.runtime.project_path
+        loops_file = group_chat_paths.loops_data(group_chat_id, project_path)
+
+        if not loops_file.exists():
+            return []
+
+        loop_records: dict[str, dict] = {}
+        deleted_ids: set[str] = set()
+
+        try:
+            with open(loops_file, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        data = json.loads(line)
+                        loop_id = data["loop_id"]
+
+                        # 墓碑记录：标记删除
+                        if data.get("_deleted"):
+                            deleted_ids.add(loop_id)
+                            loop_records.pop(loop_id, None)
+                            continue
+
+                        # 跳过已删除的 loop_id
+                        if loop_id in deleted_ids:
+                            continue
+
+                        # 后面的记录覆盖前面的（取最新）
+                        loop_records[loop_id] = data
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+
+            return list(loop_records.values())
+
+        except OSError as e:
+            logger.error("读取 loops.jsonl 失败: group=%s, error=%s", group_chat_id, e)
+            return []
+
+    async def get_loops(self, group_chat_id: str) -> list[dict]:
+        """获取群聊的所有 Loop 定义列表。
+
+        直接从 loops.jsonl 文件读取，不走 core 模块（只读设计）。
+
+        Args:
+            group_chat_id: 群聊 ID
+
+        Returns:
+            Loop 定义列表
+
+        Raises:
+            ResourceNotFoundError: 群聊不存在
+        """
+        logger.debug("获取 Loop 列表: group_chat_id=%s", group_chat_id)
+
+        # 验证群聊存在
+        try:
+            await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            logger.error("获取 Loop 列表失败: 群聊不存在, id=%s", group_chat_id)
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        # 直接从文件读取
+        loops_data = self._read_loops_from_file(group_chat_id)
+
+        # 转换为 API Schema 格式
+        result = []
+        for loop_data in loops_data:
+            nodes = []
+            for node_data in loop_data.get("nodes", []):
+                nodes.append(
+                    {
+                        "node_id": node_data.get("node_id", ""),
+                        "node_type": node_data.get("node_type", "normal"),
+                        "agent_name": node_data.get("agent_name", ""),
+                        "role_description": node_data.get("role_description", ""),
+                        "output_schema_prompt": node_data.get("output_schema_prompt"),
+                        "output_schema_fields": node_data.get("output_schema_fields"),
+                        "max_retries": node_data.get("max_retries", 3),
+                    }
+                )
+
+            result.append(
+                {
+                    "loop_id": loop_data["loop_id"],
+                    "name": loop_data.get("name"),
+                    "nodes": nodes,
+                    "max_iterations": loop_data.get("max_iterations", 1),
+                }
+            )
+
+        return result

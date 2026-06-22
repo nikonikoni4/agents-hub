@@ -306,3 +306,52 @@ class MemberHistoryResponse(BaseModel):
     agent_name: str
     main_session_id: str | None = None
     messages: list[MemberHistoryMessage]
+
+
+# --- Loop Schemas ---
+
+
+class LoopNodeSchema(BaseModel):
+    """Loop 节点信息"""
+
+    node_id: str = Field(..., description="节点唯一标识")
+    node_type: str = Field(..., description="节点类型：normal 或 terminator")
+    agent_name: str = Field(..., description="执行节点的 Agent 名称")
+    role_description: str = Field(..., description="节点职责描述")
+    output_schema_prompt: str | None = Field(None, description="输出格式提示词")
+    output_schema_fields: list[str] | None = Field(None, description="必需字段列表")
+    max_retries: int = Field(3, description="输出校验失败的最大重试次数")
+
+
+class LoopDetailSchema(BaseModel):
+    """Loop 定义详情"""
+
+    loop_id: str = Field(..., description="循环定义唯一标识")
+    name: str | None = Field(None, description="循环名称")
+    nodes: list[LoopNodeSchema] = Field(..., description="节点列表")
+    max_iterations: int = Field(..., description="最大循环次数")
+
+
+class LoopExecutionSchema(BaseModel):
+    """Loop 执行实例状态"""
+
+    execution_id: str = Field(..., description="执行实例唯一标识")
+    status: str = Field(..., description="执行状态：created/running/paused/completed/failed")
+    current_iteration: int = Field(..., description="当前循环轮次")
+    current_node_index: int = Field(..., description="当前节点索引")
+    error_message: str | None = Field(None, description="错误信息")
+
+
+class LoopListResponseSchema(BaseModel):
+    """Loop 列表响应"""
+
+    loops: list[LoopDetailSchema] = Field(..., description="Loop 定义列表")
+
+
+class ActiveLoopResponseSchema(BaseModel):
+    """激活的 Loop 响应"""
+
+    loop: LoopDetailSchema = Field(..., description="Loop 定义")
+    execution: LoopExecutionSchema | None = Field(
+        None, description="执行状态（无激活 Loop 时为 null）"
+    )

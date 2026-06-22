@@ -673,3 +673,163 @@ async def test_send_message_invalid_target(service, mock_group_chat_manager):
         with pytest.raises(ValidationError) as exc_info:
             await service.send_message("gc_test", "你好", ["测试", "E2E测试角色"])
         assert "不是群聊成员" in str(exc_info.value)
+
+
+# ==================== Loop Tests ====================
+
+
+async def test_get_loops_returns_loop_list(service, mock_group_chat_manager):
+    """测试获取 Loop 列表返回正确的数据"""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_loops"
+    project_path = tempfile.mkdtemp()
+
+    # 创建 loops.jsonl 文件（使用 group_chat_paths 的实际路径）
+    loops_dir = Path(project_path)
+    loops_dir.mkdir(parents=True, exist_ok=True)
+    loops_file = loops_dir / "loops.jsonl"
+
+    loop_data = {
+        "loop_id": "loop-001",
+        "group_chat_id": group_chat_id,
+        "name": "测试循环",
+        "nodes": [
+            {
+                "node_id": "node-1",
+                "node_type": "normal",
+                "agent_name": "executor",
+                "role_description": "执行任务",
+                "max_retries": 3,
+            },
+            {
+                "node_id": "node-2",
+                "node_type": "terminator",
+                "agent_name": "manager",
+                "role_description": "判断是否继续",
+                "max_retries": 3,
+            },
+        ],
+        "max_iterations": 10,
+        "created_at": "2026-06-23T10:00:00",
+        "updated_at": "2026-06-23T10:00:00",
+    }
+
+    with open(loops_file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(loop_data, ensure_ascii=False) + "\n")
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    # Mock group_chat_paths.loops_data 返回正确的路径
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = loops_file
+
+        # Act
+        result = await service.get_loops(group_chat_id)
+
+    # Assert
+    assert len(result) == 1
+    assert result[0]["loop_id"] == "loop-001"
+    assert result[0]["name"] == "测试循环"
+    assert len(result[0]["nodes"]) == 2
+    assert result[0]["max_iterations"] == 10
+
+
+async def test_get_loops_returns_empty_list_when_no_loops(service, mock_group_chat_manager):
+    """测试没有 Loop 时返回空列表"""
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_no_loops"
+    project_path = tempfile.mkdtemp()
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    # Mock group_chat_paths.loops_data 返回不存在的文件路径
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = Path(project_path) / "nonexistent_loops.jsonl"
+
+        # Act
+        result = await service.get_loops(group_chat_id)
+
+    # Assert
+    assert result == []
+
+
+async def test_get_loops_skips_tombstone_records(service, mock_group_chat_manager):
+    """测试跳过墓碑记录"""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    group_chat_id = "gc_tombstone"
+    project_path = tempfile.mkdtemp()
+
+    # 创建 loops.jsonl 文件，包含墓碑记录
+    loops_dir = Path(project_path)
+    loops_dir.mkdir(parents=True, exist_ok=True)
+    loops_file = loops_dir / "loops.jsonl"
+
+    # 正常记录
+    loop_data = {
+        "loop_id": "loop-001",
+        "group_chat_id": group_chat_id,
+        "name": "正常循环",
+        "nodes": [
+            {"node_id": "node-1", "node_type": "normal", "agent_name": "executor", "role_description": "执行", "max_retries": 3},
+            {"node_id": "node-2", "node_type": "terminator", "agent_name": "manager", "role_description": "判断", "max_retries": 3},
+        ],
+        "max_iterations": 5,
+        "created_at": "2026-06-23T10:00:00",
+        "updated_at": "2026-06-23T10:00:00",
+    }
+
+    # 墓碑记录
+    tombstone_data = {
+        "loop_id": "loop-002",
+        "_deleted": True,
+    }
+
+    with open(loops_file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(loop_data, ensure_ascii=False) + "\n")
+        f.write(json.dumps(tombstone_data, ensure_ascii=False) + "\n")
+
+    # Mock group_chat
+    mock_group_chat = Mock()
+    mock_group_chat.runtime.project_path = project_path
+    mock_group_chat_manager._group_chats = {group_chat_id: mock_group_chat}
+    mock_group_chat_manager.load_group_chat = AsyncMock(return_value=mock_group_chat)
+
+    # Mock group_chat_paths.loops_data 返回正确的路径
+    with patch("agents_hub.api.services.group_chat_service.group_chat_paths") as mock_paths:
+        mock_paths.loops_data.return_value = loops_file
+
+        # Act
+        result = await service.get_loops(group_chat_id)
+
+    # Assert
+    assert len(result) == 1
+    assert result[0]["loop_id"] == "loop-001"
+
+
+async def test_get_loops_not_found_raises_error(service, mock_group_chat_manager):
+    """测试群聊不存在时抛出异常"""
+    from agents_hub.core.foundation import GroupChatNotFoundError
+
+    mock_group_chat_manager._group_chats = {}
+    mock_group_chat_manager.load_group_chat = AsyncMock(
+        side_effect=GroupChatNotFoundError("群聊不存在")
+    )
+
+    with pytest.raises(ResourceNotFoundError):
+        await service.get_loops("gc_nonexistent")

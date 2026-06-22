@@ -13,6 +13,8 @@ from agents_hub.api.schemas.group_chats import (
     GroupChatInfo,
     GroupChatListResponse,
     GroupChatMember,
+    LoopDetailSchema,
+    LoopListResponseSchema,
     MemberHistoryResponse,
     MessageCreate,
     MessageInfo,
@@ -456,3 +458,17 @@ async def get_member_history(
 ):
     """获取指定成员的历史聊天记录"""
     return await service.get_member_history(group_chat_id, agent_name)
+
+
+@router.get(
+    "/{group_chat_id}/loops",
+    response_model=LoopListResponseSchema,
+)
+async def get_loops(
+    group_chat_id: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """获取群聊的所有 Loop 定义列表"""
+    loops_data = await service.get_loops(group_chat_id)
+    loops = [LoopDetailSchema(**loop) for loop in loops_data]
+    return LoopListResponseSchema(loops=loops)
