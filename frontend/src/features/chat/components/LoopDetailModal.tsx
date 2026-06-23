@@ -69,7 +69,7 @@ function NodeItem({
 }
 
 export function LoopDetailModal({ isOpen, loop, execution, onClose }: LoopDetailModalProps) {
-  const [selectedNodeIndex, setSelectedNodeIndex] = useState<number | null>(null);
+  const [selectedNodeIndex, setSelectedNodeIndex] = useState<number | null>(0);
 
   if (!isOpen || !loop) {
     return null;
@@ -88,7 +88,7 @@ export function LoopDetailModal({ isOpen, loop, execution, onClose }: LoopDetail
             ×
           </button>
         </div>
-        <div className={`${styles.content} ${selectedNode ? styles.contentWithDetail || '' : ''}`}>
+        <div className={styles.content}>
           {/* 状态标识 */}
           <div className={`${styles.statusBadge} ${STATUS_CLASS_MAP[statusInfo.statusId] || ''}`}>
             {statusInfo.text}
@@ -123,44 +123,6 @@ export function LoopDetailModal({ isOpen, loop, execution, onClose }: LoopDetail
               </div>
             )}
           </div>
-
-          {/* loopBack 区域 */}
-          {execution && (
-            <div className={styles.loopBackSection}>
-              <div className={styles.loopBackLabel}>
-                第 {execution.current_iteration} 轮 / 共 {loop.max_iterations} 轮
-              </div>
-              <div className={styles.loopBackArrow}>
-                <svg width="100%" height="40" viewBox="0 0 200 40">
-                  <path
-                    d="M 180 30 C 180 10, 20 10, 20 30"
-                    className={`${styles.loopBackArc} ${
-                      execution.status === 'running'
-                        ? styles.arcRunning
-                        : execution.status === 'completed'
-                          ? styles.arcCompleted
-                          : execution.status === 'paused'
-                            ? styles.arcPaused
-                            : styles.arcFailed
-                    }`}
-                    markerEnd="url(#arrowhead)"
-                  />
-                  <defs>
-                    <marker
-                      id="arrowhead"
-                      markerWidth="10"
-                      markerHeight="7"
-                      refX="10"
-                      refY="3.5"
-                      orient="auto"
-                    >
-                      <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" />
-                    </marker>
-                  </defs>
-                </svg>
-              </div>
-            </div>
-          )}
 
           {/* 错误信息 */}
           {hasError && <div className={styles.errorMessage}>{execution.error_message}</div>}

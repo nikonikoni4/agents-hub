@@ -25,6 +25,9 @@ import type {
   CompressAllApiResponse,
   MemberHistoryResponse,
   LoopListApiResponse,
+  LoopDetailApiResponse,
+  LoopExecutionApiItem,
+  LoopNodeApiItem,
   ActiveLoopApiResponse,
 } from '@/shared/types';
 
@@ -947,15 +950,187 @@ export async function getMemberHistory(
   );
 }
 
+// Loop Mock 数据（包含长文本用于测试溢出和滚动，节点数量超过5个）
+const MOCK_LOOP_NODES: LoopNodeApiItem[] = [
+  {
+    node_id: 'node-001',
+    node_type: 'normal',
+    agent_name: 'Senior Technical Lead & Architecture Reviewer',
+    role_description:
+      '负责整体技术架构设计、任务分配协调、代码质量把控以及团队技术方向指导，确保项目按时交付并满足技术规范要求。需要具备深厚的系统设计经验，能够识别技术风险并制定应对策略，同时负责团队成员的技术能力提升和知识分享，推动团队技术文化建设，确保项目在技术层面的可持续发展和可维护性。',
+    output_schema_prompt:
+      '请以 Markdown 格式输出详细的任务分配方案，包括：1. 任务分解与优先级排序（需要详细列出每个子任务的描述、预计工时、依赖关系）2. 资源分配与时间估算（考虑团队成员的技能特长和可用时间）3. 风险评估与应对策略（识别潜在的技术风险、人员风险、进度风险，并制定相应的缓解措施）4. 里程碑节点与验收标准（明确每个阶段的交付物和质量标准）5. 沟通计划（定期会议安排、进度汇报机制、问题升级流程）',
+    output_schema_fields: [
+      '## 任务分解列表',
+      '## 资源分配方案',
+      '## 时间计划表',
+      '## 风险评估矩阵',
+      '## 里程碑验收标准',
+      '## 沟通计划',
+    ],
+    max_retries: 3,
+  },
+  {
+    node_id: 'node-002',
+    node_type: 'normal',
+    agent_name: 'Full-Stack Developer',
+    role_description:
+      '负责前后端代码实现、单元测试编写、技术文档维护，需要具备扎实的编程基础和良好的代码风格。熟练掌握 React、TypeScript、Node.js 等技术栈，能够独立完成从需求分析到代码部署的完整开发流程。注重代码质量，遵循 SOLID 原则和设计模式，编写可测试、可维护的代码。积极参与代码评审，分享最佳实践，帮助团队提升整体开发水平。',
+    output_schema_prompt:
+      '请以 Markdown 格式输出完整的代码实现方案，包含：1. 核心功能代码（详细的代码实现，包含必要的注释和错误处理）2. 单元测试用例（覆盖正常流程、边界条件、异常场景）3. 接口文档（API 端点、请求参数、响应格式、错误码说明）4. 部署说明（环境要求、配置步骤、启动命令）5. 性能考虑（内存使用、并发处理、缓存策略）6. 安全措施（输入验证、权限控制、数据加密）',
+    output_schema_fields: [
+      '## 核心实现代码',
+      '## 修改说明文档',
+      '## 单元测试用例',
+      '## API 接口文档',
+      '## 部署配置说明',
+      '## 性能与安全考虑',
+    ],
+    max_retries: 3,
+  },
+  {
+    node_id: 'node-003',
+    node_type: 'normal',
+    agent_name: 'Quality Assurance & Code Review Specialist',
+    role_description:
+      '负责代码审查、质量检查、性能测试和安全审计，确保代码符合最佳实践和团队规范。具备敏锐的代码嗅觉，能够发现潜在的 bug、性能瓶颈和安全隐患。熟悉各种测试框架和工具，能够设计全面的测试策略，包括单元测试、集成测试、端到端测试。推动代码质量文化，建立和完善代码审查流程，确保每次代码变更都经过严格审查。',
+    output_schema_prompt:
+      '请以 Markdown 格式输出详细的审查报告，包括：1. 代码质量评分（从可读性、可维护性、可测试性、性能、安全性等多个维度进行评分）2. 发现的问题列表（按严重程度分类：阻塞、严重、一般、建议）3. 性能优化建议（具体的优化方案和预期效果）4. 安全漏洞检测结果（漏洞类型、风险等级、修复建议）5. 测试覆盖率分析（当前覆盖率、目标覆盖率、未覆盖的关键路径）6. 改进计划（短期和长期的改进目标）',
+    output_schema_fields: [
+      '## 审查结果汇总',
+      '## 问题清单详情',
+      '## 改进建议方案',
+      '## 性能优化建议',
+      '## 安全审计报告',
+      '## 测试覆盖率分析',
+    ],
+    max_retries: 1,
+  },
+  {
+    node_id: 'node-004',
+    node_type: 'normal',
+    agent_name: 'DevOps & Infrastructure Engineer',
+    role_description:
+      '负责持续集成/持续部署（CI/CD）管道的搭建和维护，确保代码从提交到部署的自动化流程顺畅运行。管理云基础设施，包括服务器配置、网络设置、存储管理等。监控系统运行状态，及时发现和解决生产环境问题，确保系统的高可用性和稳定性。制定和执行灾难恢复计划，保障业务连续性。',
+    output_schema_prompt:
+      '请以 Markdown 格式输出详细的 DevOps 方案，包括：1. CI/CD 流水线设计（构建、测试、部署各阶段的配置和工具选择）2. 基础设施即代码（IaC）方案（使用 Terraform、Ansible 等工具管理基础设施）3. 监控和告警策略（关键指标、阈值设置、告警通知方式）4. 日志管理方案（日志收集、存储、分析）5. 安全加固措施（访问控制、密钥管理、漏洞扫描）6. 容量规划（资源使用预测、扩展策略）',
+    output_schema_fields: [
+      '## CI/CD 流水线',
+      '## 基础设施代码',
+      '## 监控告警策略',
+      '## 日志管理方案',
+      '## 安全加固措施',
+      '## 容量规划',
+    ],
+    max_retries: 2,
+  },
+  {
+    node_id: 'node-005',
+    node_type: 'normal',
+    agent_name: 'Technical Writer & Documentation Specialist',
+    role_description:
+      '负责项目文档的编写和维护，确保文档的准确性、完整性和易读性。与开发团队紧密合作，理解技术细节并将其转化为清晰易懂的文档。建立文档标准和模板，规范文档的格式和内容结构。定期审查和更新文档，确保文档与代码保持同步。培训团队成员文档编写技能，提升整体文档质量。',
+    output_schema_prompt:
+      '请以 Markdown 格式输出完整的文档方案，包括：1. 文档结构规划（目录组织、分类方式、命名规范）2. API 文档模板（包含端点描述、请求示例、响应示例、错误处理）3. 用户指南大纲（安装说明、快速入门、功能详解、常见问题）4. 开发者文档（架构设计、代码规范、贡献指南）5. 版本管理（文档版本号、变更日志、发布说明）6. 文档质量保证（审查流程、反馈机制、持续改进）',
+    output_schema_fields: [
+      '## 文档结构规划',
+      '## API 文档模板',
+      '## 用户指南大纲',
+      '## 开发者文档',
+      '## 版本管理',
+      '## 质量保证流程',
+    ],
+    max_retries: 2,
+  },
+  {
+    node_id: 'node-006',
+    node_type: 'terminator',
+    agent_name: 'Project Manager & Release Coordinator',
+    role_description:
+      '负责项目整体进度管理、资源协调、风险控制和发布协调。与各团队密切沟通，确保项目目标清晰、任务分配合理、进度可控。制定项目计划，跟踪里程碑完成情况，及时调整资源分配以应对变化。组织评审会议，收集反馈，推动问题解决。负责版本发布管理，确保发布流程规范、发布质量达标。',
+    output_schema_prompt:
+      '请以 Markdown 格式输出详细的项目管理报告，包括：1. 项目进度总结（已完成任务、进行中任务、待开始任务）2. 风险和问题跟踪（已识别风险、当前问题、应对措施）3. 资源使用情况（人力投入、设备使用、预算执行）4. 质量指标（缺陷率、测试覆盖率、用户满意度）5. 下一步计划（短期目标、长期规划、资源需求）6. 发布准备情况（发布清单、回滚计划、沟通计划）',
+    output_schema_fields: [
+      '## 项目进度总结',
+      '## 风险问题跟踪',
+      '## 资源使用情况',
+      '## 质量指标',
+      '## 下一步计划',
+      '## 发布准备情况',
+    ],
+    max_retries: 1,
+  },
+];
+
+const MOCK_LOOP_DETAIL: LoopDetailApiResponse = {
+  loop_id: 'mock-loop-001',
+  name: '代码开发循环',
+  nodes: MOCK_LOOP_NODES,
+  max_iterations: 5,
+};
+
+const MOCK_LOOP_EXECUTION: LoopExecutionApiItem = {
+  execution_id: 'exec-001',
+  status: 'running',
+  current_iteration: 2,
+  current_node_index: 1,
+  error_message: null,
+};
+
+const MOCK_LOOPS_LIST: LoopListApiResponse = {
+  loops: [
+    MOCK_LOOP_DETAIL,
+    {
+      loop_id: 'mock-loop-002',
+      name: '自动化测试与质量保障循环',
+      nodes: [
+        {
+          node_id: 'node-004',
+          node_type: 'normal',
+          agent_name: 'Senior Test Engineer & Automation Specialist',
+          role_description:
+            '负责测试策略制定、自动化测试框架搭建、测试用例编写和执行，确保软件质量达到发布标准',
+          output_schema_prompt:
+            '请以 Markdown 格式输出完整的测试计划，包括：1. 测试策略与范围 2. 测试用例设计 3. 自动化脚本 4. 测试环境配置',
+          output_schema_fields: [
+            '## 测试策略文档',
+            '## 测试用例清单',
+            '## 自动化脚本',
+            '## 环境配置说明',
+            '## 预期覆盖率报告',
+          ],
+          max_retries: 3,
+        },
+        {
+          node_id: 'node-005',
+          node_type: 'terminator',
+          agent_name: 'Quality Gate Reviewer',
+          role_description:
+            '负责测试结果验证、质量门禁检查、发布审批，确保所有质量指标达标后才允许发布',
+          output_schema_prompt:
+            '请以 Markdown 格式输出质量验证报告，包括：1. 测试通过率统计 2. 缺陷分析报告 3. 性能基准对比 4. 发布建议',
+          output_schema_fields: [
+            '## 验证结果汇总',
+            '## 测试通过率',
+            '## 失败用例详情',
+            '## 缺陷分析报告',
+            '## 发布审批建议',
+          ],
+          max_retries: 1,
+        },
+      ],
+      max_iterations: 3,
+    },
+  ],
+};
+
 /**
  * 获取群聊的所有 Loop 定义列表
  */
 export async function getLoops(chatId: string, signal?: AbortSignal): Promise<LoopListApiResponse> {
   return mockableRequest(
     () => apiClient.get<LoopListApiResponse>(`/group-chats/${chatId}/loops`, { signal }),
-    {
-      loops: [],
-    }
+    MOCK_LOOPS_LIST
   );
 }
 
@@ -971,13 +1146,8 @@ export async function getActiveLoop(
   return mockableRequest(
     () => apiClient.get<ActiveLoopApiResponse>(`/group-chats/${chatId}/loops/active`, { signal }),
     {
-      loop: {
-        loop_id: 'mock-loop-001',
-        name: 'Mock Loop',
-        nodes: [],
-        max_iterations: 5,
-      },
-      execution: null,
+      loop: MOCK_LOOP_DETAIL,
+      execution: MOCK_LOOP_EXECUTION,
     }
   );
 }
@@ -994,13 +1164,8 @@ export async function getLoop(
     () =>
       apiClient.get<ActiveLoopApiResponse>(`/group-chats/${chatId}/loops/${loopId}`, { signal }),
     {
-      loop: {
-        loop_id: loopId,
-        name: 'Mock Loop',
-        nodes: [],
-        max_iterations: 5,
-      },
-      execution: null,
+      loop: MOCK_LOOP_DETAIL,
+      execution: MOCK_LOOP_EXECUTION,
     }
   );
 }

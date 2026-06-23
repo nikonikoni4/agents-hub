@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { LoopDetailModal } from './LoopDetailModal';
 import type { LoopDetailApiResponse, LoopExecutionApiItem } from '@/shared/types';
 
@@ -81,9 +81,9 @@ describe('LoopDetailModal', () => {
 
     // Assert
     expect(screen.getByText('测试循环')).toBeDefined();
-    expect(screen.getByText('执行者')).toBeDefined();
-    expect(screen.getByText('审查者')).toBeDefined();
-    expect(screen.getByText('判断者')).toBeDefined();
+    expect(screen.getAllByText('执行者').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('审查者').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('判断者').length).toBeGreaterThanOrEqual(1);
   });
 
   it('显示迭代次数', () => {
@@ -158,18 +158,15 @@ describe('LoopDetailModal', () => {
       />
     );
 
-    // Act - 点击第一个节点
-    fireEvent.click(screen.getByText('执行者'));
-
-    // Assert - 详情面板显示节点信息（节点列表和详情面板中都有 role_description）
-    expect(screen.getAllByText('执行代码').length).toBeGreaterThanOrEqual(2);
+    // Assert - 默认选中第一个节点，详情面板自动显示
+    expect(screen.getAllByText('执行代码').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('请输出实现代码')).toBeDefined();
     expect(screen.getByText('## 实现代码')).toBeDefined();
   });
 
-  it('显示 loopBack 区域当有执行状态时', () => {
+  it('显示迭代信息当有执行状态时', () => {
     // Arrange & Act
-    const { container } = render(
+    render(
       <LoopDetailModal
         isOpen={true}
         loop={mockLoop}
@@ -178,19 +175,17 @@ describe('LoopDetailModal', () => {
       />
     );
 
-    // Assert - loopBack 区域显示迭代标签
-    expect(screen.getByText(/第 2 轮 \/ 共 5 轮/)).toBeDefined();
-    // SVG 弧线箭头存在
-    expect(container.querySelector('svg')).toBeDefined();
+    // Assert - 迭代信息显示
+    expect(screen.getByText(/迭代 2 \/ 5/)).toBeDefined();
   });
 
-  it('不显示 loopBack 区域当无执行状态时', () => {
+  it('显示迭代信息当无执行状态时', () => {
     // Arrange & Act
     render(
       <LoopDetailModal isOpen={true} loop={mockLoop} execution={null} onClose={mockOnClose} />
     );
 
-    // Assert - loopBack 区域不存在
-    expect(screen.queryByText(/第.*轮 \/ 共.*轮/)).toBeNull();
+    // Assert - 迭代信息显示默认值
+    expect(screen.getByText(/迭代 0 \/ 5/)).toBeDefined();
   });
 });

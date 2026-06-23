@@ -14,9 +14,9 @@
 
 .modal {
   background: var(--bg-primary);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   width: 90%;
-  max-width: 480px;
+  max-width: 720px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -27,8 +27,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .title {
@@ -41,88 +41,102 @@
 .closeBtn {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
   color: var(--text-secondary);
-  padding: 0;
+  padding: 4px;
   line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s;
 }
 
 .closeBtn:hover {
   color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .content {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
   padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .nodeList {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
   flex-shrink: 0;
+  min-width: 200px;
+  max-width: 240px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .node {
   width: 100%;
-  max-width: 300px;
-  padding: 12px 16px;
-  background: var(--bg-secondary);
-  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg-bubble);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   cursor: pointer;
   transition:
     border-color 0.15s,
-    box-shadow 0.15s;
+    box-shadow 0.15s,
+    background-color 0.15s;
 }
 
 .node:hover {
   border-color: var(--accent-color);
+  background: var(--bg-hover);
 }
 
 .nodeSelected {
-  border-color: var(--status-running);
-  box-shadow: 0 0 0 2px var(--status-running-shadow);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color-light);
 }
 
 .nodeName {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .nodeRole {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 /* 节点状态样式 */
 .nodeCompleted {
   border-color: var(--status-idle);
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(34, 197, 94, 0.06);
 }
 
 .nodeCurrent {
   border-color: var(--status-running);
   background: var(--status-running-bg);
-  box-shadow: 0 0 0 2px var(--status-running-shadow);
+  box-shadow: 0 0 0 2px var(--accent-color-light);
 }
 
 .nodePending {
   border-color: var(--border-color);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 /* 状态标识 */
 .statusBadge {
   display: inline-block;
   font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
   font-weight: 500;
   margin-bottom: 12px;
 }
@@ -133,12 +147,12 @@
 }
 
 .statusPaused {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(245, 158, 11, 0.12);
   color: var(--status-busy);
 }
 
 .statusCompleted {
-  background: rgba(34, 197, 94, 0.15);
+  background: rgba(34, 197, 94, 0.12);
   color: var(--status-idle);
 }
 
@@ -148,16 +162,16 @@
 }
 
 .statusInactive {
-  background: rgba(156, 163, 175, 0.15);
-  color: var(--text-secondary);
+  background: rgba(156, 163, 175, 0.12);
+  color: var(--text-tertiary);
 }
 
 /* 迭代次数 */
 .iterationInfo {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: 16px;
-  text-align: center;
+  text-align: left;
 }
 
 /* 错误信息 */
@@ -166,7 +180,7 @@
   color: var(--status-error);
   background: var(--status-error-bg);
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-top: 12px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -177,30 +191,37 @@
   display: flex;
   gap: 16px;
   align-items: flex-start;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .detailPanel {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   background: var(--bg-bubble);
   border-radius: var(--radius-lg);
-  padding: 12px;
+  padding: 16px;
   border: 1px solid var(--border-color);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* 节点连接箭头 */
 .nodeConnector {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   width: 100%;
 }
 
 .nodeArrow {
   width: 2px;
-  height: 16px;
+  height: 12px;
   background: var(--border-color);
   position: relative;
+  margin-left: 24px;
 }
 
 .nodeArrow::after {
@@ -211,51 +232,7 @@
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 6px solid var(--border-color);
-}
-
-/* loopBack 区域 */
-.loopBackSection {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--border-color);
-  text-align: center;
-}
-
-.loopBackLabel {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.loopBackArrow {
-  width: 100%;
-  height: 40px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.loopBackArc {
-  stroke-width: 2;
-  fill: none;
-}
-
-.arcRunning {
-  stroke: var(--accent-color);
-}
-
-.arcPaused {
-  stroke: var(--status-busy);
-}
-
-.arcCompleted {
-  stroke: var(--status-idle);
-}
-
-.arcFailed {
-  stroke: var(--status-error);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--border-color);
 }
