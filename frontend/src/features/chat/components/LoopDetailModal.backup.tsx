@@ -82,30 +82,27 @@ export function LoopDetailModal({ isOpen, loop, execution, onClose }: LoopDetail
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className={styles.header}>
           <h3 className={styles.title}>{loop.name || loop.loop_id}</h3>
           <button className={styles.closeBtn} onClick={onClose}>
             ×
           </button>
         </div>
-
-        {/* Body */}
-        <div className={styles.body}>
-          {/* Status Bar */}
-          <div className={styles.statusBar}>
-            <div className={`${styles.statusBadge} ${STATUS_CLASS_MAP[statusInfo.statusId] || ''}`}>
-              {statusInfo.text}
-            </div>
-            <div className={styles.iterationInfo}>
-              迭代 {execution?.current_iteration || 0} / {loop.max_iterations}
-            </div>
+        <div className={styles.content}>
+          {/* 状态标识 */}
+          <div className={`${styles.statusBadge} ${STATUS_CLASS_MAP[statusInfo.statusId] || ''}`}>
+            {statusInfo.text}
           </div>
 
-          {/* Main Content Area */}
-          <div className={styles.mainContent}>
-            {/* Node List */}
-            <div className={styles.nodeListContainer}>
+          {/* 迭代次数 */}
+          <div className={styles.iterationInfo}>
+            迭代 {execution?.current_iteration || 0} / {loop.max_iterations}
+          </div>
+
+          {/* 主内容区域：节点图 + 详情面板 */}
+          <div className={styles.mainArea}>
+            {/* 垂直节点图 */}
+            <div className={styles.nodeList}>
               {loop.nodes.map((node, index) => (
                 <NodeItem
                   key={node.node_id}
@@ -119,15 +116,15 @@ export function LoopDetailModal({ isOpen, loop, execution, onClose }: LoopDetail
               ))}
             </div>
 
-            {/* Detail Panel */}
+            {/* 节点详情面板 */}
             {selectedNode && (
-              <div className={styles.detailPanelContainer}>
+              <div className={styles.detailPanel}>
                 <LoopNodeDetail node={selectedNode} />
               </div>
             )}
           </div>
 
-          {/* Error Message */}
+          {/* 错误信息 */}
           {hasError && <div className={styles.errorMessage}>{execution.error_message}</div>}
         </div>
       </div>

@@ -207,3 +207,9 @@
  - path: docs/history-bugs/2026-06-22-stream-decoder-unicode-split-multibyte.md
  - 触发规则：Claude/OpenCode Agent 执行任务，stdout 输出包含多字节 UTF-8 字符（如中文）且字符恰好跨 chunk 边界时
  - 内容摘要：`process.stdout.read(256KB)` 按固定字节数读取后直接 `chunk.decode("utf-8")`，多字节字符被截断在块边界导致 UnicodeDecodeError。位置 131070-131071 是 3 字节中文字符的截断点。修复：用 `codecs.getincrementaldecoder("utf-8")()` 增量解码器替代，自动处理跨块多字节序列。ClaudeExecutor 和 OpenCodeExecutor 已修复
+
+## Loop 详情弹窗滚动失败 - max-height 与 flex 布局冲突
+ - updated_at : 2026-06-23
+ - path: docs/history-bugs/2026-06-23-loop-modal-scroll-issue.md
+ - 触发规则：使用 max-height 限制 flex 容器高度，且容器内有多层嵌套的滚动区域时
+ - 内容摘要：LoopDetailModal 左右两侧滚动容器无法触发滚动条，内容溢出。根因：(1) modal 使用 max-height 而非 height，flex 子元素无法获得确定高度；(2) .mainArea 缺少 flex: 1，无法占据剩余空间；(3) .nodeList 设置 flex-shrink: 0，拒绝压缩导致内容撑破容器。修复：使用固定 height、完整的 flex 链条（每层都有 flex: 1 + min-height: 0）、移除 flex-shrink: 0

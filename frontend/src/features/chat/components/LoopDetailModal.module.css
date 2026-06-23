@@ -1,4 +1,7 @@
-/* Loop 详情模态框 */
+/* ========================================
+   Overlay & Modal Container
+   ======================================== */
+
 .overlay {
   position: fixed;
   top: 0;
@@ -16,19 +19,26 @@
   background: var(--bg-primary);
   border-radius: var(--radius-xl);
   width: 90%;
-  max-width: 720px;
-  max-height: 80vh;
+  max-width: 800px;
+  height: 85vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
 }
 
+/* ========================================
+   Header
+   ======================================== */
+
 .header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 .title {
@@ -41,13 +51,18 @@
 .closeBtn {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
   color: var(--text-secondary);
-  padding: 4px;
+  padding: 0;
+  width: 32px;
+  height: 32px;
   line-height: 1;
   border-radius: var(--radius-sm);
   transition: background-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .closeBtn:hover {
@@ -55,90 +70,38 @@
   background: var(--bg-hover);
 }
 
-.content {
+/* ========================================
+   Body
+   ======================================== */
+
+.body {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
-.nodeList {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
+/* ========================================
+   Status Bar
+   ======================================== */
+
+.statusBar {
   flex-shrink: 0;
-  min-width: 200px;
-  max-width: 240px;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px 12px;
+  background: var(--bg-primary);
 }
 
-.node {
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--bg-bubble);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    background-color 0.15s;
-}
-
-.node:hover {
-  border-color: var(--accent-color);
-  background: var(--bg-hover);
-}
-
-.nodeSelected {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color-light);
-}
-
-.nodeName {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.nodeRole {
-  font-size: 11px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-/* 节点状态样式 */
-.nodeCompleted {
-  border-color: var(--status-idle);
-  background: rgba(34, 197, 94, 0.06);
-}
-
-.nodeCurrent {
-  border-color: var(--status-running);
-  background: var(--status-running-bg);
-  box-shadow: 0 0 0 2px var(--accent-color-light);
-}
-
-.nodePending {
-  border-color: var(--border-color);
-  opacity: 0.6;
-}
-
-/* 状态标识 */
 .statusBadge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: var(--radius-sm);
   font-weight: 500;
-  margin-bottom: 12px;
 }
 
 .statusRunning {
@@ -166,40 +129,165 @@
   color: var(--text-tertiary);
 }
 
-/* 迭代次数 */
 .iterationInfo {
   font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 16px;
-  text-align: left;
 }
 
-/* 错误信息 */
-.errorMessage {
-  font-size: 13px;
-  color: var(--status-error);
-  background: var(--status-error-bg);
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  margin-top: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
+/* ========================================
+   Main Content Area (Split Layout)
+   ======================================== */
 
-/* 主内容区域：节点图 + 详情面板并排 */
-.mainArea {
+.mainContent {
+  flex: 1;
   display: flex;
   gap: 16px;
-  align-items: flex-start;
-  flex: 1;
+  padding: 0 20px 16px;
   min-height: 0;
   overflow: hidden;
 }
 
-.detailPanel {
+/* ========================================
+   Node List Container (Left Side)
+   ======================================== */
+
+.nodeListContainer {
+  flex-shrink: 0;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar for node list */
+.nodeListContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.nodeListContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nodeListContainer::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.nodeListContainer::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ========================================
+   Node Item
+   ======================================== */
+
+.nodeConnector {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.node {
+  padding: 10px 12px;
+  background: var(--bg-bubble);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background-color 0.15s;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.node:hover {
+  border-color: var(--accent-color);
+  background: var(--bg-hover);
+}
+
+.nodeSelected {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color-light);
+  background: var(--bg-hover);
+}
+
+.nodeName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nodeRole {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+/* Node Status Styles */
+.nodeCompleted {
+  border-color: var(--status-idle);
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.nodeCurrent {
+  border-color: var(--status-running);
+  background: var(--status-running-bg);
+  box-shadow: 0 0 0 2px var(--accent-color-light);
+}
+
+.nodePending {
+  opacity: 0.6;
+}
+
+/* ========================================
+   Node Connector Arrow
+   ======================================== */
+
+.nodeArrow {
+  width: 2px;
+  height: 10px;
+  background: var(--border-color);
+  position: relative;
+  margin: 4px 0 4px 24px;
+}
+
+.nodeArrow::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--border-color);
+}
+
+/* ========================================
+   Detail Panel Container (Right Side)
+   ======================================== */
+
+.detailPanelContainer {
   flex: 1;
   min-width: 0;
-  min-height: 0;
   background: var(--bg-bubble);
   border-radius: var(--radius-lg);
   padding: 16px;
@@ -208,31 +296,38 @@
   overflow-x: hidden;
 }
 
-/* 节点连接箭头 */
-.nodeConnector {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  width: 100%;
+/* Custom scrollbar for detail panel */
+.detailPanelContainer::-webkit-scrollbar {
+  width: 6px;
 }
 
-.nodeArrow {
-  width: 2px;
-  height: 12px;
+.detailPanelContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detailPanelContainer::-webkit-scrollbar-thumb {
   background: var(--border-color);
-  position: relative;
-  margin-left: 24px;
+  border-radius: 3px;
 }
 
-.nodeArrow::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid var(--border-color);
+.detailPanelContainer::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ========================================
+   Error Message
+   ======================================== */
+
+.errorMessage {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--status-error);
+  background: var(--status-error-bg);
+  padding: 12px 16px;
+  margin: 0 20px 16px;
+  border-radius: var(--radius-md);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
 }
