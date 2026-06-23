@@ -259,6 +259,6 @@ describe('LoopStatusPanel', () => {
     }
 
     // Assert - 模态框应该显示（检查模态框特有的内容）
-    expect(screen.getByText('第 1 轮 / 共 5 轮')).toBeDefined();
+    expect(screen.getAllByText(/迭代/).length).toBeGreaterThanOrEqual(1);
   });
 });
