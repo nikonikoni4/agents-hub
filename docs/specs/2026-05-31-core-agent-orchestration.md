@@ -1,8 +1,8 @@
 ---
-version: 2.0
+version: 2.1
 created_at: 2026-05-31
-updated_at: 2026-06-18
-last_updated: 按照新 spec 规则重构：移除执行细节，添加 key_function 标签和 Design Rationale
+updated_at: 2026-06-24
+last_updated: 新增 execute_with_first_response 接口，支持群聊首响
 abstract: core/agent 和 core/orchestration 层的正式规格，定义 Agent 执行模型、团队角色体系、群聊编排机制、MCP 工具入口
 id: spec-core-agent-orchestration
 title: Core Agent & Orchestration 层规格
@@ -35,6 +35,7 @@ contract_refs:
 | 1.3 | 对齐现有实现中的 GroupChat 组件持有关系和 context.repository 访问 |
 | 1.4 | 对齐 Agent.run 显式公开发言、显式 AgentCall 闭环，以及 complete_task 的 Agent 完成通知和 user 群聊回执 |
 | 2.0 | 按照新 spec 规则重构：移除执行细节，添加 key_function 标签和 Design Rationale |
+| 2.1 | 新增 execute_with_first_response 接口，支持群聊首响 |
 
 ## Overview
 
@@ -74,8 +75,9 @@ contract_refs:
   - base_agent.Agent.__init__:47
   - base_agent.Agent.run:1000
   - base_agent.Agent.stop:150
-  - base_agent.Agent.execute:178
-  - base_agent.Agent.btw_execute:209
+  - base_agent.Agent.execute:180
+  - base_agent.Agent.execute_with_first_response:211
+  - base_agent.Agent.btw_execute:289
   - base_agent.Agent.compress_context:442
 - agents_hub/core/agent/manager.py
   - manager.Manager.__init__:52
@@ -91,6 +93,7 @@ contract_refs:
 | Agent.run() | 启动消息循环，从私有队列取消息并处理 | 异步执行，通过 stop() 停止 |
 | Agent.stop() | 停止消息循环（双重保险：设置 _run=False + 发送哨兵消息） | 异步操作，等待当前消息处理完成 |
 | Agent.execute(prompt, session_id) | 执行 MAIN 会话（加载增量上下文 + 拼接 prompt） | 委托给 agent_bridge |
+| Agent.execute_with_first_response(prompt, use_docker, group_chat_id, system_prompt) | 执行 MAIN 会话并支持首句快速响应 | 委托给 agent_bridge，首句写入群聊历史 |
 | Agent.btw_execute(prompt, session_id) | 执行 BTW 会话（直接执行，不加载增量上下文） | 委托给 agent_bridge |
 | Agent.compress_context() | 压缩个人上下文 | 异步操作 |
 
@@ -257,7 +260,9 @@ orchestration → agent → communication → foundation
 
 ### 与 agent_bridge 的协作
 
-Agent.execute() 和 Agent.btw_execute() 委托给 agent_bridge 的 agent_platform_client，传入渲染好的 prompt、role_config 和 session_id。Agent 不直接管理 CLI 进程。
+Agent.execute()、Agent.execute_with_first_response() 和 Agent.btw_execute() 委托给 agent_bridge 的 agent_platform_client，传入渲染好的 prompt、role_config 和 session_id。Agent 不直接管理 CLI 进程。
+
+**首响机制**：Agent.execute_with_first_response() 调用 agent_bridge 的同名方法获取首句文本，然后将首句写入群聊历史（runtime.add_message），使前端能更快看到 Agent 的响应。
 
 ## Design Rationale
 

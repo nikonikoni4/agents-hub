@@ -19,6 +19,7 @@ class ClaudeParser:
 
     def __init__(self):
         self._tool_use_blocks: dict[int, dict] = {}
+        self._has_text_delta = False  # 跟踪是否收到文本增量（用于首句检测）
 
     def parse_event(self, raw_line: str) -> StreamEvent | None:
         """
@@ -96,6 +97,7 @@ class ClaudeParser:
         delta_type = delta.get("type")
 
         if delta_type == "text_delta":
+            self._has_text_delta = True  # 标记已收到文本增量
             return StreamEvent(
                 type=AgentEventType.TEXT_DELTA,
                 content={"text": delta.get("text", "")},
@@ -114,10 +116,22 @@ class ClaudeParser:
         return None
 
     def _handle_content_block_stop(self, inner_event: dict, session_id: str) -> StreamEvent | None:
-        """处理 content_block_stop：emit 缓存的 tool_use 事件"""
+        """处理 content_block_stop：emit 缓存的 tool_use 事件，或检测首句完成"""
         index = inner_event.get("index", 0)
         block = self._tool_use_blocks.pop(index, None)
         if block is None:
+            # text block 结束：如果之前收到过 TEXT_DELTA，说明首句完成
+            if self._has_text_delta:
+                self._has_text_delta = False
+                return StreamEvent(
+                    type=AgentEventType.FIRST_RESPONSE,
+                    content={},
+                    session_id=session_id,
+                    timestamp=datetime.now().isoformat(),
+                    agent_name="",
+                    platform=AgentPlatform.CLAUDE,
+                    role_type=RoleType.TEAM_MEMBER,
+                )
             return None
 
         try:

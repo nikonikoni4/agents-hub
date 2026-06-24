@@ -1,8 +1,8 @@
 ---
-version: 2.0
+version: 2.1
 created_at: 2026-05-23
-updated_at: 2026-06-18
-last_updated: 按照新 spec 规则重构，移除执行细节，添加 Design Rationale 和 key_function 标签
+updated_at: 2026-06-24
+last_updated: 新增首响支持：FIRST_RESPONSE 事件、execute_with_first_response 接口、FirstResponseResult 数据类
 abstract: agent_bridge 模块的规格定义，描述其作为纯执行层的核心职责、统一事件契约和多接口设计
 id: spec-agent-bridge
 title: Agent Bridge 模块规格
@@ -31,6 +31,7 @@ contract_refs:
 | 1.2 | RoleConfig 统一为 work_root，新增 description/role_type/bare；StreamEvent 增加 agent_name/platform/role_type；execute() 返回 AgentResult |
 | 1.3 | AgentBridge 初始化时通过 RoleManager 创建 bare 角色并缓存 RoleConfig；新增 bare_claude_call() 接口 |
 | 2.0 | 按照新 spec 规则重构，移除执行细节，添加 Design Rationale 和 key_function 标签 |
+| 2.1 | 新增首响支持：FIRST_RESPONSE 事件、execute_with_first_response 接口、FirstResponseResult 数据类 |
 
 ---
 
@@ -66,11 +67,21 @@ contract_refs:
 
 ### 对外接口
 
+<<<<<<< HEAD
 <key_function last_update="2026-06-24T22:26:41+08:00">
+=======
+<key_function last_update="2026-06-24T21:00:00+08:00">
+>>>>>>> task-38-agent-bridge-stream
 - agents_hub/agent_bridge/bridge.py
-  - bridge.AgentBridge.execute_stream:112
-  - bridge.AgentBridge.execute:231
-  - bridge.AgentBridge.bare_claude_call:320
+  - bridge.AgentBridge.execute_stream:118
+  - bridge.AgentBridge.execute:241
+  - bridge.AgentBridge.execute_with_first_response:326
+  - bridge.AgentBridge.bare_claude_call:412
+- agents_hub/agent_bridge/models.py
+  - models.StreamEvent
+  - models.AgentResult
+  - models.FirstResponseResult
+  - models.AgentEventType
 - agents_hub/roles/role_manager.py
   - role_manager.RoleManager.create_role:266
   - role_manager.RoleManager.get_role:211
@@ -82,10 +93,12 @@ contract_refs:
 |------|------|---------|------|
 | `execute_stream()` | 人机交互场景（实时显示） | 逐事件 yield StreamEvent | prompt, config: RoleConfig, session_id? |
 | `execute()` | A2A 调用场景（主 Agent 调用子 Agent） | 返回 AgentResult | prompt, config: RoleConfig, session_id? |
+| `execute_with_first_response()` | 群聊场景（首句快速响应） | 返回 FirstResponseResult | prompt, config: RoleConfig, session_id?, cwd?, system_prompt? |
 | `bare_claude_call()` | 内部快速 LLM 调用（不涉及角色业务） | 返回 AgentResult | prompt, session_id? |
 
 **接口关系**：
 - `execute()` 是 `execute_stream()` 的包装，内部拼接所有 `text_delta` 事件文本，收集 `usage` 统计
+- `execute_with_first_response()` 是 `execute_stream()` 的包装，检测 `FIRST_RESPONSE` 事件，返回首句文本和完整结果
 - `bare_claude_call()` 是 `execute()` 的包装，使用初始化时缓存的 bare 角色配置
 
 ### 平台枚举
@@ -121,6 +134,7 @@ contract_refs:
 | `TOOL_USE` | 工具调用 | `command`、`output`、`exit_code`、`status` |
 | `TURN_COMPLETE` | 回合完成 | `usage`（token 统计） |
 | `RESULT` | 完整结果（非流式输出） | 完整结果数据 |
+| `FIRST_RESPONSE` | 首句完成（用于群聊首响） | 空 dict |
 
 ### 完整结果格式（AgentResult）
 
@@ -141,6 +155,20 @@ contract_refs:
 | `permission_request` | dict? | 权限请求数据 |
 | `web_preview` | dict? | 网页预览数据 `{"url": "...", "title": "..."}` |
 | `files` | list[dict]? | 上传文件列表 |
+
+### 首响结果格式（FirstResponseResult）
+
+`execute_with_first_response()` 的返回值结构：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `first_text` | str | 首句文本（可能为空，如纯工具调用或首句未检测到） |
+| `result` | AgentResult | 完整结果（包含首句 + 剩余内容） |
+
+**首句检测机制**：
+- Claude：检测 `content_block_stop` 事件（text block 结束）
+- Codex：检测 `item.completed` 事件（agent_message 完成）
+- 纯工具调用（无文本）：`first_text` 为空字符串
 
 #### FileMetadata 类型
 
