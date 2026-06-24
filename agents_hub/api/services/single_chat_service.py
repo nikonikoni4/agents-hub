@@ -294,8 +294,8 @@ class SingleChatManager:
         Returns:
             str: 处理后的 prompt
         """
-        # Agents-Hub-Assistant：附加 agent token 以便调用 MCP 工具时验证身份
-        if agent_name == "Agents-Hub-Assistant":
+        # 系统角色：附加 agent token 以便调用 MCP 工具时验证身份
+        if agent_name in (config.default_assistant_name, config.default_memory_assistant_name):
             return f"{content}\n\n[系统提示] 你的 agent token 是: {config.assistant_token}"
         return content
 

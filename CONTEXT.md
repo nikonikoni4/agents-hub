@@ -408,6 +408,28 @@ AgentsHubError (agents_hub/core/foundation/exceptions.py)  ← 继承顶层基�
 - OPENCODE：OpenCode 平台
 - 用途：标识 Agent 所使用的 CLI 工具平台
 
+## 调度系统
+
+### SchedulerService（调度服务）
+- 定时任务调度服务（单例），封装 APScheduler
+- 职责：定时触发记忆收集任务、补偿执行（服务重启后补跑错过的任务）
+- 启动/关闭通过 FastAPI lifespan 集成
+- 位于 `agents_hub/scheduler/scheduler_service.py`
+
+### StateManager（状态管理器）
+- 调度状态文件管理
+- 职责：`.schedule_state.json`（调度状态）和 `memory/index.json`（群聊记忆索引）的读写
+- 位于 `agents_hub/scheduler/state_manager.py`
+
+### MemoryTask（记忆任务）
+- 记忆更新任务实现
+- 职责：单个群聊的记忆收集执行（获取上下文、启动记忆助手 Agent、记录结果）
+- 位于 `agents_hub/scheduler/task/memory_task.py`
+
+### memory_task（记忆收集任务）
+- 术语关键词，指代定时记忆收集任务
+- 由 SchedulerService 定时触发，遍历所有活跃群聊执行记忆收集
+
 ## 架构分层
 
 ### core（核心层）

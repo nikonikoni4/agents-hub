@@ -8,12 +8,13 @@ from agents_hub.api.schemas.single_chat import (
 )
 from agents_hub.api.services.group_chat_service import GroupChatService
 from agents_hub.api.services.single_chat_service import single_chat_manager
+from agents_hub.config import config
 from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
 from agents_hub.roles import RoleManager
 
 logger = logging.getLogger(__name__)
 
-ASSISTANT_AGENT_NAME = "Agents-Hub-Assistant"
+ASSISTANT_AGENT_NAME = config.default_assistant_name
 
 HELP_TEXT = """可用命令：
 /help - 显示帮助

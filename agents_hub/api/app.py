@@ -94,7 +94,14 @@ async def lifespan(app: FastAPI):
     # 后台启动微信 channel（仅当 token 已存在时），不阻塞 lifespan
     wechat_task = asyncio.create_task(_start_wechat_channel())
 
+    # 启动定时调度器
+    from agents_hub.scheduler import scheduler_service
+
+    scheduler_service.start()
+
     yield
+
+    scheduler_service.shutdown()
 
     wechat_channel = wechat_task.result() if wechat_task.done() else None
     if wechat_channel:
