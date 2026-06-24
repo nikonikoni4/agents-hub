@@ -349,19 +349,28 @@ class AgentBridge:
         封装 execute_stream()，检测 FIRST_RESPONSE 事件，返回首句文本和完整结果。
         用于群聊场景，使前端能更快看到 Agent 的响应。
 
-        注意：Docker 模式不支持流式输出，将回退到 execute() 方法（first_text 为空）。
+        首响检测逻辑：
+        - Claude：检测 content_block_stop 事件（text block 结束）
+        - Codex：检测 item.completed 事件（agent_message 完成）
+
+        回退场景：
+        - Codex 首次调用（session_id 为空）：不支持流式输出，回退到 execute()，first_text 为空
+
+        注意：Docker 模式的回退逻辑在 Agent 层处理（base_agent.py），不在本方法中。
 
         Args:
             prompt: 用户输入
             config: 角色配置
-            session_id: 会话 ID（可选）
+            session_id: 会话 ID（可选，Codex 首次调用时为空会触发回退）
             cwd: 项目目录路径（可选）
             system_prompt: 系统提示词（可选）
 
         Returns:
             FirstResponseResult: 包含首句文本和完整结果
+                - first_text: 首句文本（回退场景或纯工具调用时为空）
+                - result: 完整结果（包含首句 + 剩余内容）
         """
-        # Docker 模式不支持流式输出，回退到 execute()
+        # Codex 首次调用不支持流式输出，回退到 execute()
         if config.platform == AgentPlatform.CODEX and not session_id:
             # Codex 首次调用不支持流式，回退
             result = await self.execute(
