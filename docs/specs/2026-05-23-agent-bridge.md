@@ -67,21 +67,17 @@ contract_refs:
 
 ### 对外接口
 
-<<<<<<< HEAD
-<key_function last_update="2026-06-24T22:26:41+08:00">
-=======
-<key_function last_update="2026-06-24T21:00:00+08:00">
->>>>>>> task-38-agent-bridge-stream
+<key_function last_update="2026-06-24T23:36:21+08:00">
 - agents_hub/agent_bridge/bridge.py
-  - bridge.AgentBridge.execute_stream:118
-  - bridge.AgentBridge.execute:241
-  - bridge.AgentBridge.execute_with_first_response:326
-  - bridge.AgentBridge.bare_claude_call:412
+  - bridge.AgentBridge.execute_stream:130
+  - bridge.AgentBridge.execute:249
+  - bridge.AgentBridge.execute_with_first_response:338
+  - bridge.AgentBridge.bare_claude_call:430
 - agents_hub/agent_bridge/models.py
   - models.StreamEvent
   - models.AgentResult
   - models.FirstResponseResult
-  - models.AgentEventType
+  - models.AgentEventType:13
 - agents_hub/roles/role_manager.py
   - role_manager.RoleManager.create_role:266
   - role_manager.RoleManager.get_role:211
