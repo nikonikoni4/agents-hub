@@ -63,3 +63,27 @@
  - path: generated/020/
  - 触发规则：LoopManager 懒加载、单 Loop 保持、list_loops 重构的代码审查
  - 内容摘要：8 维度并行审查，发现 8 个高置信度问题（>=80）：GroupChat 直接访问 _loops 私有属性（95）、JSONL 读取逻辑重复 3 次（95）、Spec/Flow 文档未同步（95）、内存命中路径未测试（90）、MCP 模块 docstring 过时（90）、墓碑排除未测试（85）、类型注解不完整（85）、损坏行静默忽略缺少日志（85）
+
+## 首响事件（FIRST_RESPONSE）代码审查 023
+ - updated_at : 2026-06-24
+ - path: generated/023/
+ - 触发规则：local-code-review 审查 3a631cc - feat: 实现 execute_with_first_response() 方法支持群聊首响
+ - 内容摘要：8 维度并行审查，发现 8 个高置信度问题（>=90）：execute_with_first_response() 违反"LLM 输出默认不进入群聊历史"原则（Architecture 90）、Claude/Codex parser 和 execute_with_first_response 缺少单元测试（Testing 90x3）、核心业务逻辑 add_message 无集成测试（Testing 90）、agent-bridge spec 事件类型表缺少 FIRST_RESPONSE（Documentation 90）、core-agent-orchestration spec key_function 和接口表缺少新方法（Documentation 90x2）
+
+## 首响逻辑重构代码审查 024
+ - updated_at : 2026-06-24
+ - path: generated/024/
+ - 触发规则：local-code-review 审查 7e05336 - refactor: 将首响检测逻辑从 agent 层移到 agent_bridge 层
+ - 内容摘要：8 维度并行审查，发现 12 个高置信度问题（>=80）：2 个致命缺陷（AgentEventType.FIRST_RESPONSE 枚举未定义 100、Parser 不产出事件导致死代码 100）、架构违规（Agent 直接写群聊历史绕过 report_progress 90、AgentBridge 引入业务语义违反 spec 90）、测试缺失（新方法和数据类型零测试 90x3）、文档未同步（spec 事件表/接口表/key_function 缺失 90x3）、注释与代码不符（Docker 回退条件描述错误 85x2、回退逻辑注释不一致 85）、spec 描述过时（与 agent_bridge 协作章节 85）
+
+## 首响功能完整实现代码审查 025（重新审查）
+ - updated_at : 2026-06-24
+ - path: generated/025/
+ - 触发规则：local-code-review 重新审查 3a631cc + 7e05336 合并效果
+ - 内容摘要：确认两个致命缺陷已修复（FIRST_RESPONSE 枚举已定义、Parser 已实现事件生成）。剩余 10 个高置信度问题（>=80）：架构违规（Agent 直接写群聊历史绕过 report_progress 90、AgentBridge 引入业务语义违反 spec 90）、测试缺失（新方法和数据类型零测试 90x2）、文档未同步（spec 事件表/接口表/key_function 缺失 90）、注释与代码不符（Docker 回退条件描述错误 85x2）、代码质量（DRY 违反 80、字符串拼接效率 80）
+
+## 首响功能测试和文档补充代码审查 026（修复验证）
+ - updated_at : 2026-06-24
+ - path: generated/026/
+ - 触发规则：local-code-review 审查 d9c86f3 - feat: 添加首响功能测试和文档，修复代码质量问题
+ - 内容摘要：验证之前审查问题修复情况。已修复 6 个问题：文档同步（spec 事件表/接口表/key_function 已更新）、测试覆盖（新增 5 个测试场景）、代码质量（DRY 违反已修复、字符串拼接已优化）。剩余 3 个问题：2 个架构设计决策问题（Agent 直接写群聊历史绕过 report_progress 90、AgentBridge 引入业务语义违反 spec 90，需团队讨论）、1 个注释准确性问题（docstring 与代码不符 85）

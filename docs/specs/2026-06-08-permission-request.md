@@ -51,7 +51,7 @@ abstract: 权限请求功能规格，定义 Agent 请求用户授权的 MCP 工�
 
 ### MCP 工具
 
-<key_function last_update="2026-06-23T17:31:34+08:00">
+<key_function last_update="2026-06-24T22:26:41+08:00">
 - agents_hub/mcp/server.py
   - server.request_permission:863
 </key_function>

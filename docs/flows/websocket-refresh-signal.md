@@ -47,7 +47,7 @@ class RefreshSignal:
 - 前端收到信号后自行决定刷新哪些数据（消息列表、成员列表、任务列表等）
 - 采用"推送信号 + 拉取数据"模式，不直接推送完整数据
 
-<key_function last_update="2026-06-23T17:31:34+08:00">
+<key_function last_update="2026-06-24T22:26:41+08:00">
 - agents_hub/realtime/dependencies.py
   - broadcast_group_chat_refresh:25
 - agents_hub/realtime/events.py

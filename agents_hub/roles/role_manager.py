@@ -448,14 +448,30 @@ class RoleManager:
         agents_dir.mkdir(exist_ok=True)
 
     def _init_agents_hub_mcp(self, platform: AgentPlatform, work_root: Path) -> None:
-        """Initialize the fixed agents-hub MCP for this role's platform config root."""
+        """Initialize the fixed agents-hub MCP for this role's platform config root.
+
+        对于 Claude 平台，会同时添加 project 级别和 user 级别的 MCP 配置：
+        - project 级别（必须成功）：仅在该角色的 work_root 下生效
+        - user 级别（可选）：全局生效，所有项目可用
+
+        Args:
+            platform: Agent 平台类型
+            work_root: 角色的 work_root 目录路径
+
+        Raises:
+            ExternalServiceError: 当 project 级别 MCP 添加失败时抛出
+        """
         env = os.environ.copy()
         mcp_url = f"http://localhost:{config.mcp_port}/mcp"
+
         if platform == AgentPlatform.CLAUDE:
             from agents_hub.config.types import CLAUDE_COMMAND
+            from agents_hub.exceptions import ExternalServiceError
 
             env["CLAUDE_CONFIG_DIR"] = str(work_root)
-            cmd = [
+
+            # 1. 添加 project 级别 MCP（必须成功）
+            cmd_project = [
                 CLAUDE_COMMAND,
                 "mcp",
                 "add",
@@ -465,7 +481,94 @@ class RoleManager:
                 "--",
                 mcp_url,
             ]
-            subprocess.run(cmd, check=True, env=env)
+            try:
+                subprocess.run(
+                    cmd_project,
+                    check=True,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                logger.info(
+                    "添加 project 级别 MCP 成功: work_root=%s, url=%s",
+                    work_root,
+                    mcp_url,
+                )
+            except subprocess.CalledProcessError as e:
+                logger.error(
+                    "添加 project 级别 MCP 失败: work_root=%s, exit_code=%s, stderr=%s",
+                    work_root,
+                    e.returncode,
+                    e.stderr,
+                )
+                raise ExternalServiceError(
+                    message=f"添加 project 级别 MCP 失败: {e.stderr}",
+                    error_code="MCP_ADD_PROJECT_FAILED",
+                    details={
+                        "work_root": str(work_root),
+                        "exit_code": e.returncode,
+                        "stderr": e.stderr,
+                    },
+                    cause=e,
+                ) from e
+            except FileNotFoundError as e:
+                logger.error(
+                    "Claude CLI 不存在: command=%s, work_root=%s",
+                    CLAUDE_COMMAND,
+                    work_root,
+                )
+                raise ExternalServiceError(
+                    message=f"Claude CLI 不存在: {CLAUDE_COMMAND}",
+                    error_code="CLAUDE_CLI_NOT_FOUND",
+                    details={
+                        "command": CLAUDE_COMMAND,
+                        "work_root": str(work_root),
+                    },
+                    cause=e,
+                ) from e
+
+            # 2. 尝试添加 user 级别 MCP（可选，失败不影响角色创建）
+            cmd_user = [
+                CLAUDE_COMMAND,
+                "mcp",
+                "add",
+                "--transport",
+                "http",
+                "-s",
+                "user",
+                "agents-hub",
+                "--",
+                mcp_url,
+            ]
+            try:
+                subprocess.run(
+                    cmd_user,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                logger.info("添加 user 级别 MCP 成功: url=%s", mcp_url)
+            except subprocess.CalledProcessError as e:
+                # 如果是"已存在"错误，静默跳过
+                if "already exists" in e.stderr.lower() or "already configured" in e.stderr.lower():
+                    logger.debug("user 级别 MCP 已存在，跳过: url=%s", mcp_url)
+                else:
+                    # 其他错误记录警告，但不影响角色创建
+                    logger.warning(
+                        "添加 user 级别 MCP 失败（不影响角色创建）: exit_code=%s, stderr=%s",
+                        e.returncode,
+                        e.stderr,
+                    )
+            except FileNotFoundError:
+                # 理论上不会发生，因为前面已经检查过 CLI 存在
+                logger.warning("Claude CLI 不存在，无法添加 user 级别 MCP")
+            except Exception as e:
+                # 捕获其他未预期的异常，记录但不抛出
+                logger.warning(
+                    "添加 user 级别 MCP 时发生未预期错误（不影响角色创建）: error=%s",
+                    str(e),
+                )
+
         elif platform == AgentPlatform.CODEX:
             from agents_hub.config.types import CODEX_COMMAND
 
@@ -479,6 +582,7 @@ class RoleManager:
                 mcp_url,
             ]
             subprocess.run(cmd, check=True, env=env)
+
         elif platform == AgentPlatform.OPENCODE:
             # OpenCode 使用 opencode.json 配置 MCP
             opencode_json = work_root / "opencode.json"

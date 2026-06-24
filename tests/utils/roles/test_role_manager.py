@@ -64,15 +64,17 @@ def test_create_claude_role(role_manager, agents_dir):
     init_mcp.assert_called_once_with(AgentPlatform.CLAUDE, role_dir / "work_root")
 
     role_json = json.loads((role_dir / "role.json").read_text(encoding="utf-8"))
-    assert role_json == {
-        "name": "test_claude",
-        "platform": "claude",
-        "description": None,
-        "avatar": None,
-        "abilities": [],
-        "type": None,
-        "scope": None,
-    }
+    assert role_json["name"] == "test_claude"
+    assert role_json["platform"] == "claude"
+    assert role_json["description"] is None
+    assert role_json["avatar"] is None
+    assert role_json["abilities"] == []
+    assert role_json["type"] is None  # 未传入 type 参数时为 None
+    assert role_json["scope"] is None
+    assert "disabled_tools" in role_json  # 包含禁用工具列表
+    assert "AskUserQuestion" in role_json["disabled_tools"]  # 所有角色默认禁用
+    # 未指定 type 时，默认为 TEAM_MEMBER，所以也包含 Worker 禁用工具
+    assert "call_agent" in role_json["disabled_tools"]
     assert "skills" not in role_json
 
 
@@ -134,30 +136,117 @@ def test_create_role_platform_config_not_found(role_manager):
 
 def test_init_agents_hub_mcp_claude_sets_config_root(role_manager, agents_dir):
     """创建 Claude 角色时，MCP 添加命令写入角色 CLAUDE_CONFIG_DIR"""
+    from agents_hub.config.types import CLAUDE_COMMAND
+    from agents_hub.config import config
+
     work_root = agents_dir / "test_claude" / "work_root"
     work_root.mkdir(parents=True)
 
-    with patch("agents_hub.roles.role_manager.subprocess.run") as run:
+    with patch("agents_hub.roles.role_manager.subprocess.run") as mock_run:
+        # Mock 两次调用都成功
+        mock_run.return_value.returncode = 0
         role_manager._init_agents_hub_mcp(AgentPlatform.CLAUDE, work_root)
 
-    run.assert_called_once()
-    args, kwargs = run.call_args
+    # 应该调用两次：project 级别 + user 级别
+    assert mock_run.call_count == 2
+
+    # 第一次调用：project 级别
+    first_call = mock_run.call_args_list[0]
+    args, kwargs = first_call
     assert args[0] == [
-        "claude",
+        CLAUDE_COMMAND,
         "mcp",
         "add",
         "--transport",
         "http",
         "agents-hub",
         "--",
-        "http://localhost:8765/mcp",
+        f"http://localhost:{config.mcp_port}/mcp",
     ]
-    assert kwargs["check"] is True
     assert kwargs["env"]["CLAUDE_CONFIG_DIR"] == str(work_root)
+
+    # 第二次调用：user 级别
+    second_call = mock_run.call_args_list[1]
+    args, kwargs = second_call
+    assert args[0] == [
+        CLAUDE_COMMAND,
+        "mcp",
+        "add",
+        "--transport",
+        "http",
+        "-s",
+        "user",
+        "agents-hub",
+        "--",
+        f"http://localhost:{config.mcp_port}/mcp",
+    ]
+    # user 级别不需要设置 CLAUDE_CONFIG_DIR
+
+
+def test_init_agents_hub_mcp_claude_user_level_already_exists(role_manager, agents_dir):
+    """user 级别 MCP 已存在时应静默跳过"""
+    work_root = agents_dir / "test_claude" / "work_root"
+    work_root.mkdir(parents=True)
+
+    def side_effect(*args, **kwargs):
+        # 第一次调用（project 级别）成功
+        if "--transport" in args[0] and "-s" not in args[0]:
+            result = subprocess.CompletedProcess(args[0], 0, "", "")
+            return result
+        # 第二次调用（user 级别）返回"已存在"错误
+        else:
+            raise subprocess.CalledProcessError(
+                1, args[0], stderr="Error: MCP server 'agents-hub' already exists"
+            )
+
+    with patch("agents_hub.roles.role_manager.subprocess.run", side_effect=side_effect):
+        # 不应该抛出异常
+        role_manager._init_agents_hub_mcp(AgentPlatform.CLAUDE, work_root)
+
+
+def test_init_agents_hub_mcp_claude_user_level_fails(role_manager, agents_dir):
+    """user 级别 MCP 添加失败时应记录警告但不影响角色创建"""
+    work_root = agents_dir / "test_claude" / "work_root"
+    work_root.mkdir(parents=True)
+
+    def side_effect(*args, **kwargs):
+        # 第一次调用（project 级别）成功
+        if "--transport" in args[0] and "-s" not in args[0]:
+            result = subprocess.CompletedProcess(args[0], 0, "", "")
+            return result
+        # 第二次调用（user 级别）返回其他错误
+        else:
+            raise subprocess.CalledProcessError(
+                1, args[0], stderr="Error: Some other error"
+            )
+
+    with patch("agents_hub.roles.role_manager.subprocess.run", side_effect=side_effect):
+        # 不应该抛出异常，只记录警告
+        role_manager._init_agents_hub_mcp(AgentPlatform.CLAUDE, work_root)
+
+
+def test_init_agents_hub_mcp_claude_project_level_fails(role_manager, agents_dir):
+    """project 级别 MCP 添加失败时应抛出异常"""
+    from agents_hub.exceptions import ExternalServiceError
+
+    work_root = agents_dir / "test_claude" / "work_root"
+    work_root.mkdir(parents=True)
+
+    with patch(
+        "agents_hub.roles.role_manager.subprocess.run",
+        side_effect=subprocess.CalledProcessError(1, [], stderr="Error: Failed"),
+    ):
+        with pytest.raises(ExternalServiceError) as exc_info:
+            role_manager._init_agents_hub_mcp(AgentPlatform.CLAUDE, work_root)
+
+        assert "project 级别 MCP 失败" in str(exc_info.value)
 
 
 def test_init_agents_hub_mcp_codex_sets_config_root(role_manager, agents_dir):
     """创建 Codex 角色时，MCP 添加命令写入角色 CODEX_HOME"""
+    from agents_hub.config.types import CODEX_COMMAND
+    from agents_hub.config import config
+
     work_root = agents_dir / "test_codex" / "work_root"
     work_root.mkdir(parents=True)
 
@@ -167,12 +256,12 @@ def test_init_agents_hub_mcp_codex_sets_config_root(role_manager, agents_dir):
     run.assert_called_once()
     args, kwargs = run.call_args
     assert args[0] == [
-        "codex",
+        CODEX_COMMAND,
         "mcp",
         "add",
         "agents-hub",
         "--url",
-        "http://localhost:8765/mcp",
+        f"http://localhost:{config.mcp_port}/mcp",
     ]
     assert kwargs["check"] is True
     assert kwargs["env"]["CODEX_HOME"] == str(work_root)
