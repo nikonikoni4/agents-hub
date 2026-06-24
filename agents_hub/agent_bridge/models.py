@@ -18,6 +18,7 @@ class AgentEventType(Enum):
     TOOL_USE = "tool_use"  # 工具调用（命令执行）
     TURN_COMPLETE = "turn_complete"  # 回合完成（包含 token 使用统计）
     RESULT = "result"  # 完整结果（非流式输出）
+    FIRST_RESPONSE = "first_response"  # 首句完成（用于群聊首响）
 
 
 @dataclass

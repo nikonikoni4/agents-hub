@@ -12,9 +12,11 @@ Agent 基类
 import asyncio
 import re
 from collections.abc import Awaitable, Callable
+from datetime import datetime
 from pathlib import Path
 
 from agents_hub.agent_bridge import AgentResult, agent_platform_client
+from agents_hub.agent_bridge.models import AgentEventType, Usage
 from agents_hub.config import config
 from agents_hub.core.communication import AgentCallManager, MessageRouter
 from agents_hub.core.context import AgentContext, GroupChatRuntime
@@ -206,6 +208,126 @@ class Agent:
             fork_from=fork_from,
         )
 
+    async def execute_with_first_response(
+        self,
+        prompt: str,
+        use_docker: bool = False,
+        group_chat_id: str | None = None,
+        system_prompt: str | None = None,
+    ) -> AgentResult:
+        """执行主会话（群聊），支持首句响应。
+
+        内部调用 execute_stream() 获取流式事件，检测首句完成后立即写入群聊历史，
+        使前端能更快看到 Agent 的响应。
+
+        注意：Docker 模式不支持流式输出，将回退到 execute() 方法。
+
+        Args:
+            prompt: 渲染好的 LLM prompt 字符串
+            use_docker: 是否使用 Docker 沙箱执行
+            group_chat_id: 群聊 ID（Docker 模式下必填）
+            system_prompt: 系统提示词（可选，通过 CLI 参数注入）
+
+        Returns:
+            AgentResult: 完整结果（首次响应 + 剩余内容）
+        """
+        # Docker 模式不支持流式输出，回退到 execute()
+        if use_docker:
+            self.logger.debug("Docker 模式不支持首句响应，回退到 execute(): agent=%s", self.name)
+            return await self.execute(
+                prompt,
+                use_docker=use_docker,
+                group_chat_id=group_chat_id,
+                system_prompt=system_prompt,
+            )
+
+        cwd = self.agent_cwd if self.agent_cwd else None
+
+        # 流式事件处理状态
+        first_text_buffer = ""  # 首句文本缓冲
+        remaining_text = ""  # 剩余文本
+        first_response_sent = False  # 首句是否已发送
+        usage = None
+        result_session_id = self.main_session_id or ""
+
+        self.logger.debug(
+            "execute_with_first_response 开始: agent=%s, prompt_len=%d",
+            self.name,
+            len(prompt),
+        )
+
+        async for event in agent_platform_client.execute_stream(
+            prompt,
+            self.role_config,
+            self.main_session_id,
+            cwd,
+            system_prompt=system_prompt,
+        ):
+            if event.type == AgentEventType.TEXT_DELTA:
+                # 累积文本内容
+                if not first_response_sent:
+                    first_text_buffer += event.content["text"]
+                else:
+                    remaining_text += event.content["text"]
+
+            elif event.type == AgentEventType.FIRST_RESPONSE:
+                # 首句完成：立即写入群聊历史
+                if first_text_buffer and not first_response_sent:
+                    self.logger.info(
+                        "首句完成，发送首次响应: agent=%s, text_len=%d",
+                        self.name,
+                        len(first_text_buffer),
+                    )
+                    # 创建临时 AgentResult 用于写入群聊历史
+                    first_result = AgentResult(
+                        text=first_text_buffer,
+                        session_id=result_session_id or event.session_id,
+                        timestamp=event.timestamp,
+                        agent_name=self.name,
+                        platform=self.role_config.platform,
+                        role_type=self.role_config.role_type,
+                    )
+                    await self.runtime.add_message(first_result)
+                    first_response_sent = True
+
+            elif event.type == AgentEventType.TURN_COMPLETE:
+                # 提取 usage 信息
+                usage_data = event.content.get("usage", {})
+                usage = Usage(
+                    input_tokens=usage_data.get("input_tokens", 0),
+                    cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
+                    max_context_window=event.content.get("max_context_window", 0),
+                )
+
+            # 更新 session_id
+            if not result_session_id and event.session_id:
+                result_session_id = event.session_id
+
+        # 纯工具调用（无文本）：不发送首次响应
+        if not first_response_sent and not first_text_buffer:
+            self.logger.debug("纯工具调用（无文本），不发送首次响应: agent=%s", self.name)
+
+        # 组合完整结果
+        full_text = first_text_buffer + remaining_text
+
+        self.logger.debug(
+            "execute_with_first_response 完成: agent=%s, first_len=%d, remaining_len=%d, total_len=%d",
+            self.name,
+            len(first_text_buffer),
+            len(remaining_text),
+            len(full_text),
+        )
+
+        return AgentResult(
+            text=full_text,
+            session_id=result_session_id,
+            timestamp=datetime.now().isoformat(),
+            agent_name=self.name,
+            platform=self.role_config.platform,
+            role_type=self.role_config.role_type,
+            usage=usage,
+        )
+
     async def btw_execute(
         self, prompt, session: str | None = None, system_prompt: str | None = None
     ) -> AgentResult:
@@ -336,7 +458,7 @@ class Agent:
                     msg, self.agent_call_manager, self.task_manager
                 )
 
-                result = await self.execute(
+                result = await self.execute_with_first_response(
                     full_prompt,
                     use_docker=use_docker,
                     group_chat_id=self.runtime.group_chat_id,

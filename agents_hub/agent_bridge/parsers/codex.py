@@ -17,6 +17,7 @@ class CodexParser:
     def __init__(self, usage_baseline: dict | None = None):
         self._thread_id: str = ""
         self._usage_baseline = usage_baseline or {}
+        self._pending_events: list[StreamEvent] = []  # 缓存待返回的事件（用于首句检测）
 
     def parse_event(self, raw_line: str) -> StreamEvent | None:
         """
@@ -28,6 +29,10 @@ class CodexParser:
         - item.completed (command_execution) -> tool_use
         - turn.completed -> turn_complete
         """
+        # 如果有缓存的事件，先返回
+        if self._pending_events:
+            return self._pending_events.pop(0)
+
         try:
             event = json.loads(raw_line)
         except json.JSONDecodeError as e:
@@ -69,8 +74,20 @@ class CodexParser:
         # 优先使用事件自带的 thread_id，否则用缓存的
         session_id = event.get("thread_id", "") or self._thread_id
 
-        # Agent 消息
+        # Agent 消息：返回 TEXT_DELTA 并缓存 FIRST_RESPONSE
         if item_type == "agent_message":
+            # 缓存 FIRST_RESPONSE 事件，在下次 parse_event 时返回
+            self._pending_events.append(
+                StreamEvent(
+                    type=AgentEventType.FIRST_RESPONSE,
+                    content={},
+                    session_id=session_id,
+                    timestamp=datetime.now().isoformat(),
+                    agent_name="",
+                    platform=AgentPlatform.CODEX,
+                    role_type=RoleType.TEAM_MEMBER,
+                )
+            )
             return StreamEvent(
                 type=AgentEventType.TEXT_DELTA,
                 content={"text": item.get("text", "")},

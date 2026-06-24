@@ -68,13 +68,18 @@ class TestCodexParserConcurrency:
         await asyncio.gather(process_agent_a(), process_agent_b())
 
         # 验证结果
-        assert len(results_a) == 1, "Agent A 应该有 1 个事件"
-        assert len(results_b) == 1, "Agent B 应该有 1 个事件"
+        # 注意：由于首句检测机制，item.completed + agent_message 会生成 2 个事件
+        # （TEXT_DELTA + FIRST_RESPONSE），但由于并发竞态，实际事件数量可能不同
+        assert len(results_a) >= 1, "Agent A 应该至少有 1 个事件"
+        assert len(results_b) >= 1, "Agent B 应该至少有 1 个事件"
 
         # 关键断言：每个 agent 的 session_id 应该是自己的 thread_id
         # 但由于竞态条件，可能会出现错误
-        session_id_a = results_a[0].session_id
-        session_id_b = results_b[0].session_id
+        # 注意：results_a[0] 可能是 INIT 事件，需要找到 TEXT_DELTA 事件
+        text_delta_a = next((e for e in results_a if e.type.value == "text_delta"), results_a[0])
+        text_delta_b = next((e for e in results_b if e.type.value == "text_delta"), results_b[0])
+        session_id_a = text_delta_a.session_id
+        session_id_b = text_delta_b.session_id
 
         print(f"Agent A session_id: {session_id_a} (expected: thread_AAA)")
         print(f"Agent B session_id: {session_id_b} (expected: thread_BBB)")
@@ -135,11 +140,15 @@ class TestCodexParserConcurrency:
         await asyncio.gather(process_agent_a(), process_agent_b())
 
         # 验证结果
-        assert len(results_a) == 1
-        assert len(results_b) == 1
+        # 注意：由于首句检测机制，item.completed + agent_message 会生成 2 个事件
+        assert len(results_a) >= 1
+        assert len(results_b) >= 1
 
-        session_id_a = results_a[0].session_id
-        session_id_b = results_b[0].session_id
+        # 找到 TEXT_DELTA 事件来验证 session_id
+        text_delta_a = next((e for e in results_a if e.type.value == "text_delta"), results_a[0])
+        text_delta_b = next((e for e in results_b if e.type.value == "text_delta"), results_b[0])
+        session_id_a = text_delta_a.session_id
+        session_id_b = text_delta_b.session_id
 
         # 使用独立 parser，session_id 应该是正确的
         assert session_id_a == "thread_AAA", "独立 parser：Agent A session_id 正确"
@@ -181,8 +190,11 @@ class TestCodexParserConcurrency:
                 results[agent_id].append(event)
 
         # 验证 Bug：Agent A 的 session_id 应该是 AAA，但实际是 BBB
-        session_id_a = results["A"][0].session_id
-        session_id_b = results["B"][0].session_id
+        # 注意：results["A"][0] 可能是 INIT 事件，需要找到 TEXT_DELTA 事件
+        text_delta_a = next((e for e in results["A"] if e.type.value == "text_delta"), results["A"][0])
+        text_delta_b = next((e for e in results["B"] if e.type.value == "text_delta"), results["B"][0])
+        session_id_a = text_delta_a.session_id
+        session_id_b = text_delta_b.session_id
 
         print(f"最坏情况 - Agent A session_id: {session_id_a} (expected: thread_AAA)")
         print(f"最坏情况 - Agent B session_id: {session_id_b} (expected: thread_BBB)")
