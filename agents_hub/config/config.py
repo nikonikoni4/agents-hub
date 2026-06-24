@@ -32,6 +32,8 @@ class SystemConfig:
         "default_assistant_name": "Agents-Hub-Assistant",  # 默认系统助手角色名
         "default_memory_assistant_name": "Agents-Hub-Memory-Assistant",  # 默认记忆助手角色名
         "memory_path": None,  # 记忆文件存储路径，None 表示使用 data_path / "memory"
+        "memory_task_cron_hour": 10,  # 记忆任务执行小时（0-23）
+        "memory_task_cron_minute": 0,  # 记忆任务执行分钟（0-59）
         "docker_image": "ai-tools:latest",  # Docker 沙箱镜像
         "use_docker": True,  # 是否默认使用 Docker 沙箱执行
     }
@@ -199,6 +201,15 @@ class SystemConfig:
             return Path(self._config_data["memory_path"]).resolve()
         return self.data_path / "memory"
 
+    @property
+    def memory_task_cron_time(self) -> tuple[int, int]:
+        """获取记忆任务的 Cron 执行时间（hour, minute）"""
+        hour = self._config_data["memory_task_cron_hour"]
+        minute = self._config_data["memory_task_cron_minute"]
+        if not (0 <= hour <= 23) or not (0 <= minute <= 59):
+            return (10, 0)
+        return (hour, minute)
+
 
 class Config:
     """配置聚合类 - 统一访问所有配置
@@ -310,6 +321,11 @@ class Config:
     def memory_path(self) -> Path:
         """快捷访问：记忆文件存储路径"""
         return self.system.memory_path
+
+    @property
+    def memory_task_cron_time(self) -> tuple[int, int]:
+        """快捷访问：记忆任务的 Cron 执行时间（hour, minute）"""
+        return self.system.memory_task_cron_time
 
     @property
     def assistant_token(self) -> str:

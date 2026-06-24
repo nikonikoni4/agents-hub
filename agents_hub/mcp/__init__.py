@@ -32,6 +32,7 @@ from agents_hub.mcp.server import (
     create_loop,
     delete_loop,
     get_loop_status,
+    get_memory_context,
     # report_progress,
     start_loop,
     stop_loop,
@@ -67,4 +68,5 @@ __all__ = [
     "stop_loop",
     "delete_loop",
     "get_loop_status",
+    "get_memory_context",
 ]

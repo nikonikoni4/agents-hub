@@ -99,6 +99,7 @@ from agents_hub.mcp.errors import (  # noqa: E402  # noqa: E402
 from agents_hub.realtime import broadcast_group_chat_refresh  # noqa: E402
 from agents_hub.roles.exceptions import RoleAlreadyExistsError  # noqa: E402
 from agents_hub.utils import get_logger  # noqa: E402
+from agents_hub.utils.session_parser import get_group_chat_messages  # noqa: E402
 
 logger = get_logger(__name__)
 # ============================================================================
@@ -1455,6 +1456,109 @@ async def health_check() -> dict:
 
 
 # ============================================================================
+# Tool 15: get_memory_context
+# ============================================================================
+
+
+async def get_memory_context(
+    agent_token: str,
+    group_chat_id: str,
+    last_updated: str | None = None,
+) -> dict:
+    """
+    获取记忆助手所需的上下文数据
+
+    Args:
+        agent_token: 记忆助手的身份令牌
+        group_chat_id: 群聊ID
+        last_updated: 上次更新时间（ISO 8601 格式）
+
+    Returns:
+        成功: {
+            "group_chat_id": "...",
+            "last_updated": "...",
+            "history_summary": "...",  # 历史总结内容
+            "new_messages": "...",     # 新消息内容
+            "context": "..."           # 拼接后的完整上下文
+        }
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    from datetime import datetime as dt
+
+    logger.info("MCP 调用: get_memory_context, group_chat_id=%s", group_chat_id)
+    try:
+        # 1. Token 验证
+        identity = group_chat_manager.resolve_token(agent_token)
+        if identity is None:
+            return make_error_response(
+                INVALID_TOKEN,
+                "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
+            )
+
+        agent_name, _resolved_group_chat_id = identity
+
+        # 2. 角色权限校验：仅记忆助手可调用
+        if agent_name != config.default_memory_assistant_name:
+            return make_error_response(
+                PERMISSION_DENIED,
+                f"权限不足：只有记忆助手可以调用此工具，当前 Agent {agent_name} 不是记忆助手",
+                details={
+                    "agent_name": agent_name,
+                    "required_role": config.default_memory_assistant_name,
+                },
+            )
+
+        # 3. 读取历史总结文件
+        history_file = config.memory_path / "agents_hub_history" / "history.jsonl"
+        history_summary = ""
+        if history_file.exists():
+            import json
+
+            try:
+                lines = history_file.read_text(encoding="utf-8").strip().splitlines()
+                if lines:
+                    # 取最后一行作为最新总结
+                    last_entry = json.loads(lines[-1])
+                    history_summary = last_entry.get("summary", "")
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("读取 history.jsonl 失败: %s", e)
+
+        # 4. 获取新消息
+        after_time = None
+        if last_updated:
+            try:
+                after_time = dt.fromisoformat(last_updated)
+            except (ValueError, TypeError):
+                logger.warning("last_updated 格式无效: %s，将返回全部消息", last_updated)
+
+        new_messages = get_group_chat_messages(group_chat_id, after_time=after_time)
+
+        # 5. 拼接上下文
+        context_parts = []
+        if history_summary:
+            context_parts.append(f"[历史总结]\n{history_summary}")
+        if new_messages:
+            context_parts.append(f"[新消息]\n{new_messages}")
+        context = "\n\n".join(context_parts) if context_parts else ""
+
+        return {
+            "group_chat_id": group_chat_id,
+            "last_updated": last_updated or "",
+            "history_summary": history_summary,
+            "new_messages": new_messages,
+            "context": context,
+        }
+
+    except Exception as e:
+        logger.error("get_memory_context 失败: %s", str(e), exc_info=True)
+        return make_error_response(
+            INTERNAL_ERROR,
+            f"内部错误: {str(e)}",
+            details={"exception": str(e)},
+        )
+
+
+# ============================================================================
 # 注册工具到 FastMCP
 # ============================================================================
 
@@ -1481,3 +1585,4 @@ _register_tool_with_docstring(get_loop_status)
 _register_tool_with_docstring(list_loops)
 _register_tool_with_docstring(list_loop_executions)
 _register_tool_with_docstring(health_check)
+_register_tool_with_docstring(get_memory_context)
