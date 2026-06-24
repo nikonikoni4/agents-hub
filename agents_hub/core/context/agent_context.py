@@ -195,20 +195,18 @@ class AgentContext:
         """
         parts: list[str] = []
 
-        # 1. 构建 runtime 信息
-        runtime = self._build_runtime(msg, agent_call_manager, task_manager)
-        parts.append(runtime)
+        # Loop 消息跳过 runtime 和 context，只保留 incoming_message
+        if msg.message_type != MessageType.LOOP_MESSAGE:
+            # 1. 构建 runtime 信息
+            runtime = self._build_runtime(msg, agent_call_manager, task_manager)
+            parts.append(runtime)
 
-        # 2. 获取上下文。循环消息的 content 已经是隔离上下文，不读取群聊历史。
-        history = ""
-        if msg.message_type == MessageType.LOOP_MESSAGE:
-            history = msg.content
-        else:
+            # 2. 获取上下文
             history = await self.get_context()
-        if history:
-            parts.append(history)
+            if history:
+                parts.append(history)
 
-        # 3. 渲染 incoming_message（含 call_id）
+        # 3. 渲染 incoming_message（Loop 消息的上下文在 msg.content 中）
         incoming_message = render_for_llm(msg)
         parts.append(incoming_message)
 

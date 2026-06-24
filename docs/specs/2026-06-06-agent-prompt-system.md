@@ -1,9 +1,9 @@
 ---
-version: 2.0
+version: 2.1
 created_at: 2026-06-06
-updated_at: 2026-06-18
-last_updated: 按新 spec 规则重构：移除执行细节，添加 key_function 和 Design Rationale
-abstract: Agent 提示词系统规格，定义发送给 Agent 的所有提示词来源、注入机制、渲染规则和平台标识
+updated_at: 2026-06-24
+last_updated: 添加 Loop 消息跳过 runtime 注入的设计说明
+abstract: Agent 提示词系统规格，定义发送给 Agent 的所有提示词来源、注入机制、渲染规则和平台标识。v2.1 新增 Loop 消息特殊处理：跳过 runtime 注入，使用 Loop 专用上下文。
 id: spec-agent-prompt-system
 title: Agent 提示词系统规格
 status: draft
@@ -32,6 +32,7 @@ contract_refs:
 | 1.1 | `<AGENT_RUNTIME>` 新增 `<pinned_messages>` 区块，Pin 消息通过 runtime 注入而非 prompt 拼接 |
 | 1.2 | AgentContext 按角色差异化交付（Worker 不接收 raw messages）；工具提示词重构为 ROLE_INSTRUCTIONS 类变量；收窄 report_progress 语义；新增阻塞判定规则 |
 | 2.0 | 按新 spec 规则重构：移除执行细节，添加 key_function 和 Design Rationale |
+| 2.1 | 添加 Loop 消息特殊处理：跳过 runtime 注入，使用 Loop 专用上下文（`<LOOP_NODE_ROLE>` 等） |
 
 ## Overview
 
@@ -79,17 +80,23 @@ contract_refs:
 │ System Prompt（CLI 自动加载 CLAUDE.md）       │
 │  └─ <TOOL_USAGE>     工具使用说明              │
 ├─────────────────────────────────────────────┤
-│ User Prompt（build_user_prompt 三段拼接）      │
-│  ├─ <runtime>        身份/团队/任务/调用状态/Pin消息 │
-│  ├─ <group_chat_history>  历史摘要            │
-│  ├─ <recent_messages>     最近群聊消息        │
-│  └─ <incoming_message>    当前入站消息         │
+│ User Prompt（build_user_prompt 按类型拼接）    │
+│  ┌─ 普通消息（三段式）:                        │
+│  │  ├─ <runtime>        身份/团队/任务/Pin消息 │
+│  │  ├─ <group_chat_history>  历史摘要         │
+│  │  ├─ <recent_messages>     最近群聊消息     │
+│  │  └─ <incoming_message>    当前入站消息      │
+│  └─ Loop 消息（单段式，只有 incoming_message）: │
+│     └─ <incoming_message>                    │
+│         内容: <LOOP_NODE_ROLE> ...           │
+│               <LOOP_OUTPUT_SCHEMA> ...       │
+│               <PREVIOUS_NODE_OUTPUT> ...     │
 └─────────────────────────────────────────────┘
 ```
 
 ### 对外接口
 
-<key_function last_update="2026-06-23T17:31:34+08:00">
+<key_function last_update="2026-06-24T21:35:11+08:00">
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent.SHARED_RULES:38
 - agents_hub/core/agent/manager.py
@@ -106,7 +113,7 @@ contract_refs:
 
 | 接口 | 说明 | 约束 |
 |------|------|------|
-| `build_user_prompt(msg)` | 三段拼接构造 LLM user message | 按 runtime + context + incoming_message 顺序，`"\n\n"` 分隔 |
+| `build_user_prompt(msg)` | 按消息类型构造 LLM user message | 普通消息：runtime + context + incoming_message（三段式）；Loop 消息：只有 incoming_message（单段式，跳过 runtime 和 context） |
 | `render_for_llm(msg)` | 将消息渲染为 `<incoming_message>` XML 片段 | 输出必须包含 `[Agents Hub 平台消息]` 标识、`call_id`、`类型` |
 | `render_for_chat(send_from, send_to, content, is_loop_message?, loop_iteration?)` | 格式化消息写入群聊记录 | 非循环消息：`@{send_to} {content}`；循环消息：`[循环-节点{send_from}-第{loop_iteration}轮] @{send_to} {content}` |
 | `SHARED_RULES` (Agent) | 共享规则类变量 | 群聊消息显示规则 |
@@ -117,6 +124,8 @@ contract_refs:
 ### Runtime 信息结构（`<runtime>`）
 
 `<runtime>` XML 作为 `build_user_prompt()` 的第一段，包含以下区块：
+
+**注意**：Loop 消息（`MessageType.LOOP_MESSAGE`）跳过 runtime 注入，直接使用 Loop 专用上下文（见 `docs/specs/2026-06-21-loop.md`）。
 
 | 区块 | 条件 | 内容 |
 |------|------|------|
@@ -231,6 +240,11 @@ call_id: {call_id}
 
 **为什么 complete_task 在 Manager 和 Worker 间有不同语义？**
 - Manager 是编排者，安排完任务后不需要等待 Worker 结果即可闭环，Worker 完成后通过新的 AgentCall 重新激活。Worker 是执行者，闭环即表示工作完成。
+
+**为什么 Loop 消息跳过 runtime 和 context 注入？**
+- Loop 节点只需关注当前任务（`<LOOP_NODE_ROLE>` / `<PREVIOUS_NODE_OUTPUT>`），不需要 `<runtime>` 中的 `team_members`、`group_chat_id` 等群聊上下文信息。跳过 runtime 保持 Loop 上下文的纯净性，避免无关信息干扰节点执行。
+- Loop 消息依然保存到群聊历史（通过 `GroupChat.send_message_to_agent()`），Manager 可以查看循环执行动态，复用现有的消息持久化机制。
+- Loop 消息也跳过 `get_context()` 调用（第二段），避免 `msg.content`（Loop 上下文）重复出现：一次作为 history 段，一次在 `<incoming_message>` 的内容字段。Loop 上下文只在 `<incoming_message>` 中出现一次。
 
 **已知限制**：
 - Heartbeat 固定 20 分钟间隔，无法按任务紧急程度动态调整

@@ -1,9 +1,9 @@
 ---
-version: 1.2
+version: 1.3
 created_at: 2026-06-21
-updated_at: 2026-06-23
-last_updated: 2026-06-23T05:00:00+08:00
-abstract: Loop 循环执行功能的数据流文档，记录 Loop 的生命周期、状态变化、节点执行、内存管理和资源清理的完整链路
+updated_at: 2026-06-24
+last_updated: 2026-06-24T22:00:00+08:00
+abstract: Loop 循环执行功能的数据流文档，记录 Loop 的生命周期、状态变化、节点执行、内存管理和资源清理的完整链路。v1.3 修正消息隔离设计：循环消息保存到群聊历史，但跳过 runtime 注入。
 ---
 
 ## 版本
@@ -13,6 +13,7 @@ abstract: Loop 循环执行功能的数据流文档，记录 Loop 的生命周�
 | 1.0 | 创建 Loop Flow 初稿 |
 | 1.1 | 添加内存管理策略说明 |
 | 1.2 | 添加 WebSocket 通知集成说明 |
+| 1.3 | 修正消息隔离设计：循环消息保存到群聊历史，但跳过 runtime 注入 |
 
 # 数据流：Loop 生命周期
 
@@ -77,7 +78,7 @@ class Loop:
 - Agent 的 `current_loop_id` 字段记录当前所在的循环 ID
 - `stop_loop()` 的 Agent 恢复机制：先调用 `stop_member()` 再调用 `start_member()`，最后手动设置 status 为 "idle"（stop-then-start 模式）
 
-<key_function last_update="2026-06-23T17:31:34+08:00">
+<key_function last_update="2026-06-24T21:35:11+08:00">
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent._should_accept_message:104
   - base_agent.Agent.set_loop_completion_queue:100
@@ -102,8 +103,9 @@ class Loop:
 | 循环结束 | 未完成的 AgentCall 标记为 failed | `LoopExecutor._cleanup()` |
 
 **说明**：
-- 循环内部消息使用 `MessageType.LOOP_MESSAGE`，不自动保存到群聊历史
-- LoopExecutor 通过 `_save_loop_result()` 手动保存最终结果到群聊历史
+- 循环消息使用 `MessageType.LOOP_MESSAGE` 标记，通过 `GroupChat.send_message_to_agent()` 保存到群聊历史
+- 循环消息在构造 LLM prompt 时跳过 `<runtime>` 注入，只使用 Loop 专用上下文（见 `AgentContext.build_user_prompt()`）
+- Manager 可以通过群聊历史查看循环执行动态，无需单独的 Loop 日志系统
 
 <key_function last_update="2026-06-21T10:00:00+08:00">
 - agents_hub/core/orchestration/loop_executor.py
@@ -309,7 +311,7 @@ stateDiagram-v2
 3. Agent._process_message()
    Agent 处理循环消息
    状态: Agent.status: in_loop 不变 | 持久化: ❌ | 跨模块: ❌ core 内
-   步骤: 从队列取出消息 → 使用 msg.content 作为上下文 → 调用 LLM 执行 → 投递完成通知
+   步骤: 从队列取出消息 → AgentContext.build_user_prompt() 构造 prompt（跳过 runtime，直接使用 msg.content 作为 Loop 上下文） → 调用 LLM 执行 → 投递完成通知
 
 4. Agent._notify_message_completion()
    Agent 向 completion_queue 投递完成事件
