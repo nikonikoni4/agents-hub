@@ -141,3 +141,4 @@
  - path: `docs/specs/2026-06-21-loop.md`
  - 触发规则：当设计、修改或扩展 Loop 循环执行功能时阅读，包括多节点循环编排、输出校验、状态机规则和 MCP 工具接口
  - 内容摘要：Loop 循环执行功能的正式规格，定义多节点循环编排模型（至少 2 个节点，有且仅有 1 个 TERMINATOR）、Loop/LoopNode 数据结构、状态机规则、输出校验和重试机制、MCP 工具接口（create_loop/start_loop/stop_loop/delete_loop/get_loop_status）
+

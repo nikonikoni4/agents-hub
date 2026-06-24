@@ -37,6 +37,25 @@ ASSISTANT_DISABLED_MCP_TOOLS = [
     "get_loop_status",
 ]
 
+# Memory Assistant 禁用的 MCP 工具黑名单
+# 记忆助手只需要读取数据和写入文件，不需要 Agent 编排和群聊管理能力
+MEMORY_ASSISTANT_DISABLED_TOOLS = [
+    "AskUserQuestion",
+    "create_group_chat",
+    "create_agent",
+    "call_agent",
+    "check_agent_call",
+    "assign_tasks_to_team",
+    "archive_task_list",
+    "create_loop",
+    "start_loop",
+    "stop_loop",
+    "delete_loop",
+    "get_loop_status",
+    "list_loops",
+    "list_loop_executions",
+]
+
 
 def _get_template_dir() -> Path:
     """获取模板目录路径。
@@ -113,7 +132,7 @@ def initialize_resources() -> None:
 def initialize_default_roles() -> None:
     """初始化默认角色
 
-    创建系统必需的默认角色（如 manager）和系统角色（如 Agents-Hub-Assistant），如果不存在则创建。
+    创建系统必需的默认角色（如 manager）和系统角色（如 Agents-Hub-Assistant、Agents-Hub-Memory-Assistant），如果不存在则创建。
     同时为 manager 角色复制 loop-design skill（无论角色是否已存在，确保 skill 是最新的）。
     """
     from agents_hub.config import RoleType, config
@@ -151,7 +170,7 @@ def initialize_default_roles() -> None:
         logger.warning(f"复制 loop-design skill 到 {manager_role_name} 失败: {e}")
 
     # Agents-Hub-Assistant 角色：系统预置的助手角色
-    assistant_role_name = "Agents-Hub-Assistant"
+    assistant_role_name = config.default_assistant_name
     if assistant_role_name not in role_manager.list_role_names():
         try:
             role_manager.create_role(
@@ -177,3 +196,27 @@ def initialize_default_roles() -> None:
         _copy_skill_to_role("agent-trainer", assistant_role_name)
     except Exception as e:
         logger.warning(f"复制 agent-trainer skill 到 {assistant_role_name} 失败: {e}")
+
+    # Agents-Hub-Memory-Assistant 角色：系统预置的记忆助手角色
+    memory_assistant_name = config.default_memory_assistant_name
+    if memory_assistant_name not in role_manager.list_role_names():
+        try:
+            role_manager.create_role(
+                name=memory_assistant_name,
+                platform=AgentPlatform.CLAUDE,
+                type=RoleType.SYSTEM,
+                description="Agents Hub 记忆助手，负责收集群聊信息，编写任务日志、用户决策、AI错误记录和协作改进建议",
+            )
+            logger.info(f"已创建系统角色: {memory_assistant_name}")
+        except Exception as e:
+            logger.warning(f"创建系统角色 {memory_assistant_name} 失败: {e}")
+
+    # 为 Memory Assistant 设置禁用列表
+    try:
+        memory_role = role_manager.get_role(memory_assistant_name)
+        memory_role.update_disabled_tools(MEMORY_ASSISTANT_DISABLED_TOOLS)
+        logger.info(
+            f"已更新 {memory_assistant_name} 禁用工具列表: {MEMORY_ASSISTANT_DISABLED_TOOLS}"
+        )
+    except Exception as e:
+        logger.warning(f"更新 {memory_assistant_name} 禁用工具列表失败: {e}")

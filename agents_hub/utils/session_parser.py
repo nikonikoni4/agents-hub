@@ -1,9 +1,11 @@
 """Session 文件解析器
 
 解析 Claude Code 和 Codex 平台的 session 文件，返回统一格式的消息列表。
+提供群聊记录截取功能，支持按时间段提取群聊消息。
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -218,3 +220,103 @@ def resolve_session_path(
     for f in search_dir.rglob(f"*{session_id}*.jsonl"):
         return str(f)
     return None
+
+
+def _find_messages_file(group_chat_id: str, teams_dir: Path) -> Path | None:
+    """扫描 teams/ 目录，定位群聊消息文件
+
+    目录结构: teams/{project}/{group_chat_id}/{group_chat_id}.jsonl
+    """
+    if not teams_dir.exists():
+        return None
+    for project_dir in teams_dir.iterdir():
+        if not project_dir.is_dir():
+            continue
+        candidate = project_dir / group_chat_id / f"{group_chat_id}.jsonl"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def get_group_chat_messages(
+    group_chat_id: str,
+    after_time: datetime | None = None,
+) -> str:
+    """截取群聊聊天记录
+
+    从群聊的 JSONL 文件中读取消息，按时间过滤后返回格式化字符串。
+    只输出 timestamp、speaker (agent_name)、content，忽略附件等额外字段。
+
+    通过扫描 teams/*/{group_chat_id}/{group_chat_id}.jsonl 自动定位文件。
+
+    Args:
+        group_chat_id: 群聊 ID
+        after_time: 起始时间，只返回该时间之后的消息。为 None 时返回全部消息。
+
+    Returns:
+        格式化字符串，格式：
+        <group_chat_session time_range="YYYY-mm-DD HH:MM:SS ~ YYYY-mm-DD HH:MM:SS">
+        {timestamp} {speaker}: {content}
+        </group_chat_session>
+    """
+    from agents_hub.config import config
+
+    messages_file = _find_messages_file(group_chat_id, config.data_path / "teams")
+    if not messages_file:
+        logger.warning("群聊消息文件不存在: %s", messages_file)
+        return '<group_chat_session time_range="none">\n</group_chat_session>'
+
+    messages: list[dict] = []
+    try:
+        with open(messages_file, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                # 跳过 meta_data 记录
+                if data.get("_type") == "meta_data":
+                    continue
+                messages.append(data)
+    except OSError as e:
+        logger.error("读取群聊消息失败: path=%s, error=%s", messages_file, str(e))
+        return '<group_chat_session time_range="error">\n</group_chat_session>'
+
+    # 按时间过滤
+    filtered: list[dict] = []
+    for msg in messages:
+        ts_str = msg.get("timestamp", "")
+        if not ts_str:
+            continue
+        try:
+            msg_time = datetime.fromisoformat(ts_str)
+        except ValueError:
+            continue
+        if after_time is not None and msg_time <= after_time:
+            continue
+        filtered.append(msg)
+
+    if not filtered:
+        time_range = "none" if after_time is None else f"after {after_time.isoformat()}"
+        return f'<group_chat_session time_range="{time_range}">\n</group_chat_session>'
+
+    # 构建输出
+    first_ts = filtered[0].get("timestamp", "")
+    last_ts = filtered[-1].get("timestamp", "")
+    time_range = f"{first_ts} ~ {last_ts}"
+
+    lines = [f'<group_chat_session time_range="{time_range}">']
+    for msg in filtered:
+        timestamp = msg.get("timestamp", "")
+        speaker = msg.get("agent_name", "unknown")
+        content = msg.get("content", "")
+        # content 可能是多行，只取第一行摘要避免过长
+        if isinstance(content, str):
+            content = content.replace("\n", " ").strip()
+        lines.append(f"{timestamp} {speaker}: {content}")
+    lines.append("</group_chat_session>")
+
+    return "\n".join(lines)

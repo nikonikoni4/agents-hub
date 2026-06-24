@@ -29,6 +29,9 @@ class SystemConfig:
         "mcp_port": 8765,  # MCP 服务器运行端口
         "default_manager_name": "manager",  # 默认 manager 角色名
         "default_user_name": "user",  # 默认用户身份名
+        "default_assistant_name": "Agents-Hub-Assistant",  # 默认系统助手角色名
+        "default_memory_assistant_name": "Agents-Hub-Memory-Assistant",  # 默认记忆助手角色名
+        "memory_path": None,  # 记忆文件存储路径，None 表示使用 data_path / "memory"
         "docker_image": "ai-tools:latest",  # Docker 沙箱镜像
         "use_docker": True,  # 是否默认使用 Docker 沙箱执行
     }
@@ -179,6 +182,23 @@ class SystemConfig:
         """是否为开发环境"""
         return self._is_dev
 
+    @property
+    def default_assistant_name(self) -> str:
+        """默认系统助手角色名"""
+        return self._config_data["default_assistant_name"]
+
+    @property
+    def default_memory_assistant_name(self) -> str:
+        """默认记忆助手角色名"""
+        return self._config_data["default_memory_assistant_name"]
+
+    @property
+    def memory_path(self) -> Path:
+        """记忆文件存储路径"""
+        if self._config_data["memory_path"]:
+            return Path(self._config_data["memory_path"]).resolve()
+        return self.data_path / "memory"
+
 
 class Config:
     """配置聚合类 - 统一访问所有配置
@@ -275,6 +295,21 @@ class Config:
     def use_docker(self, value: bool):
         """快捷访问：设置是否默认使用 Docker 沙箱执行"""
         self.system.use_docker = value
+
+    @property
+    def default_assistant_name(self) -> str:
+        """快捷访问：默认系统助手角色名"""
+        return self.system.default_assistant_name
+
+    @property
+    def default_memory_assistant_name(self) -> str:
+        """快捷访问：默认记忆助手角色名"""
+        return self.system.default_memory_assistant_name
+
+    @property
+    def memory_path(self) -> Path:
+        """快捷访问：记忆文件存储路径"""
+        return self.system.memory_path
 
     @property
     def assistant_token(self) -> str:
