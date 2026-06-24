@@ -16,6 +16,7 @@ MCP Server 和 15 个工具
 12. list_loops: 查询所有 Loop 定义（任意 Agent）
 13. list_loop_executions: 查询 Loop 执行历史（任意 Agent）
 14. health_check: 健康检查端点
+15. get_memory_context: 获取记忆助手所需的上下文数据
 
 维护说明：
 - 当前 tool 数量少，且共享同一套 token 解析、GroupChat 获取和错误响应约定，
