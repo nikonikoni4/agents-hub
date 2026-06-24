@@ -4,6 +4,7 @@
 - FirstResponseResult 数据类
 - AgentBridge.execute_with_first_response() 方法
 - Docker 模式回退路径
+- 执行失败场景（异常、中途中断）
 """
 
 import pytest
@@ -313,3 +314,129 @@ class TestExecuteWithFirstResponse:
         assert result.first_text == ""  # 回退模式下首句为空
         assert result.result == expected_result
         bridge.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_execute_with_first_response_stream_exception(self, bridge, mock_config):
+        """测试 execute_stream 抛出异常时的行为
+
+        场景：流式执行中途中断，异常向上传播
+        """
+        from agents_hub.agent_bridge.exceptions import CLIExecutionError
+
+        async def mock_execute_stream_with_error(*args, **kwargs):
+            yield StreamEvent(
+                type=AgentEventType.TEXT_DELTA,
+                content={"text": "Hello "},
+                session_id="test-session",
+                timestamp="2026-01-01T00:00:01",
+                agent_name="test-agent",
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
+            yield StreamEvent(
+                type=AgentEventType.FIRST_RESPONSE,
+                content={},
+                session_id="test-session",
+                timestamp="2026-01-01T00:00:02",
+                agent_name="test-agent",
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
+            yield StreamEvent(
+                type=AgentEventType.TEXT_DELTA,
+                content={"text": "World"},
+                session_id="test-session",
+                timestamp="2026-01-01T00:00:03",
+                agent_name="test-agent",
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
+            # 模拟执行失败
+            raise CLIExecutionError(
+                platform="claude",
+                exit_code=1,
+                stderr="Execution failed",
+            )
+
+        bridge.execute_stream = mock_execute_stream_with_error
+
+        # 异常应该向上传播
+        with pytest.raises(CLIExecutionError):
+            await bridge.execute_with_first_response(
+                prompt="test prompt",
+                config=mock_config,
+                session_id="test-session",
+            )
+
+    @pytest.mark.asyncio
+    async def test_execute_with_first_response_interrupted_after_first_response(self, bridge, mock_config):
+        """测试首句响应后中途中断的行为
+
+        场景：首句已检测到并累积，但后续事件处理中断
+        验证：异常向上传播，不返回部分结果
+        """
+        from agents_hub.agent_bridge.exceptions import CLIExecutionError
+
+        async def mock_execute_stream_interrupted(*args, **kwargs):
+            # 首句文本
+            yield StreamEvent(
+                type=AgentEventType.TEXT_DELTA,
+                content={"text": "Hello World"},
+                session_id="test-session",
+                timestamp="2026-01-01T00:00:01",
+                agent_name="test-agent",
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
+            # 首句完成
+            yield StreamEvent(
+                type=AgentEventType.FIRST_RESPONSE,
+                content={},
+                session_id="test-session",
+                timestamp="2026-01-01T00:00:02",
+                agent_name="test-agent",
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
+            # 中途中断
+            raise CLIExecutionError(
+                platform="claude",
+                exit_code=1,
+                stderr="Interrupted",
+            )
+
+        bridge.execute_stream = mock_execute_stream_interrupted
+
+        # 异常应该向上传播
+        with pytest.raises(CLIExecutionError):
+            await bridge.execute_with_first_response(
+                prompt="test prompt",
+                config=mock_config,
+                session_id="test-session",
+            )
+
+    @pytest.mark.asyncio
+    async def test_execute_with_first_response_empty_stream(self, bridge, mock_config):
+        """测试空流式事件流的行为
+
+        场景：execute_stream 不返回任何事件
+        验证：返回空结果
+        """
+
+        async def mock_execute_stream_empty(*args, **kwargs):
+            # 不 yield 任何事件
+            return
+            yield  # 使函数成为生成器
+
+        bridge.execute_stream = mock_execute_stream_empty
+
+        result = await bridge.execute_with_first_response(
+            prompt="test prompt",
+            config=mock_config,
+            session_id="test-session",
+        )
+
+        assert isinstance(result, FirstResponseResult)
+        assert result.first_text == ""
+        assert result.result.text == ""
+        assert result.result.session_id == "test-session"
