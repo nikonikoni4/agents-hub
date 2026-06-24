@@ -14,7 +14,13 @@ from agents_hub.agent_bridge.exceptions import (
 from agents_hub.agent_bridge.executors.claude import ClaudeExecutor
 from agents_hub.agent_bridge.executors.codex import CodexExecutor
 from agents_hub.agent_bridge.executors.opencode import OpenCodeExecutor
-from agents_hub.agent_bridge.models import AgentEventType, AgentResult, StreamEvent, Usage
+from agents_hub.agent_bridge.models import (
+    AgentEventType,
+    AgentResult,
+    FirstResponseResult,
+    StreamEvent,
+    Usage,
+)
 from agents_hub.agent_bridge.parsers.claude import ClaudeParser
 from agents_hub.agent_bridge.parsers.codex import CodexParser
 from agents_hub.agent_bridge.parsers.opencode import OpenCodeParser
@@ -315,6 +321,92 @@ class AgentBridge:
             platform=config.platform,
             role_type=config.role_type,
             usage=usage,
+        )
+
+    async def execute_with_first_response(
+        self,
+        prompt: str,
+        config: RoleConfig,
+        session_id: str | None = None,
+        cwd: str | None = None,
+        system_prompt: str | None = None,
+    ) -> FirstResponseResult:
+        """
+        执行 Agent 并支持首句响应检测
+
+        封装 execute_stream()，检测 FIRST_RESPONSE 事件，返回首句文本和完整结果。
+        用于群聊场景，使前端能更快看到 Agent 的响应。
+
+        注意：Docker 模式不支持流式输出，将回退到 execute() 方法（first_text 为空）。
+
+        Args:
+            prompt: 用户输入
+            config: 角色配置
+            session_id: 会话 ID（可选）
+            cwd: 项目目录路径（可选）
+            system_prompt: 系统提示词（可选）
+
+        Returns:
+            FirstResponseResult: 包含首句文本和完整结果
+        """
+        # Docker 模式不支持流式输出，回退到 execute()
+        if config.platform == AgentPlatform.CODEX and not session_id:
+            # Codex 首次调用不支持流式，回退
+            result = await self.execute(
+                prompt, config, session_id, cwd, system_prompt=system_prompt
+            )
+            return FirstResponseResult(first_text="", result=result)
+
+        # 流式事件处理状态
+        first_text_buffer = ""  # 首句文本缓冲
+        remaining_text = ""  # 剩余文本
+        first_response_detected = False  # 首句是否已检测到
+        usage = None
+        result_session_id = session_id or ""
+
+        async for event in self.execute_stream(
+            prompt, config, session_id, cwd, system_prompt=system_prompt
+        ):
+            if event.type == AgentEventType.TEXT_DELTA:
+                # 累积文本内容
+                if not first_response_detected:
+                    first_text_buffer += event.content["text"]
+                else:
+                    remaining_text += event.content["text"]
+
+            elif event.type == AgentEventType.FIRST_RESPONSE:
+                # 首句完成：标记已检测到
+                first_response_detected = True
+
+            elif event.type == AgentEventType.TURN_COMPLETE:
+                # 提取 usage 信息
+                usage_data = event.content.get("usage", {})
+                usage = Usage(
+                    input_tokens=usage_data.get("input_tokens", 0),
+                    cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
+                    max_context_window=event.content.get("max_context_window", 0),
+                )
+
+            # 更新 session_id
+            if not result_session_id and event.session_id:
+                result_session_id = event.session_id
+
+        # 组合完整结果
+        full_text = first_text_buffer + remaining_text
+
+        result = AgentResult(
+            text=full_text,
+            session_id=result_session_id,
+            timestamp=datetime.now().isoformat(),
+            agent_name=config.name,
+            platform=config.platform,
+            role_type=config.role_type,
+            usage=usage,
+        )
+
+        return FirstResponseResult(
+            first_text=first_text_buffer if first_response_detected else "",
+            result=result,
         )
 
     async def bare_claude_call(self, prompt: str) -> AgentResult:

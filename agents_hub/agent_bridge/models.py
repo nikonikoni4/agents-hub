@@ -66,9 +66,25 @@ class AgentResult:
     status_before: dict[str, str] | None = None  # 执行前的工作区状态（推荐使用）
 
 
+@dataclass
+class FirstResponseResult:
+    """首响执行结果（execute_with_first_response 的返回值）"""
+
+    first_text: str  # 首句文本（可能为空，如纯工具调用）
+    result: AgentResult  # 完整结果
+
+
 # 向后兼容别名（待废弃）
 AgentEvent = StreamEvent
 
 
 # 导出 FileMetadata 保持向后兼容
-__all__ = ["FileMetadata", "AgentEventType", "StreamEvent", "AgentResult", "AgentEvent", "Usage"]
+__all__ = [
+    "FileMetadata",
+    "AgentEventType",
+    "StreamEvent",
+    "AgentResult",
+    "AgentEvent",
+    "Usage",
+    "FirstResponseResult",
+]

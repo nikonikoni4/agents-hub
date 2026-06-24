@@ -13,6 +13,7 @@ from agents_hub.agent_bridge.models import (
     AgentEvent,  # 向后兼容别名
     AgentEventType,
     AgentResult,
+    FirstResponseResult,
     StreamEvent,
     Usage,
 )
@@ -42,4 +43,5 @@ __all__ = [
     "PlatformNotSupportedError",
     "AgentTimeoutError",
     "Usage",
+    "FirstResponseResult",
 ]
