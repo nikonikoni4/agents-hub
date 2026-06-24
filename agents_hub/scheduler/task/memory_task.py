@@ -92,8 +92,7 @@ class MemoryTask:
             logger.info("记忆收集完成: group_chat_id=%s", group_chat_id)
 
             # 裁剪 history.jsonl
-            history_path = config.memory_path / "agents_hub_history" / "history.jsonl"
-            trim_history_jsonl(history_path)
+            trim_history_jsonl(config.history_jsonl_path)
 
             return result.text
 

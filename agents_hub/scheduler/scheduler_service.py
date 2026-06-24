@@ -95,6 +95,12 @@ class SchedulerService:
 
     def shutdown(self) -> None:
         """关闭调度器，未启动时跳过（幂等）"""
+        # 1. 取消补偿任务
+        if self._compensation_task and not self._compensation_task.done():
+            logger.info("取消补偿执行任务")
+            self._compensation_task.cancel()
+
+        # 2. 关闭调度器
         if self._scheduler is None or not self._scheduler.running:
             logger.warning("调度器未运行，跳过关闭")
             return

@@ -1522,11 +1522,10 @@ async def get_memory_context(
             )
 
         # 4. 读取历史总结文件
-        history_file = config.memory_path / "agents_hub_history" / "history.jsonl"
         history_summary = ""
-        if history_file.exists():
+        if config.history_jsonl_path.exists():
             try:
-                lines = history_file.read_text(encoding="utf-8").strip().splitlines()
+                lines = config.history_jsonl_path.read_text(encoding="utf-8").strip().splitlines()
                 if lines:
                     # 取最后一行作为最新总结
                     last_entry = json.loads(lines[-1])

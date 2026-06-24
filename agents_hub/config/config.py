@@ -210,6 +210,11 @@ class SystemConfig:
             return (10, 0)
         return (hour, minute)
 
+    @property
+    def history_jsonl_path(self) -> Path:
+        """历史总结文件路径"""
+        return self.memory_path / "agents_hub_history" / "history.jsonl"
+
 
 class Config:
     """配置聚合类 - 统一访问所有配置
@@ -326,6 +331,11 @@ class Config:
     def memory_task_cron_time(self) -> tuple[int, int]:
         """快捷访问：记忆任务的 Cron 执行时间（hour, minute）"""
         return self.system.memory_task_cron_time
+
+    @property
+    def history_jsonl_path(self) -> Path:
+        """快捷访问：历史总结文件路径"""
+        return self.system.history_jsonl_path
 
     @property
     def assistant_token(self) -> str:
