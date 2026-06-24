@@ -115,6 +115,18 @@ class AgentBridge:
         session_path = resolve_session_path(session_id, config.platform, config.work_root)
         return self._read_codex_usage_baseline(session_path)
 
+    @staticmethod
+    def _extract_usage(event: StreamEvent) -> Usage | None:
+        """从 TURN_COMPLETE 事件中提取 Usage 信息"""
+        if event.type != AgentEventType.TURN_COMPLETE:
+            return None
+        usage_data = event.content.get("usage", {})
+        return Usage(
+            input_tokens=usage_data.get("input_tokens", 0),
+            cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
+            max_context_window=event.content.get("max_context_window", 0),
+        )
+
     async def execute_stream(
         self,
         prompt: str,
@@ -380,19 +392,16 @@ class AgentBridge:
 
             elif event.type == AgentEventType.TURN_COMPLETE:
                 # 提取 usage 信息
-                usage_data = event.content.get("usage", {})
-                usage = Usage(
-                    input_tokens=usage_data.get("input_tokens", 0),
-                    cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
-                    max_context_window=event.content.get("max_context_window", 0),
-                )
+                extracted_usage = self._extract_usage(event)
+                if extracted_usage is not None:
+                    usage = extracted_usage
 
             # 更新 session_id
             if not result_session_id and event.session_id:
                 result_session_id = event.session_id
 
         # 组合完整结果
-        full_text = first_text_buffer + remaining_text
+        full_text = "".join([first_text_buffer, remaining_text])
 
         result = AgentResult(
             text=full_text,
