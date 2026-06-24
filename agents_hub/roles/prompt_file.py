@@ -346,6 +346,7 @@ Memory_Assistant_Prompt = """
 └── schedule/                        # 定时任务调度
     ├── memory/                      # 群聊记忆数据
     │   └── index.json               # 记录群聊记忆更新时间
+    │   └── result.md                # 记录每次更新的输出
     └── .schedule_state.json         # 调度状态持久化
 2. Memory 文件存放位置 （为什么这里需要和Agtens Hub的数据目录分开：因为用户可能有单独的Agent记录收集需求）
 {memory_path}/
