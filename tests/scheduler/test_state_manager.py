@@ -3,11 +3,13 @@
 测试状态文件管理的核心功能：
 - JSON 文件读写
 - should_execute_today 判断
-- append_result 保留最近 10 条
+- append_results 批量写入
+- _write_json 异常传播
 """
 
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -61,20 +63,47 @@ class TestMemoryIndex:
         assert state_manager.load_memory_index() == index
 
 
-class TestAppendResult:
-    """执行结果追加测试"""
+class TestAppendResults:
+    """批量执行结果追加测试"""
 
     def test_append_creates_file(self, state_manager: StateManager):
-        state_manager.append_result("chat-1", "成功", True)
+        state_manager.append_results(
+            [{"group_chat_id": "chat-1", "result": "成功", "success": True}]
+        )
         results = state_manager._read_json(state_manager._result_path)
         assert len(results) == 1
         assert results[0]["group_chat_id"] == "chat-1"
         assert results[0]["success"] is True
 
     def test_append_keeps_max_10(self, state_manager: StateManager):
-        for i in range(15):
-            state_manager.append_result(f"chat-{i}", f"结果{i}", True)
-        results = state_manager._read_json(state_manager._result_path)
-        assert len(results) == 10
-        assert results[0]["group_chat_id"] == "chat-5"
-        assert results[-1]["group_chat_id"] == "chat-14"
+        results = [
+            {"group_chat_id": f"chat-{i}", "result": f"结果{i}", "success": True}
+            for i in range(15)
+        ]
+        state_manager.append_results(results)
+        stored = state_manager._read_json(state_manager._result_path)
+        assert len(stored) == 10
+        assert stored[0]["group_chat_id"] == "chat-5"
+        assert stored[-1]["group_chat_id"] == "chat-14"
+
+    def test_batch_append_single_call(self, state_manager: StateManager):
+        """批量写入只产生一次文件 IO"""
+        results = [
+            {"group_chat_id": "chat-1", "result": "成功", "success": True},
+            {"group_chat_id": "chat-2", "result": "失败", "success": False},
+        ]
+        state_manager.append_results(results)
+        stored = state_manager._read_json(state_manager._result_path)
+        assert len(stored) == 2
+
+
+class TestWriteJsonRaises:
+    """_write_json 异常传播测试"""
+
+    def test_write_json_raises_on_os_error(self, tmp_path: Path):
+        """写入失败时应抛出 OSError"""
+        path = tmp_path / "test.json"
+
+        with patch("builtins.open", side_effect=OSError("磁盘满")):
+            with pytest.raises(OSError, match="磁盘满"):
+                StateManager._write_json(path, {"key": "value"})

@@ -29,12 +29,14 @@ class SchedulerService:
     _instance: "SchedulerService | None" = None
     _scheduler: AsyncIOScheduler | None = None
     _running: bool = False
+    _compensation_task: asyncio.Task | None = None
 
     def __new__(cls) -> "SchedulerService":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._scheduler = None
             cls._instance._running = False
+            cls._instance._compensation_task = None
         return cls._instance
 
     def start(self) -> None:
@@ -79,7 +81,17 @@ class SchedulerService:
                     target_hour,
                     target_minute,
                 )
-                asyncio.create_task(self._execute_memory_task())
+                self._compensation_task = asyncio.create_task(self._execute_memory_task())
+                self._compensation_task.add_done_callback(self._on_task_done)
+
+    @staticmethod
+    def _on_task_done(task: asyncio.Task) -> None:
+        """监控异步任务异常退出"""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            logger.error("补偿执行任务异常退出: %s", exc)
 
     def shutdown(self) -> None:
         """关闭调度器，未启动时跳过（幂等）"""
@@ -123,8 +135,7 @@ class SchedulerService:
                 return
 
             memory_task = MemoryTask()
-            success_count = 0
-            fail_count = 0
+            results: list[dict] = []
 
             # 遍历群聊列表
             for group_chat_id, group_info in index.items():
@@ -133,14 +144,19 @@ class SchedulerService:
 
                 is_success = not result_text.startswith("执行失败:")
                 if is_success:
-                    success_count += 1
                     # 成功时更新 index 的 last_updated
                     index[group_chat_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
-                else:
-                    fail_count += 1
 
-                # 记录执行结果
-                state_manager.append_result(group_chat_id, result_text, is_success)
+                results.append(
+                    {
+                        "group_chat_id": group_chat_id,
+                        "result": result_text,
+                        "success": is_success,
+                    }
+                )
+
+            # 批量写入执行结果
+            state_manager.append_results(results)
 
             # 保存更新后的 index
             state_manager.save_memory_index(index)
@@ -150,7 +166,12 @@ class SchedulerService:
                 {"memory_task": datetime.now(timezone.utc).isoformat()}
             )
 
-            logger.info("记忆更新任务完成: 成功=%d, 失败=%d", success_count, fail_count)
+            success_count = sum(1 for r in results if r["success"])
+            logger.info(
+                "记忆更新任务完成: 成功=%d, 失败=%d",
+                success_count,
+                len(results) - success_count,
+            )
 
         except Exception as e:
             logger.error("记忆更新任务异常: %s", str(e), exc_info=True)

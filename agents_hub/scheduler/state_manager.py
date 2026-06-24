@@ -13,6 +13,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+_MAX_RESULT_ENTRIES = 10
+
 
 class StateManager:
     """状态文件管理"""
@@ -57,26 +59,31 @@ class StateManager:
         except (ValueError, TypeError):
             return True
 
-    def append_result(self, group_chat_id: str, result: str, success: bool) -> None:
-        """追加执行结果到 result.json（保留最近 10 条）"""
-        results = self._read_json(self._result_path)
-        if not isinstance(results, list):
-            results = []
+    def append_results(self, results: list[dict]) -> None:
+        """批量追加执行结果到 result.json（保留最近 N 条）
 
-        results.append(
-            {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "group_chat_id": group_chat_id,
-                "success": success,
-                "result": result,
-            }
-        )
+        Args:
+            results: 结果列表，每项包含 group_chat_id、result、success
+        """
+        existing = self._read_json(self._result_path)
+        if not isinstance(existing, list):
+            existing = []
 
-        # 保留最近 10 条
-        if len(results) > 10:
-            results = results[-10:]
+        now = datetime.now(timezone.utc).isoformat()
+        for r in results:
+            existing.append(
+                {
+                    "timestamp": now,
+                    "group_chat_id": r["group_chat_id"],
+                    "success": r["success"],
+                    "result": r["result"],
+                }
+            )
 
-        self._write_json(self._result_path, results)
+        if len(existing) > _MAX_RESULT_ENTRIES:
+            existing = existing[-_MAX_RESULT_ENTRIES:]
+
+        self._write_json(self._result_path, existing)
 
     @staticmethod
     def _read_json(path: Path) -> dict | list:
@@ -92,10 +99,11 @@ class StateManager:
 
     @staticmethod
     def _write_json(path: Path, data: dict | list) -> None:
-        """写入 JSON 文件，自动创建父目录"""
+        """写入 JSON 文件，自动创建父目录
+
+        Raises:
+            OSError: 写入失败时抛出（权限不足、磁盘满等）
+        """
         path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except OSError as e:
-            logger.error("写入状态文件失败: %s, 错误: %s", path, e)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)

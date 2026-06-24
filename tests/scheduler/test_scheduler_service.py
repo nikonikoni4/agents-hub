@@ -4,7 +4,7 @@
 - 单例行为
 - start() / shutdown() 幂等性
 - CronTrigger 注册
-- 补偿执行逻辑
+- 补偿执行逻辑（含任务引用保存和异常监控）
 """
 
 from unittest.mock import MagicMock, patch
@@ -170,7 +170,7 @@ class TestCompensationExecution:
     def test_compensation_when_past_time_and_not_executed(
         self, mock_config, mock_sm_cls, mock_scheduler_cls, mock_asyncio
     ):
-        """已过执行时间且今天未执行时，触发补偿"""
+        """已过执行时间且今天未执行时，触发补偿并保存任务引用"""
         mock_scheduler = MagicMock()
         mock_scheduler.running = False
         mock_scheduler_cls.return_value = mock_scheduler
@@ -182,7 +182,10 @@ class TestCompensationExecution:
         mock_config.memory_task_cron_time = (10, 0)
         mock_config.data_path = "/tmp/data"
 
-        # 模拟当前时间 11:00（已过 10:00）
+        # 模拟 create_task 返回带 add_done_callback 的 task
+        mock_task = MagicMock()
+        mock_asyncio.create_task.return_value = mock_task
+
         fake_now = MagicMock()
         fake_now.hour = 11
         fake_now.minute = 0
@@ -195,6 +198,10 @@ class TestCompensationExecution:
 
         # 应该触发了补偿执行
         mock_asyncio.create_task.assert_called_once()
+        # 任务引用被保存
+        assert svc._compensation_task is mock_task
+        # 添加了异常监控回调
+        mock_task.add_done_callback.assert_called_once()
 
     @patch("agents_hub.scheduler.scheduler_service.asyncio")
     @patch("agents_hub.scheduler.scheduler_service.AsyncIOScheduler")
@@ -215,7 +222,6 @@ class TestCompensationExecution:
         mock_config.memory_task_cron_time = (10, 0)
         mock_config.data_path = "/tmp/data"
 
-        # 模拟当前时间 09:00（未到 10:00）
         fake_now = MagicMock()
         fake_now.hour = 9
         fake_now.minute = 0
@@ -228,6 +234,7 @@ class TestCompensationExecution:
 
         # 不触发补偿
         mock_asyncio.create_task.assert_not_called()
+        assert svc._compensation_task is None
 
     @patch("agents_hub.scheduler.scheduler_service.asyncio")
     @patch("agents_hub.scheduler.scheduler_service.AsyncIOScheduler")
@@ -248,7 +255,6 @@ class TestCompensationExecution:
         mock_config.memory_task_cron_time = (10, 0)
         mock_config.data_path = "/tmp/data"
 
-        # 模拟当前时间 11:00
         fake_now = MagicMock()
         fake_now.hour = 11
         fake_now.minute = 0
@@ -261,3 +267,40 @@ class TestCompensationExecution:
 
         # 不触发补偿
         mock_asyncio.create_task.assert_not_called()
+
+
+class TestOnTaskDone:
+    """_on_task_done 异常监控测试"""
+
+    def test_logs_exception_on_failure(self):
+        """任务异常时记录 ERROR 日志"""
+        mock_task = MagicMock()
+        mock_task.cancelled.return_value = False
+        mock_task.exception.return_value = RuntimeError("测试异常")
+
+        with patch("agents_hub.scheduler.scheduler_service.logger") as mock_logger:
+            SchedulerService._on_task_done(mock_task)
+
+        mock_logger.error.assert_called_once()
+        assert "补偿执行任务异常退出" in mock_logger.error.call_args[0][0]
+
+    def test_no_log_on_cancelled(self):
+        """任务取消时不记录"""
+        mock_task = MagicMock()
+        mock_task.cancelled.return_value = True
+
+        with patch("agents_hub.scheduler.scheduler_service.logger") as mock_logger:
+            SchedulerService._on_task_done(mock_task)
+
+        mock_logger.error.assert_not_called()
+
+    def test_no_log_on_success(self):
+        """任务成功时不记录"""
+        mock_task = MagicMock()
+        mock_task.cancelled.return_value = False
+        mock_task.exception.return_value = None
+
+        with patch("agents_hub.scheduler.scheduler_service.logger") as mock_logger:
+            SchedulerService._on_task_done(mock_task)
+
+        mock_logger.error.assert_not_called()

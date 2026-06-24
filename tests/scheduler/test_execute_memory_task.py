@@ -48,6 +48,11 @@ class TestExecuteMemoryTask:
             mock_mt.execute.assert_awaited_once_with("chat-1", "2020-01-01T00:00:00Z")
             mock_sm.save_memory_index.assert_called_once()
             mock_sm.save_schedule_state.assert_called_once()
+            # 验证使用批量写入
+            mock_sm.append_results.assert_called_once()
+            results_arg = mock_sm.append_results.call_args[0][0]
+            assert len(results_arg) == 1
+            assert results_arg[0]["success"] is True
 
     @pytest.mark.asyncio
     async def test_skips_when_should_not_execute(self):
@@ -86,8 +91,12 @@ class TestExecuteMemoryTask:
             await svc._execute_memory_task()
 
             assert mock_mt.execute.await_count == 2
-            # 两个群聊都记录了结果
-            assert mock_sm.append_result.call_count == 2
+            # 批量写入，只调用一次
+            mock_sm.append_results.assert_called_once()
+            results_arg = mock_sm.append_results.call_args[0][0]
+            assert len(results_arg) == 2
+            assert results_arg[0]["success"] is False
+            assert results_arg[1]["success"] is True
             # 只有成功的群聊更新了 index
             mock_sm.save_memory_index.assert_called_once()
 

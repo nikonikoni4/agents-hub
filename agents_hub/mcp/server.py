@@ -1,5 +1,5 @@
 """
-MCP Server 和 14 个工具
+MCP Server 和 15 个工具
 
 提供 Manager 编排团队协作的能力：
 1. call_agent: 派活给团队成员
@@ -1483,6 +1483,7 @@ async def get_memory_context(
         }
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    import json
     from datetime import datetime as dt
 
     logger.info("MCP 调用: get_memory_context, group_chat_id=%s", group_chat_id)
@@ -1495,9 +1496,20 @@ async def get_memory_context(
                 "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
             )
 
-        agent_name, _resolved_group_chat_id = identity
+        agent_name, resolved_group_chat_id = identity
 
-        # 2. 角色权限校验：仅记忆助手可调用
+        # 2. 校验 group_chat_id 与 token 归属关系
+        if group_chat_id != resolved_group_chat_id:
+            return make_error_response(
+                PERMISSION_DENIED,
+                f"权限不足：token 对应群聊 {resolved_group_chat_id}，不能访问群聊 {group_chat_id}",
+                details={
+                    "requested_group_chat_id": group_chat_id,
+                    "token_group_chat_id": resolved_group_chat_id,
+                },
+            )
+
+        # 3. 角色权限校验：仅记忆助手可调用
         if agent_name != config.default_memory_assistant_name:
             return make_error_response(
                 PERMISSION_DENIED,
@@ -1508,12 +1520,10 @@ async def get_memory_context(
                 },
             )
 
-        # 3. 读取历史总结文件
+        # 4. 读取历史总结文件
         history_file = config.memory_path / "agents_hub_history" / "history.jsonl"
         history_summary = ""
         if history_file.exists():
-            import json
-
             try:
                 lines = history_file.read_text(encoding="utf-8").strip().splitlines()
                 if lines:
@@ -1523,7 +1533,7 @@ async def get_memory_context(
             except (json.JSONDecodeError, OSError) as e:
                 logger.warning("读取 history.jsonl 失败: %s", e)
 
-        # 4. 获取新消息
+        # 5. 获取新消息
         after_time = None
         if last_updated:
             try:
@@ -1533,7 +1543,7 @@ async def get_memory_context(
 
         new_messages = get_group_chat_messages(group_chat_id, after_time=after_time)
 
-        # 5. 拼接上下文
+        # 6. 拼接上下文
         context_parts = []
         if history_summary:
             context_parts.append(f"[历史总结]\n{history_summary}")

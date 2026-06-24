@@ -2,6 +2,7 @@
 
 测试记忆助手上下文获取工具：
 - Token 验证
+- group_chat_id 与 token 归属校验
 - 角色权限校验（仅记忆助手可调用）
 - history.jsonl 读取
 - 新消息获取
@@ -13,10 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents_hub.mcp.errors import (
-    INVALID_TOKEN,
-    PERMISSION_DENIED,
-)
+from agents_hub.mcp.errors import INVALID_TOKEN, PERMISSION_DENIED
 
 
 @pytest.fixture
@@ -53,28 +51,37 @@ class TestGetMemoryContextTokenValidation:
         assert "error" in result
         assert result["error"]["code"] == INVALID_TOKEN
 
+
+class TestGetMemoryContextGroupChatValidation:
+    """group_chat_id 归属校验测试"""
+
     @pytest.mark.asyncio
-    async def test_group_chat_not_found_returns_error(self, mock_group_chat_manager):
+    async def test_mismatched_group_chat_id_denied(self, mock_group_chat_manager):
+        """token 对应的 group_chat_id 与请求的不匹配时拒绝"""
         from agents_hub.mcp.server import get_memory_context
 
-        mock_group_chat_manager.resolve_token.return_value = ("agent_1", "group_123")
-        mock_group_chat_manager.load_group_chat.side_effect = Exception("not found")
+        mock_group_chat_manager.resolve_token.return_value = (
+            "Agents-Hub-Memory-Assistant",
+            "group_123",
+        )
         result = await get_memory_context(
             agent_token="valid-token",
-            group_chat_id="group_123",
+            group_chat_id="group_other",  # 不匹配
         )
         assert "error" in result
+        assert result["error"]["code"] == PERMISSION_DENIED
+        assert "group_123" in result["error"]["message"]
+        assert "group_other" in result["error"]["message"]
 
 
 class TestGetMemoryContextPermission:
     """角色权限校验测试"""
 
     @pytest.mark.asyncio
-    async def test_non_memory_assistant_denied(self, mock_group_chat_manager, mock_group_chat):
+    async def test_non_memory_assistant_denied(self, mock_group_chat_manager):
         from agents_hub.mcp.server import get_memory_context
 
         mock_group_chat_manager.resolve_token.return_value = ("some_agent", "group_123")
-        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
         with patch("agents_hub.mcp.server.config") as mock_config:
             mock_config.default_memory_assistant_name = "Agents-Hub-Memory-Assistant"
             mock_config.memory_path = Path("/tmp/memory")
@@ -95,7 +102,6 @@ class TestGetMemoryContextPermission:
             "Agents-Hub-Memory-Assistant",
             "group_123",
         )
-        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         # 创建 history.jsonl
         history_dir = tmp_memory_path / "agents_hub_history"
@@ -140,7 +146,6 @@ class TestGetMemoryContextData:
             "Agents-Hub-Memory-Assistant",
             "group_123",
         )
-        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         with (
             patch("agents_hub.mcp.server.config") as mock_config,
@@ -171,7 +176,6 @@ class TestGetMemoryContextData:
             "Agents-Hub-Memory-Assistant",
             "group_123",
         )
-        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         history_dir = tmp_memory_path / "agents_hub_history"
         history_dir.mkdir(parents=True)
@@ -212,7 +216,6 @@ class TestGetMemoryContextData:
             "Agents-Hub-Memory-Assistant",
             "group_123",
         )
-        mock_group_chat_manager.load_group_chat.return_value = mock_group_chat
 
         with (
             patch("agents_hub.mcp.server.config") as mock_config,
