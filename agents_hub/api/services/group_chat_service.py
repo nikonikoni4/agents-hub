@@ -762,7 +762,15 @@ class GroupChatService:
                 details={"agent_name": agent_name},
             )
 
-        # 3. 执行压缩
+        # 3. 检查是否在私聊中
+        agent_member_info = group_chat.runtime.state.agent_member_infos.get(agent_name)
+        if agent_member_info and agent_member_info.status == "in_private_chat":
+            raise StateError(
+                f"Agent {agent_name} 正在单聊中，无法压缩上下文",
+                details={"agent_name": agent_name, "current_status": "in_private_chat"},
+            )
+
+        # 4. 执行压缩
         try:
             result = await agent.compress_context()
         except AgentBusyError as e:

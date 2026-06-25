@@ -1026,6 +1026,19 @@ class GroupChat:
 
         for agent in all_agents:
             logger.debug("压缩 Agent: %s", agent.name)
+
+            # 跳过正在私聊的 Agent
+            agent_member_info = self.runtime.state.agent_member_infos.get(agent.name)
+            if agent_member_info and agent_member_info.status == "in_private_chat":
+                results.append(
+                    {
+                        "agent_name": agent.name,
+                        "status": "skipped",
+                        "reason": "in_private_chat",
+                    }
+                )
+                continue
+
             try:
                 result = await agent.compress_context()
                 results.append(
@@ -1100,7 +1113,45 @@ class GroupChat:
                 details={"agent_name": message.send_to, "status": "stopped"},
             )
 
-        # 2. 投递消息
+        # 2. 检查目标 agent 是否在私聊中（拦截消息，返回自动回复）
+        if target_agent_info and target_agent_info.status == "in_private_chat":
+            from agents_hub.core.foundation import AgentMessage, MessageType
+
+            logger.info(
+                "消息被拦截: agent=%s 正在私聊中, from=%s", message.send_to, message.send_from
+            )
+
+            # 创建自动回复消息
+            auto_reply = AgentMessage(
+                send_from=message.send_to,
+                send_to=message.send_from,
+                content=f"当前{message.send_to}正在与user进行单独聊天，无法处理当前的消息：{message.content[:20]}，请稍后再发送该任务",
+                message_type=MessageType.NOTIFICATION,
+                call_id=message.call_id,
+            )
+
+            # 保存自动回复到群聊历史
+            from agents_hub.agent_bridge import AgentPlatform, AgentResult
+            from agents_hub.config.types import RoleType
+
+            reply_result = AgentResult(
+                text=auto_reply.content,
+                session_id="",
+                timestamp=datetime.now().isoformat(),
+                agent_name=message.send_to,
+                platform=AgentPlatform.CLAUDE,
+                role_type=RoleType.TEAM_MEMBER,
+            )
+            await self.runtime.add_message(reply_result)
+
+            # 通知前端刷新
+            from agents_hub.realtime import broadcast_group_chat_refresh
+
+            asyncio.get_running_loop().create_task(broadcast_group_chat_refresh(self.group_chat_id))
+
+            return
+
+        # 3. 投递消息
         await self.message_router.send_message(message)
 
         if message.message_type == MessageType.LOOP_MESSAGE:
@@ -1260,12 +1311,21 @@ class GroupChat:
     async def _stop_member_locked(self, agent_name: str) -> dict:
         """在成员生命周期锁内停止单个 agent。"""
         from agents_hub.core.foundation import AgentNotFoundError
+        from agents_hub.exceptions import StateError
 
         # 1. 查找 agent
         agent = self._find_agent(agent_name)
         if agent is None:
             logger.error("停止 Agent 失败: name=%s, 原因=未找到", agent_name)
             raise AgentNotFoundError(agent_name)
+
+        # 2. 检查是否在私聊中
+        agent_info = self.runtime.state.agent_member_infos.get(agent_name)
+        if agent_info and agent_info.status == "in_private_chat":
+            raise StateError(
+                f"Agent {agent_name} 正在单聊中，无法停止",
+                details={"agent_name": agent_name, "current_status": "in_private_chat"},
+            )
 
         logger.info("停止 Agent: %s", agent_name)
 
@@ -1477,12 +1537,21 @@ class GroupChat:
     async def _reset_member_locked(self, agent_name: str) -> dict:
         """在成员生命周期锁内重置单个 agent。"""
         from agents_hub.core.foundation import AgentNotFoundError
+        from agents_hub.exceptions import StateError
 
         # 1. 查找 agent
         agent = self._find_agent(agent_name)
         if agent is None:
             logger.error("重置 Agent 失败: name=%s, 原因=未找到", agent_name)
             raise AgentNotFoundError(agent_name)
+
+        # 2. 检查是否在私聊中
+        agent_info = self.runtime.state.agent_member_infos.get(agent_name)
+        if agent_info and agent_info.status == "in_private_chat":
+            raise StateError(
+                f"Agent {agent_name} 正在单聊中，无法重置",
+                details={"agent_name": agent_name, "current_status": "in_private_chat"},
+            )
 
         logger.info("重置 Agent: %s", agent_name)
 
