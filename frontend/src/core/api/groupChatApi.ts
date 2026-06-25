@@ -883,6 +883,7 @@ export async function uploadFile(chatId: string, file: File): Promise<UploadedFi
 
 /**
  * 压缩指定 Agent 的上下文
+ * timeout: 120 秒（压缩操作耗时较长）
  */
 export async function compressAgentContext(
   chatId: string,
@@ -891,19 +892,26 @@ export async function compressAgentContext(
 ): Promise<CompressApiResponse> {
   const qs = mock ? '?mock=true' : '';
   return apiClient.post<CompressApiResponse>(
-    `/group-chats/${chatId}/members/${agentName}/compress${qs}`
+    `/group-chats/${chatId}/members/${agentName}/compress${qs}`,
+    undefined,
+    { timeout: 120000 }
   );
 }
 
 /**
  * 全量压缩所有 Agent 的上下文
+ * timeout: 120 秒（压缩操作耗时较长）
  */
 export async function compressAllAgents(
   chatId: string,
   mock = false
 ): Promise<CompressAllApiResponse> {
   const qs = mock ? '?mock=true' : '';
-  return apiClient.post<CompressAllApiResponse>(`/group-chats/${chatId}/compress-all${qs}`);
+  return apiClient.post<CompressAllApiResponse>(
+    `/group-chats/${chatId}/compress-all${qs}`,
+    undefined,
+    { timeout: 120000 }
+  );
 }
 
 /**
@@ -934,6 +942,26 @@ export async function resetMember(
   agentName: string
 ): Promise<{ agent_name: string; status: string; new_session_id: string }> {
   return apiClient.post(`/group-chats/${chatId}/members/${agentName}/reset`);
+}
+
+/**
+ * 进入私聊模式
+ */
+export async function startPrivateChat(
+  chatId: string,
+  agentName: string
+): Promise<{ agent_name: string; status: string; main_session_id: string | null }> {
+  return apiClient.post(`/group-chats/${chatId}/members/${agentName}/start-private-chat`);
+}
+
+/**
+ * 退出私聊模式
+ */
+export async function stopPrivateChat(
+  chatId: string,
+  agentName: string
+): Promise<{ agent_name: string; status: string }> {
+  return apiClient.post(`/group-chats/${chatId}/members/${agentName}/stop-private-chat`);
 }
 
 /**

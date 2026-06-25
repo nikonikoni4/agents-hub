@@ -28,6 +28,8 @@ export {
   stopMember,
   startMember,
   resetMember,
+  startPrivateChat,
+  stopPrivateChat,
   getMemberHistory,
 } from './groupChatApi';
 

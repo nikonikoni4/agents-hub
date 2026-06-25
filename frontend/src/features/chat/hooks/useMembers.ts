@@ -20,7 +20,10 @@ import {
   stopMember as stopMemberApi,
   startMember as startMemberApi,
   resetMember as resetMemberApi,
+  startPrivateChat as startPrivateChatApi,
+  stopPrivateChat as stopPrivateChatApi,
 } from '@/core/api';
+import { usePrivateChatStore } from '@/features/private-chat';
 import { useCompressStatusStore } from '@/features/chat/store/compressStatusStore';
 import { wsManager } from '@/core/websocket/WebSocketManager';
 import type { GroupChatMemberApiItem, RoleApiResponse, RefreshSignal } from '@/shared/types';
@@ -191,6 +194,42 @@ export function useMembers() {
     [activeSessionId, fetchMembers]
   );
 
+  const startPrivateChat = useCallback(
+    async (agentName: string) => {
+      if (!activeSessionId) return;
+
+      try {
+        const result = await startPrivateChatApi(activeSessionId, agentName);
+        // 更新私聊 store
+        usePrivateChatStore.getState().startPrivateChat(activeSessionId, agentName);
+        await fetchMembers();
+        return result;
+      } catch (error) {
+        console.error('Failed to start private chat:', error);
+        throw error;
+      }
+    },
+    [activeSessionId, fetchMembers]
+  );
+
+  const stopPrivateChat = useCallback(
+    async (agentName: string) => {
+      if (!activeSessionId) return;
+
+      try {
+        const result = await stopPrivateChatApi(activeSessionId, agentName);
+        // 清除私聊 store
+        usePrivateChatStore.getState().stopPrivateChat();
+        await fetchMembers();
+        return result;
+      } catch (error) {
+        console.error('Failed to stop private chat:', error);
+        throw error;
+      }
+    },
+    [activeSessionId, fetchMembers]
+  );
+
   // 合并 compressing 状态到 members
   const membersWithCompressing = useMemo(() => {
     const result = members.map((m) => ({
@@ -214,5 +253,7 @@ export function useMembers() {
     stopMember,
     startMember,
     resetMember,
+    startPrivateChat,
+    stopPrivateChat,
   };
 }
