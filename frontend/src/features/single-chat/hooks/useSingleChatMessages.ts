@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSingleChatMessages } from '@/core/api/singleChatApi';
+import { getMemberHistory } from '@/core/api/groupChatApi';
 import { streamSSE } from '@/core/api/sseClient';
 import { useSingleChatStore } from '../store/singleChatStore';
 import type { SingleChatMessageApiItem, ToolCall } from '@/shared/types';
@@ -24,34 +25,50 @@ export function useSingleChatMessages() {
   const [streamingText, setStreamingText] = useState('');
   const abortRef = useRef<AbortController | null>(null);
 
-  // 获取消息历史（仅对真实单聊有效）
+  // 获取消息历史（支持真实单聊和 draft 模式）
   useEffect(() => {
-    if (!activeSingleChatId) {
-      setMessages([]);
-      return;
-    }
-
     let cancelled = false;
     setLoading(true);
 
-    getSingleChatMessages(activeSingleChatId)
-      .then((msgs) => {
-        if (!cancelled) {
-          setMessages(msgs);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
+    // 真实单聊：通过 single_chat_id 获取历史
+    if (activeSingleChatId) {
+      getSingleChatMessages(activeSingleChatId)
+        .then((msgs) => {
+          if (!cancelled) {
+            setMessages(msgs);
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        });
+    }
+    // Draft 模式：通过 group_chat_id 和 agent_name 获取历史
+    else if (draftChat?.type === 'continue_group_chat' && draftChat.group_chat_id) {
+      getMemberHistory(draftChat.group_chat_id, draftChat.agent_name)
+        .then((res) => {
+          if (!cancelled) {
+            setMessages(res.messages);
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        });
+    } else {
+      setMessages([]);
+      setLoading(false);
+    }
 
     return () => {
       cancelled = true;
       abortRef.current?.abort();
     };
-  }, [activeSingleChatId]);
+  }, [activeSingleChatId, draftChat]);
 
   // 发送消息（SSE 流式）
   const sendMessage = useCallback(

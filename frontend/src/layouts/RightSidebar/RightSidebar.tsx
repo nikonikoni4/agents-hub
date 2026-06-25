@@ -5,6 +5,7 @@ import { useAgentCalls } from '@/features/chat/hooks/useAgentCalls';
 import { useTasks } from '@/features/chat/hooks/useTasks';
 import { useSessionStore } from '@/features/session/store/sessionStore';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
+import { usePrivateChatStore } from '@/features/private-chat/store/privateChatStore';
 import { SingleChatPanel } from '@/features/single-chat/components/SingleChatPanel';
 import {
   AvatarImage,
@@ -89,6 +90,7 @@ export interface RightSidebarProps {
     startMember: (name: string) => Promise<void>;
     resetMember: (name: string) => Promise<void>;
     startPrivateChat?: (agentName: string) => Promise<unknown>;
+    stopPrivateChat?: (agentName: string) => Promise<unknown>;
   };
 }
 
@@ -131,6 +133,7 @@ function MemberItem({
   onReset,
   onViewHistory,
   onInvitePrivateChat,
+  onStopPrivateChat,
 }: {
   member: MemberWithRole;
   onToggleDocker: (memberName: string, enableDocker: boolean) => void;
@@ -140,6 +143,7 @@ function MemberItem({
   onReset: (memberName: string) => void;
   onViewHistory: (memberName: string) => void;
   onInvitePrivateChat?: (memberName: string) => void;
+  onStopPrivateChat?: (memberName: string) => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -307,6 +311,18 @@ function MemberItem({
                 💬 邀请单聊
               </button>
             )}
+            {onStopPrivateChat && member.status === 'in_private_chat' && (
+              <button
+                className={styles.memberMenuItem}
+                onClick={() => {
+                  setShowMenu(false);
+                  onStopPrivateChat(member.name);
+                }}
+                title="退出单聊"
+              >
+                🔚 退出单聊
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -346,6 +362,7 @@ export function RightSidebar({
     startMember,
     resetMember,
     startPrivateChat,
+    stopPrivateChat,
   } = membersData;
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
@@ -461,6 +478,23 @@ export function RightSidebar({
     [startPrivateChat, openDraftChat, activeSessionId, toast]
   );
 
+  const handleStopPrivateChat = useCallback(
+    async (agentName: string) => {
+      if (!stopPrivateChat) return;
+
+      try {
+        await stopPrivateChat(agentName);
+        // 清除私聊状态
+        usePrivateChatStore.getState().stopPrivateChat();
+        toast.success(`已退出与 ${agentName} 的单聊`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '退出单聊失败';
+        toast.error(message);
+      }
+    },
+    [stopPrivateChat, toast]
+  );
+
   return (
     <div
       className={`${styles.rightSidebar} ${collapsed ? styles.collapsed : ''}`}
@@ -532,6 +566,7 @@ export function RightSidebar({
                     onReset={resetMember}
                     onViewHistory={handleViewHistory}
                     onInvitePrivateChat={startPrivateChat ? handleInvitePrivateChat : undefined}
+                    onStopPrivateChat={stopPrivateChat ? handleStopPrivateChat : undefined}
                   />
                 ))
               )}
