@@ -430,7 +430,9 @@ class AgentBridge:
                 result_session_id = event.session_id
 
         # 组合完整结果
-        full_text = "".join([first_text_buffer, remaining_text])
+        # 注意：只包含剩余内容，首句已经通过 first_text 字段单独返回
+        # 避免 base_agent 层两次 add_message 时重复写入首句
+        full_text = remaining_text
 
         result = AgentResult(
             text=full_text,

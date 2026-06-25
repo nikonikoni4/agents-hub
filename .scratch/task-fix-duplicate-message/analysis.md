@@ -85,8 +85,32 @@
 - **方案 B**：如果其他地方依赖 `result.text` 包含完整内容，可能出现问题
 - **方案 C**：需要修改消息存储和查询逻辑，测试范围较大
 
-## 下一步行动
+## 最终修复方案
 
-1. 确认产品需求：首响功能是否必须保留？
-2. 如果必须保留：实施方案 B 或方案 C
-3. 如果可以暂时放弃：实施方案 A（最简单）
+**已实施方案 D**：直接在 agent_bridge 层修改拼接逻辑
+
+修改位置：`agents_hub/agent_bridge/bridge.py:435`
+
+```python
+# 修改前
+full_text = "".join([first_text_buffer, remaining_text])
+
+# 修改后
+full_text = remaining_text  # 只包含剩余内容，首句已通过 first_text 字段单独返回
+```
+
+**优点**：
+- 在最底层（agent_bridge）修复，影响范围可控
+- 语义清晰：first_text 是首句，result.text 是剩余内容
+- 不需要字符串匹配和截取，避免边界情况
+- 保留首响功能
+
+**修复后的数据流**：
+1. base_agent.py:276 写入首句（first_text）
+2. base_agent.py:1007/1012/1173 写入剩余内容（remaining_text）
+3. 用户看到完整消息，不重复
+
+**测试验证**：需要在群聊中发送消息，确认：
+1. 首句能够快速显示
+2. 完整消息不重复
+3. 消息内容完整（首句 + 剩余内容都在）
