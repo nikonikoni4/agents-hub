@@ -49,7 +49,7 @@ contract_refs: agents_hub/scheduler/scheduler_service.py, agents_hub/scheduler/s
 
 ### SchedulerService
 
-<key_function last_update="2026-06-25T11:30:28+08:00">
+<key_function last_update="2026-06-25T19:37:44+08:00">
 - agents_hub/scheduler/scheduler_service.py
   - scheduler_service.SchedulerService.start:42
   - scheduler_service.SchedulerService.shutdown:101

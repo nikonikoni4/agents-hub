@@ -1,6 +1,6 @@
 # Issue 00: LoopManager 单例重构
 
-Status: ready-for-agent
+Status: completed
 Type: AFK
 Blocked by: None - can start immediately
 User stories covered: 间接支持所有 User Stories（为后续 API 提供正确的内存模型）

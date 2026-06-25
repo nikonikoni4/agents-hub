@@ -332,6 +332,7 @@ class GroupChatRuntime:
                 logger.warning("群聊 message 引用不一致: session=%s", id(session))
             await self._persist(lambda: self.repository.save_group_chat_session(session))
             self._message_event.set()
+            await self._notify_change()
 
     async def add_system_message(self, content: str) -> None:
         """

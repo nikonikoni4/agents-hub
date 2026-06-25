@@ -181,7 +181,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
   if (!isOpen) return null;
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
+    <div className={styles.overlay}>
       <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
         {/* 标题栏 - 增加图标和副标题 */}
         <div className={styles.header}>

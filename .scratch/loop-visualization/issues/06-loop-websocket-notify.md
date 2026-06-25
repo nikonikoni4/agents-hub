@@ -1,6 +1,6 @@
 # Issue 06: WebSocket 通知集成
 
-Status: ready-for-agent
+Status: completed
 Type: AFK
 Blocked by: 03-loop-status-panel
 User stories covered: #11 (实时更新)

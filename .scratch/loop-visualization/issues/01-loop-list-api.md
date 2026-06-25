@@ -1,6 +1,6 @@
 # Issue 01: Loop 列表 API + 前端类型定义
 
-Status: ready-for-agent
+Status: completed
 Type: AFK
 Blocked by: None - can start immediately
 User stories covered: #1 (看到Loop状态), #12 (空状态提示)

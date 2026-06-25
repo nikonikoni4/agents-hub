@@ -100,7 +100,7 @@ class GroupChat:
 - Token 索引（`_tokens`）用于 MCP 工具的身份验证：token → (agent_name, group_chat_id)
 - 注销群聊时自动调用 `GroupChat.cleanup()` 清理所有资源
 
-<key_function last_update="2026-06-25T11:30:28+08:00">
+<key_function last_update="2026-06-25T19:37:43+08:00">
 - agents_hub/api/services/group_chat_service.py
   - group_chat_service.GroupChatService.create_group_chat:81
   - group_chat_service.GroupChatService.load_group_chat:186
@@ -120,15 +120,15 @@ class GroupChat:
   - group_chat.GroupChat._start_agent_tasks:260
   - group_chat.GroupChat._init_agents:278
   - group_chat.GroupChat._initialize_new_members:846
-  - group_chat.GroupChat._ensure_tokens:1646
-  - group_chat.GroupChat._heartbeat_loop:1685
+  - group_chat.GroupChat._ensure_tokens:1809
+  - group_chat.GroupChat._heartbeat_loop:1848
   - group_chat.GroupChat.add_member:356
-  - group_chat.GroupChat.stop_member:1237
-  - group_chat.GroupChat.start_member:1371
-  - group_chat.GroupChat.reset_member:1452
-  - group_chat.GroupChat.cleanup:1559
-  - group_chat.GroupChat._cleanup_agent_queue:1143
-  - group_chat.GroupChat._stop_agent_process:1342
+  - group_chat.GroupChat.stop_member:1288
+  - group_chat.GroupChat.start_member:1431
+  - group_chat.GroupChat.reset_member:1512
+  - group_chat.GroupChat.cleanup:1722
+  - group_chat.GroupChat._cleanup_agent_queue:1194
+  - group_chat.GroupChat._stop_agent_process:1402
 </key_function>
 
 ## 流程概览

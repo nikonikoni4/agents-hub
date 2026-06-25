@@ -271,6 +271,9 @@ class GroupChatService:
                     },
                 ) from e
 
+        # 4. 广播刷新信号，通知前端更新群聊列表
+        await broadcast_group_chat_refresh(group_chat_id)
+
         logger.info("群聊删除成功: id=%s", group_chat_id)
 
     async def get_projects_summary(self) -> list[ProjectSummary]:
@@ -553,6 +556,7 @@ class GroupChatService:
         )
         logger.debug("投递消息到 MessageRouter: call_id=%s, to=%s", call.call_id, send_to)
         await group_chat.send_message_to_agent(message)
+        await broadcast_group_chat_refresh(group_chat_id)
         logger.info("消息已发送: group=%s, to=%s, call_id=%s", group_chat_id, send_to, call.call_id)
 
     async def send_message_and_wait(

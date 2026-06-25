@@ -1,6 +1,6 @@
 # Issue 04: 扩展模态框（基础）
 
-Status: ready-for-agent
+Status: completed
 Type: AFK
 Blocked by: 03-loop-status-panel
 User stories covered: #5 (详细状态), #9 (迭代次数), #10 (错误信息)

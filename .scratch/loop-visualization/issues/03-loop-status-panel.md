@@ -1,6 +1,6 @@
 # Issue 03: 侧边栏 Loop 状态面板（基础）
 
-Status: ready-for-agent
+Status: completed
 Type: AFK
 Blocked by: 02-loop-active-api
 User stories covered: #1 (看到Loop状态), #2 (节点列表), #3 (执行节点), #4 (执行状态), #7 (下拉菜单), #8 (未激活状态), #12 (空状态)

@@ -1,6 +1,6 @@
 # Issue 02: 激活的 Loop API + 指定 Loop API
 
-Status: ready-for-agent
+Status: completed
 Type: AFK
 Blocked by: 01-loop-list-api
 User stories covered: #1 (看到Loop状态), #4 (执行状态)

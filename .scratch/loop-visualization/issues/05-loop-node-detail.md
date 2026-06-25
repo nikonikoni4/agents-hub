@@ -1,6 +1,6 @@
 # Issue 05: 节点详情面板
 
-Status: ready-for-agent
+Status: completed
 Type: AFK
 Blocked by: 04-loop-detail-modal
 User stories covered: #6 (节点提示词)
