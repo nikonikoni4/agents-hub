@@ -7,9 +7,10 @@
  * - 输入框
  *
  * 支持 draft 模式：无后端数据时直接显示输入界面
+ * 支持私聊模式：显示"退出单聊"按钮，3 分钟超时自动退出
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { AvatarImage, MarkdownRenderer } from '@/shared/components';
 import { NavigationCard } from '@/shared/components/NavigationCard/NavigationCard';
 import { parseNavigationMark } from '@/shared/utils/navigationParser';
@@ -19,8 +20,13 @@ import { useSingleChatMembers } from '../hooks/useSingleChatMembers';
 import { useNavigationHandler } from '../hooks/useNavigationHandler';
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea';
 import { ToolCallCard } from '@/shared/components';
+import { usePrivateChatStore } from '@/features/private-chat';
+import { stopPrivateChat as stopPrivateChatApi } from '@/core/api';
+import { useToast } from '@/shared/components/Toast/useToast';
 import type { SingleChatMessageApiItem } from '@/shared/types';
 import styles from './SingleChatPanel.module.css';
+
+const PRIVATE_CHAT_TIMEOUT = 3 * 60 * 1000; // 3 分钟
 
 const CHAT_TYPE_LABELS: Record<string, string> = {
   new: '全新',
@@ -84,6 +90,66 @@ export function SingleChatPanel() {
   const { textareaRef, adjustHeight } = useAutoResizeTextarea();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
+
+  // 私聊状态
+  const activeGroupChatId = usePrivateChatStore((s) => s.activeGroupChatId);
+  const activeAgentName = usePrivateChatStore((s) => s.activeAgentName);
+  const stopPrivateChatStore = usePrivateChatStore((s) => s.stopPrivateChat);
+  const resetTimer = usePrivateChatStore((s) => s.resetTimer);
+  const isPrivateChat = !!activeGroupChatId && !!activeAgentName;
+
+  // 计时器回调（超时自动退出）
+  const handleTimeout = useCallback(async () => {
+    if (!activeGroupChatId || !activeAgentName) return;
+
+    try {
+      await stopPrivateChatApi(activeGroupChatId, activeAgentName);
+      stopPrivateChatStore();
+      closeSingleChat();
+      toast.info('单聊已自动退出（3 分钟无活动）');
+    } catch (error) {
+      console.error('Failed to auto stop private chat:', error);
+    }
+  }, [activeGroupChatId, activeAgentName, stopPrivateChatStore, closeSingleChat, toast]);
+
+  // 启动计时器
+  useEffect(() => {
+    if (!isPrivateChat) return;
+
+    const newTimerId = setTimeout(handleTimeout, PRIVATE_CHAT_TIMEOUT);
+    usePrivateChatStore.setState({ timerId: newTimerId });
+
+    return () => {
+      clearTimeout(newTimerId);
+    };
+  }, [isPrivateChat, handleTimeout]);
+
+  // 退出单聊
+  const handleExitPrivateChat = useCallback(async () => {
+    if (!activeGroupChatId || !activeAgentName) return;
+
+    try {
+      await stopPrivateChatApi(activeGroupChatId, activeAgentName);
+      stopPrivateChatStore();
+      closeSingleChat();
+      toast.success('已退出单聊');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '退出单聊失败';
+      toast.error(message);
+    }
+  }, [activeGroupChatId, activeAgentName, stopPrivateChatStore, closeSingleChat, toast]);
+
+  // 发送消息时重置计时器
+  const handleSendMessage = useCallback(
+    async (text: string) => {
+      if (isPrivateChat) {
+        resetTimer();
+      }
+      await sendMessage(text);
+    },
+    [isPrivateChat, resetTimer, sendMessage]
+  );
 
   // 从已有列表中查找，或用 draft 构造临时对象
   const activeChat = activeSingleChatId
@@ -130,7 +196,7 @@ export function SingleChatPanel() {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-    await sendMessage(trimmed);
+    await handleSendMessage(trimmed);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -169,14 +235,25 @@ export function SingleChatPanel() {
         >
           📍
         </button>
-        <button
-          type="button"
-          className={styles.closeBtn}
-          onClick={closeSingleChat}
-          title="关闭单聊"
-        >
-          ×
-        </button>
+        {isPrivateChat ? (
+          <button
+            type="button"
+            className={styles.exitPrivateChatBtn}
+            onClick={handleExitPrivateChat}
+            title="退出单聊"
+          >
+            退出单聊
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={closeSingleChat}
+            title="关闭单聊"
+          >
+            ×
+          </button>
+        )}
       </div>
 
       {/* 消息列表 */}

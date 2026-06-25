@@ -97,6 +97,24 @@
   opacity: 1;
 }
 
+.exitPrivateChatBtn {
+  padding: 4px 12px;
+  border: 1px solid #ef4444;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.exitPrivateChatBtn:hover {
+  background: #ef4444;
+  color: white;
+}
+
 /* 消息列表 */
 
 .messages {
