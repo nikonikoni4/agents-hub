@@ -303,6 +303,79 @@ html[data-theme='dark'] {
   stroke-linejoin: round;
 }
 
+/* 路径输入容器（用于定位下拉菜单） */
+.pathInputWrapper {
+  position: relative;
+}
+
+/* 路径历史下拉菜单 */
+.pathHistoryDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  overflow: hidden;
+}
+
+.pathHistoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pathHistoryTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.pathHistoryClear {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.pathHistoryClear:hover {
+  color: var(--text-primary);
+  background: var(--bg-shadow);
+}
+
+.pathHistoryList {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.pathHistoryItem {
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pathHistoryItem:hover {
+  background: var(--bg-bubble);
+}
+
+.pathHistoryText {
+  font-size: 13px;
+  color: var(--text-primary);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 角色选择器 - 卡片网格布局 */
 .roleGrid {
   display: grid;

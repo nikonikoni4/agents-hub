@@ -2,9 +2,10 @@
  * 创建群组对话弹窗
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FolderIcon, AvatarImage } from '@/shared/components';
 import { useCreateGroupChat } from '../hooks/useCreateGroupChat';
+import { usePathHistory } from '../hooks/usePathHistory';
 import { useSessionStore } from '../store/sessionStore';
 import { useCreateChatData, useGroupChatMembers } from '@/shared/hooks';
 import { useSingleChatStore } from '@/features/single-chat/store/singleChatStore';
@@ -50,6 +51,22 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const [projectPath, setProjectPath] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const pathInputRef = useRef<HTMLDivElement>(null);
+
+  // 路径历史管理
+  const { history, addToHistory, clearHistory } = usePathHistory();
+
+  // 点击外部关闭历史下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (pathInputRef.current && !pathInputRef.current.contains(e.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // 单聊状态
   const [singleMode, setSingleMode] = useState<SingleMode>('new');
@@ -69,6 +86,7 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
     setSelectedWorkers([]);
     setProjectPath('');
     setSelectedTeam(null);
+    setShowHistory(false);
     setSingleMode('new');
     setSelectedAgent(null);
     setSelectedGroupChat(null);
@@ -110,10 +128,17 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
           window as { showDirectoryPicker: () => Promise<{ name: string }> }
         ).showDirectoryPicker();
         setProjectPath(handle.name);
+        addToHistory(handle.name);
       } catch {
         // 用户取消选择
       }
     }
+  };
+
+  // 选择历史路径
+  const handleSelectHistory = (path: string) => {
+    setProjectPath(path);
+    setShowHistory(false);
   };
 
   const canSubmit =
@@ -126,12 +151,14 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
   const handleSubmit = async () => {
     if (chatMode === 'group') {
       if (!canSubmit || !selectedLeader) return;
+      const trimmedPath = projectPath.trim();
       const chatId = await createChat({
         group_chat_name: name.trim(),
         team_members: [selectedLeader, ...selectedWorkers],
-        project_path: projectPath.trim(),
+        project_path: trimmedPath,
       });
       if (chatId) {
+        addToHistory(trimmedPath);
         selectGroupChat(chatId);
         onSuccess?.();
         handleClose();
@@ -505,19 +532,47 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                       <span className={`${styles.badge} ${styles.badgeRequired}`}>必选</span>
                     </label>
                   </div>
-                  <div className={styles.pathRow}>
-                    <input
-                      type="text"
-                      className={`${styles.input} ${styles.pathInput}`}
-                      value={projectPath}
-                      onChange={(e) => setProjectPath(e.target.value)}
-                      placeholder="/home/user/projects/your-project"
-                    />
-                    {import.meta.env.PROD && (
-                      <button type="button" className={styles.browseBtn} onClick={handleBrowse}>
-                        <FolderIcon />
-                        浏览
-                      </button>
+                  <div className={styles.pathInputWrapper} ref={pathInputRef}>
+                    <div className={styles.pathRow}>
+                      <input
+                        type="text"
+                        className={`${styles.input} ${styles.pathInput}`}
+                        value={projectPath}
+                        onChange={(e) => setProjectPath(e.target.value)}
+                        onFocus={() => history.length > 0 && setShowHistory(true)}
+                        placeholder="/home/user/projects/your-project"
+                      />
+                      {import.meta.env.PROD && (
+                        <button type="button" className={styles.browseBtn} onClick={handleBrowse}>
+                          <FolderIcon />
+                          浏览
+                        </button>
+                      )}
+                    </div>
+                    {showHistory && history.length > 0 && (
+                      <div className={styles.pathHistoryDropdown}>
+                        <div className={styles.pathHistoryHeader}>
+                          <span className={styles.pathHistoryTitle}>历史路径</span>
+                          <button
+                            type="button"
+                            className={styles.pathHistoryClear}
+                            onClick={clearHistory}
+                          >
+                            清除
+                          </button>
+                        </div>
+                        <div className={styles.pathHistoryList}>
+                          {history.map((path) => (
+                            <div
+                              key={path}
+                              className={styles.pathHistoryItem}
+                              onClick={() => handleSelectHistory(path)}
+                            >
+                              <span className={styles.pathHistoryText}>{path}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
