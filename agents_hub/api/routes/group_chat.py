@@ -25,6 +25,7 @@ from agents_hub.api.schemas.group_chats import (
     PinMessageRequest,
     PinnedMessageInfo,
     PinOperationResponse,
+    PrivateChatResponse,
     ProjectSummary,
     TaskListInfo,
     UploadedFileInfo,
@@ -431,6 +432,41 @@ async def start_member(
 ):
     """重新启动已停止的成员"""
     return await service.start_member(group_chat_id, agent_name)
+
+
+@router.post(
+    "/{group_chat_id}/members/{agent_name}/start-private-chat",
+    response_model=PrivateChatResponse,
+    responses={
+        404: {"description": "群聊或 Agent 不存在"},
+        403: {"description": "Agent 是 Manager，禁止私聊"},
+        409: {"description": "Agent 非 idle 状态"},
+    },
+)
+async def start_private_chat(
+    group_chat_id: str,
+    agent_name: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """进入私聊模式"""
+    return await service.start_private_chat(group_chat_id, agent_name)
+
+
+@router.post(
+    "/{group_chat_id}/members/{agent_name}/stop-private-chat",
+    response_model=PrivateChatResponse,
+    responses={
+        404: {"description": "群聊或 Agent 不存在"},
+        409: {"description": "Agent 非 in_private_chat 状态"},
+    },
+)
+async def stop_private_chat(
+    group_chat_id: str,
+    agent_name: str,
+    service: GroupChatService = Depends(get_group_chat_service),
+):
+    """退出私聊模式"""
+    return await service.stop_private_chat(group_chat_id, agent_name)
 
 
 @router.post(

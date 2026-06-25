@@ -1541,6 +1541,98 @@ class GroupChat:
             "new_session_id": new_session_id,
         }
 
+    async def start_private_chat(self, agent_name: str) -> dict:
+        """
+        将 Agent 状态设置为 in_private_chat，允许前端私聊。
+
+        前置条件：Agent 必须处于 idle 状态。
+        Manager 角色禁止私聊。
+
+        Args:
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "in_private_chat", "main_session_id": str | None}
+
+        Raises:
+            AgentNotFoundError: Agent 不存在
+            StateError: Agent 非 idle 状态
+            PermissionError: Agent 是 Manager
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+        from agents_hub.exceptions import StateError
+
+        # 检查是否为 Manager
+        if agent_name == self.manager.name if self.manager else False:
+            logger.warning("禁止与 Manager 私聊: agent=%s", agent_name)
+            raise PermissionError("Manager 不允许进入私聊")
+
+        # 获取 Agent 状态
+        agent_info = self.runtime.state.agent_member_infos.get(agent_name)
+        if not agent_info:
+            raise AgentNotFoundError(agent_name)
+
+        # 检查状态是否为 idle
+        if agent_info.status != "idle":
+            raise StateError(
+                f"Agent {agent_name} 当前状态为 {agent_info.status}，只有 idle 状态才能进入私聊",
+                details={"agent_name": agent_name, "current_status": agent_info.status},
+            )
+
+        # 更新状态
+        agent_info.status = "in_private_chat"
+        await self.runtime.save_agent_members(context=f"Start private chat: {agent_name}")
+
+        logger.info("Agent %s 已进入私聊", agent_name)
+
+        return {
+            "agent_name": agent_name,
+            "status": "in_private_chat",
+            "main_session_id": agent_info.main_session,
+        }
+
+    async def stop_private_chat(self, agent_name: str) -> dict:
+        """
+        将 Agent 状态从 in_private_chat 恢复为 idle。
+
+        前置条件：Agent 必须处于 in_private_chat 状态。
+
+        Args:
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "idle"}
+
+        Raises:
+            AgentNotFoundError: Agent 不存在
+            StateError: Agent 非 in_private_chat 状态
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+        from agents_hub.exceptions import StateError
+
+        # 获取 Agent 状态
+        agent_info = self.runtime.state.agent_member_infos.get(agent_name)
+        if not agent_info:
+            raise AgentNotFoundError(agent_name)
+
+        # 检查状态是否为 in_private_chat
+        if agent_info.status != "in_private_chat":
+            raise StateError(
+                f"Agent {agent_name} 当前状态为 {agent_info.status}，只有 in_private_chat 状态才能退出私聊",
+                details={"agent_name": agent_name, "current_status": agent_info.status},
+            )
+
+        # 更新状态
+        agent_info.status = "idle"
+        await self.runtime.save_agent_members(context=f"Stop private chat: {agent_name}")
+
+        logger.info("Agent %s 已退出私聊", agent_name)
+
+        return {
+            "agent_name": agent_name,
+            "status": "idle",
+        }
+
     async def stop(self):
         """停止群聊，停止所有 agent 的 run() 任务。 暂时不要使用这个方法"""
         logger.info("停止群聊: id=%s", self.group_chat_id)

@@ -887,6 +887,96 @@ class GroupChatService:
 
         return result
 
+    async def start_private_chat(self, group_chat_id: str, agent_name: str) -> dict:
+        """进入私聊模式
+
+        Args:
+            group_chat_id: 群聊 ID
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "in_private_chat", "main_session_id": str | None}
+
+        Raises:
+            ResourceNotFoundError: 群聊或 Agent 不存在
+            StateError: Agent 非 idle 状态（409）
+            PermissionError: Agent 是 Manager（403）
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+        from agents_hub.exceptions import StateError
+
+        logger.info("进入私聊: group=%s, agent=%s", group_chat_id, agent_name)
+
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        try:
+            result = await group_chat.start_private_chat(agent_name)
+        except AgentNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"Agent '{agent_name}' 不在此群聊中",
+                details={"agent_name": agent_name},
+            ) from e
+        except StateError as e:
+            raise e
+        except PermissionError as e:
+            raise StateError(
+                str(e),
+                details={"agent_name": agent_name, "reason": "manager_forbidden"},
+            ) from e
+
+        # 发送 WebSocket 通知
+        await broadcast_group_chat_refresh(group_chat_id)
+
+        return result
+
+    async def stop_private_chat(self, group_chat_id: str, agent_name: str) -> dict:
+        """退出私聊模式
+
+        Args:
+            group_chat_id: 群聊 ID
+            agent_name: Agent 名称
+
+        Returns:
+            dict: {"agent_name": str, "status": "idle"}
+
+        Raises:
+            ResourceNotFoundError: 群聊或 Agent 不存在
+            StateError: Agent 非 in_private_chat 状态（409）
+        """
+        from agents_hub.core.foundation import AgentNotFoundError
+        from agents_hub.exceptions import StateError
+
+        logger.info("退出私聊: group=%s, agent=%s", group_chat_id, agent_name)
+
+        try:
+            group_chat = await self.group_chat_manager.load_group_chat(group_chat_id)
+        except GroupChatNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"群聊不存在: {group_chat_id}",
+                details={"group_chat_id": group_chat_id},
+            ) from e
+
+        try:
+            result = await group_chat.stop_private_chat(agent_name)
+        except AgentNotFoundError as e:
+            raise ResourceNotFoundError(
+                f"Agent '{agent_name}' 不在此群聊中",
+                details={"agent_name": agent_name},
+            ) from e
+        except StateError as e:
+            raise e
+
+        # 发送 WebSocket 通知
+        await broadcast_group_chat_refresh(group_chat_id)
+
+        return result
+
     async def reset_member(self, group_chat_id: str, agent_name: str) -> dict:
         """重置成员（清空上下文并重新初始化）
 

@@ -289,6 +289,14 @@ class CompressAllResponse(BaseModel):
     results: list[dict] = Field(..., description="每个 Agent 的压缩结果")
 
 
+class PrivateChatResponse(BaseModel):
+    """进入/退出私聊响应"""
+
+    agent_name: str = Field(..., description="Agent 名称")
+    status: str = Field(..., description="Agent 状态：in_private_chat 或 idle")
+    main_session_id: str | None = Field(None, description="Agent 的主会话 ID（仅进入私聊时返回）")
+
+
 class MemberHistoryMessage(BaseModel):
     """成员历史聊天记录消息"""
 
