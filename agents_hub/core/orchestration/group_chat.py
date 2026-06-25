@@ -1163,16 +1163,16 @@ class GroupChat:
             )
             return
 
-        # 3. 获取发送方的 platform
+        # 4. 获取发送方的 platform
         sender_agent = self._find_agent(message.send_from)
         platform = sender_agent.role_config.platform if sender_agent else AgentPlatform.CLAUDE
 
-        # 4. 格式化消息内容（如果还没有 @ 前缀）
+        # 5. 格式化消息内容（如果还没有 @ 前缀）
         content = message.content
         if not content.startswith(f"@{message.send_to}"):
             content = render_for_chat(message.send_from, message.send_to, content)
 
-        # 5. 构造 AgentResult 并保存（只需要 agent_name, text, timestamp, platform）
+        # 6. 构造 AgentResult 并保存（只需要 agent_name, text, timestamp, platform）
         role_type = getattr(sender_agent, "role_type", RoleType.TEAM_MEMBER)
         sender_result = AgentResult(
             text=content,
@@ -1329,7 +1329,7 @@ class GroupChat:
 
         logger.info("停止 Agent: %s", agent_name)
 
-        # 2. 先更新状态为 "stopped"（阻止新消息投递）
+        # 3. 先更新状态为 "stopped"（阻止新消息投递）
         try:
             agent_info = self.runtime.get_agent_member_info(agent_name)
         except KeyError:
@@ -1345,13 +1345,13 @@ class GroupChat:
         agent_info.status = "stopped"
         await self.runtime.save_agent_members(context=f"Stop agent {agent_name}")
 
-        # 3. ⭐ 新增：立即终止正在运行的 CLI 进程
+        # 4. 立即终止正在运行的 CLI 进程
         await self._stop_agent_process(agent)
 
-        # 4. 停止 agent.run() 循环（发送哨兵消息并设置 _run=False）
+        # 5. 停止 agent.run() 循环（发送哨兵消息并设置 _run=False）
         await agent.stop()
 
-        # 5. 强制取消 agent run 的 asyncio.Task
+        # 6. 强制取消 agent run 的 asyncio.Task
         if self.manager and agent_name == self.manager.name:
             if self.manager_task and not self.manager_task.done():
                 self.manager_task.cancel()
@@ -1368,10 +1368,10 @@ class GroupChat:
                         await task
                 del self.worker_tasks[agent_name]
 
-        # 5. 清空消息队列并闭环未完成的 AgentCall
+        # 7. 清空消息队列并闭环未完成的 AgentCall
         processed_calls = await self._cleanup_agent_queue(agent_name)
 
-        # 6. 从 MessageRouter 注销
+        # 8. 从 MessageRouter 注销
         self.message_router.unregister(agent_name)
         logger.debug("Agent %s 已从 MessageRouter 注销", agent_name)
 
@@ -1555,33 +1555,33 @@ class GroupChat:
 
         logger.info("重置 Agent: %s", agent_name)
 
-        # 2. 如果正在运行，先停止
+        # 3. 如果正在运行，先停止
         agent_member_info = self.runtime.state.agent_member_infos.get(agent_name)
         if agent_member_info and agent_member_info.status != "stopped":
             await self._stop_member_locked(agent_name)
 
-        # 3. 清空 main_session 和 btw_sessions
+        # 4. 清空 main_session 和 btw_sessions
         if agent_member_info:
             agent_member_info.main_session = None
             agent_member_info.btw_session = []
 
-        # 4. 清空消息队列（stop_member 已经做了，这里确保）
+        # 5. 清空消息队列（stop_member 已经做了，这里确保）
         while not agent.message_queue.empty():
             try:
                 agent.message_queue.get_nowait()
             except asyncio.QueueEmpty:
                 break
 
-        # 5. 重置 context_usage
+        # 6. 重置 context_usage
         agent_info = self.runtime.get_agent_member_info(agent_name)
         assert agent_info is not None, f"Agent {agent_name} not found"
         agent_info.context_usage = 0
         await self.runtime.save_agent_members(context=f"Reset agent {agent_name}")
 
-        # 6. 重新初始化（打招呼）
+        # 7. 重新初始化（打招呼）
         await self._initialize_single_member(agent)
 
-        # 7. 自动启动
+        # 8. 自动启动
         agent._run = True
         if self.manager and agent_name == self.manager.name:
             self.manager_task = asyncio.create_task(agent.run())
@@ -1592,10 +1592,10 @@ class GroupChat:
             new_task.add_done_callback(lambda t, n=agent_name: self._on_agent_task_done(n, t))  # type: ignore[misc]
             self.worker_tasks[agent_name] = new_task
 
-        # 8. 重新注册到 MessageRouter
+        # 9. 重新注册到 MessageRouter
         self.message_router.register(agent_name, agent.message_queue)
 
-        # 9. 更新状态为 "idle"
+        # 10. 更新状态为 "idle"
         agent_info.status = "idle"
         await self.runtime.save_agent_members(context=f"Reset agent {agent_name} complete")
 

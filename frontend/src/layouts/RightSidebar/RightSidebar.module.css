@@ -219,18 +219,18 @@
 }
 
 .statusPrivateChat {
-  background: rgba(168, 85, 247, 0.15);
-  color: #a855f7;
+  background: var(--status-private-chat-bg);
+  color: var(--status-private-chat);
 }
 
 .statusLoop {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+  background: var(--status-loop-bg);
+  color: var(--status-loop);
 }
 
 .statusError {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
   cursor: help;
 }
 

@@ -20,13 +20,9 @@ import { useSingleChatMembers } from '../hooks/useSingleChatMembers';
 import { useNavigationHandler } from '../hooks/useNavigationHandler';
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea';
 import { ToolCallCard } from '@/shared/components';
-import { usePrivateChatStore } from '@/features/private-chat';
-import { stopPrivateChat as stopPrivateChatApi } from '@/core/api';
-import { useToast } from '@/shared/components/Toast/useToast';
+import { usePrivateChat } from '@/features/private-chat';
 import type { SingleChatMessageApiItem } from '@/shared/types';
 import styles from './SingleChatPanel.module.css';
-
-const PRIVATE_CHAT_TIMEOUT = 3 * 60 * 1000; // 3 分钟
 
 const CHAT_TYPE_LABELS: Record<string, string> = {
   new: '全新',
@@ -90,65 +86,44 @@ export function SingleChatPanel() {
   const { textareaRef, adjustHeight } = useAutoResizeTextarea();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const toast = useToast();
 
-  // 私聊状态
-  const activeGroupChatId = usePrivateChatStore((s) => s.activeGroupChatId);
-  const activeAgentName = usePrivateChatStore((s) => s.activeAgentName);
-  const stopPrivateChatStore = usePrivateChatStore((s) => s.stopPrivateChat);
-  const resetTimer = usePrivateChatStore((s) => s.resetTimer);
-  const isPrivateChat = !!activeGroupChatId && !!activeAgentName;
+  // 通过 hook 获取私聊功能，不直接操作 store 和 API
+  const {
+    isPrivateChat,
+    stopPrivateChat,
+    startTimer,
+    resetTimer,
+    handleTimeout,
+  } = usePrivateChat();
 
-  // 计时器回调（超时自动退出）
-  const handleTimeout = useCallback(async () => {
-    if (!activeGroupChatId || !activeAgentName) return;
-
-    try {
-      await stopPrivateChatApi(activeGroupChatId, activeAgentName);
-      stopPrivateChatStore();
-      closeSingleChat();
-      toast.info('单聊已自动退出（3 分钟无活动）');
-    } catch (error) {
-      console.error('Failed to auto stop private chat:', error);
-    }
-  }, [activeGroupChatId, activeAgentName, stopPrivateChatStore, closeSingleChat, toast]);
-
-  // 启动计时器
+  // 启动计时器（私聊模式下）
   useEffect(() => {
     if (!isPrivateChat) return;
 
-    const newTimerId = setTimeout(handleTimeout, PRIVATE_CHAT_TIMEOUT);
-    usePrivateChatStore.setState({ timerId: newTimerId });
+    startTimer(handleTimeout);
 
     return () => {
-      clearTimeout(newTimerId);
+      // cleanup 由 hook 处理
     };
-  }, [isPrivateChat, handleTimeout]);
+  }, [isPrivateChat, startTimer, handleTimeout]);
 
   // 退出单聊
   const handleExitPrivateChat = useCallback(async () => {
-    if (!activeGroupChatId || !activeAgentName) return;
-
-    try {
-      await stopPrivateChatApi(activeGroupChatId, activeAgentName);
-      stopPrivateChatStore();
+    const success = await stopPrivateChat();
+    if (success) {
       closeSingleChat();
-      toast.success('已退出单聊');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '退出单聊失败';
-      toast.error(message);
     }
-  }, [activeGroupChatId, activeAgentName, stopPrivateChatStore, closeSingleChat, toast]);
+  }, [stopPrivateChat, closeSingleChat]);
 
   // 发送消息时重置计时器
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (isPrivateChat) {
-        resetTimer();
+        resetTimer(handleTimeout);
       }
       await sendMessage(text);
     },
-    [isPrivateChat, resetTimer, sendMessage]
+    [isPrivateChat, resetTimer, handleTimeout, sendMessage]
   );
 
   // 从已有列表中查找，或用 draft 构造临时对象

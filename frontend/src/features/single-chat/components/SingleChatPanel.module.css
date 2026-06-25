@@ -99,9 +99,9 @@
 
 .exitPrivateChatBtn {
   padding: 4px 12px;
-  border: 1px solid #ef4444;
+  border: 1px solid var(--status-danger);
   background: transparent;
-  color: #ef4444;
+  color: var(--status-danger);
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
@@ -111,7 +111,7 @@
 }
 
 .exitPrivateChatBtn:hover {
-  background: #ef4444;
+  background: var(--status-danger);
   color: white;
 }
 

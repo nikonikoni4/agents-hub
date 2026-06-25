@@ -5,3 +5,4 @@
  */
 
 export { usePrivateChatStore } from './store/privateChatStore';
+export { usePrivateChat } from './hooks/usePrivateChat';

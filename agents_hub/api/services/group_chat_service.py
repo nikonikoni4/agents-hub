@@ -910,7 +910,6 @@ class GroupChatService:
             StateError: Agent 非 idle 状态或是 Manager（409）
         """
         from agents_hub.core.foundation import AgentNotFoundError
-        from agents_hub.exceptions import StateError
 
         logger.info("进入私聊: group=%s, agent=%s", group_chat_id, agent_name)
 
@@ -929,8 +928,6 @@ class GroupChatService:
                 f"Agent '{agent_name}' 不在此群聊中",
                 details={"agent_name": agent_name},
             ) from e
-        except StateError as e:
-            raise e
 
         # 发送 WebSocket 通知
         await broadcast_group_chat_refresh(group_chat_id)
@@ -952,7 +949,6 @@ class GroupChatService:
             StateError: Agent 非 in_private_chat 状态（409）
         """
         from agents_hub.core.foundation import AgentNotFoundError
-        from agents_hub.exceptions import StateError
 
         logger.info("退出私聊: group=%s, agent=%s", group_chat_id, agent_name)
 
@@ -971,8 +967,6 @@ class GroupChatService:
                 f"Agent '{agent_name}' 不在此群聊中",
                 details={"agent_name": agent_name},
             ) from e
-        except StateError as e:
-            raise e
 
         # 发送 WebSocket 通知
         await broadcast_group_chat_refresh(group_chat_id)

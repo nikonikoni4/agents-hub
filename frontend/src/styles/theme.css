@@ -53,6 +53,12 @@
   --status-running-bg: rgba(74, 158, 255, 0.1);
   --status-running-bg-light: rgba(74, 158, 255, 0.15);
   --status-running-shadow: rgba(74, 158, 255, 0.3);
+  --status-private-chat: #a855f7;
+  --status-private-chat-bg: rgba(168, 85, 247, 0.15);
+  --status-loop: #3b82f6;
+  --status-loop-bg: rgba(59, 130, 246, 0.15);
+  --status-danger: #ef4444;
+  --status-danger-bg: rgba(239, 68, 68, 0.15);
 
   /* 遮罩层 */
   --overlay-bg: rgba(0, 0, 0, 0.5);
@@ -96,6 +102,12 @@ html[data-theme='dark'] {
   --status-running-bg: rgba(74, 158, 255, 0.1);
   --status-running-bg-light: rgba(74, 158, 255, 0.15);
   --status-running-shadow: rgba(74, 158, 255, 0.3);
+  --status-private-chat: #a855f7;
+  --status-private-chat-bg: rgba(168, 85, 247, 0.15);
+  --status-loop: #3b82f6;
+  --status-loop-bg: rgba(59, 130, 246, 0.15);
+  --status-danger: #ef4444;
+  --status-danger-bg: rgba(239, 68, 68, 0.15);
 
   /* 遮罩层 */
   --overlay-bg: rgba(0, 0, 0, 0.7);

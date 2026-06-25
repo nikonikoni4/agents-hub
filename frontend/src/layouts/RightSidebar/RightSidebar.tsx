@@ -23,6 +23,35 @@ import styles from './RightSidebar.module.css';
 
 type SidebarTab = 'single-chat' | 'chat' | 'tasks' | 'preview' | 'diff' | 'web' | 'history';
 
+/** 成员状态样式映射 */
+const STATUS_CLASS_MAP: Record<string, string> = {
+  error: styles.statusError ?? '',
+  busy: styles.statusBusy ?? '',
+  stopped: styles.statusStopped ?? '',
+  in_private_chat: styles.statusPrivateChat ?? '',
+  in_loop: styles.statusLoop ?? '',
+};
+
+/** 成员状态文本映射 */
+const STATUS_TEXT_MAP: Record<string, string> = {
+  error: '错误',
+  busy: '忙碌',
+  stopped: '已停止',
+  in_private_chat: '单聊中',
+  in_loop: '循环中',
+};
+
+/** 获取成员状态样式类名 */
+function getStatusClass(status: string): string {
+  return (STATUS_CLASS_MAP[status] ?? styles.statusIdle) as string;
+}
+
+/** 获取成员状态文本 */
+function getStatusText(status: string, compressing: boolean): string {
+  if (compressing) return '压缩中';
+  return (STATUS_TEXT_MAP[status] ?? '空闲') as string;
+}
+
 /** 将 file:/// URL 转换为后端 HTTP 代理 URL */
 function toPreviewUrl(url: string): string {
   if (url.startsWith('file:///')) {
@@ -193,19 +222,7 @@ function MemberItem({
       </div>
       <div className={styles.memberStatus}>
         <span
-          className={
-            member.status === 'error'
-              ? styles.statusError
-              : member.status === 'busy'
-                ? styles.statusBusy
-                : member.status === 'stopped'
-                  ? styles.statusStopped
-                  : member.status === 'in_private_chat'
-                    ? styles.statusPrivateChat
-                    : member.status === 'in_loop'
-                      ? styles.statusLoop
-                      : styles.statusIdle
-          }
+          className={getStatusClass(member.status)}
           title={
             member.status === 'error' && member.error_info
               ? `错误: ${member.error_info.type}\n${member.error_info.message}${
@@ -214,19 +231,7 @@ function MemberItem({
               : undefined
           }
         >
-          {member.compressing
-            ? '压缩中'
-            : member.status === 'error'
-              ? '错误'
-              : member.status === 'busy'
-                ? '忙碌'
-                : member.status === 'stopped'
-                  ? '已停止'
-                  : member.status === 'in_private_chat'
-                    ? '单聊中'
-                    : member.status === 'in_loop'
-                      ? '循环中'
-                      : '空闲'}
+          {getStatusText(member.status, member.compressing)}
         </span>
       </div>
       <button
@@ -289,21 +294,19 @@ function MemberItem({
             >
               📜 查看历史
             </button>
-            {onInvitePrivateChat &&
-              member.role?.type !== 'leader' &&
-              member.status === 'idle' && (
-                <button
-                  className={styles.memberMenuItem}
-                  onClick={() => {
-                    setShowMenu(false);
-                    onInvitePrivateChat(member.name);
-                  }}
-                  title={member.compressing ? 'Agent 正在压缩中，无法邀请单聊' : '邀请单聊'}
-                  disabled={member.compressing}
-                >
-                  💬 邀请单聊
-                </button>
-              )}
+            {onInvitePrivateChat && member.role?.type !== 'leader' && member.status === 'idle' && (
+              <button
+                className={styles.memberMenuItem}
+                onClick={() => {
+                  setShowMenu(false);
+                  onInvitePrivateChat(member.name);
+                }}
+                title={member.compressing ? 'Agent 正在压缩中，无法邀请单聊' : '邀请单聊'}
+                disabled={member.compressing}
+              >
+                💬 邀请单聊
+              </button>
+            )}
           </div>
         )}
       </div>
