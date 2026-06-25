@@ -59,6 +59,7 @@ export interface RightSidebarProps {
     stopMember: (name: string) => Promise<void>;
     startMember: (name: string) => Promise<void>;
     resetMember: (name: string) => Promise<void>;
+    startPrivateChat?: (agentName: string) => Promise<unknown>;
   };
 }
 
@@ -100,6 +101,7 @@ function MemberItem({
   onStart,
   onReset,
   onViewHistory,
+  onInvitePrivateChat,
 }: {
   member: MemberWithRole;
   onToggleDocker: (memberName: string, enableDocker: boolean) => void;
@@ -108,6 +110,7 @@ function MemberItem({
   onStart: (memberName: string) => void;
   onReset: (memberName: string) => void;
   onViewHistory: (memberName: string) => void;
+  onInvitePrivateChat?: (memberName: string) => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -197,7 +200,11 @@ function MemberItem({
                 ? styles.statusBusy
                 : member.status === 'stopped'
                   ? styles.statusStopped
-                  : styles.statusIdle
+                  : member.status === 'in_private_chat'
+                    ? styles.statusPrivateChat
+                    : member.status === 'in_loop'
+                      ? styles.statusLoop
+                      : styles.statusIdle
           }
           title={
             member.status === 'error' && member.error_info
@@ -215,7 +222,11 @@ function MemberItem({
                 ? '忙碌'
                 : member.status === 'stopped'
                   ? '已停止'
-                  : '空闲'}
+                  : member.status === 'in_private_chat'
+                    ? '单聊中'
+                    : member.status === 'in_loop'
+                      ? '循环中'
+                      : '空闲'}
         </span>
       </div>
       <button
@@ -278,6 +289,21 @@ function MemberItem({
             >
               📜 查看历史
             </button>
+            {onInvitePrivateChat &&
+              member.role?.type !== 'leader' &&
+              member.status === 'idle' && (
+                <button
+                  className={styles.memberMenuItem}
+                  onClick={() => {
+                    setShowMenu(false);
+                    onInvitePrivateChat(member.name);
+                  }}
+                  title={member.compressing ? 'Agent 正在压缩中，无法邀请单聊' : '邀请单聊'}
+                  disabled={member.compressing}
+                >
+                  💬 邀请单聊
+                </button>
+              )}
           </div>
         )}
       </div>
@@ -316,6 +342,7 @@ export function RightSidebar({
     stopMember,
     startMember,
     resetMember,
+    startPrivateChat,
   } = membersData;
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
@@ -405,6 +432,23 @@ export function RightSidebar({
     [onContentChange]
   );
 
+  const handleInvitePrivateChat = useCallback(
+    async (agentName: string) => {
+      if (!startPrivateChat) return;
+
+      try {
+        await startPrivateChat(agentName);
+        // 成功后切换到单聊 tab
+        setActiveTab('single-chat');
+        toast.success(`已邀请 ${agentName} 进入单聊`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '邀请单聊失败';
+        toast.error(message);
+      }
+    },
+    [startPrivateChat, toast]
+  );
+
   return (
     <div
       className={`${styles.rightSidebar} ${collapsed ? styles.collapsed : ''}`}
@@ -475,6 +519,7 @@ export function RightSidebar({
                     onStart={startMember}
                     onReset={resetMember}
                     onViewHistory={handleViewHistory}
+                    onInvitePrivateChat={startPrivateChat ? handleInvitePrivateChat : undefined}
                   />
                 ))
               )}

@@ -44,6 +44,7 @@ export interface ChatAreaProps {
     stopMember: (name: string) => Promise<void>;
     startMember: (name: string) => Promise<void>;
     resetMember: (name: string) => Promise<void>;
+    startPrivateChat?: (agentName: string) => Promise<unknown>;
   };
 }
 

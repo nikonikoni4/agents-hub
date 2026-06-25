@@ -265,8 +265,8 @@ export interface GroupChatMemberApiItem {
   cwd: string | null;
   /** 是否使用 Docker 沙箱 */
   use_docker: boolean;
-  /** Agent 状态：idle/busy/stopped/error */
-  status: 'idle' | 'busy' | 'stopped' | 'error';
+  /** Agent 状态：idle/busy/stopped/error/in_private_chat/in_loop */
+  status: 'idle' | 'busy' | 'stopped' | 'error' | 'in_private_chat' | 'in_loop';
   /** 上下文窗口大小（单位: K tokens），null 表示未知 */
   context_usage: number | null;
   /** 错误信息 */
