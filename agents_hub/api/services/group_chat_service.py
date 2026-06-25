@@ -899,8 +899,7 @@ class GroupChatService:
 
         Raises:
             ResourceNotFoundError: 群聊或 Agent 不存在
-            StateError: Agent 非 idle 状态（409）
-            PermissionError: Agent 是 Manager（403）
+            StateError: Agent 非 idle 状态或是 Manager（409）
         """
         from agents_hub.core.foundation import AgentNotFoundError
         from agents_hub.exceptions import StateError
@@ -924,11 +923,6 @@ class GroupChatService:
             ) from e
         except StateError as e:
             raise e
-        except PermissionError as e:
-            raise StateError(
-                str(e),
-                details={"agent_name": agent_name, "reason": "manager_forbidden"},
-            ) from e
 
         # 发送 WebSocket 通知
         await broadcast_group_chat_refresh(group_chat_id)

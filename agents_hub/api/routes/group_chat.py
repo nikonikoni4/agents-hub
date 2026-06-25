@@ -439,8 +439,7 @@ async def start_member(
     response_model=PrivateChatResponse,
     responses={
         404: {"description": "群聊或 Agent 不存在"},
-        403: {"description": "Agent 是 Manager，禁止私聊"},
-        409: {"description": "Agent 非 idle 状态"},
+        409: {"description": "Agent 非 idle 状态或是 Manager"},
     },
 )
 async def start_private_chat(

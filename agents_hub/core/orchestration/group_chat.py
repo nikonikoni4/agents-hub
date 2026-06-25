@@ -1556,16 +1556,18 @@ class GroupChat:
 
         Raises:
             AgentNotFoundError: Agent 不存在
-            StateError: Agent 非 idle 状态
-            PermissionError: Agent 是 Manager
+            StateError: Agent 非 idle 状态或是 Manager
         """
         from agents_hub.core.foundation import AgentNotFoundError
         from agents_hub.exceptions import StateError
 
         # 检查是否为 Manager
-        if agent_name == self.manager.name if self.manager else False:
+        if self.manager and agent_name == self.manager.name:
             logger.warning("禁止与 Manager 私聊: agent=%s", agent_name)
-            raise PermissionError("Manager 不允许进入私聊")
+            raise StateError(
+                "Manager 不允许进入私聊",
+                details={"agent_name": agent_name, "reason": "manager_forbidden"},
+            )
 
         # 获取 Agent 状态
         agent_info = self.runtime.state.agent_member_infos.get(agent_name)
