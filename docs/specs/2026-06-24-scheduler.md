@@ -49,11 +49,11 @@ contract_refs: agents_hub/scheduler/scheduler_service.py, agents_hub/scheduler/s
 
 ### SchedulerService
 
-<key_function last_update="2026-06-24T10:00:00+08:00">
+<key_function last_update="2026-06-25T11:30:28+08:00">
 - agents_hub/scheduler/scheduler_service.py
-  - scheduler_service.SchedulerService.start:29
-  - scheduler_service.SchedulerService.shutdown:44
-  - scheduler_service.SchedulerService._execute_memory_task:60
+  - scheduler_service.SchedulerService.start:42
+  - scheduler_service.SchedulerService.shutdown:101
+  - scheduler_service.SchedulerService._execute_memory_task:117
   - scheduler_service.SchedulerService._run_compensation:88
 </key_function>
 
@@ -111,16 +111,16 @@ contract_refs: agents_hub/scheduler/scheduler_service.py, agents_hub/scheduler/s
 
 ### MCP 工具：get_memory_context
 
-<key_function last_update="2026-06-24T10:00:00+08:00">
+<key_function last_update="2026-06-25T14:30:00+08:00">
 - agents_hub/mcp/server.py
-  - server.get_memory_context:1464
+  - server.get_memory_context:1469
 </key_function>
 
 **对外接口**：
 
 | 接口 | 说明 | 约束 |
 |------|------|------|
-| `get_memory_context(agent_token, group_chat_id, last_updated)` | 获取记忆助手所需的上下文数据 | 仅记忆助手角色可调用；group_chat_id 必须与 token 归属一致 |
+| `get_memory_context(agent_token, group_chat_id, last_updated)` | 获取群聊上下文 | 使用 `config.memory_assistant_token` 验证身份，不依赖群聊 token 机制 |
 
 **返回值**：
 
@@ -187,7 +187,7 @@ contract_refs: agents_hub/scheduler/scheduler_service.py, agents_hub/scheduler/s
 **有哪些约束？**
 - 每天只执行一次记忆任务，通过 `.schedule_state.json` 的日期字段防重
 - 记忆助手 Agent 通过 `agent_platform_client.execute` 直接执行，不创建 GroupChat
-- Token 使用 `config.assistant_token`（系统助手统一 token）
+- Token 使用 `config.memory_assistant_token`（记忆助手专用 token，独立于群聊 token 机制）
 
 **有哪些已知限制？**
 - 当前不支持按群聊自定义执行时间

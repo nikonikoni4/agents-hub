@@ -16,7 +16,7 @@ MCP Server 和 15 个工具
 12. list_loops: 查询所有 Loop 定义（任意 Agent）
 13. list_loop_executions: 查询 Loop 执行历史（任意 Agent）
 14. health_check: 健康检查端点
-15. get_memory_context: 获取记忆助手所需的上下文数据
+15. get_memory_context: 获取群聊上下文
 
 维护说明：
 - 当前 tool 数量少，且共享同一套 token 解析、GroupChat 获取和错误响应约定，
@@ -120,6 +120,11 @@ role_service = RoleService()
 def _verify_system_token(agent_token: str) -> bool:
     """验证是否为系统助手 token"""
     return agent_token == config.assistant_token
+
+
+def _verify_memory_token(agent_token: str) -> bool:
+    """验证是否为记忆助手 token"""
+    return agent_token == config.memory_assistant_token
 
 
 def _find_agent(group_chat, agent_name: str):
@@ -1467,7 +1472,7 @@ async def get_memory_context(
     last_updated: str | None = None,
 ) -> dict:
     """
-    获取记忆助手所需的上下文数据
+    获取群聊上下文
 
     Args:
         agent_token: 记忆助手的身份令牌
@@ -1489,36 +1494,11 @@ async def get_memory_context(
 
     logger.info("MCP 调用: get_memory_context, group_chat_id=%s", group_chat_id)
     try:
-        # 1. Token 验证
-        identity = group_chat_manager.resolve_token(agent_token)
-        if identity is None:
+        # 1. Token 验证（记忆助手使用独立的 token，不依赖群聊 token 机制）
+        if not _verify_memory_token(agent_token):
             return make_error_response(
                 INVALID_TOKEN,
-                "身份令牌无效或已过期，请检查 <AGENT_RUNTIME> 块中的 token",
-            )
-
-        agent_name, resolved_group_chat_id = identity
-
-        # 2. 校验 group_chat_id 与 token 归属关系
-        if group_chat_id != resolved_group_chat_id:
-            return make_error_response(
-                PERMISSION_DENIED,
-                f"权限不足：token 对应群聊 {resolved_group_chat_id}，不能访问群聊 {group_chat_id}",
-                details={
-                    "requested_group_chat_id": group_chat_id,
-                    "token_group_chat_id": resolved_group_chat_id,
-                },
-            )
-
-        # 3. 角色权限校验：仅记忆助手可调用
-        if agent_name != config.default_memory_assistant_name:
-            return make_error_response(
-                PERMISSION_DENIED,
-                f"权限不足：只有记忆助手可以调用此工具，当前 Agent {agent_name} 不是记忆助手",
-                details={
-                    "agent_name": agent_name,
-                    "required_role": config.default_memory_assistant_name,
-                },
+                "身份令牌无效，请检查记忆助手配置中的 token",
             )
 
         # 4. 读取历史总结文件

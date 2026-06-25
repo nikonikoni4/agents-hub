@@ -100,6 +100,36 @@ def _copy_skill_to_role(skill_name: str, role_name: str) -> None:
     logger.info(f"已复制 skill '{skill_name}' 到角色 '{role_name}': {target_skill_dir}")
 
 
+def _copy_knowledge_to_role(knowledge_name: str, role_name: str) -> None:
+    """将 template 下的知识文件夹复制到角色的 knowledge-base 目录。
+
+    如果已存在则覆盖，确保知识文件是最新的。
+
+    Args:
+        knowledge_name: 知识文件夹名称（template/ 下的目录名）。
+        role_name: 角色名称。
+    """
+    from agents_hub.config.config import config
+
+    template_dir = _get_template_dir()
+    source_dir = template_dir / knowledge_name
+
+    if not source_dir.exists():
+        logger.warning(f"知识文件夹模板不存在，跳过复制: {source_dir}")
+        return
+
+    target_dir = config.data_path / "agents" / role_name / "work_root" / "knowledge-base"
+
+    # 如果目标已存在，先删除再复制（确保是最新的）
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+        logger.info(f"已删除旧版 knowledge-base: {target_dir}")
+
+    # 复制整个知识文件夹
+    shutil.copytree(source_dir, target_dir)
+    logger.info(f"已复制知识文件夹 '{knowledge_name}' 到角色 '{role_name}': {target_dir}")
+
+
 def initialize_resources() -> None:
     """初始化资源文件
 
@@ -220,3 +250,9 @@ def initialize_default_roles() -> None:
         )
     except Exception as e:
         logger.warning(f"更新 {memory_assistant_name} 禁用工具列表失败: {e}")
+
+    # 为 Memory Assistant 复制知识文件（无论角色是否已存在，确保知识文件是最新的）
+    try:
+        _copy_knowledge_to_role("memory-assistant", memory_assistant_name)
+    except Exception as e:
+        logger.warning(f"复制知识文件到 {memory_assistant_name} 失败: {e}")

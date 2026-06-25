@@ -97,7 +97,7 @@ class AgentContextState:
 - `build_user_prompt()` 内部调用 `get_context()` 获取增量上下文
 - 只有 LEADER 角色才加载 `<recent_messages>`，其他角色只加载压缩历史
 
-<key_function last_update="2026-06-24T22:26:41+08:00">
+<key_function last_update="2026-06-25T11:30:28+08:00">
 - agents_hub/core/context/agent_context.py
   - AgentContext.get_context:38
   - AgentContext.build_user_prompt:180
@@ -112,7 +112,7 @@ class AgentContextState:
 - agents_hub/core/orchestration/group_chat.py
   - GroupChat.compact_history:986
 - agents_hub/core/agent/base_agent.py
-  - Agent._process_message:265
+  - Agent._process_message:345
 </key_function>
 
 ## 流程概览

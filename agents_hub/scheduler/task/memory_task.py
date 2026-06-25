@@ -52,7 +52,7 @@ def _build_memory_prompt(group_chat_id: str, last_updated: str | None) -> str:
         task += f"上次更新时间：{last_updated}"
     else:
         task += "这是首次执行，需要处理所有历史消息。"
-    return f"{task}\n\n[系统提示] 你的 agent token 是: {config.assistant_token}"
+    return f"{task}\n\n[系统提示] 你的 agent token 是: {config.memory_assistant_token}"
 
 
 class MemoryTask:

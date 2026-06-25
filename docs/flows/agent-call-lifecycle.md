@@ -72,7 +72,7 @@ class AgentCall:
 - 当 Agent 从队列取出消息开始处理时，Agent 状态变为 busy，AgentCall 状态变为 RUNNING
 - 处理完成后，Agent 状态回到 idle，AgentCall 状态进入终态（COMPLETED/FAILED）
 
-<key_function last_update="2026-06-24T22:26:41+08:00">
+<key_function last_update="2026-06-25T11:30:28+08:00">
 - frontend/src/layouts/ChatArea/ChatArea.tsx
   - ChatArea.handleSend:377
 - frontend/src/core/api/groupChatApi.ts
@@ -80,11 +80,11 @@ class AgentCall:
 - agents_hub/api/services/group_chat_service.py
   - GroupChatService.send_message:482
 - agents_hub/mcp/server.py
-  - call_agent:274
+  - call_agent:281
 - agents_hub/core/agent/base_agent.py
-  - Agent._process_message:265
-  - Agent._fallback_close_task:813
-  - Agent._run_loop:1025
+  - Agent._process_message:345
+  - Agent._fallback_close_task:893
+  - Agent._run_loop:1105
 - agents_hub/core/orchestration/group_chat.py
   - GroupChat.send_message_to_agent:1059
   - GroupChat._cleanup_agent_queue:1143

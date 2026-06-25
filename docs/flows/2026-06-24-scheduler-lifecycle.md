@@ -1,8 +1,8 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-24
-updated_at: 2026-06-24
-last_updated: 创建 scheduler flow 初稿
+updated_at: 2026-06-25
+last_updated: 更新 token 验证机制，使用独立的 memory_assistant_token
 abstract: 定时记忆助手调度系统的数据流文档，记录调度器生命周期、记忆任务执行流程和状态文件管理的完整链路
 ---
 
@@ -11,6 +11,7 @@ abstract: 定时记忆助手调度系统的数据流文档，记录调度器生�
 | 版本 | 更新内容 |
 | ---- | -------- |
 | 1.0 | 创建 flow 初稿 |
+| 1.1 | 更新 token 验证机制，使用独立的 memory_assistant_token |
 
 # 数据流：Scheduler 生命周期
 
@@ -62,7 +63,7 @@ class MemoryTask:
 - `memory_task_cron_minute`：记忆任务执行分钟（0-59，默认 0）
 - `memory_path`：记忆文件存储路径
 - `default_memory_assistant_name`：记忆助手角色名
-- `assistant_token`：系统助手统一 token
+- `memory_assistant_token`：记忆助手专用 token（独立于群聊 token 机制）
 
 **耦合关系**：
 
@@ -70,7 +71,7 @@ class MemoryTask:
 |---------------|------------|---------|
 | 读取 cron 时间 | `config.memory_task_cron_time` | `SchedulerService.start()` |
 | 读取记忆路径 | `config.memory_path` | `StateManager.__init__()` |
-| 验证记忆助手身份 | `config.default_memory_assistant_name` | `get_memory_context()` |
+| 验证记忆助手身份 | `config.memory_assistant_token` | `get_memory_context()` |
 
 ### Scheduler ↔ GroupChatManager
 
@@ -79,7 +80,6 @@ class MemoryTask:
 | Scheduler 操作 | GroupChatManager 影响 | 触发位置 |
 |---------------|---------------------|---------|
 | 获取活跃群聊列表 | `group_chat_manager.get_active_group_chats()` | `SchedulerService._execute_memory_task()` |
-| Token 验证 | `group_chat_manager.resolve_token()` | `get_memory_context()` |
 
 ### Scheduler ↔ Agent Platform Client
 
@@ -89,21 +89,22 @@ class MemoryTask:
 |---------------|-------------------|---------|
 | 执行记忆助手 | `agent_platform_client.execute()` | `MemoryTask.execute()` |
 
-<key_function last_update="2026-06-24T10:00:00+08:00">
+<key_function last_update="2026-06-25T11:30:28+08:00">
 - agents_hub/scheduler/scheduler_service.py
-  - scheduler_service.SchedulerService.start:29
-  - scheduler_service.SchedulerService.shutdown:44
-  - scheduler_service.SchedulerService._execute_memory_task:60
+  - scheduler_service.SchedulerService.start:42
+  - scheduler_service.SchedulerService.shutdown:101
+  - scheduler_service.SchedulerService._execute_memory_task:117
   - scheduler_service.SchedulerService._run_compensation:88
 - agents_hub/scheduler/state_manager.py
-  - state_manager.StateManager.load_schedule_state:18
-  - state_manager.StateManager.save_schedule_state:25
-  - state_manager.StateManager.should_execute_today:46
-  - state_manager.StateManager.append_results:55
+  - state_manager.StateManager.load_schedule_state:27
+  - state_manager.StateManager.save_schedule_state:32
+  - state_manager.StateManager.should_execute_today:45
+  - state_manager.StateManager.append_results:62
 - agents_hub/scheduler/task/memory_task.py
-  - memory_task.MemoryTask.execute:15
+  - memory_task.MemoryTask.execute:64
 - agents_hub/mcp/server.py
-  - server.get_memory_context:1464
+  - server.get_memory_context:1469
+  - server._verify_memory_token:125
 - agents_hub/api/app.py
   - app.lifespan:启动时调用 scheduler_service.start()
 </key_function>
@@ -169,7 +170,7 @@ stateDiagram-v2
 1. `get_memory_context(agent_token, group_chat_id, last_updated)`
    记忆助手获取群聊上下文数据
    状态: ❌ | 持久化: ✅ 读取 history.jsonl | 跨模块: mcp → core
-   步骤: 验证 token → 校验 group_chat_id 归属 → 校验记忆助手角色 → 读取历史总结 → 获取新消息 → 拼接返回
+   步骤: 验证 memory_assistant_token → 读取历史总结 → 获取新消息 → 拼接返回
 
 ## 异常与清理
 
