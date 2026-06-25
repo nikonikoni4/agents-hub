@@ -1105,8 +1105,6 @@ class GroupChat:
         # 1. 检查目标 agent 状态
         target_agent_info = self.runtime.state.agent_member_infos.get(message.send_to)
         if target_agent_info and target_agent_info.status == "stopped":
-            from agents_hub.exceptions import StateError
-
             logger.error("无法发送消息给 %s：该 Agent 已停止", message.send_to)
             raise StateError(
                 f"无法发送消息给 {message.send_to}：该 Agent 已停止，请先启动",
@@ -1115,8 +1113,6 @@ class GroupChat:
 
         # 2. 检查目标 agent 是否在私聊中（拦截消息，返回自动回复）
         if target_agent_info and target_agent_info.status == "in_private_chat":
-            from agents_hub.core.foundation import AgentMessage, MessageType
-
             logger.info(
                 "消息被拦截: agent=%s 正在私聊中, from=%s", message.send_to, message.send_from
             )
@@ -1132,7 +1128,6 @@ class GroupChat:
 
             # 保存自动回复到群聊历史
             from agents_hub.agent_bridge import AgentPlatform, AgentResult
-            from agents_hub.config.types import RoleType
 
             reply_result = AgentResult(
                 text=auto_reply.content,
@@ -1145,8 +1140,6 @@ class GroupChat:
             await self.runtime.add_message(reply_result)
 
             # 通知前端刷新
-            from agents_hub.realtime import broadcast_group_chat_refresh
-
             asyncio.get_running_loop().create_task(broadcast_group_chat_refresh(self.group_chat_id))
 
             return

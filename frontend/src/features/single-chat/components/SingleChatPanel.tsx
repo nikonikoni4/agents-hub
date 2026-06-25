@@ -88,13 +88,8 @@ export function SingleChatPanel() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 通过 hook 获取私聊功能，不直接操作 store 和 API
-  const {
-    isPrivateChat,
-    stopPrivateChat,
-    startTimer,
-    resetTimer,
-    handleTimeout,
-  } = usePrivateChat();
+  const { isPrivateChat, stopPrivateChat, startTimer, resetTimer, handleTimeout } =
+    usePrivateChat();
 
   // 启动计时器（私聊模式下）
   useEffect(() => {
