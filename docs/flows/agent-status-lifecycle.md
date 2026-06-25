@@ -1,9 +1,9 @@
 ---
-version: 1.0
+version: 1.1
 created_at: 2026-06-18
-updated_at: 2026-06-18
-last_updated: 初始版本
-abstract: 描述 Agent 状态（AgentMemberInfo.status）的生命周期和变化，包括 idle、busy、stopped、error 四种状态的流转规则、触发位置、与 AgentCall 状态的耦合关系
+updated_at: 2026-06-25
+last_updated: 添加 in_private_chat 和 in_loop 状态
+abstract: 描述 Agent 状态（AgentMemberInfo.status）的生命周期和变化，包括 idle、busy、stopped、error、in_private_chat、in_loop 六种状态的流转规则、触发位置、与 AgentCall 状态的耦合关系
 ---
 
 # 数据流：Agent 状态生命周期
@@ -25,7 +25,7 @@ class AgentMemberInfo:
     token: str = ""                              # Agent 的 token，用于 MCP 工具身份验证
     cwd: str = ""                                # CLI 命令启动的工作目录路径
     use_docker: bool = False                     # 是否使用 Docker 沙箱执行
-    status: str = "idle"                         # Agent 状态：idle/busy/stopped/error
+    status: str = "idle"                         # Agent 状态：idle/busy/stopped/error/in_private_chat/in_loop
     context_usage: int = 0                       # 上下文使用量（input_tokens/1000 取整）
     error_info: dict[str, Any] | None = None     # 错误信息：{"type": "...", "message": "...", "exit_code": ..., "stderr": "..."}
 ```
@@ -36,6 +36,8 @@ class AgentMemberInfo:
   - `busy`：处理中，正在执行任务（理论上仍可接收新消息到队列）
   - `stopped`：已停止，不能接收新消息，现有任务被清理
   - `error`：错误状态，Agent 执行出现异常，需要重置或重启
+  - `in_private_chat`：私聊中，与用户进行一对一私聊，不可被停止/重置/压缩
+  - `in_loop`：循环中，正在参与 Loop 执行
 - `error_info`：仅在 status = "error" 时有值，记录错误详情供前端展示
 - `status` 与 `AgentCall.status` 强耦合：Agent 开始处理消息时变 busy，完成后回到 idle
 
@@ -61,6 +63,10 @@ class AgentMemberInfo:
 | * → stopped（用户操作） | PENDING/RUNNING → FAILED | `GroupChat.stop_member()` |
 | stopped → idle（重启） | 无影响（队列已清空） | `GroupChat.start_member()` |
 | stopped → idle（重置） | 无影响（队列已清空） | `GroupChat.reset_member()` |
+| idle → in_private_chat（私聊） | 无影响 | `GroupChat.start_private_chat()` |
+| in_private_chat → idle（退出私聊） | 无影响 | `GroupChat.stop_private_chat()` |
+| idle → in_loop（Loop 启动） | 无影响 | Loop 管理器启动 |
+| in_loop → idle（Loop 结束） | 无影响 | Loop 管理器结束 |
 
 **说明**：
 - Agent 状态是整体状态，一个 Agent 同时只有一个状态值
@@ -69,22 +75,22 @@ class AgentMemberInfo:
 - 处理完成后：Agent.status = "idle"，AgentCall.status = COMPLETED/FAILED
 - 用户停止 Agent 时：Agent.status = "stopped"，所有未完成的 AgentCall 都被标记为 FAILED
 
-<key_function last_update="2026-06-25T11:30:28+08:00">
+<key_function last_update="2026-06-25T19:37:43+08:00">
 - agents_hub/api/routes/group_chat.py
   - group_chat.stop_member:406
   - group_chat.start_member:423
   - group_chat.reset_member:439
 - agents_hub/api/services/group_chat_service.py
-  - group_chat_service.GroupChatService.stop_member:819
-  - group_chat_service.GroupChatService.start_member:854
-  - group_chat_service.GroupChatService.reset_member:890
+  - group_chat_service.GroupChatService.stop_member:827
+  - group_chat_service.GroupChatService.start_member:862
+  - group_chat_service.GroupChatService.reset_member:976
 - agents_hub/core/orchestration/group_chat.py
   - group_chat.GroupChat._initialize_single_member:829
   - group_chat.GroupChat._initialize_new_members:846
-  - group_chat.GroupChat._cleanup_agent_queue:1143
-  - group_chat.GroupChat.stop_member:1237
-  - group_chat.GroupChat.start_member:1371
-  - group_chat.GroupChat.reset_member:1452
+  - group_chat.GroupChat._cleanup_agent_queue:1194
+  - group_chat.GroupChat.stop_member:1288
+  - group_chat.GroupChat.start_member:1431
+  - group_chat.GroupChat.reset_member:1512
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent._sync_status:733
   - base_agent.Agent._set_error_status:763
@@ -99,34 +105,51 @@ stateDiagram-v2
     idle --> busy: 开始处理消息
     busy --> idle: 完成处理
     busy --> error: 执行异常
-    
+
     idle --> stopped: 用户停止
     busy --> stopped: 用户停止
     error --> stopped: 用户停止（需先重置）
-    
+
     stopped --> idle: 用户重启/重置
     error --> idle: 用户重置
-    
+
+    idle --> in_private_chat: 用户发起私聊
+    in_private_chat --> idle: 用户退出私聊/超时退出
+
+    idle --> in_loop: Loop 启动
+    in_loop --> idle: Loop 结束/停止
+
     note right of idle
         可接收消息
         Agent.run() 循环等待
     end note
-    
+
     note right of busy
         正在执行任务
         _process_message() 运行中
     end note
-    
+
     note right of stopped
         不接收消息
         队列已清空
         AgentCall 已闭环
     end note
-    
+
     note right of error
         执行异常
         error_info 记录详情
         需要重置才能恢复
+    end note
+
+    note right of in_private_chat
+        私聊中
+        不可被停止/重置/压缩
+        3 分钟超时自动退出
+    end note
+
+    note right of in_loop
+        循环中
+        参与 Loop 执行
     end note
 ```
 
@@ -266,6 +289,44 @@ stateDiagram-v2
    步骤: 创建 run() 任务 → agent_info.status = "idle" → 保存
 ```
 
+### 4.4 进入私聊
+
+```
+1. group_chat_api.start_private_chat()
+   前端调用 API 进入私聊
+   状态: 无影响 | 持久化: ❌ | 跨模块: frontend→api
+   步骤: POST /group-chats/{id}/members/{name}/start-private-chat
+
+2. GroupChatService.start_private_chat()
+   API 层，加载群聊并调用 core 层私聊逻辑
+   状态: 无影响 | 持久化: ❌ | 跨模块: api→core
+   步骤: 加载群聊 → group_chat.start_private_chat()
+
+3. GroupChat.start_private_chat()
+   将 Agent 状态设置为 in_private_chat
+   状态: idle→in_private_chat | 持久化: ✅ | 跨模块: ❌ core 内
+   步骤: 检查 Manager → 检查状态 = idle → agent_info.status = "in_private_chat" → 保存
+```
+
+### 4.5 退出私聊
+
+```
+1. group_chat_api.stop_private_chat()
+   前端调用 API 退出私聊（或 3 分钟超时自动调用）
+   状态: 无影响 | 持久化: ❌ | 跨模块: frontend→api
+   步骤: POST /group-chats/{id}/members/{name}/stop-private-chat
+
+2. GroupChatService.stop_private_chat()
+   API 层，加载群聊并调用 core 层退出私聊逻辑
+   状态: 无影响 | 持久化: ❌ | 跨模块: api→core
+   步骤: 加载群聊 → group_chat.stop_private_chat()
+
+3. GroupChat.stop_private_chat()
+   将 Agent 状态从 in_private_chat 恢复为 idle
+   状态: in_private_chat→idle | 持久化: ✅ | 跨模块: ❌ core 内
+   步骤: 检查状态 = in_private_chat → agent_info.status = "idle" → 保存
+```
+
 ## 相关文档
 
 ### Spec 文档
@@ -273,6 +334,8 @@ stateDiagram-v2
   - 定义消息传递路径和 Agent 停止清理流程
 - **Core Context**：`docs/specs/2026-05-31-core-context.md`
   - AgentMemberInfo 数据结构定义
+- **群聊内私聊功能**：`docs/specs/2026-06-25-private-chat.md`
+  - 定义 in_private_chat 状态的业务规则和操作限制
 
 ### 架构文档
 - **Core 架构概览**：`docs/specs/2026-05-31-core-overview.md`

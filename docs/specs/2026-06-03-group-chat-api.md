@@ -55,7 +55,7 @@ abstract: Group Chat API 模块的正式规格，定义群聊生命周期管理�
 
 ### HTTP API 端点总览
 
-<key_function last_update="2026-06-25T11:30:28+08:00">
+<key_function last_update="2026-06-25T19:37:43+08:00">
 - agents_hub/api/routes/group_chat.py
   - group_chat.create_group_chat:30
   - group_chat.list_group_chats:65
@@ -96,6 +96,8 @@ abstract: Group Chat API 模块的正式规格，定义群聊生命周期管理�
 | POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/start` | 启动成员 | start_member |
 | POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/reset` | 重置成员 | reset_member |
 | GET | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/history` | 成员历史 | get_member_history |
+| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/start-private-chat` | 进入私聊 | start_private_chat |
+| POST | `/api/v1/group-chats/{group_chat_id}/members/{agent_name}/stop-private-chat` | 退出私聊 | stop_private_chat |
 
 ### Request/Response Schemas
 
@@ -176,6 +178,14 @@ abstract: Group Chat API 模块的正式规格，定义群聊生命周期管理�
 | use_docker | bool | 是 | 是否启用 Docker 沙箱执行 |
 
 #### 扩展 Schema（功能性接口）
+
+**PrivateChatResponse**（私聊响应）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| agent_name | str | Agent 名称 |
+| status | str | 状态（"in_private_chat" 或 "idle"） |
+| main_session_id | str \| None | 主会话 ID（进入私聊时返回） |
 
 **GroupChatForkRequest**（Fork 群聊请求）：
 
