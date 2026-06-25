@@ -105,5 +105,9 @@ class StateManager:
             OSError: 写入失败时抛出（权限不足、磁盘满等）
         """
         path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except OSError as e:
+            logger.error("写入状态文件失败: %s, 错误: %s", path, e)
+            raise

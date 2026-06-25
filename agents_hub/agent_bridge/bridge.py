@@ -168,6 +168,13 @@ class AgentBridge:
             config.platform, usage_baseline=usage_baseline
         )  # 每次创建新的 parser 实例
 
+        logger.info(
+            "[AgentBridge] execute_stream 启动: agent=%s, platform=%s, session_id=%s",
+            config.name,
+            config.platform.value,
+            session_id or "new",
+        )
+
         try:
             raw_stream = executor.execute(
                 prompt, config, session_id, cwd, fork_from=fork_from, system_prompt=system_prompt
@@ -202,6 +209,12 @@ class AgentBridge:
         except (CLINotFoundError, CLIExecutionError):
             # CLI 错误：直接向上传递
             raise
+        finally:
+            logger.info(
+                "[AgentBridge] execute_stream 完成: agent=%s, platform=%s",
+                config.name,
+                config.platform.value,
+            )
 
     def _dict_to_stream_event(self, event_dict: dict, config: RoleConfig) -> StreamEvent | None:
         """将 dict 转换为 StreamEvent（用于 OpenCode）"""
@@ -378,6 +391,13 @@ class AgentBridge:
             )
             return FirstResponseResult(first_text="", result=result)
 
+        logger.info(
+            "[AgentBridge] execute_with_first_response 启动: agent=%s, platform=%s, session_id=%s",
+            config.name,
+            config.platform.value,
+            session_id or "new",
+        )
+
         # 流式事件处理状态
         first_text_buffer = ""  # 首句文本缓冲
         remaining_text = ""  # 剩余文本
@@ -422,6 +442,12 @@ class AgentBridge:
             usage=usage,
         )
 
+        logger.info(
+            "[AgentBridge] execute_with_first_response 完成: agent=%s, first_response=%s",
+            config.name,
+            first_response_detected,
+        )
+
         return FirstResponseResult(
             first_text=first_text_buffer if first_response_detected else "",
             result=result,
@@ -454,7 +480,11 @@ class AgentBridge:
         if executor and hasattr(executor, "stop_session"):
             await executor.stop_session(session_id)
         else:
-            logger.warning(f"Platform {platform.value} executor does not support stop_session")
+            logger.warning(
+                "Platform %s executor does not support stop_session: session_id=%s",
+                platform.value,
+                session_id,
+            )
 
     def _init_bare_config(self) -> RoleConfig:
         """初始化 bare 角色配置，不存在则创建。"""

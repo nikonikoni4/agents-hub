@@ -91,7 +91,12 @@ class SchedulerService:
             return
         exc = task.exception()
         if exc is not None:
-            logger.error("补偿执行任务异常退出: %s", exc)
+            logger.error(
+                "补偿执行任务异常退出: %s, task_name=%s, done=%s",
+                exc,
+                task.get_name(),
+                task.done(),
+            )
 
     def shutdown(self) -> None:
         """关闭调度器，未启动时跳过（幂等）"""
