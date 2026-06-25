@@ -435,13 +435,22 @@ export function RightSidebar({
     [onContentChange]
   );
 
+  const openDraftChat = useSingleChatStore((s) => s.openDraftChat);
+
   const handleInvitePrivateChat = useCallback(
     async (agentName: string) => {
       if (!startPrivateChat) return;
 
       try {
         await startPrivateChat(agentName);
-        // 成功后切换到单聊 tab
+        // 设置 draft chat，让 SingleChatPanel 加载 Agent 的 session
+        openDraftChat({
+          single_chat_name: `与 ${agentName} 的私聊`,
+          type: 'continue_group_chat',
+          agent_name: agentName,
+          group_chat_id: activeSessionId ?? undefined,
+        });
+        // 切换到单聊 tab
         setActiveTab('single-chat');
         toast.success(`已邀请 ${agentName} 进入单聊`);
       } catch (error) {
@@ -449,7 +458,7 @@ export function RightSidebar({
         toast.error(message);
       }
     },
-    [startPrivateChat, toast]
+    [startPrivateChat, openDraftChat, activeSessionId, toast]
   );
 
   return (
