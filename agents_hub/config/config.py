@@ -91,16 +91,28 @@ class SystemConfig:
             return Path.home() / "AppData" / "Local" / "AgentsHub" / "config" / "config.yaml"
 
     def _load_config(self):
-        """加载配置文件，从 yaml 覆盖默认值。文件不存在时自动创建。"""
+        """加载配置文件，从 yaml 覆盖默认值。文件不存在或内容不完整时自动创建。"""
         if not self._config_file.exists():
             self._create_default_config()
+            return
 
         with open(self._config_file, encoding="utf-8") as f:
             saved_config = yaml.safe_load(f) or {}
-            # 用保存的值覆盖默认值
-            for key in self._config_data:
-                if key in saved_config and saved_config[key] is not None:
-                    self._config_data[key] = saved_config[key]
+
+        # 检查配置是否完整（缺少关键字段则重新生成）
+        if not self._is_config_complete(saved_config):
+            self._create_default_config()
+            saved_config = yaml.safe_load(self._config_file.read_text(encoding="utf-8")) or {}
+
+        # 用保存的值覆盖默认值
+        for key in self._config_data:
+            if key in saved_config and saved_config[key] is not None:
+                self._config_data[key] = saved_config[key]
+
+    def _is_config_complete(self, config_data: dict) -> bool:
+        """检查配置是否包含所有必需字段。"""
+        required_keys = {"team_id", "mcp_port", "feishu"}
+        return required_keys.issubset(config_data.keys())
 
     def _create_default_config(self):
         """创建默认配置文件"""
