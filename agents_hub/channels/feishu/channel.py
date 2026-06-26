@@ -244,8 +244,13 @@ class FeishuChannel:
             member_list = ", ".join(members)
             formatted_content += f"\n\n---\n群聊成员: {member_list}"
 
+        # 飞书 API 要求 content 是 JSON 格式
+        import json
+
+        content_json = json.dumps({"text": formatted_content}, ensure_ascii=False)
+
         # 发送到飞书（异常由调用方处理）
-        await self._client.send_message(chat_id, formatted_content)
+        await self._client.send_message(chat_id, content_json)
         logger.info("消息已发送到飞书: chat_id=%s, agent=%s", chat_id, agent_name)
 
     async def _on_broadcast(self, group_chat_id: str, message: dict[str, Any] | None) -> None:
