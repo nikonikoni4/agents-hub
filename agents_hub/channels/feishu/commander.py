@@ -14,11 +14,15 @@ from agents_hub.utils import get_logger
 
 logger = get_logger(__name__)
 
+# 常量
+MESSAGE_TIMEOUT_SECONDS = 120.0  # 消息等待超时时间
+ADMIN_USERS: list[str] = []  # 管理员用户列表，为空时表示不限制
+
 HELP_TEXT = """可用命令：
 /help - 显示帮助
 /agents - 列出所有 agent
 /groups - 列出所有群聊
-/bind <群聊名称> - 绑定飞书群到 agents-hub 群聊
+/bind <群聊名称> - 绑定飞书群到 agents-hub 群聊（需要管理员权限）
 /back - 退出当前对话"""
 
 
@@ -64,7 +68,7 @@ class FeishuCommander:
             "/help": lambda: self._cmd_help(),
             "/agents": lambda: self._cmd_agents(),
             "/groups": lambda: self._cmd_groups(),
-            "/bind": lambda: self._cmd_bind(chat_id, arg),
+            "/bind": lambda: self._cmd_bind(user_id, chat_id, arg),
             "/back": lambda: self._cmd_back(),
         }
 
@@ -103,13 +107,22 @@ class FeishuCommander:
             lines.append(f"     ID: {g['group_chat_id']}")
         return "\n".join(lines)
 
-    async def _cmd_bind(self, chat_id: str, group_chat_name: str) -> str:
+    async def _cmd_bind(self, user_id: str, chat_id: str, group_chat_name: str) -> str:
         """绑定飞书群到 agents-hub 群聊。
 
         Args:
+            user_id: 用户 ID
             chat_id: 飞书群 ID
             group_chat_name: agents-hub 群聊名称
+
+        Returns:
+            操作结果消息
         """
+        # 权限检查：只有管理员可以绑定
+        if ADMIN_USERS and user_id not in ADMIN_USERS:
+            logger.warning("非管理员尝试绑定: user_id=%s, chat_id=%s", user_id, chat_id)
+            return "权限不足：只有管理员可以执行绑定操作"
+
         if not group_chat_name:
             return "请指定群聊名称，如: /bind my-team"
 
@@ -128,6 +141,9 @@ class FeishuCommander:
         self._session_manager.bind(chat_id, target["group_chat_id"], target["group_chat_name"])
         self._session_manager.save()
 
+        logger.info(
+            "飞书群已绑定: user=%s, chat_id=%s, group=%s", user_id, chat_id, group_chat_name
+        )
         return f"已绑定到群聊: {target['group_chat_name']}"
 
     @staticmethod
@@ -165,5 +181,5 @@ class FeishuCommander:
             group_chat_id=mapping.group_chat_id,
             content=content,
             members=members,
-            timeout=120.0,
+            timeout=MESSAGE_TIMEOUT_SECONDS,
         )

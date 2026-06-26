@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agents_hub.channels.feishu.commander import FeishuCommander, HELP_TEXT
+from agents_hub.channels.feishu.commander import FeishuCommander, HELP_TEXT, MESSAGE_TIMEOUT_SECONDS
 
 
 @pytest.fixture
@@ -123,7 +123,7 @@ class TestBindCommand:
             mock_gcm.list_all_group_chats.return_value = mock_groups
             result = await commander.handle("user1", "/bind 团队1", "oc_xxx")
 
-        assert "已绑定到群聊: 团队1" in result
+        assert result == "已绑定到群聊: 团队1"
         mock_session_manager.bind.assert_called_once_with("oc_xxx", "g1", "团队1")
         mock_session_manager.save.assert_called_once()
 
@@ -146,6 +146,14 @@ class TestBindCommand:
 
         assert "未找到群聊" in result
 
+    @pytest.mark.asyncio
+    async def test_bind_command_permission_denied(self, commander):
+        """测试 /bind 命令权限拒绝"""
+        with patch("agents_hub.channels.feishu.commander.ADMIN_USERS", ["admin1"]):
+            result = await commander.handle("user1", "/bind 团队1", "oc_xxx")
+
+        assert "权限不足" in result
+
 
 class TestBackCommand:
     """测试 /back 命令"""
@@ -154,8 +162,8 @@ class TestBackCommand:
     async def test_back_command(self, commander):
         """测试 /back 命令"""
         result = await commander.handle("user1", "/back", "oc_xxx")
-        # 飞书版本简化，直接返回提示
-        assert "退出" in result or "帮助" in result
+        assert "已退出当前对话" in result
+        assert "/help" in result
 
 
 class TestUnknownCommand:
@@ -190,12 +198,16 @@ class TestMessageForwarding:
 
         with patch("agents_hub.channels.feishu.commander.group_chat_manager") as mock_gcm:
             mock_group_chat = MagicMock()
-            mock_member = MagicMock()
-            mock_member.name = "manager"
-            mock_group_chat.runtime.get_member_dicts.return_value = [mock_member]
+            # 使用字典而不是 MagicMock 来避免属性访问问题
+            mock_group_chat.runtime.get_member_dicts.return_value = [{"name": "manager"}]
             mock_gcm.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
             result = await commander.handle("user1", "Hello", "oc_xxx")
 
         assert result == "回复内容"
-        mock_group_chat_service.send_message_and_wait.assert_called_once()
+        mock_group_chat_service.send_message_and_wait.assert_called_once_with(
+            group_chat_id="g1",
+            content="Hello",
+            members=["manager"],
+            timeout=MESSAGE_TIMEOUT_SECONDS,
+        )

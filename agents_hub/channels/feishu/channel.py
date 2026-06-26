@@ -138,25 +138,25 @@ class FeishuChannel:
             content: 消息内容
             agent_name: 发送消息的 agent 名称
             members: 群聊成员列表（可选）
+
+        Raises:
+            FeishuAPIError: API 调用失败
+            FeishuAuthError: 认证失败
         """
         if not self._client:
             return
 
-        try:
-            # 格式化消息
-            formatted_content = f"**[{agent_name}]** : {content}"
+        # 格式化消息
+        formatted_content = f"**[{agent_name}]** : {content}"
 
-            # 添加成员列表
-            if members:
-                member_list = ", ".join(members)
-                formatted_content += f"\n\n---\n群聊成员: {member_list}"
+        # 添加成员列表
+        if members:
+            member_list = ", ".join(members)
+            formatted_content += f"\n\n---\n群聊成员: {member_list}"
 
-            # 发送到飞书
-            await self._client.send_message(chat_id, formatted_content)
-            logger.info("消息已发送到飞书: chat_id=%s, agent=%s", chat_id, agent_name)
-
-        except Exception:
-            logger.error("发送飞书消息失败: chat_id=%s", chat_id, exc_info=True)
+        # 发送到飞书（异常由调用方处理）
+        await self._client.send_message(chat_id, formatted_content)
+        logger.info("消息已发送到飞书: chat_id=%s, agent=%s", chat_id, agent_name)
 
     async def _on_broadcast(self, group_chat_id: str, message: dict[str, Any] | None) -> None:
         """处理广播回调。
@@ -164,36 +164,36 @@ class FeishuChannel:
         Args:
             group_chat_id: 群聊 ID
             message: 消息内容（可选）
+
+        Raises:
+            FeishuAPIError: 飞书 API 调用失败
+            FeishuAuthError: 飞书认证失败
         """
         # 过滤：只处理有消息的广播
         if not message:
             return
 
-        try:
-            # 获取绑定的飞书群 ID
-            if not self._session_manager:
-                return
+        # 获取绑定的飞书群 ID
+        if not self._session_manager:
+            return
 
-            mapping = self._session_manager.get_mapping(group_chat_id)
-            if not mapping:
-                return  # 未绑定，跳过
+        mapping = self._session_manager.get_mapping(group_chat_id)
+        if not mapping:
+            return  # 未绑定，跳过
 
-            feishu_chat_id = mapping.feishu_chat_id
+        feishu_chat_id = mapping.feishu_chat_id
 
-            # 增量同步：只处理新消息
-            sync_state = self._session_manager.get_sync_state(feishu_chat_id)
-            if message.get("id", 0) <= sync_state.last_message_id:
-                return  # 已同步过，跳过
+        # 增量同步：只处理新消息
+        sync_state = self._session_manager.get_sync_state(feishu_chat_id)
+        if message.get("id", 0) <= sync_state.last_message_id:
+            return  # 已同步过，跳过
 
-            # 推送到飞书群
-            await self.send_to_feishu(
-                chat_id=feishu_chat_id,
-                content=message.get("content", ""),
-                agent_name=message.get("send_from", "unknown"),
-            )
+        # 推送到飞书群（异常由调用方处理）
+        await self.send_to_feishu(
+            chat_id=feishu_chat_id,
+            content=message.get("content", ""),
+            agent_name=message.get("send_from", "unknown"),
+        )
 
-            # 更新同步状态
-            self._session_manager.update_sync_state(feishu_chat_id, message.get("id", 0))
-
-        except Exception:
-            logger.error("处理广播回调失败: group_chat_id=%s", group_chat_id, exc_info=True)
+        # 更新同步状态
+        self._session_manager.update_sync_state(feishu_chat_id, message.get("id", 0))

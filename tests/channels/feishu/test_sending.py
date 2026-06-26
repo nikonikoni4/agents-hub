@@ -107,16 +107,19 @@ class TestSendToFeishu:
     @pytest.mark.asyncio
     async def test_send_message_handles_error(self, channel):
         """测试发送消息错误处理"""
+        from agents_hub.channels.feishu.exceptions import FeishuAPIError
+
         # Mock client 抛出异常
         channel._client = MagicMock()
-        channel._client.send_message = AsyncMock(side_effect=Exception("API Error"))
+        channel._client.send_message = AsyncMock(side_effect=FeishuAPIError("API Error"))
 
-        # 应该不会抛出异常
-        await channel.send_to_feishu(
-            chat_id="oc_xxx",
-            content="Hello",
-            agent_name="coder",
-        )
+        # 应该抛出异常
+        with pytest.raises(FeishuAPIError):
+            await channel.send_to_feishu(
+                chat_id="oc_xxx",
+                content="Hello",
+                agent_name="coder",
+            )
 
 
 class TestOnBroadcast:
