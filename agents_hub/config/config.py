@@ -41,8 +41,6 @@ use_docker: true
 feishu:
   app_id: ""
   app_secret: ""
-  encrypt_key: ""
-  verification_token: ""
   group_policy: "mention"
   domain: "feishu"
 """
