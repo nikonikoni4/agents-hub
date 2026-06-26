@@ -130,7 +130,7 @@ class TestOnBroadcast:
         """测试处理有消息的广播"""
         # Mock session manager
         channel._session_manager = MagicMock()
-        channel._session_manager.get_mapping.return_value = MagicMock(feishu_chat_id="oc_feishu")
+        channel._session_manager.get_mapping_by_group_chat_id.return_value = MagicMock(feishu_chat_id="oc_feishu")
         channel._session_manager.get_sync_state.return_value = MagicMock(last_message_id=0)
         channel._session_manager.update_sync_state = MagicMock()
 
@@ -168,7 +168,7 @@ class TestOnBroadcast:
         """测试未绑定的群聊"""
         # Mock session manager
         channel._session_manager = MagicMock()
-        channel._session_manager.get_mapping.return_value = None
+        channel._session_manager.get_mapping_by_group_chat_id.return_value = None
 
         # Mock send_to_feishu
         channel.send_to_feishu = AsyncMock()
@@ -189,7 +189,7 @@ class TestOnBroadcast:
         """测试重复消息"""
         # Mock session manager
         channel._session_manager = MagicMock()
-        channel._session_manager.get_mapping.return_value = MagicMock(feishu_chat_id="oc_feishu")
+        channel._session_manager.get_mapping_by_group_chat_id.return_value = MagicMock(feishu_chat_id="oc_feishu")
         channel._session_manager.get_sync_state.return_value = MagicMock(last_message_id=1)
 
         # Mock send_to_feishu
@@ -211,7 +211,7 @@ class TestOnBroadcast:
         """测试更新同步状态"""
         # Mock session manager
         channel._session_manager = MagicMock()
-        channel._session_manager.get_mapping.return_value = MagicMock(feishu_chat_id="oc_feishu")
+        channel._session_manager.get_mapping_by_group_chat_id.return_value = MagicMock(feishu_chat_id="oc_feishu")
         channel._session_manager.get_sync_state.return_value = MagicMock(last_message_id=0)
         channel._session_manager.update_sync_state = MagicMock()
 

@@ -46,24 +46,44 @@ def wrap_xml(tag: str, content: str) -> str:
     return f"<{tag}>\n{content}\n</{tag}>"
 
 
+def wrap_md(heading: str, content: str, level: int = 2) -> str:
+    """用 Markdown 标题包裹内容。
+
+    Args:
+        heading: 标题文本
+        content: 内容文本
+        level: 标题级别（1-6），默认 2 表示 ##
+
+    Returns:
+        格式化的 Markdown 文本块
+    """
+    prefix = "#" * level
+    return f"{prefix} {heading}\n\n{content}"
+
+
 def render_for_llm(msg: AgentMessage) -> str:
-    """AgentMessage → 喂给 LLM 的 prompt 字符串（含 <incoming_message> 包裹）"""
-    body = (
-        f"[Agents Hub 平台消息]\n"
-        f"call_id: {msg.call_id}\n"
-        f"来自：{msg.send_from}\n"
-        f"发送给：{msg.send_to}（你）\n"
-        f"类型：{msg.message_type.value}\n"
-        f"内容：{msg.content}"
-    )
+    """AgentMessage → 喂给 LLM 的 prompt 字符串（Markdown 格式）"""
+    lines = [
+        "## 任务",
+        "",
+        f"发起者：{msg.send_from}",
+        "",
+        f"{msg.content}",
+    ]
+
     if msg.files:
-        file_lines = "\n".join(
-            f"- {f['file_name']} ({f['file_type']}, {f['file_size']}B): "
-            f"{str((config.data_path / f['file_path']).resolve())}"
-            for f in msg.files
-        )
-        body += f"\n\n[附件]\n{file_lines}"
-    return wrap_xml(Tag.INCOMING_MESSAGE, body)
+        lines.append("")
+        lines.append("**附件**：")
+        for f in msg.files:
+            file_path = str((config.data_path / f["file_path"]).resolve())
+            lines.append(f"- {f['file_name']} ({f['file_type']}, {f['file_size']}B): {file_path}")
+
+    # 元数据行（供 MCP 工具使用）
+    lines.append("")
+    lines.append("---")
+    lines.append(f"_元数据：call_id={msg.call_id}, type={msg.message_type.value}_")
+
+    return "\n".join(lines)
 
 
 def render_for_chat(

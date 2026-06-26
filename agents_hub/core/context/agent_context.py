@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 from agents_hub.config.types import RoleType
-from agents_hub.core.foundation import MessageType, StateError, Tag, wrap_xml
+from agents_hub.core.foundation import MessageType, StateError, wrap_md
 from agents_hub.core.foundation.message import AgentMessage
 from agents_hub.core.foundation.renderer import render_for_llm
 from agents_hub.utils import get_logger
@@ -64,15 +64,15 @@ class AgentContext:
             last_loaded_compact_index = agent_member_info.context_state.last_loaded_compact_index
             last_loaded_message_index = agent_member_info.context_state.last_loaded_message_index
 
-        # 2. 压缩历史 → <group_chat_history>
+        # 2. 压缩历史 → ## 历史摘要
         compact_history = await self.runtime.load_compact_history()
-        compact_history_xml = await self._build_compact_history_xml(
+        compact_history_md = await self._build_compact_history_md(
             compact_history, last_loaded_compact_index
         )
-        if compact_history_xml:
-            parts.append(compact_history_xml)
+        if compact_history_md:
+            parts.append(compact_history_md)
 
-        # 3. 未压缩的最新消息 → <recent_messages>（仅 LEADER 需要）
+        # 3. 未压缩的最新消息 → ## 最近消息（仅 LEADER 需要）
         group_chat_session = self.runtime.get_group_chat_session()
         if group_chat_session is None:
             logger.error("构建上下文失败: agent=%s, 原因=GroupChatSession 未加载", self.agent_name)
@@ -80,8 +80,8 @@ class AgentContext:
         if self.role_type == RoleType.LEADER:
             new_messages = self._get_filtered_messages(last_loaded_message_index)
             if new_messages:
-                msg_lines = [f"[{m['agent_name']}]: {m['content']}" for m in new_messages]
-                parts.append(wrap_xml(Tag.RECENT_MESSAGES, "\n".join(msg_lines)))
+                msg_lines = [f"- [{m['agent_name']}]: {m['content']}" for m in new_messages]
+                parts.append(wrap_md("最近消息", "\n".join(msg_lines)))
 
         # 4. 更新 agent 的加载状态
         await self._update_agent_context_state(
@@ -91,11 +91,11 @@ class AgentContext:
 
         return "\n".join(parts)
 
-    async def _build_compact_history_xml(
+    async def _build_compact_history_md(
         self, compact_history: list[dict], last_loaded_compact_index: int
     ) -> str:
         """
-        构建压缩历史的 XML 片段
+        构建压缩历史的 Markdown 片段
 
         同类合并：overall（全体摘要）和 for_you（针对当前 agent 的摘要）各自独立编号。
 
@@ -104,7 +104,7 @@ class AgentContext:
             last_loaded_compact_index: 上次加载到的压缩历史索引
 
         Returns:
-            XML 字符串，无新内容时返回空串
+            Markdown 字符串，无新内容时返回空串
         """
         new_compact_history = compact_history[last_loaded_compact_index:]
         if not new_compact_history:
@@ -118,20 +118,19 @@ class AgentContext:
             if self.agent_name in content:
                 for_you_items.append(content[self.agent_name])
 
-        history_blocks: list[str] = [
-            wrap_xml(
-                Tag.SUMMARY_OVERALL,
-                "\n".join(f"{i}. {s}" for i, s in enumerate(overall_items, start=1)),
-            )
-        ]
+        history_blocks: list[str] = ["## 历史摘要", ""]
+
+        # 全体摘要
+        history_blocks.append("**全体进展**：")
+        history_blocks.extend(f"{i}. {s}" for i, s in enumerate(overall_items, start=1))
+
+        # 针对当前 agent 的摘要
         if for_you_items:
-            history_blocks.append(
-                wrap_xml(
-                    Tag.SUMMARY_FOR_YOU,
-                    "\n".join(f"{i}. {s}" for i, s in enumerate(for_you_items, start=1)),
-                )
-            )
-        return wrap_xml(Tag.GROUP_HISTORY, "\n".join(history_blocks))
+            history_blocks.append("")
+            history_blocks.append("**与你相关**：")
+            history_blocks.extend(f"{i}. {s}" for i, s in enumerate(for_you_items, start=1))
+
+        return "\n".join(history_blocks)
 
     def _get_filtered_messages(self, last_loaded_message_index: int) -> list[dict]:
         """
@@ -218,7 +217,7 @@ class AgentContext:
         agent_call_manager=None,
         task_manager=None,
     ) -> str:
-        """构建 runtime XML
+        """构建 runtime Markdown
 
         Args:
             msg: 原始 AgentMessage
@@ -226,22 +225,22 @@ class AgentContext:
             task_manager: TaskManager 实例（可选，仅 LEADER 需要）
 
         Returns:
-            runtime XML 字符串
+            runtime Markdown 字符串
         """
-        parts: list[str] = []
+        lines = ["## Runtime 信息", ""]
 
         # 会话类型：群聊/单聊
         session_type = "群聊" if msg.session_type.value == "main" else "单聊"
-        parts.append(f"    <type>{session_type}</type>")
+        lines.append(f"- **类型**：{session_type}")
 
         # agent_token
         agent_member_info = self.runtime.get_agent_member_info(self.agent_name)
         agent_token = agent_member_info.token if agent_member_info else ""
-        parts.append(f"    <agent_token>{agent_token}</agent_token>")
+        lines.append(f"- **token**：`{agent_token}`")
 
         # group_chat_id
         group_chat_id = self.runtime.group_chat_id
-        parts.append(f"    <group_chat_id>{group_chat_id}</group_chat_id>")
+        lines.append(f"- **群聊ID**：`{group_chat_id}`")
 
         # team_members（排除自己，带 description）
         team_members = []
@@ -249,41 +248,33 @@ class AgentContext:
             if name != self.agent_name:
                 desc = info.description if hasattr(info, "description") and info.description else ""
                 team_members.append(f"{name}（{desc}）" if desc else name)
-        parts.append(f"    <team_members>{', '.join(team_members)}</team_members>")
-
-        # agent_call（当前消息的 call_id、from、content_head、need_response）
-        content_head = msg.content[:20] if msg.content else ""
-        need_response = "true" if msg.message_type.value == "task" else "false"
-        parts.append(
-            f'    <agent_call call_id="{msg.call_id}" from="{msg.send_from}" '
-            f'content_head="{content_head}" need_response="{need_response}" />'
-        )
+        lines.append(f"- **团队成员**：{', '.join(team_members)}")
 
         # team_workboard（仅 LEADER）
         if self.role_type == RoleType.LEADER and task_manager:
             task_list = task_manager.get_active_task_list(self.runtime.group_chat_id)
             if task_list and task_list.tasks:
-                workboard_lines = ["    <team_workboard>", "        当前任务列表："]
+                lines.append("")
+                lines.append("**当前任务列表**：")
                 for task in task_list.tasks:
                     status_str = task.status.value.upper()
-                    workboard_lines.append(
-                        f"        - [{status_str}] {task.task_id}: {task.content} (owner: {task.owner})"
+                    lines.append(
+                        f"- [{status_str}] {task.task_id}: {task.content} (owner: {task.owner})"
                     )
-                workboard_lines.append("    </team_workboard>")
-                parts.append("\n".join(workboard_lines))
 
         # user_pin_message
         pin_content = self._get_pinned_messages()
         if pin_content:
-            parts.append(pin_content)
+            lines.append("")
+            lines.append(pin_content)
 
-        return "<runtime>\n" + "\n".join(parts) + "\n</runtime>"
+        return "\n".join(lines)
 
     def _get_pinned_messages(self) -> str:
         """读取 pin 消息并格式化
 
         Returns:
-            pin 消息 XML 字符串，无 pin 时返回空字符串
+            pin 消息 Markdown 字符串，无 pin 时返回空字符串
         """
         session_path = Path(self.runtime.repository.group_chat_session_path)
         pins_path = session_path / "pins.json"
@@ -301,12 +292,11 @@ class AgentContext:
 
             pins_sorted = sorted(pins, key=lambda p: p.get("pinned_at", ""))
 
-            lines = ["    <user_pin_message>"]
+            lines = ["**用户置顶消息**："]
             for i, pin in enumerate(pins_sorted, start=1):
                 speaker = pin.get("speaker", "unknown")
                 pin_content = pin.get("content", "")
-                lines.append(f"        {i}. [{speaker}]: {pin_content}")
-            lines.append("    </user_pin_message>")
+                lines.append(f"{i}. [{speaker}]: {pin_content}")
 
             return "\n".join(lines)
         except Exception:

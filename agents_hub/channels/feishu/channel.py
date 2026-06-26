@@ -173,7 +173,7 @@ class FeishuChannel:
         if not self._session_manager:
             return
 
-        mapping = self._session_manager.get_mapping(group_chat_id)
+        mapping = self._session_manager.get_mapping_by_group_chat_id(group_chat_id)
         if not mapping:
             return  # 未绑定，跳过
 

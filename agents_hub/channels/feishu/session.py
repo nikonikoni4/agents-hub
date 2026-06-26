@@ -91,6 +91,7 @@ class FeishuSessionManager:
         self._sync_state_file = self._channels_dir / "sync_state.json"
         self._mappings: dict[str, FeishuSessionMapping] = {}  # feishu_chat_id -> mapping
         self._sync_states: dict[str, FeishuSyncState] = {}  # feishu_chat_id -> sync_state
+        self._group_to_feishu: dict[str, str] = {}  # group_chat_id -> feishu_chat_id（反向索引）
 
     def bind(self, feishu_chat_id: str, group_chat_id: str, group_chat_name: str) -> None:
         """绑定飞书群到 agents-hub 群聊。
@@ -107,6 +108,7 @@ class FeishuSessionManager:
             group_chat_name=group_chat_name,
             bound_at=now,
         )
+        self._group_to_feishu[group_chat_id] = feishu_chat_id
         logger.info("飞书群已绑定: %s -> %s (%s)", feishu_chat_id, group_chat_id, group_chat_name)
 
     def unbind(self, feishu_chat_id: str) -> None:
@@ -116,6 +118,8 @@ class FeishuSessionManager:
             feishu_chat_id: 飞书群 ID
         """
         if feishu_chat_id in self._mappings:
+            mapping = self._mappings[feishu_chat_id]
+            self._group_to_feishu.pop(mapping.group_chat_id, None)
             del self._mappings[feishu_chat_id]
             logger.info("飞书群已解绑: %s", feishu_chat_id)
 
@@ -133,6 +137,20 @@ class FeishuSessionManager:
             绑定关系，不存在则返回 None
         """
         return self._mappings.get(feishu_chat_id)
+
+    def get_mapping_by_group_chat_id(self, group_chat_id: str) -> FeishuSessionMapping | None:
+        """通过 agents-hub 群聊 ID 获取绑定关系。
+
+        Args:
+            group_chat_id: agents-hub 群聊 ID
+
+        Returns:
+            绑定关系，不存在则返回 None
+        """
+        feishu_chat_id = self._group_to_feishu.get(group_chat_id)
+        if feishu_chat_id:
+            return self._mappings.get(feishu_chat_id)
+        return None
 
     def get_sync_state(self, feishu_chat_id: str) -> FeishuSyncState:
         """获取同步状态（不存在则创建）。
@@ -194,6 +212,10 @@ class FeishuSessionManager:
                 data = json.loads(self._mapping_file.read_text())
                 self._mappings = {
                     item["feishu_chat_id"]: FeishuSessionMapping.from_dict(item) for item in data
+                }
+                # 重建反向索引
+                self._group_to_feishu = {
+                    m.group_chat_id: m.feishu_chat_id for m in self._mappings.values()
                 }
                 logger.info("已加载 %d 个映射关系", len(self._mappings))
             except (json.JSONDecodeError, KeyError):
