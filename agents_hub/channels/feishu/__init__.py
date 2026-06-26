@@ -1,3 +1,4 @@
+from agents_hub.channels.feishu.channel import FeishuChannel
 from agents_hub.channels.feishu.client import FeishuClient
 from agents_hub.channels.feishu.config import FeishuConfig
 from agents_hub.channels.feishu.message import (
@@ -8,6 +9,7 @@ from agents_hub.channels.feishu.message import (
 )
 
 __all__ = [
+    "FeishuChannel",
     "FeishuClient",
     "FeishuConfig",
     "MessageDeduplicator",
