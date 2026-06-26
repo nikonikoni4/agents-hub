@@ -36,6 +36,7 @@ class SystemConfig:
         "memory_task_cron_minute": 0,  # 记忆任务执行分钟（0-59）
         "docker_image": "ai-tools:latest",  # Docker 沙箱镜像
         "use_docker": True,  # 是否默认使用 Docker 沙箱执行
+        "feishu": {},  # 飞书 Channel 配置
     }
 
     def __new__(cls):
@@ -215,6 +216,11 @@ class SystemConfig:
         """历史总结文件路径"""
         return self.data_path / "schedule" / "memory" / "agents_hub_history" / "history.jsonl"
 
+    @property
+    def feishu_config(self) -> dict:
+        """飞书 Channel 配置（原始字典）"""
+        return self._config_data.get("feishu", {})
+
 
 class Config:
     """配置聚合类 - 统一访问所有配置
@@ -336,6 +342,11 @@ class Config:
     def history_jsonl_path(self) -> Path:
         """快捷访问：历史总结文件路径"""
         return self.system.history_jsonl_path
+
+    @property
+    def feishu_config(self) -> dict:
+        """快捷访问：飞书 Channel 配置"""
+        return self.system.feishu_config
 
     @property
     def assistant_token(self) -> str:

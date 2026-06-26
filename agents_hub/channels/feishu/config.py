@@ -1,4 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from agents_hub.config.config import SystemConfig
 
 
 @dataclass
@@ -20,3 +26,23 @@ class FeishuConfig:
     verification_token: str = ""
     group_policy: str = "mention"
     domain: str = "feishu"
+
+    @classmethod
+    def from_system_config(cls, system_config: SystemConfig) -> FeishuConfig:
+        """从 SystemConfig 创建 FeishuConfig。
+
+        Args:
+            system_config: 系统配置实例
+
+        Returns:
+            FeishuConfig 实例
+        """
+        feishu_data = system_config.feishu_config
+        return cls(
+            app_id=feishu_data.get("app_id", ""),
+            app_secret=feishu_data.get("app_secret", ""),
+            encrypt_key=feishu_data.get("encrypt_key", ""),
+            verification_token=feishu_data.get("verification_token", ""),
+            group_policy=feishu_data.get("group_policy", "mention"),
+            domain=feishu_data.get("domain", "feishu"),
+        )
