@@ -1,6 +1,8 @@
 """飞书消息发送测试"""
 
 import pytest
+import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from agents_hub.channels.feishu.channel import FeishuChannel
@@ -17,9 +19,16 @@ def config():
 
 
 @pytest.fixture
-def channel(config):
+def data_path():
+    """创建临时数据目录"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield Path(tmpdir)
+
+
+@pytest.fixture
+def channel(config, data_path):
     """创建测试 Channel"""
-    return FeishuChannel(config)
+    return FeishuChannel(config, data_path)
 
 
 class TestSendToFeishu:

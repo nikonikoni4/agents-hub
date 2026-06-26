@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from agents_hub.channels.feishu.client import FeishuClient
@@ -26,7 +27,7 @@ class FeishuChannel:
     负责消息接收、解析、去重、命令处理和消息发送。
 
     使用方式：
-        channel = FeishuChannel(config)
+        channel = FeishuChannel(config, data_path)
         await channel.start()
         # ... 接收消息时调用 on_message(event)
         await channel.stop()
@@ -34,8 +35,9 @@ class FeishuChannel:
 
     name = "feishu"
 
-    def __init__(self, config: FeishuConfig):
+    def __init__(self, config: FeishuConfig, data_path: Path):
         self.config = config
+        self._data_path = data_path
         self._client: FeishuClient | None = None
         self._deduplicator = MessageDeduplicator()
         self._commander: Any = None  # 延迟初始化
@@ -57,7 +59,7 @@ class FeishuChannel:
         self._commander = Commander()
 
         # 初始化 session manager
-        self._session_manager = FeishuSessionManager()
+        self._session_manager = FeishuSessionManager(self._data_path)
         self._session_manager.load()
 
         # 注册广播回调

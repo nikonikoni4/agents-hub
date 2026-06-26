@@ -7,11 +7,19 @@ from agents_hub.channels.feishu.message import (
     parse_mentions,
     parse_message,
 )
+from agents_hub.channels.feishu.session import (
+    FeishuSessionManager,
+    FeishuSessionMapping,
+    FeishuSyncState,
+)
 
 __all__ = [
     "FeishuChannel",
     "FeishuClient",
     "FeishuConfig",
+    "FeishuSessionManager",
+    "FeishuSessionMapping",
+    "FeishuSyncState",
     "MessageDeduplicator",
     "parse_agent_name",
     "parse_mentions",
