@@ -28,7 +28,7 @@ def data_path():
 @pytest.fixture
 def channel(config, data_path):
     """创建测试 Channel"""
-    return FeishuChannel(config, data_path)
+    return FeishuChannel(config, data_path, group_chat_service=MagicMock())
 
 
 class TestSendToFeishu:

@@ -27,7 +27,7 @@ class FeishuChannel:
     负责消息接收、解析、去重、命令处理和消息发送。
 
     使用方式：
-        channel = FeishuChannel(config, data_path)
+        channel = FeishuChannel(config, data_path, group_chat_service)
         await channel.start()
         # ... 接收消息时调用 on_message(event)
         await channel.stop()
@@ -35,9 +35,10 @@ class FeishuChannel:
 
     name = "feishu"
 
-    def __init__(self, config: FeishuConfig, data_path: Path):
+    def __init__(self, config: FeishuConfig, data_path: Path, group_chat_service: Any):
         self.config = config
         self._data_path = data_path
+        self._group_chat_service = group_chat_service
         self._client: FeishuClient | None = None
         self._deduplicator = MessageDeduplicator()
         self._commander: Any = None  # 延迟初始化
@@ -47,10 +48,8 @@ class FeishuChannel:
     async def start(self) -> None:
         """启动 channel：初始化客户端 -> 注册回调"""
         # 延迟导入避免循环依赖
-        from agents_hub.api.services.group_chat_service import GroupChatService
         from agents_hub.channels.feishu.commander import FeishuCommander
         from agents_hub.channels.feishu.session import FeishuSessionManager
-        from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
         from agents_hub.realtime.dependencies import register_channel_callback
 
         # 初始化客户端
@@ -61,11 +60,8 @@ class FeishuChannel:
         self._session_manager = FeishuSessionManager(self._data_path)
         self._session_manager.load()
 
-        # 初始化 group chat service
-        group_chat_service = GroupChatService(group_chat_manager)
-
         # 初始化 commander
-        self._commander = FeishuCommander(self._session_manager, group_chat_service)
+        self._commander = FeishuCommander(self._session_manager, self._group_chat_service)
 
         # 注册广播回调
         register_channel_callback(self._on_broadcast)
