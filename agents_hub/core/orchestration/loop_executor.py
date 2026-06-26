@@ -239,19 +239,29 @@ class LoopExecutor:
     ) -> tuple[bool, str]:
         """校验节点输出是否包含所有必需字段。
 
-        使用简单字符串匹配检查输出中是否包含所有必需字段。
-        这是一种轻量级校验方式，适用于 Markdown 格式的输出。
+        校验逻辑：
+        1. 提取字段中的关键字（去除 ## 等 Markdown 标记）
+        2. 检查关键字是否存在于输出中
 
         Args:
             output: 节点输出内容。
-            required_fields: 必需字段列表，如果为 None 则跳过校验。
+            required_fields: 必需字段列表（Markdown 标题格式），如果为 None 则跳过校验。
 
         Returns:
             (is_valid, error_message) 元组：
             - is_valid: 是否通过校验
             - error_message: 校验失败时的错误提示，成功时为空字符串
         """
-        missing_fields = [field for field in (required_fields or []) if field not in output]
+        if not required_fields:
+            return True, ""
+
+        # 提取关键字：去除行首的 # 和空格
+        def extract_keyword(field: str) -> str:
+            return field.lstrip("#").strip()
+
+        missing_fields = [
+            field for field in required_fields if extract_keyword(field) not in output
+        ]
         if not missing_fields:
             return True, ""
 
