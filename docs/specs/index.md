@@ -148,3 +148,9 @@
  - 触发规则：当设计、修改或扩展定时记忆助手调度系统时阅读，包括 SchedulerService、StateManager、MemoryTask、补偿执行机制和 MCP 工具 get_memory_context
  - 内容摘要：定时记忆助手调度系统规格，定义 SchedulerService（APScheduler 封装、定时触发、补偿执行）、StateManager（状态文件读写）、MemoryTask（单群聊记忆收集）、get_memory_context MCP 工具和容错策略
 
+## memory-assistant
+ - updated_at : 2026-06-26
+ - path: `docs/specs/2026-06-26-memory-assistant.md`
+ - 触发规则：当设计、修改或扩展记忆助手 Agent 时阅读，包括 4 类记忆文件生成规则、MCP 工具调用契约和 knowledge-base 同步机制
+ - 内容摘要：记忆助手 Agent 的职责规格，定义 4 类记忆文件（任务日志、用户决策、AI 错误、协作建议）的生成规则和判断标准、get_memory_context MCP 工具输入输出契约、history.jsonl 数据模型和 knowledge-base 文件同步机制
+
