@@ -127,8 +127,9 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
         const handle = await (
           window as { showDirectoryPicker: () => Promise<{ name: string }> }
         ).showDirectoryPicker();
+        // File System Access API 只能获取目录名，无法获取完整路径
+        // 所以只设置目录名，让用户手动补充完整路径
         setProjectPath(handle.name);
-        addToHistory(handle.name);
       } catch {
         // 用户取消选择
       }
@@ -540,6 +541,13 @@ export function CreateGroupChatDialog({ isOpen, onClose, onSuccess }: CreateGrou
                         value={projectPath}
                         onChange={(e) => setProjectPath(e.target.value)}
                         onFocus={() => history.length > 0 && setShowHistory(true)}
+                        onBlur={() => {
+                          // 输入框失去焦点时，如果有内容则保存到历史
+                          if (projectPath.trim()) {
+                            addToHistory(projectPath.trim());
+                          }
+                          setShowHistory(false);
+                        }}
                         placeholder="/home/user/projects/your-project"
                       />
                       {import.meta.env.PROD && (
