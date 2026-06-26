@@ -274,5 +274,9 @@ class FeishuChannel:
                 agent_name=message.get("send_from", "unknown"),
             )
 
-            # 更新同步状态
+            # 更新同步状态并持久化
             self._session_manager.update_sync_state(state.feishu_chat_id, message.get("id", 0))
+
+        # 批量保存：避免每条消息都写磁盘
+        if self._session_manager._states:
+            self._session_manager.save()
