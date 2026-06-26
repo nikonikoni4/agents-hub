@@ -27,11 +27,13 @@ HELP_TEXT = """欢迎使用 Agents Hub！
 /help - 显示帮助
 /a 或 /assistant - 进入助手模式
 /agents - 列出所有 agent
+/ag <名称或序号> - 进入 agent 单聊 (快捷方式)
 /groups - 列出所有群聊
-/group <名称或序号> - 进入群聊模式
-/agent <名称> - 进入单聊模式
+/g <名称或序号> - 进入群聊 (快捷方式)
 /status - 显示当前状态
-/back - 返回命令面板"""
+/back - 返回命令面板
+
+提示：可使用序号快速选择，如 /g 1 或 /ag 2"""
 
 
 class FeishuCommander:
@@ -80,9 +82,11 @@ class FeishuCommander:
             "/a": lambda: self._cmd_assistant(chat_id),
             "/assistant": lambda: self._cmd_assistant(chat_id),
             "/agents": lambda: self._cmd_agents(),
-            "/groups": lambda: self._cmd_groups(),
-            "/group": lambda: self._cmd_group(chat_id, arg),
+            "/ag": lambda: self._cmd_agent(chat_id, arg),  # 快捷方式
             "/agent": lambda: self._cmd_agent(chat_id, arg),
+            "/groups": lambda: self._cmd_groups(),
+            "/g": lambda: self._cmd_group(chat_id, arg),  # 快捷方式
+            "/group": lambda: self._cmd_group(chat_id, arg),
             "/status": lambda: self._cmd_status(chat_id),
             "/back": lambda: self._cmd_back(chat_id),
         }
@@ -138,7 +142,7 @@ class FeishuCommander:
     async def _cmd_group(self, chat_id: str, name_or_idx: str) -> str:
         """切换到群聊模式。"""
         if not name_or_idx:
-            return "请指定群聊名称、序号或 ID，如: /group my-team 或 /group 1"
+            return "请指定群聊名称或序号，如: /g my-team 或 /g 1"
 
         groups = group_chat_manager.list_all_group_chats()
         if not groups:
@@ -185,17 +189,32 @@ class FeishuCommander:
             f"发送 /back 返回助手模式"
         )
 
-    async def _cmd_agent(self, chat_id: str, agent_name: str) -> str:
+    async def _cmd_agent(self, chat_id: str, name_or_idx: str) -> str:
         """切换到单聊模式。"""
-        if not agent_name:
-            return "请指定 agent 名称，如: /agent pm"
+        if not name_or_idx:
+            return "请指定 agent 名称或序号，如: /ag pm 或 /ag 1"
 
-        # 验证 agent 存在
-        try:
-            self._role_manager.get_role(agent_name)
-        except Exception:
-            available = self._role_manager.list_role_names()
-            return f"Agent '{agent_name}' 不存在。可用: {', '.join(available)}"
+        # 获取所有 agent
+        roles = self._role_manager.list_roles()
+        if not roles:
+            return "当前没有可用的 agent"
+
+        agent_name = None
+
+        # 按序号匹配
+        if name_or_idx.isdigit():
+            idx = int(name_or_idx) - 1
+            if 0 <= idx < len(roles):
+                agent_name = roles[idx].name
+            else:
+                return f"序号 {name_or_idx} 超出范围，共 {len(roles)} 个 agent"
+        else:
+            # 按名称匹配
+            if name_or_idx in [r.name for r in roles]:
+                agent_name = name_or_idx
+            else:
+                names = [r.name for r in roles]
+                return f"Agent '{name_or_idx}' 不存在。可用: {', '.join(names)}"
 
         # 创建单聊会话
         request = CreateSingleChatRequest(
@@ -210,7 +229,7 @@ class FeishuCommander:
         self._session_manager.save()
 
         logger.info("已切换到单聊: chat_id=%s, agent=%s", chat_id, agent_name)
-        return f"已进入与 {agent_name} 的单聊模式\n发送 /back 返回助手模式"
+        return f"已进入与 {agent_name} 的单聊模式\n发送 /back 返回命令面板"
 
     async def _cmd_status(self, chat_id: str) -> str:
         """显示当前状态。"""
