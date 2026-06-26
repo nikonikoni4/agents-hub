@@ -39,7 +39,7 @@ class GroupChatRuntime:
         project_path: str,
         repository: GroupChatRepository | None = None,
         state: GroupChatRuntimeState | None = None,
-        on_change: Callable[[str], Awaitable[None]] | None = None,
+        on_change: Callable[[str, dict | None], Awaitable[None]] | None = None,
     ) -> None:
         self.group_chat_id = group_chat_id
         self.project_path = project_path
@@ -332,7 +332,15 @@ class GroupChatRuntime:
                 logger.warning("群聊 message 引用不一致: session=%s", id(session))
             await self._persist(lambda: self.repository.save_group_chat_session(session))
             self._message_event.set()
-            await self._notify_change()
+            # 构建消息内容用于广播
+            message_data = {
+                "id": session.messages[-1].get("id"),
+                "content": agent_result.text,
+                "send_from": agent_result.agent_name,
+                "send_to": "group",
+                "timestamp": agent_result.timestamp,
+            }
+            await self._notify_change(message=message_data)
 
     async def add_system_message(self, content: str) -> None:
         """
@@ -610,16 +618,21 @@ class GroupChatRuntime:
 
     # ==================== Persistence Helper ====================
 
-    async def _notify_change(self) -> None:
-        """通知外部状态变更（通过 on_change 回调）"""
+    async def _notify_change(self, message: dict | None = None) -> None:
+        """通知外部状态变更（通过 on_change 回调）
+
+        Args:
+            message: 消息内容（可选），不为 None 时表示有新消息的广播
+        """
         logger.debug(
-            "[Runtime] _notify_change 被调用: group_chat_id=%s, has_callback=%s",
+            "[Runtime] _notify_change 被调用: group_chat_id=%s, has_callback=%s, has_message=%s",
             self.group_chat_id,
             self._on_change is not None,
+            message is not None,
         )
         if self._on_change:
             try:
-                await self._on_change(self.group_chat_id)
+                await self._on_change(self.group_chat_id, message)
                 logger.debug("[Runtime] on_change 回调执行成功")
             except Exception:
                 logger.warning("on_change 回调失败", exc_info=True)

@@ -2,7 +2,10 @@
 
 import pytest
 
-from agents_hub.realtime.dependencies import broadcast_group_chat_refresh
+from agents_hub.realtime.dependencies import (
+    broadcast_group_chat_refresh,
+    reset_channel_callbacks,
+)
 from agents_hub.realtime.events import RefreshSignal, make_refresh_signal
 
 
@@ -23,9 +26,12 @@ def test_refresh_signal_defaults_to_refresh_type():
 
 @pytest.mark.asyncio
 async def test_broadcast_group_chat_refresh_uses_manager_payload():
+    reset_channel_callbacks()
+
     class FakeManager:
         def __init__(self):
             self.calls = []
+            self.rooms = {"chat-123": []}
 
         async def broadcast(self, group_chat_id, message):
             self.calls.append((group_chat_id, message))

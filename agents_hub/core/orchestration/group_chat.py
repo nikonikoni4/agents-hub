@@ -91,7 +91,7 @@ class GroupChat:
         self.runtime = GroupChatRuntime(
             group_chat_id,
             project_path,
-            on_change=broadcast_group_chat_refresh,
+            on_change=lambda gc_id, msg: broadcast_group_chat_refresh(gc_id, message=msg),
         )
         self.message_router = MessageRouter()
         self.agent_call_manager = AgentCallManager(self.group_chat_id, project_path)
