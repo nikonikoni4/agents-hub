@@ -15,7 +15,7 @@ import { streamSSE } from '@/core/api/sseClient';
 import { useSingleChatStore } from '../store/singleChatStore';
 import type { SingleChatMessageApiItem, ToolCall } from '@/shared/types';
 
-export function useSingleChatMessages() {
+export function useSingleChatMessages(onAssistantReply?: () => void) {
   const activeSingleChatId = useSingleChatStore((s) => s.activeSingleChatId);
   const draftChat = useSingleChatStore((s) => s.draftChat);
   const promoteDraftToReal = useSingleChatStore((s) => s.promoteDraftToReal);
@@ -142,6 +142,8 @@ export function useSingleChatMessages() {
             tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
           };
           setMessages((prev) => [...prev, assistantMsg]);
+          // agent 回复完成，调用回调
+          onAssistantReply?.();
         }
 
         // draft → real：更新 store

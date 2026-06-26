@@ -81,7 +81,6 @@ export function SingleChatPanel() {
   const closeSingleChat = useSingleChatStore((s) => s.closeSingleChat);
   const toggleLocation = useSingleChatStore((s) => s.toggleLocation);
 
-  const { messages, loading, streaming, streamingText, sendMessage } = useSingleChatMessages();
   const { handleNavigation } = useNavigationHandler();
   const { textareaRef, adjustHeight } = useAutoResizeTextarea();
   const [input, setInput] = useState('');
@@ -90,6 +89,16 @@ export function SingleChatPanel() {
   // 通过 hook 获取私聊功能，不直接操作 store 和 API
   const { isPrivateChat, stopPrivateChat, startTimer, resetTimer, handleTimeout } =
     usePrivateChat();
+
+  // agent 回复后重置计时器
+  const handleAssistantReply = useCallback(() => {
+    if (isPrivateChat) {
+      resetTimer(handleTimeout);
+    }
+  }, [isPrivateChat, resetTimer, handleTimeout]);
+
+  // 获取消息（agent 回复后会调用 handleAssistantReply）
+  const { messages, loading, streaming, streamingText, sendMessage } = useSingleChatMessages(handleAssistantReply);
 
   // 启动计时器（私聊模式下）
   useEffect(() => {
@@ -110,15 +119,12 @@ export function SingleChatPanel() {
     }
   }, [stopPrivateChat, closeSingleChat]);
 
-  // 发送消息时重置计时器
+  // 发送消息（计时器由 agent 回复后重置，不在发送时重置）
   const handleSendMessage = useCallback(
     async (text: string) => {
-      if (isPrivateChat) {
-        resetTimer(handleTimeout);
-      }
       await sendMessage(text);
     },
-    [isPrivateChat, resetTimer, handleTimeout, sendMessage]
+    [sendMessage]
   );
 
   // 从已有列表中查找，或用 draft 构造临时对象
