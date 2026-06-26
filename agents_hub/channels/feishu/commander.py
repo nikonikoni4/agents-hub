@@ -21,14 +21,17 @@ logger = get_logger(__name__)
 # 常量
 MESSAGE_TIMEOUT_SECONDS = 120.0  # 消息等待超时时间
 
-HELP_TEXT = """可用命令：
+HELP_TEXT = """欢迎使用 Agents Hub！
+
+可用命令：
 /help - 显示帮助
+/a 或 /assistant - 进入助手模式
 /agents - 列出所有 agent
 /groups - 列出所有群聊
 /group <名称或序号> - 进入群聊模式
 /agent <名称> - 进入单聊模式
 /status - 显示当前状态
-/back - 返回助手模式"""
+/back - 返回命令面板"""
 
 
 class FeishuCommander:
@@ -74,6 +77,8 @@ class FeishuCommander:
 
         handlers = {
             "/help": lambda: self._cmd_help(),
+            "/a": lambda: self._cmd_assistant(chat_id),
+            "/assistant": lambda: self._cmd_assistant(chat_id),
             "/agents": lambda: self._cmd_agents(),
             "/groups": lambda: self._cmd_groups(),
             "/group": lambda: self._cmd_group(chat_id, arg),
@@ -93,6 +98,20 @@ class FeishuCommander:
     async def _cmd_help() -> str:
         """显示帮助信息。"""
         return HELP_TEXT
+
+    async def _cmd_assistant(self, chat_id: str) -> str:
+        """进入助手模式。"""
+        state = self._session_manager.get_or_create_state(chat_id)
+
+        # 如果已经在助手模式，提示用户
+        if state.session_type == "assistant":
+            return "已经在助手模式中\n\n直接发送消息即可与助手对话"
+
+        # 切换到助手模式
+        self._session_manager.switch_to_assistant(chat_id)
+        self._session_manager.save()
+        logger.info("已切换到助手模式: chat_id=%s", chat_id)
+        return "已进入助手模式\n\n直接发送消息即可与助手对话\n发送 /back 返回命令面板"
 
     async def _cmd_agents(self) -> str:
         """列出所有 agent。"""
@@ -197,20 +216,29 @@ class FeishuCommander:
         """显示当前状态。"""
         state = self._session_manager.get_or_create_state(chat_id)
         type_map = {
+            "idle": "命令面板",
             "assistant": "助手模式",
             "single_chat": "单聊模式",
             "group_chat": "群聊模式",
         }
         type_text = type_map.get(state.session_type, state.session_type)
+
+        if state.session_type == "idle":
+            return f"当前模式: {type_text}\n\n发送命令选择模式，如 /a 进入助手"
+
         name_text = state.session_name or state.session_id
         return f"当前模式: {type_text}\n当前对话: {name_text}"
 
     async def _cmd_back(self, chat_id: str) -> str:
-        """返回助手模式。"""
-        self._session_manager.switch_to_assistant(chat_id)
+        """返回命令面板。"""
+        state = self._session_manager.get_or_create_state(chat_id)
+        state.session_type = "idle"
+        state.session_id = ""
+        state.session_name = ""
+        # 保留 single_chat_id，避免重复创建单聊
         self._session_manager.save()
-        logger.info("已返回助手模式: chat_id=%s", chat_id)
-        return "已返回助手模式\n\n发送 /help 查看可用命令"
+        logger.info("已返回命令面板: chat_id=%s", chat_id)
+        return "已返回命令面板\n\n" + HELP_TEXT
 
     # ==================== 消息转发 ====================
 
@@ -230,7 +258,10 @@ class FeishuCommander:
         # 自动创建状态（首次消息）
         state = self._session_manager.get_or_create_state(chat_id)
 
-        if state.session_type == "assistant":
+        if state.session_type == "idle":
+            # 空闲模式：显示命令面板
+            return HELP_TEXT
+        elif state.session_type == "assistant":
             return await self._forward_to_assistant(state, content)
         elif state.session_type == "single_chat":
             return await self._forward_to_single_chat(state, content)

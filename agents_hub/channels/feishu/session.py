@@ -81,7 +81,7 @@ class FeishuSessionManager:
         self._channels_dir = data_path / "channels" / "feishu"
         self._state_file = self._channels_dir / "session_state.json"
         self._states: dict[str, FeishuSessionState] = {}  # feishu_chat_id -> state
-        self._default_session_type = "assistant"  # 默认助手模式
+        self._default_session_type = "idle"  # 默认空闲模式，显示命令面板
 
     def get_or_create_state(self, feishu_chat_id: str) -> FeishuSessionState:
         """获取或创建状态（首次收到消息时自动创建）
@@ -97,7 +97,7 @@ class FeishuSessionManager:
             self._states[feishu_chat_id] = FeishuSessionState(
                 feishu_chat_id=feishu_chat_id,
                 session_type=self._default_session_type,
-                session_id=config.default_assistant_name,
+                session_id="",  # idle 模式无 session_id
                 session_name="",
                 single_chat_id="",
                 last_message_id=0,
@@ -105,10 +105,9 @@ class FeishuSessionManager:
                 created_at=now,
             )
             logger.info(
-                "自动创建飞书状态: chat_id=%s, type=%s, session=%s",
+                "自动创建飞书状态: chat_id=%s, type=%s",
                 feishu_chat_id,
                 self._default_session_type,
-                config.default_assistant_name,
             )
         return self._states[feishu_chat_id]
 
