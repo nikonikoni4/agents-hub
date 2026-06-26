@@ -310,11 +310,24 @@ class FeishuCommander:
         async for event_json in single_chat_manager.send_message_stream(single_chat_id, content):
             try:
                 event = json.loads(event_json)
-                if event.get("type") == "text_delta":
+                event_type = event.get("type")
+
+                # 调试日志：记录所有事件类型
+                logger.debug(
+                    "收到流式事件: type=%s, content_keys=%s",
+                    event_type,
+                    list(event.get("content", {}).keys())
+                    if isinstance(event.get("content"), dict)
+                    else "not_dict",
+                )
+
+                if event_type == "text_delta":
                     text = event.get("content", {}).get("text", "")
                     if text:
                         parts.append(text)
-            except (json.JSONDecodeError, KeyError):
-                pass
+            except (json.JSONDecodeError, KeyError) as e:
+                logger.warning("解析流式事件失败: %s", e)
 
-        return "".join(parts) if parts else "Agent 未返回内容"
+        result = "".join(parts) if parts else "Agent 未返回内容"
+        logger.info("流式响应收集完成: single_chat_id=%s, length=%d", single_chat_id, len(result))
+        return result
