@@ -89,7 +89,7 @@ class MemoryTask:
 |---------------|-------------------|---------|
 | 执行记忆助手 | `agent_platform_client.execute()` | `MemoryTask.execute()` |
 
-<key_function last_update="2026-06-25T19:37:43+08:00">
+<key_function last_update="2026-06-26T18:23:55+08:00">
 - agents_hub/scheduler/scheduler_service.py
   - scheduler_service.SchedulerService.start:42
   - scheduler_service.SchedulerService.shutdown:101
@@ -101,7 +101,7 @@ class MemoryTask:
   - state_manager.StateManager.should_execute_today:45
   - state_manager.StateManager.append_results:62
 - agents_hub/scheduler/task/memory_task.py
-  - memory_task.MemoryTask.execute:64
+  - memory_task.MemoryTask.execute:100
 - agents_hub/mcp/server.py
   - server.get_memory_context:1469
   - server._verify_memory_token:125

@@ -74,7 +74,7 @@ Agent 成员状态扩展为：
 
 ### API 端点
 
-<key_function last_update="2026-06-25T19:45:00+08:00">
+<key_function last_update="2026-06-26T18:23:55+08:00">
 - agents_hub/api/routes/group_chat.py
   - group_chat.start_private_chat
   - group_chat.stop_private_chat

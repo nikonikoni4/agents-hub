@@ -67,12 +67,12 @@ contract_refs:
 
 ### 对外接口
 
-<key_function last_update="2026-06-25T19:37:43+08:00">
+<key_function last_update="2026-06-26T18:23:55+08:00">
 - agents_hub/agent_bridge/bridge.py
   - bridge.AgentBridge.execute_stream:130
   - bridge.AgentBridge.execute:262
   - bridge.AgentBridge.execute_with_first_response:351
-  - bridge.AgentBridge.bare_claude_call:456
+  - bridge.AgentBridge.bare_claude_call:458
 - agents_hub/agent_bridge/models.py
   - models.StreamEvent
   - models.AgentResult

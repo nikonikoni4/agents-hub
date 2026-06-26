@@ -126,16 +126,16 @@ class AgentResult:
 - `GroupChatRuntime.add_message()` 是唯一写入入口
 - 前端通过 `getMessages` API 读取 `messages` 列表
 
-<key_function last_update="2026-06-25T19:37:43+08:00">
+<key_function last_update="2026-06-26T18:23:55+08:00">
 - frontend/src/layouts/ChatArea/ChatArea.tsx
   - ChatArea.handleSend:377
 - frontend/src/core/api/groupChatApi.ts
   - groupChatApi.sendMessage:674
 - agents_hub/api/services/group_chat_service.py
-  - GroupChatService.send_message:482
+  - GroupChatService.send_message:485
 - agents_hub/core/orchestration/group_chat.py
   - GroupChat.send_message_to_agent:1072
-  - GroupChat._cleanup_agent_queue:1194
+  - GroupChat._cleanup_agent_queue:1187
 - agents_hub/core/communication/message_router.py
   - MessageRouter.send_message:66
   - MessageRouter._validate_message:120

@@ -47,7 +47,7 @@ class RefreshSignal:
 - 前端收到信号后自行决定刷新哪些数据（消息列表、成员列表、任务列表等）
 - 采用"推送信号 + 拉取数据"模式，不直接推送完整数据
 
-<key_function last_update="2026-06-25T19:37:43+08:00">
+<key_function last_update="2026-06-26T18:23:55+08:00">
 - agents_hub/realtime/dependencies.py
   - broadcast_group_chat_refresh:25
 - agents_hub/realtime/events.py
@@ -57,13 +57,13 @@ class RefreshSignal:
   - WebSocketManager.disconnect:28
   - WebSocketManager.broadcast:46
 - agents_hub/core/context/group_chat_runtime.py
-  - GroupChatRuntime._notify_change:612
+  - GroupChatRuntime._notify_change:613
 - agents_hub/core/orchestration/group_chat.py
   - GroupChat.__init__:57
 - agents_hub/api/services/group_chat_service.py
-  - GroupChatService.fork_group_chat:1097
+  - GroupChatService.fork_group_chat:1101
   - GroupChatService.load_group_chat:186
-  - GroupChatService.update_permission_status:1611
+  - GroupChatService.update_permission_status:1615
 - agents_hub/mcp/server.py
   - call_agent:281
   - report_progress:501 ⚠️ 已弃用（见 ADR 2026-06-16-mcp-tools-to-direct-output）

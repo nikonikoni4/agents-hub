@@ -63,7 +63,7 @@ contract_refs:
 
 ### 对外接口总览
 
-<key_function last_update="2026-06-25T19:37:43+08:00">
+<key_function last_update="2026-06-26T18:23:55+08:00">
 - agents_hub/agent_bridge/docker/manager.py
   - manager.DockerManager.get_or_create_container:262
   - manager.DockerManager.release_container:297
