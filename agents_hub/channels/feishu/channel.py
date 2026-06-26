@@ -190,7 +190,32 @@ class FeishuChannel:
         if mentions:
             content = parse_mentions(content, mentions)
 
-        # 5. 解析目标 agent
+        # 5. 【优先级1】判断是否为命令消息（以 / 开头）
+        #    命令消息直接交给 commander 处理，不解析 agent_name
+        if content.strip().startswith("/"):
+            logger.info(
+                "收到飞书命令: message_id=%s, chat_id=%s, sender=%s, command=%s",
+                message_id,
+                chat_id,
+                sender_id,
+                content.split()[0] if content.split() else content,
+            )
+
+            if self._commander:
+                response = await self._commander.handle(sender_id, content.strip(), chat_id)
+
+                if response:
+                    await self.send_to_feishu(
+                        chat_id=chat_id,
+                        content=response,
+                        agent_name="Agents Hub",
+                    )
+                    logger.info(
+                        "已发送命令响应到飞书: chat_id=%s, length=%d", chat_id, len(response)
+                    )
+            return
+
+        # 6. 【优先级2】解析目标 agent（非命令消息）
         agent_name, clean_content = parse_agent_name(content, self._members)
 
         logger.info(
@@ -201,11 +226,11 @@ class FeishuChannel:
             agent_name,
         )
 
-        # 6. 调用 commander 处理并获取响应
+        # 7. 调用 commander 处理并获取响应
         if self._commander:
             response = await self._commander.handle(sender_id, clean_content, chat_id)
 
-            # 7. 发送响应回飞书
+            # 8. 发送响应回飞书
             if response:
                 await self.send_to_feishu(
                     chat_id=chat_id,
