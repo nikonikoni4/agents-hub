@@ -213,3 +213,10 @@
  - path: docs/history-bugs/2026-06-23-loop-modal-scroll-issue.md
  - 触发规则：使用 max-height 限制 flex 容器高度，且容器内有多层嵌套的滚动区域时
  - 内容摘要：LoopDetailModal 左右两侧滚动容器无法触发滚动条，内容溢出。根因：(1) modal 使用 max-height 而非 height，flex 子元素无法获得确定高度；(2) .mainArea 缺少 flex: 1，无法占据剩余空间；(3) .nodeList 设置 flex-shrink: 0，拒绝压缩导致内容撑破容器。修复：使用固定 height、完整的 flex 链条（每层都有 flex: 1 + min-height: 0）、移除 flex-shrink: 0
+
+## lark-oapi WebSocket 客户端事件循环冲突
+ - updated_at : 2026-06-27
+ - path: docs/history-bugs/2026-06-27-feishu-websocket-event-loop-conflict.md
+ - 触发规则：Windows 环境下启动飞书 channel，WebSocket 连接静默失败，日志显示 "RuntimeError: This event loop is already running"
+ - 内容摘要：lark-oapi SDK 使用模块级全局 loop 变量（import 时固化），在 Windows ProactorEventLoop 环境下调用 run_until_complete() 失败。三重修复：(1) nest_asyncio.apply() 允许嵌套循环；(2) 替换 lark_oapi.ws.client 模块的全局 loop 变量；(3) 添加 nest-asyncio 依赖。教训：第三方库的模块级全局状态在多线程/多事件循环环境中极易出问题
+

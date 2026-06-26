@@ -26,38 +26,62 @@ agents_hub/
 | Bot 数量 | 一个 bot 代理整个群聊 | 降低复杂度，避免多 bot 管理 |
 | 连接方式 | WebSocket 长连接 | 飞书原生支持，无需公网 IP |
 | 消息格式 | `[agent_name] : 内容` | 清晰标识发言者 |
-| 流式输出 | CardKit 流式卡片 | 飞书原生支持，体验好 |
 | 命令系统 | 复用微信命令 | 保持一致性，降低开发成本 |
+| Channel 监听 | 回调订阅机制 | 飞书 Channel 是进程内组件，无法直接加入 WebSocket 房间 |
 
 ## 2. 模块职责边界
 
 ### 2.1 阶段 1：广播机制修改
 
-**修改文件**：`agents_hub/core/context/group_chat_runtime.py`
+**修改文件**：
+- `agents_hub/core/context/group_chat_runtime.py`
+- `agents_hub/realtime/dependencies.py`
 
 **修改内容**：
-- 扩展 `broadcast_group_chat_refresh()` 函数签名，添加可选的 `message` 参数
-- 在 `add_message()` 方法中调用扩展后的广播方法，附加消息内容
-- 保持向后兼容：前端继续使用现有的刷新逻辑
+1. 扩展 `on_change` 回调签名，支持传递消息内容
+2. 扩展 `_notify_change()` 方法，添加可选的 `message` 参数
+3. 扩展 `broadcast_group_chat_refresh()` 函数，添加可选的 `message` 参数
+4. 添加回调订阅机制，支持飞书 Channel 注册回调
 
 **接口变更**：
 ```python
 # realtime/dependencies.py
+# 新增：回调订阅列表
+_channel_callbacks: list[Callable] = []
+
+def register_channel_callback(callback: Callable):
+    """注册 Channel 回调"""
+    _channel_callbacks.append(callback)
+
 async def broadcast_group_chat_refresh(
     group_chat_id: str,
     manager: WebSocketManager | None = None,
     message: dict | None = None,  # 新增参数
 ):
     """广播群聊刷新信号（可选携带消息内容）"""
-    ...
+    # 1. WebSocket 广播（前端）
+    realtime_manager = manager or get_realtime_manager()
+    signal = make_refresh_signal(group_chat_id)
+    if message:
+        signal["message"] = message
+    await realtime_manager.broadcast(group_chat_id, signal.model_dump(mode="json"))
+    
+    # 2. 回调通知（飞书 Channel 等进程内组件）
+    for callback in _channel_callbacks:
+        try:
+            await callback(group_chat_id, message)
+        except Exception:
+            logger.warning("Channel 回调失败", exc_info=True)
 ```
 
 **调用链路**：
 ```
 add_message(agent_result)
-  → _notify_change()
-    → on_change(group_chat_id)
+  → _notify_change(message=...)
+    → on_change(group_chat_id, message=...)
       → broadcast_group_chat_refresh(group_chat_id, message=...)
+        → WebSocket 广播（前端）
+        → 回调通知（飞书 Channel）
 ```
 
 ### 2.2 阶段 2：飞书 Channel 模块
@@ -69,13 +93,12 @@ add_message(agent_result)
 | 文件 | 职责 | 依赖 |
 |------|------|------|
 | `__init__.py` | 模块导出 | - |
-| `channel.py` | 主 channel 类，WebSocket 连接管理、消息接收/发送 | client, message, commander, session |
+| `channel.py` | 主 channel 类，WebSocket 连接管理、消息接收/发送、回调注册 | client, message, commander, session |
 | `config.py` | 配置模型（app_id, app_secret 等） | - |
 | `client.py` | lark-oapi 封装，API 调用 | config |
 | `message.py` | 消息解析，@Mention 检测，@agent_name 解析 | - |
-| `streaming.py` | CardKit 流式输出，缓冲区管理 | client |
 | `commander.py` | 命令处理，复用微信的命令系统 | - |
-| `session.py` | Session 映射，chat_id 到 group_chat_id 的持久化 | - |
+| `session.py` | Session 映射与同步状态管理 | - |
 | `exceptions.py` | 异常定义 | - |
 
 **依赖关系**：
@@ -84,8 +107,48 @@ channel.py
   ├── client.py (API 调用)
   ├── message.py (消息解析)
   ├── commander.py (命令处理)
-  └── session.py (Session 映射)
-      └── streaming.py (流式输出)
+  └── session.py (Session 映射 + 同步状态)
+```
+
+**飞书 Channel 监听机制**：
+```python
+class FeishuChannel:
+    async def start(self):
+        """启动飞书 Channel"""
+        # 1. 连接到飞书服务器
+        self._connect_to_feishu()
+        
+        # 2. 注册回调到 broadcast_group_chat_refresh
+        from agents_hub.realtime.dependencies import register_channel_callback
+        register_channel_callback(self._on_broadcast)
+        
+        # 3. 加载 Session 映射和同步状态
+        self._session_manager.load()
+    
+    async def _on_broadcast(self, group_chat_id: str, message: dict | None):
+        """处理广播回调"""
+        # 过滤：只处理有消息的广播
+        if not message:
+            return
+        
+        # 增量同步：只处理新消息
+        feishu_chat_id = self._get_feishu_chat_id(group_chat_id)
+        if not feishu_chat_id:
+            return  # 未绑定，跳过
+        
+        sync_state = self._session_manager.get_sync_state(feishu_chat_id)
+        if message["id"] <= sync_state.last_message_id:
+            return  # 已同步过，跳过
+        
+        # 推送到飞书群
+        await self.send_to_feishu(
+            chat_id=feishu_chat_id,
+            content=message["content"],
+            agent_name=message["send_from"],
+        )
+        
+        # 更新同步状态
+        self._session_manager.update_sync_state(feishu_chat_id, message["id"])
 ```
 
 ## 3. 数据流设计
@@ -172,55 +235,134 @@ class FeishuReplyChannel:
         """发送最终内容"""
 ```
 
-### 4.3 Session 映射接口
+### 4.3 Session 映射与同步状态接口
 
 ```python
+@dataclass
+class FeishuSessionMapping:
+    """飞书群绑定关系（持久化）"""
+    feishu_chat_id: str          # 飞书群 ID（oc_xxx，创建后不变）
+    group_chat_id: str           # agents-hub 群聊 ID
+    group_chat_name: str         # agents-hub 群聊名称（便于显示）
+    bound_at: str                # 绑定时间
+
+@dataclass
+class FeishuSyncState:
+    """同步状态（持久化）"""
+    feishu_chat_id: str          # 飞书群 ID
+    last_message_id: int         # 最后同步的消息 ID
+    last_sync_at: str            # 最后同步时间
+
 class FeishuSessionManager:
-    """飞书 Session 映射管理"""
+    """飞书 Session 映射与同步状态管理"""
     
     def __init__(self, data_path: Path):
         self.mapping_file = data_path / "channels" / "feishu" / "session_mapping.json"
-        self._mappings: dict[str, str] = {}  # feishu_chat_id -> group_chat_id
+        self.sync_state_file = data_path / "channels" / "feishu" / "sync_state.json"
+        self._mappings: dict[str, FeishuSessionMapping] = {}  # feishu_chat_id -> mapping
+        self._sync_states: dict[str, FeishuSyncState] = {}    # feishu_chat_id -> sync_state
     
-    def bind(self, feishu_chat_id: str, group_chat_id: str) -> None:
+    def bind(self, feishu_chat_id: str, group_chat_id: str, group_chat_name: str) -> None:
         """绑定飞书群到 agents-hub 群聊"""
         
     def unbind(self, feishu_chat_id: str) -> None:
         """解绑飞书群"""
         
-    def get_group_chat_id(self, feishu_chat_id: str) -> str | None:
-        """获取绑定的 group_chat_id"""
+    def get_mapping(self, feishu_chat_id: str) -> FeishuSessionMapping | None:
+        """获取绑定关系"""
+        
+    def get_sync_state(self, feishu_chat_id: str) -> FeishuSyncState:
+        """获取同步状态（不存在则创建）"""
+        
+    def update_sync_state(self, feishu_chat_id: str, last_message_id: int) -> None:
+        """更新同步状态"""
         
     def save(self) -> None:
-        """持久化映射关系"""
+        """持久化映射关系和同步状态"""
         
     def load(self) -> None:
-        """加载映射关系"""
+        """加载映射关系和同步状态"""
 ```
 
 ## 5. 关键实现细节
 
-### 5.1 lark-oapi SDK 线程安全
+### 5.1 lark-oapi SDK 线程安全与事件循环冲突
 
-**问题**：lark-oapi SDK 的 WebSocket 在独立线程运行，需要桥接到 asyncio。
+**问题**：lark-oapi SDK 的 WebSocket 客户端在 Windows 环境下与我们的异步架构不兼容。
 
-**解决方案**：参考 nanobot 的 `run_ws()` 实现：
+**根本原因**：
+1. lark-oapi SDK 使用**模块级全局 loop 变量**（`loop = asyncio.get_event_loop()`），在 import 时就固化了
+2. `start()` 方法内部多次调用 `loop.run_until_complete()`，但这个 loop 是主线程的事件循环
+3. 即使在独立线程中创建新事件循环，SDK 仍使用旧的全局 loop
+4. Windows ProactorEventLoop 环境下，在已运行的事件循环中调用 `run_until_complete()` 会抛出 `RuntimeError`
+
+**解决方案**（三重修复）：
+
 ```python
-async def start(self) -> None:
-    """启动飞书 WebSocket 连接"""
-    loop = asyncio.get_event_loop()
-    # 在独立线程中运行 lark-oapi WebSocket
-    await loop.run_in_executor(None, self._run_ws_sync)
+def _start_ws(self):
+    """在后台线程中启动 WebSocket 连接（阻塞）。"""
+    import asyncio
 
-def _run_ws_sync(self) -> None:
-    """同步方式运行 WebSocket（在独立线程）"""
-    # lark-oapi 的 WebSocket 客户端
-    ws_client = lark.ws.Client(
-        app_id=self.config.app_id,
-        app_secret=self.config.app_secret,
-        event_handler=self._create_event_handler(),
+    # 1. 创建新的事件循环
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    # 2. 应用 nest_asyncio 允许嵌套事件循环（关键！）
+    import nest_asyncio
+    nest_asyncio.apply(loop)
+
+    # 3. Hack: 替换 lark_oapi.ws.client 模块中的全局 loop 变量
+    import lark_oapi.ws.client as ws_client_module
+    ws_client_module.loop = loop
+
+    # 4. 启动 WebSocket（阻塞调用）
+    self._ws_client.start()
+```
+
+**依赖要求**：
+- 必须添加 `nest-asyncio>=1.5.0` 到 `pyproject.toml`
+- nest_asyncio 通过 monkey-patch asyncio 实现嵌套循环支持
+
+**相关 Bug**：
+- `docs/history-bugs/2026-06-27-feishu-websocket-event-loop-conflict.md` - 完整的根因分析和修复过程
+
+**替代方案（未采用）**：
+- 方案 A：放弃 WebSocket，改用 HTTP 轮询 → 性能差、延迟高
+- 方案 B：fork lark-oapi SDK 修改源码 → 维护成本高
+- 方案 C：独立进程运行飞书 channel → 架构复杂度过高
+
+
+### 5.2 广播过滤与增量同步
+
+**问题**：飞书 Channel 监听广播时，需要过滤纯状态刷新，并支持增量同步。
+
+**解决方案**：
+```python
+async def _on_broadcast(self, group_chat_id: str, message: dict | None):
+    """处理广播回调（通过 register_channel_callback 注册）"""
+    # 过滤 1：只处理有消息的广播
+    if not message:
+        return  # 忽略纯状态刷新
+    
+    # 获取绑定的飞书群 ID
+    feishu_chat_id = self._get_feishu_chat_id(group_chat_id)
+    if not feishu_chat_id:
+        return  # 未绑定，跳过
+    
+    # 过滤 2：增量同步，只处理新消息
+    sync_state = self._session_manager.get_sync_state(feishu_chat_id)
+    if message["id"] <= sync_state.last_message_id:
+        return  # 已同步过，跳过
+    
+    # 推送到飞书群
+    await self.send_to_feishu(
+        chat_id=feishu_chat_id,
+        content=message["content"],
+        agent_name=message["send_from"],
     )
-    ws_client.start()
+    
+    # 更新同步状态
+    self._session_manager.update_sync_state(feishu_chat_id, message["id"])
 ```
 
 ### 5.2 消息去重
@@ -313,7 +455,6 @@ Realtime 层
 |------|------|------|
 | lark-oapi | >= 1.0.0 | 飞书官方 SDK |
 | 飞书开放平台 | - | 创建应用、配置权限 |
-| CardKit API | - | 流式卡片输出 |
 
 ## 7. 配置模型
 
@@ -326,7 +467,6 @@ class FeishuConfig:
     verification_token: str = "" # 验证 token（可选）
     group_policy: str = "mention"  # "open" / "mention"
     domain: str = "feishu"       # "feishu" / "lark"
-    streaming: bool = True       # 启用 CardKit 流式输出
 ```
 
 ## 8. 测试策略
@@ -336,8 +476,7 @@ class FeishuConfig:
 | 模块 | 测试点 |
 |------|--------|
 | message.py | @agent_name 解析、mention 占位符替换 |
-| session.py | 映射关系持久化、加载 |
-| streaming.py | 节流逻辑、缓冲区管理 |
+| session.py | 映射关系持久化、同步状态持久化、增量同步逻辑 |
 | commander.py | 命令路由、参数解析 |
 
 ### 8.2 集成测试
@@ -346,8 +485,9 @@ class FeishuConfig:
 |------|--------|
 | 消息接收 | 飞书消息 → agents-hub 群聊 |
 | 消息发送 | agents-hub 群聊 → 飞书群 |
-| 流式输出 | CardKit 卡片更新 |
+| 广播过滤 | 只处理有消息的广播，忽略状态刷新 |
 | Session 映射 | bind/unbind/get |
+| 增量同步 | 重启后从上次位置开始同步 |
 
 ### 8.3 端到端测试
 
@@ -356,15 +496,16 @@ class FeishuConfig:
 | 完整流程 | 飞书发消息 → Agent 处理 → 回复到飞书 |
 | 命令系统 | /help, /agents, /groups, /bind |
 | 断线重连 | WebSocket 断开 → 自动重连 |
+| 增量同步 | 重启后不重复发送历史消息 |
 
 ## 9. 风险与缓解
 
 | 风险 | 等级 | 缓解措施 |
 |------|------|----------|
 | lark-oapi SDK 线程安全 | 中 | 参考 nanobot 的 run_ws() 实现，使用独立线程 |
-| CardKit API 限流 | 低 | 使用 0.5 秒节流间隔 |
 | 消息去重 | 中 | 使用 OrderedDict 缓存 message_id |
-| 异步回调机制 | 高 | 需要新增事件订阅机制（阶段 1 解决） |
+| 广播过滤 | 低 | 检查广播中是否包含 message 字段 |
+| 增量同步 | 低 | 持久化 last_message_id，重启后从上次位置开始 |
 
 ## 10. 相关文档
 
