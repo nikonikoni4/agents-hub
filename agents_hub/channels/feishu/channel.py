@@ -47,8 +47,10 @@ class FeishuChannel:
     async def start(self) -> None:
         """启动 channel：初始化客户端 -> 注册回调"""
         # 延迟导入避免循环依赖
+        from agents_hub.api.services.group_chat_service import GroupChatService
         from agents_hub.channels.feishu.commander import FeishuCommander
         from agents_hub.channels.feishu.session import FeishuSessionManager
+        from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
         from agents_hub.realtime.dependencies import register_channel_callback
 
         # 初始化客户端
@@ -59,8 +61,11 @@ class FeishuChannel:
         self._session_manager = FeishuSessionManager(self._data_path)
         self._session_manager.load()
 
+        # 初始化 group chat service
+        group_chat_service = GroupChatService(group_chat_manager)
+
         # 初始化 commander
-        self._commander = FeishuCommander(self._session_manager)
+        self._commander = FeishuCommander(self._session_manager, group_chat_service)
 
         # 注册广播回调
         register_channel_callback(self._on_broadcast)
@@ -83,43 +88,41 @@ class FeishuChannel:
         Args:
             event: 飞书事件对象，包含 message 字段
         """
-        try:
-            # 1. 解析消息
-            parsed = parse_message(event)
-            message_id = parsed["message_id"]
-            content = parsed["content"]
-            sender_id = parsed["sender_id"]
+        # 1. 解析消息
+        parsed = parse_message(event)
+        message_id = parsed["message_id"]
+        chat_id = parsed["chat_id"]
+        content = parsed["content"]
+        sender_id = parsed["sender_id"]
 
-            # 2. 消息去重
-            if self._deduplicator.is_duplicate(message_id):
-                logger.debug("消息已处理，跳过: message_id=%s", message_id)
-                return
+        # 2. 消息去重
+        if self._deduplicator.is_duplicate(message_id):
+            logger.debug("消息已处理，跳过: message_id=%s", message_id)
+            return
 
-            # 3. 跳过空内容
-            if not content.strip():
-                return
+        # 3. 跳过空内容
+        if not content.strip():
+            return
 
-            # 4. 解析 mention 占位符
-            mentions = parsed.get("mentions", [])
-            if mentions:
-                content = parse_mentions(content, mentions)
+        # 4. 解析 mention 占位符
+        mentions = parsed.get("mentions", [])
+        if mentions:
+            content = parse_mentions(content, mentions)
 
-            # 5. 解析目标 agent
-            agent_name, clean_content = parse_agent_name(content, self._members)
+        # 5. 解析目标 agent
+        agent_name, clean_content = parse_agent_name(content, self._members)
 
-            logger.info(
-                "收到飞书消息: message_id=%s, sender=%s, target=%s",
-                message_id,
-                sender_id,
-                agent_name,
-            )
+        logger.info(
+            "收到飞书消息: message_id=%s, chat_id=%s, sender=%s, target=%s",
+            message_id,
+            chat_id,
+            sender_id,
+            agent_name,
+        )
 
-            # 6. 调用 commander 处理
-            if self._commander:
-                await self._commander.handle(sender_id, clean_content)
-
-        except Exception:
-            logger.error("处理飞书消息失败", exc_info=True)
+        # 6. 调用 commander 处理
+        if self._commander:
+            await self._commander.handle(sender_id, clean_content, chat_id)
 
     async def send_to_feishu(
         self,

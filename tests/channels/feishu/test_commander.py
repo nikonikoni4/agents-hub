@@ -16,9 +16,17 @@ def mock_session_manager():
 
 
 @pytest.fixture
-def commander(mock_session_manager):
+def mock_group_chat_service():
+    """创建 mock group chat service"""
+    service = MagicMock()
+    service.send_message_and_wait = AsyncMock(return_value="回复内容")
+    return service
+
+
+@pytest.fixture
+def commander(mock_session_manager, mock_group_chat_service):
     """创建测试 Commander"""
-    return FeishuCommander(mock_session_manager)
+    return FeishuCommander(mock_session_manager, mock_group_chat_service)
 
 
 class TestHelpCommand:
@@ -173,7 +181,7 @@ class TestMessageForwarding:
         assert "请先绑定群聊" in result
 
     @pytest.mark.asyncio
-    async def test_forward_message_with_binding(self, commander, mock_session_manager):
+    async def test_forward_message_with_binding(self, commander, mock_session_manager, mock_group_chat_service):
         """测试转发消息（已绑定）"""
         mock_mapping = MagicMock()
         mock_mapping.group_chat_id = "g1"
@@ -187,11 +195,7 @@ class TestMessageForwarding:
             mock_group_chat.runtime.get_member_dicts.return_value = [mock_member]
             mock_gcm.load_group_chat = AsyncMock(return_value=mock_group_chat)
 
-            with patch("agents_hub.api.services.group_chat_service.GroupChatService") as mock_service_cls:
-                mock_service = MagicMock()
-                mock_service.send_message_and_wait = AsyncMock(return_value="回复内容")
-                mock_service_cls.return_value = mock_service
-
-                result = await commander.handle("user1", "Hello", "oc_xxx")
+            result = await commander.handle("user1", "Hello", "oc_xxx")
 
         assert result == "回复内容"
+        mock_group_chat_service.send_message_and_wait.assert_called_once()

@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from agents_hub.channels.feishu.session import FeishuSessionManager
 from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
 from agents_hub.roles import RoleManager
@@ -26,13 +28,14 @@ class FeishuCommander:
     负责解析和执行用户命令，以及转发消息到群聊。
 
     使用方式：
-        commander = FeishuCommander(session_manager)
+        commander = FeishuCommander(session_manager, group_chat_service)
         response = await commander.handle(user_id, content, chat_id)
     """
 
-    def __init__(self, session_manager: FeishuSessionManager):
+    def __init__(self, session_manager: FeishuSessionManager, group_chat_service: Any = None):
         self._session_manager = session_manager
         self._role_manager = RoleManager()
+        self._group_chat_service = group_chat_service
 
     async def handle(self, user_id: str, content: str, chat_id: str) -> str:
         """处理命令或消息。
@@ -147,16 +150,18 @@ class FeishuCommander:
         if not mapping:
             return "请先绑定群聊\n\n发送 /help 查看可用命令"
 
+        # 检查 group_chat_service 是否可用
+        if not self._group_chat_service:
+            logger.error("GroupChatService 未注入，无法转发消息")
+            return "消息转发服务不可用"
+
         # 获取群聊成员
         group_chat = await group_chat_manager.load_group_chat(mapping.group_chat_id)
         member_dicts = group_chat.runtime.get_member_dicts()
         members = [m["name"] for m in member_dicts]
 
         # 转发消息
-        from agents_hub.api.services.group_chat_service import GroupChatService
-
-        group_chat_service = GroupChatService(group_chat_manager)
-        return await group_chat_service.send_message_and_wait(
+        return await self._group_chat_service.send_message_and_wait(
             group_chat_id=mapping.group_chat_id,
             content=content,
             members=members,
