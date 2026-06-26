@@ -16,6 +16,37 @@ import yaml
 
 USER_DISPLAY_SUFFIX = "(user)"
 
+_DEFAULT_CONFIG_YAML = """\
+# Agents Hub 配置文件
+# 首次运行时自动生成
+
+# 数据存储路径（null 表示使用默认路径）
+data_path: null
+
+# 团队标识
+team_id: "default"
+
+# MCP 服务器端口
+mcp_port: 8765
+
+# 默认角色名
+default_manager_name: "manager"
+default_user_name: "user"
+
+# Docker 配置
+docker_image: "ai-tools:latest"
+use_docker: true
+
+# 飞书配置
+feishu:
+  app_id: ""
+  app_secret: ""
+  encrypt_key: ""
+  verification_token: ""
+  group_policy: "mention"
+  domain: "feishu"
+"""
+
 
 class SystemConfig:
     """系统配置（单例）"""
@@ -62,14 +93,24 @@ class SystemConfig:
             return Path.home() / "AppData" / "Local" / "AgentsHub" / "config" / "config.yaml"
 
     def _load_config(self):
-        """加载配置文件，从 yaml 覆盖默认值"""
-        if self._config_file.exists():
-            with open(self._config_file, encoding="utf-8") as f:
-                saved_config = yaml.safe_load(f) or {}
-                # 用保存的值覆盖默认值
-                for key in self._config_data:
-                    if key in saved_config and saved_config[key] is not None:
-                        self._config_data[key] = saved_config[key]
+        """加载配置文件，从 yaml 覆盖默认值。文件不存在时自动创建。"""
+        if not self._config_file.exists():
+            self._create_default_config()
+
+        with open(self._config_file, encoding="utf-8") as f:
+            saved_config = yaml.safe_load(f) or {}
+            # 用保存的值覆盖默认值
+            for key in self._config_data:
+                if key in saved_config and saved_config[key] is not None:
+                    self._config_data[key] = saved_config[key]
+
+    def _create_default_config(self):
+        """创建默认配置文件"""
+        self._config_file.parent.mkdir(parents=True, exist_ok=True)
+        self._config_file.write_text(
+            _DEFAULT_CONFIG_YAML,
+            encoding="utf-8",
+        )
 
     def _save_config(self):
         """保存配置文件"""
