@@ -571,6 +571,7 @@ class RoleManager:
 
         elif platform == AgentPlatform.CODEX:
             from agents_hub.config.types import CODEX_COMMAND
+            from agents_hub.exceptions import ExternalServiceError
 
             env["CODEX_HOME"] = str(work_root)
             cmd = [
@@ -581,7 +582,51 @@ class RoleManager:
                 "--url",
                 mcp_url,
             ]
-            subprocess.run(cmd, check=True, env=env)
+            try:
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                logger.info(
+                    "添加 Codex MCP 成功: work_root=%s, url=%s",
+                    work_root,
+                    mcp_url,
+                )
+            except subprocess.CalledProcessError as e:
+                logger.error(
+                    "添加 Codex MCP 失败: work_root=%s, exit_code=%s, stderr=%s",
+                    work_root,
+                    e.returncode,
+                    e.stderr,
+                )
+                raise ExternalServiceError(
+                    message=f"添加 Codex MCP 失败: {e.stderr}",
+                    error_code="MCP_ADD_CODEX_FAILED",
+                    details={
+                        "work_root": str(work_root),
+                        "exit_code": e.returncode,
+                        "stderr": e.stderr,
+                    },
+                    cause=e,
+                ) from e
+            except FileNotFoundError as e:
+                logger.error(
+                    "Codex CLI 不存在: command=%s, work_root=%s",
+                    CODEX_COMMAND,
+                    work_root,
+                )
+                raise ExternalServiceError(
+                    message=f"Codex CLI 不存在: {CODEX_COMMAND}",
+                    error_code="CODEX_CLI_NOT_FOUND",
+                    details={
+                        "command": CODEX_COMMAND,
+                        "work_root": str(work_root),
+                    },
+                    cause=e,
+                ) from e
 
         elif platform == AgentPlatform.OPENCODE:
             # OpenCode 使用 opencode.json 配置 MCP

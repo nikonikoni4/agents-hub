@@ -2,10 +2,12 @@
 
 负责单个群聊的记忆收集执行。
 通过 agent_platform_client.execute 调用记忆助手 Agent。
-执行完成后裁剪 history.jsonl 保留最近 1000 条。
+执行完成后写入 history.jsonl 并裁剪保留最近 1000 条。
 """
 
+import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 from agents_hub.agent_bridge import agent_platform_client
@@ -15,6 +17,38 @@ from agents_hub.roles import RoleManager
 logger = logging.getLogger(__name__)
 
 HISTORY_MAX_LINES = 1000
+
+
+def append_to_history(group_chat_id: str, summary: str, history_path: Path) -> None:
+    """追加总结到 history.jsonl
+
+    Args:
+        group_chat_id: 群聊ID
+        summary: 总结内容
+        history_path: history.jsonl 文件路径
+    """
+    if not summary or not summary.strip():
+        logger.warning("总结内容为空，跳过写入 history.jsonl")
+        return
+
+    try:
+        # 确保父目录存在
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 构建记录
+        record = {
+            "group_chat_id": group_chat_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "summary": summary.strip(),
+        }
+
+        # 追加到文件
+        with open(history_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+        logger.info("已写入 history.jsonl: group_chat_id=%s", group_chat_id)
+    except OSError as e:
+        logger.error("写入 history.jsonl 失败: %s", e)
 
 
 def trim_history_jsonl(history_path: Path, max_lines: int = HISTORY_MAX_LINES) -> None:
@@ -91,7 +125,10 @@ class MemoryTask:
 
             logger.info("记忆收集完成: group_chat_id=%s", group_chat_id)
 
-            # 裁剪 history.jsonl
+            # 4. 写入 history.jsonl（记忆助手的输出即为总结内容）
+            append_to_history(group_chat_id, result.text, config.history_jsonl_path)
+
+            # 5. 裁剪 history.jsonl
             trim_history_jsonl(config.history_jsonl_path)
 
             return result.text
