@@ -47,7 +47,7 @@ class FeishuChannel:
     async def start(self) -> None:
         """启动 channel：初始化客户端 -> 注册回调"""
         # 延迟导入避免循环依赖
-        from agents_hub.channels.feishu.commander import Commander
+        from agents_hub.channels.feishu.commander import FeishuCommander
         from agents_hub.channels.feishu.session import FeishuSessionManager
         from agents_hub.realtime.dependencies import register_channel_callback
 
@@ -55,12 +55,12 @@ class FeishuChannel:
         self._client = FeishuClient(self.config)
         await self._client.connect()
 
-        # 初始化 commander
-        self._commander = Commander()
-
         # 初始化 session manager
         self._session_manager = FeishuSessionManager(self._data_path)
         self._session_manager.load()
+
+        # 初始化 commander
+        self._commander = FeishuCommander(self._session_manager)
 
         # 注册广播回调
         register_channel_callback(self._on_broadcast)
