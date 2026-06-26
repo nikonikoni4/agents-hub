@@ -98,7 +98,8 @@ export function SingleChatPanel() {
   }, [isPrivateChat, resetTimer, handleTimeout]);
 
   // 获取消息（agent 回复后会调用 handleAssistantReply）
-  const { messages, loading, streaming, streamingText, sendMessage } = useSingleChatMessages(handleAssistantReply);
+  const { messages, loading, streaming, streamingText, sendMessage } =
+    useSingleChatMessages(handleAssistantReply);
 
   // 启动计时器（私聊模式下）
   useEffect(() => {
