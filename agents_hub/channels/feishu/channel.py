@@ -201,9 +201,18 @@ class FeishuChannel:
             agent_name,
         )
 
-        # 6. 调用 commander 处理
+        # 6. 调用 commander 处理并获取响应
         if self._commander:
-            await self._commander.handle(sender_id, clean_content, chat_id)
+            response = await self._commander.handle(sender_id, clean_content, chat_id)
+
+            # 7. 发送响应回飞书
+            if response:
+                await self.send_to_feishu(
+                    chat_id=chat_id,
+                    content=response,
+                    agent_name="Agents Hub",  # 统一使用平台名称
+                )
+                logger.info("已发送响应到飞书: chat_id=%s, length=%d", chat_id, len(response))
 
     async def send_to_feishu(
         self,
