@@ -1,6 +1,6 @@
 ---
 created_at: 2026-06-06
-updated_at: 2026-06-06
+updated_at: 2026-06-27
 ---
 
 # 后端单例规则
@@ -9,7 +9,7 @@ updated_at: 2026-06-06
 
 ## 当前系统中的全局单例
 
-后端只有以下 4 个全局单例，**任何模块都必须通过 import 使用，禁止自行实例化**：
+后端只有以下 5 个全局单例，**任何模块都必须通过 import 使用，禁止自行实例化**：
 
 | 单例变量 | 类 | 定义文件 | 导入方式 |
 |----------|-----|---------|---------|
@@ -17,8 +17,9 @@ updated_at: 2026-06-06
 | `group_chat_paths` | `GroupChatPaths` | `agents_hub/core/foundation/paths.py:252` | `from agents_hub.core.foundation import group_chat_paths` |
 | `group_chat_manager` | `GroupChatManager` | `agents_hub/core/orchestration/group_chat_manager.py:396` | `from agents_hub.core.orchestration import group_chat_manager` |
 | `scheduler_service` | `SchedulerService` | `agents_hub/scheduler/scheduler_service.py` | `from agents_hub.scheduler import scheduler_service` |
+| `feishu_session_manager` | `FeishuSessionManager` | `agents_hub/channels/feishu/session.py:355` | `from agents_hub.channels.feishu.session import feishu_session_manager` |
 
-除以上 4 个外，**不存在其他全局单例**。`APIRouter` 等模块级实例是框架惯例，不在此列。
+除以上 5 个外，**不存在其他全局单例**。`APIRouter` 等模块级实例是框架惯例，不在此列。
 
 ## 核心规则
 

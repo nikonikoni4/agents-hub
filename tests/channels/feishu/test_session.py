@@ -1,110 +1,101 @@
-"""飞书 Session 映射与同步状态测试"""
+"""飞书 Session 状态管理测试"""
 
 import json
 import pytest
 import tempfile
-from datetime import datetime
+import threading
 from pathlib import Path
 
 from agents_hub.channels.feishu.session import (
+    FeishuSessionState,
     FeishuSessionManager,
-    FeishuSessionMapping,
-    FeishuSyncState,
 )
 
 
-class TestFeishuSessionMapping:
-    """测试 FeishuSessionMapping 数据模型"""
+class TestFeishuSessionState:
+    """测试 FeishuSessionState 数据模型"""
 
-    def test_create_mapping(self):
-        """测试创建映射关系"""
-        mapping = FeishuSessionMapping(
+    def test_create_state(self):
+        """测试创建状态"""
+        state = FeishuSessionState(
             feishu_chat_id="oc_xxx",
-            group_chat_id="group_123",
-            group_chat_name="测试群聊",
-            bound_at="2026-06-26T10:00:00",
-        )
-
-        assert mapping.feishu_chat_id == "oc_xxx"
-        assert mapping.group_chat_id == "group_123"
-        assert mapping.group_chat_name == "测试群聊"
-        assert mapping.bound_at == "2026-06-26T10:00:00"
-
-    def test_mapping_to_dict(self):
-        """测试映射关系转字典"""
-        mapping = FeishuSessionMapping(
-            feishu_chat_id="oc_xxx",
-            group_chat_id="group_123",
-            group_chat_name="测试群聊",
-            bound_at="2026-06-26T10:00:00",
-        )
-
-        data = mapping.to_dict()
-        assert data["feishu_chat_id"] == "oc_xxx"
-        assert data["group_chat_id"] == "group_123"
-        assert data["group_chat_name"] == "测试群聊"
-        assert data["bound_at"] == "2026-06-26T10:00:00"
-
-    def test_mapping_from_dict(self):
-        """测试从字典创建映射关系"""
-        data = {
-            "feishu_chat_id": "oc_xxx",
-            "group_chat_id": "group_123",
-            "group_chat_name": "测试群聊",
-            "bound_at": "2026-06-26T10:00:00",
-        }
-
-        mapping = FeishuSessionMapping.from_dict(data)
-        assert mapping.feishu_chat_id == "oc_xxx"
-        assert mapping.group_chat_id == "group_123"
-        assert mapping.group_chat_name == "测试群聊"
-        assert mapping.bound_at == "2026-06-26T10:00:00"
-
-
-class TestFeishuSyncState:
-    """测试 FeishuSyncState 数据模型"""
-
-    def test_create_sync_state(self):
-        """测试创建同步状态"""
-        state = FeishuSyncState(
-            feishu_chat_id="oc_xxx",
-            last_message_id=100,
-            last_sync_at="2026-06-26T10:00:00",
+            session_type="idle",
+            session_id="",
+            session_name="",
         )
 
         assert state.feishu_chat_id == "oc_xxx"
-        assert state.last_message_id == 100
-        assert state.last_sync_at == "2026-06-26T10:00:00"
+        assert state.session_type == "idle"
+        assert state.session_id == ""
+        assert state.session_name == ""
+        assert state.single_chat_id == ""
+        assert state.last_message_id == 0
+        assert state.default_agent == ""
+        assert state.single_chat_history == []
 
-    def test_sync_state_to_dict(self):
-        """测试同步状态转字典"""
-        state = FeishuSyncState(
+    def test_to_dict(self):
+        """测试转字典"""
+        state = FeishuSessionState(
             feishu_chat_id="oc_xxx",
+            session_type="group_chat",
+            session_id="group_123",
+            session_name="测试群聊",
+            single_chat_id="",
             last_message_id=100,
-            last_sync_at="2026-06-26T10:00:00",
+            default_agent="pm",
         )
 
         data = state.to_dict()
         assert data["feishu_chat_id"] == "oc_xxx"
+        assert data["session_type"] == "group_chat"
+        assert data["session_id"] == "group_123"
+        assert data["session_name"] == "测试群聊"
         assert data["last_message_id"] == 100
-        assert data["last_sync_at"] == "2026-06-26T10:00:00"
+        assert data["default_agent"] == "pm"
+        assert data["single_chat_history"] == []
 
-    def test_sync_state_from_dict(self):
-        """测试从字典创建同步状态"""
+    def test_from_dict(self):
+        """测试从字典创建"""
         data = {
             "feishu_chat_id": "oc_xxx",
-            "last_message_id": 100,
-            "last_sync_at": "2026-06-26T10:00:00",
+            "session_type": "single_chat",
+            "session_id": "researcher",
+            "session_name": "researcher",
+            "single_chat_id": "sc_123",
+            "last_message_id": 0,
+            "last_sync_at": "2026-06-27T10:00:00",
+            "created_at": "2026-06-27T10:00:00",
+            "default_agent": "",
+            "single_chat_history": [
+                {"session_id": "sc_123", "agent_name": "researcher", "first_message": "你好", "created_at": "2026-06-27T10:00:00"}
+            ],
         }
 
-        state = FeishuSyncState.from_dict(data)
+        state = FeishuSessionState.from_dict(data)
         assert state.feishu_chat_id == "oc_xxx"
-        assert state.last_message_id == 100
-        assert state.last_sync_at == "2026-06-26T10:00:00"
+        assert state.session_type == "single_chat"
+        assert state.session_id == "researcher"
+        assert state.single_chat_id == "sc_123"
+        assert len(state.single_chat_history) == 1
+        assert state.single_chat_history[0]["agent_name"] == "researcher"
+
+    def test_from_dict_missing_optional_fields(self):
+        """测试从字典创建（缺少可选字段）"""
+        data = {
+            "feishu_chat_id": "oc_xxx",
+            "session_type": "idle",
+            "session_id": "",
+        }
+
+        state = FeishuSessionState.from_dict(data)
+        assert state.session_name == ""
+        assert state.single_chat_id == ""
+        assert state.last_message_id == 0
+        assert state.single_chat_history == []
 
 
-class TestFeishuSessionManager:
-    """测试 FeishuSessionManager"""
+class TestFeishuSessionManagerWithRealMethods:
+    """测试 FeishuSessionManager 真实方法（不复制实现逻辑）"""
 
     @pytest.fixture
     def temp_dir(self):
@@ -114,144 +105,297 @@ class TestFeishuSessionManager:
 
     @pytest.fixture
     def manager(self, temp_dir):
-        """创建测试 SessionManager"""
-        return FeishuSessionManager(temp_dir)
+        """创建独立的 manager 实例（绕过单例）"""
+        FeishuSessionManager._instance = None
+        mgr = FeishuSessionManager(temp_dir)
+        yield mgr
+        FeishuSessionManager._instance = None
 
-    def test_bind(self, manager):
-        """测试绑定飞书群"""
-        manager.bind("oc_xxx", "group_123", "测试群聊")
-
-        mapping = manager.get_mapping("oc_xxx")
-        assert mapping is not None
-        assert mapping.feishu_chat_id == "oc_xxx"
-        assert mapping.group_chat_id == "group_123"
-        assert mapping.group_chat_name == "测试群聊"
-
-    def test_unbind(self, manager):
-        """测试解绑飞书群"""
-        manager.bind("oc_xxx", "group_123", "测试群聊")
-        manager.unbind("oc_xxx")
-
-        mapping = manager.get_mapping("oc_xxx")
-        assert mapping is None
-
-    def test_get_mapping_not_found(self, manager):
-        """测试获取不存在的映射"""
-        mapping = manager.get_mapping("oc_not_exist")
-        assert mapping is None
-
-    def test_get_sync_state_create_new(self, manager):
-        """测试获取同步状态（不存在则创建）"""
-        state = manager.get_sync_state("oc_xxx")
+    def test_get_or_create_state_creates_new(self, manager):
+        """测试 get_or_create_state 创建新状态"""
+        state = manager.get_or_create_state("oc_xxx")
 
         assert state.feishu_chat_id == "oc_xxx"
-        assert state.last_message_id == 0
-        assert state.last_sync_at is not None
+        assert state.session_type == "idle"
+        assert state.session_id == ""
+        assert state.session_name == ""
 
-    def test_get_sync_state_existing(self, manager):
-        """测试获取已存在的同步状态"""
-        # 先更新同步状态
-        manager.update_sync_state("oc_xxx", 100)
+    def test_get_or_create_state_returns_existing(self, manager):
+        """测试 get_or_create_state 返回已存在状态"""
+        state1 = manager.get_or_create_state("oc_xxx")
+        state1.session_type = "assistant"
 
-        # 再获取
-        state = manager.get_sync_state("oc_xxx")
-        assert state.last_message_id == 100
+        state2 = manager.get_or_create_state("oc_xxx")
+        assert state2.session_type == "assistant"
+        assert state1 is state2
+
+    def test_switch_to_idle(self, manager):
+        """测试 switch_to_idle"""
+        manager.switch_to_group_chat("oc_xxx", "group_123", "测试群聊")
+        manager.switch_to_idle("oc_xxx")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert state.session_type == "idle"
+        assert state.session_id == ""
+        assert state.session_name == ""
+
+    def test_switch_to_idle_preserves_single_chat_id(self, manager):
+        """测试 switch_to_idle 保留 single_chat_id"""
+        manager.switch_to_single_chat("oc_xxx", "researcher", "sc_123")
+        manager.switch_to_idle("oc_xxx")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert state.session_type == "idle"
+        assert state.single_chat_id == "sc_123"  # 保留
+
+    def test_switch_to_group_chat(self, manager):
+        """测试 switch_to_group_chat"""
+        manager.switch_to_group_chat("oc_xxx", "group_123", "测试群聊")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert state.session_type == "group_chat"
+        assert state.session_id == "group_123"
+        assert state.session_name == "测试群聊"
+        assert state.single_chat_id == ""  # 清空单聊 ID
+
+    def test_switch_to_single_chat(self, manager):
+        """测试 switch_to_single_chat"""
+        manager.switch_to_single_chat("oc_xxx", "researcher", "sc_123")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert state.session_type == "single_chat"
+        assert state.session_id == "researcher"
+        assert state.session_name == "researcher"
+        assert state.single_chat_id == "sc_123"
+
+    def test_switch_to_assistant(self, manager):
+        """测试 switch_to_assistant"""
+        manager.switch_to_assistant("oc_xxx")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert state.session_type == "assistant"
 
     def test_update_sync_state(self, manager):
-        """测试更新同步状态"""
+        """测试 update_sync_state"""
         manager.update_sync_state("oc_xxx", 100)
 
-        state = manager.get_sync_state("oc_xxx")
+        state = manager.get_or_create_state("oc_xxx")
         assert state.last_message_id == 100
+        assert state.last_sync_at != ""
 
-        # 再次更新
-        manager.update_sync_state("oc_xxx", 200)
-        state = manager.get_sync_state("oc_xxx")
-        assert state.last_message_id == 200
+    def test_add_single_chat_history(self, manager):
+        """测试 add_single_chat_history"""
+        manager.add_single_chat_history("oc_xxx", "sc_123", "researcher", "你好世界")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert len(state.single_chat_history) == 1
+        assert state.single_chat_history[0]["session_id"] == "sc_123"
+        assert state.single_chat_history[0]["agent_name"] == "researcher"
+        assert state.single_chat_history[0]["first_message"] == "你好世界"
+
+    def test_add_single_chat_history_truncate(self, manager):
+        """测试 add_single_chat_history 截断第一句话"""
+        long_message = "abcdefghijklmnop"  # 16 chars
+        manager.add_single_chat_history("oc_xxx", "sc_123", "researcher", long_message)
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert state.single_chat_history[0]["first_message"] == "abcdefghij"  # 10 chars
+
+    def test_add_single_chat_history_dedup(self, manager):
+        """测试 add_single_chat_history 去重"""
+        manager.add_single_chat_history("oc_xxx", "sc_123", "researcher", "你好")
+        manager.add_single_chat_history("oc_xxx", "sc_123", "researcher", "世界")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert len(state.single_chat_history) == 1
+        assert state.single_chat_history[0]["first_message"] == "你好"
+
+    def test_add_single_chat_history_update_empty_first_message(self, manager):
+        """测试 add_single_chat_history 更新空的第一句话"""
+        manager.add_single_chat_history("oc_xxx", "sc_123", "researcher", "")
+        manager.add_single_chat_history("oc_xxx", "sc_123", "researcher", "你好")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert len(state.single_chat_history) == 1
+        assert state.single_chat_history[0]["first_message"] == "你好"
+
+    def test_add_single_chat_history_limit(self, manager):
+        """测试 add_single_chat_history 上限（50条）"""
+        for i in range(55):
+            manager.add_single_chat_history("oc_xxx", f"sc_{i}", "researcher", f"消息{i}")
+
+        state = manager.get_or_create_state("oc_xxx")
+        assert len(state.single_chat_history) == 50
+        assert state.single_chat_history[0]["session_id"] == "sc_5"
+        assert state.single_chat_history[-1]["session_id"] == "sc_54"
+
+
+class TestFeishuSessionManagerPersistence:
+    """测试 FeishuSessionManager 持久化"""
+
+    @pytest.fixture
+    def temp_dir(self):
+        """创建临时目录"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
 
     def test_save_and_load(self, temp_dir):
         """测试持久化和加载"""
-        # 创建 manager 并添加数据
+        FeishuSessionManager._instance = None
         manager1 = FeishuSessionManager(temp_dir)
-        manager1.bind("oc_xxx", "group_123", "测试群聊")
+        manager1.switch_to_group_chat("oc_xxx", "group_123", "测试群聊")
         manager1.update_sync_state("oc_xxx", 100)
+        manager1.add_single_chat_history("oc_xxx", "sc_123", "researcher", "你好")
         manager1.save()
 
-        # 创建新的 manager 并加载
+        FeishuSessionManager._instance = None
         manager2 = FeishuSessionManager(temp_dir)
         manager2.load()
 
-        # 验证数据
-        mapping = manager2.get_mapping("oc_xxx")
-        assert mapping is not None
-        assert mapping.group_chat_id == "group_123"
-
-        state = manager2.get_sync_state("oc_xxx")
+        state = manager2.get_or_create_state("oc_xxx")
+        assert state.session_type == "group_chat"
+        assert state.session_id == "group_123"
         assert state.last_message_id == 100
+        assert len(state.single_chat_history) == 1
 
-    def test_save_creates_directory(self, temp_dir):
-        """测试保存时创建目录"""
-        nested_dir = temp_dir / "nested" / "path"
-        manager = FeishuSessionManager(nested_dir)
+        FeishuSessionManager._instance = None
 
-        manager.bind("oc_xxx", "group_123", "测试群聊")
-        manager.save()
-
-        # 验证文件创建
-        assert (nested_dir / "channels" / "feishu" / "session_mapping.json").exists()
-        assert (nested_dir / "channels" / "feishu" / "sync_state.json").exists()
-
-    def test_load_nonexistent_files(self, temp_dir):
+    def test_load_nonexistent_file(self, temp_dir):
         """测试加载不存在的文件"""
+        FeishuSessionManager._instance = None
         manager = FeishuSessionManager(temp_dir)
-        manager.load()  # 应该不会抛出异常
+        manager.load()  # 不应抛出异常
 
-        # 验证空数据
-        assert manager.get_mapping("oc_xxx") is None
+        assert len(manager._states) == 0
+        FeishuSessionManager._instance = None
 
-    def test_multiple_mappings(self, manager):
-        """测试多个映射关系"""
-        manager.bind("oc_aaa", "group_1", "群聊1")
-        manager.bind("oc_bbb", "group_2", "群聊2")
-        manager.bind("oc_ccc", "group_3", "群聊3")
+    def test_migrate_old_format(self, temp_dir):
+        """测试旧格式迁移"""
+        old_data = [
+            {
+                "feishu_chat_id": "oc_xxx",
+                "group_chat_id": "group_123",
+                "group_chat_name": "测试群聊",
+                "bound_at": "2026-06-26T10:00:00",
+            }
+        ]
 
-        assert manager.get_mapping("oc_aaa").group_chat_id == "group_1"
-        assert manager.get_mapping("oc_bbb").group_chat_id == "group_2"
-        assert manager.get_mapping("oc_ccc").group_chat_id == "group_3"
+        state_file = temp_dir / "channels" / "feishu"
+        state_file.mkdir(parents=True, exist_ok=True)
+        (state_file / "session_state.json").write_text(json.dumps(old_data, ensure_ascii=False))
 
-    def test_bind_updates_existing(self, manager):
-        """测试更新已存在的绑定"""
-        manager.bind("oc_xxx", "group_123", "测试群聊")
-        manager.bind("oc_xxx", "group_456", "新群聊")
+        FeishuSessionManager._instance = None
+        manager = FeishuSessionManager(temp_dir)
+        manager.load()
 
-        mapping = manager.get_mapping("oc_xxx")
-        assert mapping.group_chat_id == "group_456"
-        assert mapping.group_chat_name == "新群聊"
+        state = manager.get_or_create_state("oc_xxx")
+        assert state.session_type == "group_chat"
+        assert state.session_id == "group_123"
+        assert state.session_name == "测试群聊"
 
-    def test_unbind_cleans_sync_state(self, manager):
-        """测试解绑时清理同步状态"""
-        manager.bind("oc_xxx", "group_123", "测试群聊")
-        manager.update_sync_state("oc_xxx", 100)
-        manager.unbind("oc_xxx")
+        FeishuSessionManager._instance = None
 
-        # 同步状态应该被清理
-        state = manager.get_sync_state("oc_xxx")
-        assert state.last_message_id == 0  # 重新创建的默认值
 
-    def test_save_load_preserves_order(self, temp_dir):
-        """测试保存和加载保持顺序"""
-        manager1 = FeishuSessionManager(temp_dir)
-        for i in range(10):
-            manager1.bind(f"oc_{i}", f"group_{i}", f"群聊{i}")
-            manager1.update_sync_state(f"oc_{i}", i * 10)
-        manager1.save()
+class TestFeishuSessionManagerNoDeadlock:
+    """测试 FeishuSessionManager 方法不会死锁"""
 
-        manager2 = FeishuSessionManager(temp_dir)
-        manager2.load()
+    @pytest.fixture
+    def temp_dir(self):
+        """创建临时目录"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
 
-        for i in range(10):
-            mapping = manager2.get_mapping(f"oc_{i}")
-            assert mapping.group_chat_id == f"group_{i}"
+    def _create_manager(self, temp_dir):
+        """创建独立的 manager 实例"""
+        FeishuSessionManager._instance = None
+        return FeishuSessionManager(temp_dir)
 
-            state = manager2.get_sync_state(f"oc_{i}")
-            assert state.last_message_id == i * 10
+    def test_switch_to_idle_no_deadlock(self, temp_dir):
+        """测试 switch_to_idle 不会死锁"""
+        manager = self._create_manager(temp_dir)
+        result = threading.Event()
+
+        def run():
+            manager.switch_to_idle("oc_xxx")
+            result.set()
+
+        t = threading.Thread(target=run)
+        t.start()
+        t.join(timeout=2)
+        assert result.is_set(), "switch_to_idle 死锁了"
+        FeishuSessionManager._instance = None
+
+    def test_switch_to_group_chat_no_deadlock(self, temp_dir):
+        """测试 switch_to_group_chat 不会死锁"""
+        manager = self._create_manager(temp_dir)
+        result = threading.Event()
+
+        def run():
+            manager.switch_to_group_chat("oc_xxx", "group_1", "测试群聊")
+            result.set()
+
+        t = threading.Thread(target=run)
+        t.start()
+        t.join(timeout=2)
+        assert result.is_set(), "switch_to_group_chat 死锁了"
+        FeishuSessionManager._instance = None
+
+    def test_switch_to_single_chat_no_deadlock(self, temp_dir):
+        """测试 switch_to_single_chat 不会死锁"""
+        manager = self._create_manager(temp_dir)
+        result = threading.Event()
+
+        def run():
+            manager.switch_to_single_chat("oc_xxx", "researcher", "sc_123")
+            result.set()
+
+        t = threading.Thread(target=run)
+        t.start()
+        t.join(timeout=2)
+        assert result.is_set(), "switch_to_single_chat 死锁了"
+        FeishuSessionManager._instance = None
+
+    def test_switch_to_assistant_no_deadlock(self, temp_dir):
+        """测试 switch_to_assistant 不会死锁"""
+        manager = self._create_manager(temp_dir)
+        result = threading.Event()
+
+        def run():
+            manager.switch_to_assistant("oc_xxx")
+            result.set()
+
+        t = threading.Thread(target=run)
+        t.start()
+        t.join(timeout=2)
+        assert result.is_set(), "switch_to_assistant 死锁了"
+        FeishuSessionManager._instance = None
+
+    def test_update_sync_state_no_deadlock(self, temp_dir):
+        """测试 update_sync_state 不会死锁"""
+        manager = self._create_manager(temp_dir)
+        result = threading.Event()
+
+        def run():
+            manager.update_sync_state("oc_xxx", 100)
+            result.set()
+
+        t = threading.Thread(target=run)
+        t.start()
+        t.join(timeout=2)
+        assert result.is_set(), "update_sync_state 死锁了"
+        FeishuSessionManager._instance = None
+
+    def test_add_single_chat_history_no_deadlock(self, temp_dir):
+        """测试 add_single_chat_history 不会死锁"""
+        manager = self._create_manager(temp_dir)
+        result = threading.Event()
+
+        def run():
+            manager.add_single_chat_history("oc_xxx", "sc_123", "researcher", "你好")
+            result.set()
+
+        t = threading.Thread(target=run)
+        t.start()
+        t.join(timeout=2)
+        assert result.is_set(), "add_single_chat_history 死锁了"
+        FeishuSessionManager._instance = None
