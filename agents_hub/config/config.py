@@ -418,6 +418,10 @@ class Config:
     def memory_assistant_token(self) -> str:
         return "agents-hub-memory-assistant"
 
+    @property
+    def feishu_assistant_token(self) -> str:
+        return "agents-hub-feishu-assistant"
+
 
 # ============ 全局单例 ============
 

@@ -1,8 +1,8 @@
 ---
-version: 1.4
+version: 1.5
 created_at: 2026-06-27
 updated_at: 2026-06-27
-last_updated: 添加 iter_states() 公共方法，修复 _on_broadcast 无条件 save
+last_updated: 飞书 MCP 工具添加 token 验证，防御 prompt injection
 abstract: 飞书 Channel 模块规格，定义飞书消息接收/发送、命令系统、会话状态管理和消息广播同步
 ---
 
@@ -12,6 +12,7 @@ abstract: 飞书 Channel 模块规格，定义飞书消息接收/发送、命令
 
 | 版本 | 更新内容 |
 | ---- | -------- |
+| 1.5 | 飞书 MCP 工具添加 token 验证，防御 prompt injection |
 | 1.4 | 添加 iter_states() 公共方法，修复 _on_broadcast 无条件 save |
 | 1.3 | 提取 FeishuSessionService 服务层，MCP 写操作委托给 service |
 | 1.2 | 添加飞书管理 MCP 工具（6个）、get_state 只读方法、Feishu-Assistant 角色 |
@@ -58,13 +59,13 @@ abstract: 飞书 Channel 模块规格，定义飞书消息接收/发送、命令
 
 ### FeishuChannel（主类）
 
-<key_function last_update="2026-06-27T16:00:18+08:00">
+<key_function last_update="2026-06-27T23:39:49+08:00">
 - agents_hub/channels/feishu/channel.py
-  - channel.FeishuChannel.start:48
-  - channel.FeishuChannel.stop:224
-  - channel.FeishuChannel.on_message:234
-  - channel.FeishuChannel.send_to_feishu:310
-  - channel.FeishuChannel._on_broadcast:349
+  - channel.FeishuChannel.start:47
+  - channel.FeishuChannel.stop:222
+  - channel.FeishuChannel.on_message:232
+  - channel.FeishuChannel.send_to_feishu:308
+  - channel.FeishuChannel._on_broadcast:347
 </key_function>
 
 **对外接口**：
@@ -223,18 +224,21 @@ default_feishu_assistant_name: str  # 飞书助手角色名，默认 "Feishu-Ass
 
 | 工具 | 参数 | 返回值 | 说明 |
 |------|------|--------|------|
-| `list_group_chats` | `feishu_chat_id` | 群聊列表 | 列出所有 Agent Hub 群聊 |
-| `list_single_chat_history` | `feishu_chat_id`, `agent_name?` | 单聊历史列表 | 只读，不创建状态 |
-| `bind_to_group_chat` | `feishu_chat_id`, `group_chat_id` | 绑定结果 | 切换到群聊模式 |
-| `bind_to_single_chat` | `feishu_chat_id`, `session_id` | 绑定结果 | 切换到单聊模式 |
-| `create_single_chat` | `feishu_chat_id`, `agent_name` | session_id | 创建新单聊并绑定 |
-| `get_current_binding` | `feishu_chat_id` | 当前绑定信息 | 只读，不创建状态 |
+| `list_group_chats` | `agent_token`, `feishu_chat_id` | 群聊列表 | 列出所有 Agent Hub 群聊 |
+| `list_single_chat_history` | `agent_token`, `feishu_chat_id`, `agent_name?` | 单聊历史列表 | 只读，不创建状态 |
+| `bind_to_group_chat` | `agent_token`, `feishu_chat_id`, `group_chat_id` | 绑定结果 | 切换到群聊模式 |
+| `bind_to_single_chat` | `agent_token`, `feishu_chat_id`, `session_id` | 绑定结果 | 切换到单聊模式 |
+| `create_single_chat` | `agent_token`, `feishu_chat_id`, `agent_name` | session_id | 创建新单聊并绑定 |
+| `get_current_binding` | `agent_token`, `feishu_chat_id` | 当前绑定信息 | 只读，不创建状态 |
 
 **设计要点**：
-- 所有工具以 `feishu_chat_id` 为标识（不使用 `agent_token`）
+- 所有工具使用 `agent_token` 验证身份（`config.feishu_assistant_token`），通过 `_verify_feishu_token()` 校验
+- `create_group_chat` 和 `create_agent` 共享工具同时接受系统助手和飞书助手 token
+- 飞书助手 token 通过 `_build_prompt` 注入到消息末尾（与系统助手模式一致）
 - 读操作（`list_*`、`get_*`）使用 `get_state()` 只读方法，不创建状态
 - 写操作（`bind_*`、`create_*`）使用 `switch_to_*` 方法并调用 `save()`
 - 飞书助手角色通过 `default_feishu_assistant_name` 配置，禁用非飞书工具
+- 用户消息中的 `[feishu_chat_id:...]` 伪造前缀在 `commander.py` 中被正则过滤（防御 prompt injection）
 
 ### 状态机规则
 

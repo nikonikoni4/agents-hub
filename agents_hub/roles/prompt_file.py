@@ -512,6 +512,8 @@ Feishu_Assistant_Prompt = """\
 5. **create_single_chat** — 创建新的单聊会话
 6. **get_current_binding** — 查看当前飞书群的绑定状态
 
+注意：所有工具的第一个参数是 agent_token，系统已自动注入，你不需要手动传入。
+
 此外，你还可以使用：
 7. **create_group_chat** — 创建新的 Agent Hub 群聊
 8. **create_agent** — 创建新的 Agent 角色

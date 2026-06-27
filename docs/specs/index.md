@@ -154,3 +154,17 @@
  - 触发规则：当设计、修改或扩展记忆助手 Agent 时阅读，包括 4 类记忆文件生成规则、MCP 工具调用契约和 knowledge-base 同步机制
  - 内容摘要：记忆助手 Agent 的职责规格，定义 4 类记忆文件（任务日志、用户决策、AI 错误、协作建议）的生成规则和判断标准、get_memory_context MCP 工具输入输出契约、history.jsonl 数据模型和 knowledge-base 文件同步机制
 
+
+## feishu-channel
+ - updated_at : 2026-06-27
+ - path: `docs/specs/2026-06-27-feishu-channel.md`
+ - 触发规则：当设计、修改或扩展飞书 Channel 模块时阅读，包括消息接收/发送、命令系统、会话状态管理和消息广播同步
+ - 内容摘要：飞书 Channel 模块规格，定义飞书 WebSocket 消息接收/解析/去重、命令系统（/start, /back, /default）、会话状态管理（idle/assistant/single_chat/group_chat 四种模式）、FeishuSessionService 服务层、飞书管理 MCP 工具、消息发送格式化和群聊消息增量同步到飞书的机制
+
+
+## feishu-admin-mcp
+ - updated_at : 2026-06-27
+ - path: `docs/specs/2026-06-27-feishu-admin-mcp.md`
+ - 触发规则：当设计、修改或扩展飞书管理 MCP 工具时阅读，包括会话查询、绑定切换、资源创建等飞书助手专用工具
+ - 内容摘要：飞书管理 MCP 工具规格，定义 6 个飞书助手专用工具（list_group_chats, list_single_chat_history, bind_to_group_chat, bind_to_single_chat, create_single_chat, get_current_binding）的输入输出契约、FeishuSessionService 服务层设计和飞书助手角色配置
+

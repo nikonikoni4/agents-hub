@@ -133,6 +133,11 @@ def _verify_memory_token(agent_token: str) -> bool:
     return agent_token == config.memory_assistant_token
 
 
+def _verify_feishu_token(agent_token: str) -> bool:
+    """验证是否为飞书助手 token"""
+    return agent_token == config.feishu_assistant_token
+
+
 def _find_agent(group_chat, agent_name: str):
     """从 GroupChat 中按名称找到 Agent 实例。"""
     manager = getattr(group_chat, "manager", None)
@@ -979,8 +984,8 @@ async def create_group_chat(
         "MCP 调用: create_group_chat, team_members=%s, project_path=%s", team_members, project_path
     )
     try:
-        # 1. 系统身份验证
-        if not _verify_system_token(agent_token):
+        # 1. 系统身份验证（系统助手和飞书助手共用）
+        if not (_verify_system_token(agent_token) or _verify_feishu_token(agent_token)):
             return make_error_response(
                 PERMISSION_DENIED,
                 "权限不足：只有系统助手可以创建群聊",
@@ -1059,8 +1064,8 @@ async def create_agent(
     """
     logger.info("MCP 调用: create_agent, name=%s, platform=%s", name, platform)
     try:
-        # 1. 系统身份验证
-        if not _verify_system_token(agent_token):
+        # 1. 系统身份验证（系统助手和飞书助手共用）
+        if not (_verify_system_token(agent_token) or _verify_feishu_token(agent_token)):
             return make_error_response(
                 PERMISSION_DENIED,
                 "权限不足：只有系统助手可以创建成员",
@@ -1559,18 +1564,21 @@ async def get_memory_context(
 # ============================================================================
 
 
-async def list_group_chats(feishu_chat_id: str) -> dict:
+async def list_group_chats(agent_token: str, feishu_chat_id: str) -> dict:
     """列出所有可用的 Agent Hub 群聊。
 
     返回系统中所有已创建的群聊信息，包括 ID、名称和成员列表。
     飞书用户可以通过此工具查看可绑定的群聊。
 
     Args:
+        agent_token: 飞书助手 token
         feishu_chat_id: 飞书群 ID（oc_xxx 格式）
 
     Returns:
         成功: {"group_chats": [{"group_chat_id": "...", "name": "...", "members": [...]}]}
     """
+    if not _verify_feishu_token(agent_token):
+        return make_error_response(INVALID_TOKEN, "无效的飞书助手 token")
     logger.info("MCP list_group_chats: feishu_chat_id=%s", feishu_chat_id)
     all_chats = group_chat_manager.list_all_group_chats()
     result = []
@@ -1587,19 +1595,24 @@ async def list_group_chats(feishu_chat_id: str) -> dict:
     return {"group_chats": result}
 
 
-async def list_single_chat_history(feishu_chat_id: str, agent_name: str | None = None) -> dict:
+async def list_single_chat_history(
+    agent_token: str, feishu_chat_id: str, agent_name: str | None = None
+) -> dict:
     """列出飞书群的单聊历史记录。
 
     返回该飞书群之前创建过的单聊会话列表，包括会话 ID、Agent 名称、
     第一句话摘要和创建时间。可通过 agent_name 参数过滤。
 
     Args:
+        agent_token: 飞书助手 token
         feishu_chat_id: 飞书群 ID
         agent_name: 可选，按 agent 名称过滤
 
     Returns:
         成功: {"history": [{"session_id": "...", "agent_name": "...", "first_message": "...", "created_at": "..."}]}
     """
+    if not _verify_feishu_token(agent_token):
+        return make_error_response(INVALID_TOKEN, "无效的飞书助手 token")
     from agents_hub.channels.feishu.session import feishu_session_manager
 
     logger.info(
@@ -1616,13 +1629,14 @@ async def list_single_chat_history(feishu_chat_id: str, agent_name: str | None =
     return {"history": history}
 
 
-async def bind_to_group_chat(feishu_chat_id: str, group_chat_id: str) -> dict:
+async def bind_to_group_chat(agent_token: str, feishu_chat_id: str, group_chat_id: str) -> dict:
     """将飞书群绑定到 Agent Hub 群聊，切换到群聊模式。
 
     绑定后，飞书群中的消息将直接转发到指定的 Agent Hub 群聊。
     如果群聊不存在，返回错误。
 
     Args:
+        agent_token: 飞书助手 token
         feishu_chat_id: 飞书群 ID
         group_chat_id: Agent Hub 群聊 ID
 
@@ -1630,6 +1644,8 @@ async def bind_to_group_chat(feishu_chat_id: str, group_chat_id: str) -> dict:
         成功: {"status": "bound", "group_chat_id": "...", "group_chat_name": "..."}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    if not _verify_feishu_token(agent_token):
+        return make_error_response(INVALID_TOKEN, "无效的飞书助手 token")
     from agents_hub.channels.feishu.service import feishu_session_service
 
     logger.info(
@@ -1649,13 +1665,14 @@ async def bind_to_group_chat(feishu_chat_id: str, group_chat_id: str) -> dict:
         return make_error_response(INTERNAL_ERROR, f"内部错误: {e}")
 
 
-async def bind_to_single_chat(feishu_chat_id: str, session_id: str) -> dict:
+async def bind_to_single_chat(agent_token: str, feishu_chat_id: str, session_id: str) -> dict:
     """将飞书群绑定到已有单聊会话，切换到单聊模式。
 
     绑定后，飞书群中的消息将直接转发到指定的单聊 Agent。
     使用 list_single_chat_history 查看可用的单聊会话。
 
     Args:
+        agent_token: 飞书助手 token
         feishu_chat_id: 飞书群 ID
         session_id: 单聊会话 ID
 
@@ -1663,6 +1680,8 @@ async def bind_to_single_chat(feishu_chat_id: str, session_id: str) -> dict:
         成功: {"status": "bound", "session_id": "...", "agent_name": "..."}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    if not _verify_feishu_token(agent_token):
+        return make_error_response(INVALID_TOKEN, "无效的飞书助手 token")
     from agents_hub.channels.feishu.service import feishu_session_service
 
     logger.info(
@@ -1680,13 +1699,14 @@ async def bind_to_single_chat(feishu_chat_id: str, session_id: str) -> dict:
         )
 
 
-async def create_single_chat(feishu_chat_id: str, agent_name: str) -> dict:
+async def create_single_chat(agent_token: str, feishu_chat_id: str, agent_name: str) -> dict:
     """为飞书群创建新的单聊会话并绑定。
 
     创建一个与指定 Agent 的新单聊会话，同时绑定到飞书群。
     创建后飞书群自动切换到单聊模式。
 
     Args:
+        agent_token: 飞书助手 token
         feishu_chat_id: 飞书群 ID
         agent_name: Agent 角色名称
 
@@ -1694,6 +1714,8 @@ async def create_single_chat(feishu_chat_id: str, agent_name: str) -> dict:
         成功: {"single_chat_id": "...", "agent_name": "...", "status": "created"}
         失败: {"error": {"code": "...", "message": "..."}}
     """
+    if not _verify_feishu_token(agent_token):
+        return make_error_response(INVALID_TOKEN, "无效的飞书助手 token")
     from agents_hub.channels.feishu.service import feishu_session_service
 
     logger.info(
@@ -1713,17 +1735,20 @@ async def create_single_chat(feishu_chat_id: str, agent_name: str) -> dict:
         return make_error_response(VALIDATION_ERROR, f"创建单聊失败: {e}")
 
 
-async def get_current_binding(feishu_chat_id: str) -> dict:
+async def get_current_binding(agent_token: str, feishu_chat_id: str) -> dict:
     """查看飞书群当前的绑定状态。
 
     返回飞书群当前的会话类型、关联 ID、名称等完整状态信息。
 
     Args:
+        agent_token: 飞书助手 token
         feishu_chat_id: 飞书群 ID
 
     Returns:
         {"session_type": "...", "session_id": "...", "session_name": "...", ...}
     """
+    if not _verify_feishu_token(agent_token):
+        return make_error_response(INVALID_TOKEN, "无效的飞书助手 token")
     from agents_hub.channels.feishu.session import feishu_session_manager
 
     logger.info("MCP get_current_binding: feishu_chat_id=%s", feishu_chat_id)
