@@ -33,6 +33,7 @@ class FeishuSessionState:
     last_message_id: int = 0  # 增量同步位置（仅群聊模式使用）
     last_sync_at: str = ""  # 最后同步时间
     created_at: str = ""  # 创建时间
+    default_agent: str = ""  # 群聊默认对话 Agent（仅群聊模式使用）
 
     def to_dict(self) -> dict[str, Any]:
         """转为字典"""
@@ -45,6 +46,7 @@ class FeishuSessionState:
             "last_message_id": self.last_message_id,
             "last_sync_at": self.last_sync_at,
             "created_at": self.created_at,
+            "default_agent": self.default_agent,
         }
 
     @classmethod
@@ -59,6 +61,7 @@ class FeishuSessionState:
             last_message_id=data.get("last_message_id", 0),
             last_sync_at=data.get("last_sync_at", ""),
             created_at=data.get("created_at", ""),
+            default_agent=data.get("default_agent", ""),
         )
 
 

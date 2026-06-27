@@ -31,6 +31,7 @@ HELP_TEXT = """欢迎使用 Agents Hub！
 /ag <名称或序号> - 进入 agent 单聊 (快捷方式)
 /groups - 列出所有群聊
 /g <名称或序号> - 进入群聊 (快捷方式)
+/default <名称> - 设置群聊默认对话对象 (仅群聊模式)
 /status - 显示当前状态
 /back - 返回命令面板
 
@@ -88,6 +89,7 @@ class FeishuCommander:
             "/groups": lambda: self._cmd_groups(),
             "/g": lambda: self._cmd_group(chat_id, arg),  # 快捷方式
             "/group": lambda: self._cmd_group(chat_id, arg),
+            "/default": lambda: self._cmd_default(chat_id, arg),
             "/status": lambda: self._cmd_status(chat_id),
             "/back": lambda: self._cmd_back(chat_id),
         }
@@ -232,6 +234,30 @@ class FeishuCommander:
         logger.info("已切换到单聊: chat_id=%s, agent=%s", chat_id, agent_name)
         return f"已进入与 {agent_name} 的单聊模式\n发送 /back 返回命令面板"
 
+    async def _cmd_default(self, chat_id: str, agent_name: str) -> str:
+        """设置群聊默认对话 Agent。"""
+        if not agent_name:
+            return "请指定 agent 名称，如: /default pm"
+
+        state = self._session_manager.get_or_create_state(chat_id)
+
+        # 检查是否在群聊状态
+        if state.session_type != "group_chat":
+            return "此命令仅在群聊模式下可用\n\n请先使用 /group <名称> 进入群聊"
+
+        # 检查 agent 是否存在
+        roles = self._role_manager.list_roles()
+        valid_names = [r.name for r in roles]
+        if agent_name not in valid_names:
+            return f"Agent '{agent_name}' 不存在。可用: {', '.join(valid_names)}"
+
+        # 设置默认 agent
+        state.default_agent = agent_name
+        self._session_manager.save()
+
+        logger.info("已设置默认 agent: chat_id=%s, agent=%s", chat_id, agent_name)
+        return f"已设置默认对话对象: {agent_name}\n\n后续消息将默认发送给 {agent_name}"
+
     async def _cmd_status(self, chat_id: str) -> str:
         """显示当前状态。"""
         state = self._session_manager.get_or_create_state(chat_id)
@@ -339,10 +365,14 @@ class FeishuCommander:
         member_dicts = group_chat.runtime.get_member_dicts()
         members = [m["name"] for m in member_dicts]
 
+        # 使用默认 agent 或默认发送给 manager
+        default_agent = state.default_agent if state.default_agent else "manager"
+
         logger.info(
-            "转发消息到群聊: group_chat_id=%s, members=%s",
+            "转发消息到群聊: group_chat_id=%s, members=%s, default_agent=%s",
             state.session_id,
             members,
+            default_agent,
         )
 
         # 发送消息并等待回复
@@ -353,8 +383,12 @@ class FeishuCommander:
             timeout=MESSAGE_TIMEOUT_SECONDS,
         )
 
+        # 添加群聊信息
+        group_info = f"\n\n---\n当前默认对话对象: {default_agent}\n群聊成员: {', '.join(members)}"
+        result_with_info = f"{result}{group_info}"
+
         logger.info("消息转发完成: group_chat_id=%s", state.session_id)
-        return result
+        return result_with_info
 
     async def _collect_stream_response(self, single_chat_id: str, content: str) -> str:
         """收集单聊流式响应（参考微信实现）。
