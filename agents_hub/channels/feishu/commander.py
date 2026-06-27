@@ -12,6 +12,7 @@ from agents_hub.api.schemas.single_chat import CreateSingleChatRequest, SingleCh
 from agents_hub.api.services.single_chat_service import single_chat_manager
 from agents_hub.channels.feishu.session import FeishuSessionManager, FeishuSessionState
 from agents_hub.config import config
+from agents_hub.core.foundation import GroupChatNotFoundError
 from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
 from agents_hub.roles import RoleManager
 from agents_hub.utils import get_logger
@@ -324,8 +325,17 @@ class FeishuCommander:
             logger.error("GroupChatService 未注入")
             return "消息转发服务不可用"
 
-        # 获取群聊成员
-        group_chat = await group_chat_manager.load_group_chat(state.session_id)
+        try:
+            # 获取群聊成员
+            group_chat = await group_chat_manager.load_group_chat(state.session_id)
+        except GroupChatNotFoundError:
+            logger.warning("群聊已删除: group_chat_id=%s, 重置状态为 idle", state.session_id)
+            state.session_type = "idle"
+            state.session_id = ""
+            state.session_name = ""
+            self._session_manager.save()
+            return f"群聊 '{state.session_name or state.session_id}' 已删除\n\n已返回命令面板\n\n{HELP_TEXT}"
+
         member_dicts = group_chat.runtime.get_member_dicts()
         members = [m["name"] for m in member_dicts]
 

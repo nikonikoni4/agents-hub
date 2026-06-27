@@ -80,6 +80,7 @@ class FeishuChannel:
 
         遍历所有已绑定的群聊 session，查询群聊历史中 id > last_message_id 的消息并补发。
         """
+        from agents_hub.core.foundation import GroupChatNotFoundError
         from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
 
         if not self._session_manager:
@@ -115,6 +116,16 @@ class FeishuChannel:
                     )
                     state.last_message_id = msg.get("id", 0)
                     synced_count += 1
+
+            except GroupChatNotFoundError:
+                logger.warning(
+                    "群聊已删除，重置状态为 idle: feishu_chat_id=%s, group_chat_id=%s",
+                    state.feishu_chat_id,
+                    state.session_id,
+                )
+                state.session_type = "idle"
+                state.session_id = ""
+                state.session_name = ""
 
             except Exception as e:
                 logger.error(
