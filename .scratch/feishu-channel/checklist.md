@@ -16,28 +16,57 @@
 
 ### 2. 飞书 Channel 监听机制
 
-- [ ] **连接方式**：飞书 Channel 在 agents-hub 进程内，直接调用 WebSocketManager
-- [ ] **房间加入**：启动时加入对应 group_chat_id 的房间
+- [ ] **连接方式**：飞书 Channel 在 agents-hub 进程内，通过回调订阅机制监听
+- [ ] **回调注册**：启动时调用 `register_channel_callback()` 注册回调
 - [ ] **广播过滤**：只处理有消息的广播，忽略纯状态刷新
 
 **关键实现**：
 ```python
-async def on_broadcast(self, group_chat_id: str, signal: dict):
-    """处理广播信号"""
-    # 过滤：只处理有消息的广播
-    if "message" not in signal:
-        return  # 忽略纯状态刷新
+class FeishuChannel:
+    async def start(self):
+        """启动飞书 Channel"""
+        # 1. 连接到飞书服务器
+        self._connect_to_feishu()
+        
+        # 2. 注册回调到 broadcast_group_chat_refresh
+        from agents_hub.realtime.dependencies import register_channel_callback
+        register_channel_callback(self._on_broadcast)
+        
+        # 3. 加载 Session 映射和同步状态
+        self._session_manager.load()
     
-    # 提取消息内容
-    message = signal["message"]
-    
-    # 推送到飞书群
-    await self.send_to_feishu(
-        chat_id=self._get_feishu_chat_id(group_chat_id),
-        content=message["content"],
-        agent_name=message["send_from"],
-    )
+    async def _on_broadcast(self, group_chat_id: str, message: dict | None):
+        """处理广播回调"""
+        # 过滤 1：只处理有消息的广播
+        if not message:
+            return
+        
+        # 获取绑定的飞书群 ID
+        feishu_chat_id = self._get_feishu_chat_id(group_chat_id)
+        if not feishu_chat_id:
+            return  # 未绑定，跳过
+        
+        # 过滤 2：增量同步，只处理新消息
+        sync_state = self._session_manager.get_sync_state(feishu_chat_id)
+        if message["id"] <= sync_state.last_message_id:
+            return  # 已同步过，跳过
+        
+        # 推送到飞书群
+        await self.send_to_feishu(
+            chat_id=feishu_chat_id,
+            content=message["content"],
+            agent_name=message["send_from"],
+        )
+        
+        # 更新同步状态
+        self._session_manager.update_sync_state(feishu_chat_id, message["id"])
 ```
+
+**审核发现的问题**：
+1. ✅ **已解决**：`WebSocketManager` 不支持非 WebSocket 连接加入房间
+   - 解决方案：使用回调订阅机制，飞书 Channel 注册回调到 `broadcast_group_chat_refresh`
+2. ✅ **已解决**：`on_change` 回调签名不支持传递消息内容
+   - 解决方案：扩展 `_notify_change()` 和 `on_change` 签名，添加可选 `message` 参数
 
 ### 3. 飞书 Channel 耦合点
 
@@ -68,13 +97,43 @@ WebSocket 2：飞书 Channel ↔ 飞书服务器
 - 不需要 WebSocket
 ```
 
-### 6. 流式输出
+### 6. Session 与同步状态
+
+- [ ] **Session 映射**：飞书群 ↔ agents-hub 群聊的绑定关系（持久化）
+- [ ] **同步状态**：记录每个飞书群最后同步到哪条消息（持久化）
+- [ ] **增量同步**：重启后从上次位置开始同步，避免重复发送
+- [ ] **飞书 chat_id 稳定性**：oc_xxx 创建后不变，绑定关系长期有效
+
+**同步时机**：
+- **启动时**：`channel.start()` 中调用 `_sync_missed_messages()`，遍历所有 `session_type == "group_chat"` 的 session，查询群聊历史中 `id > last_message_id` 的消息并补发
+- **运行时**：通过广播机制实时推送（`_on_broadcast()`）
+- **单聊暂不实现**：单聊数据不在 agents-hub 中存储，后续待存储方案确定后再实现
+
+**数据模型**：
+```python
+@dataclass
+class FeishuSessionMapping:
+    """飞书群绑定关系（持久化）"""
+    feishu_chat_id: str          # 飞书群 ID（oc_xxx，创建后不变）
+    group_chat_id: str           # agents-hub 群聊 ID
+    group_chat_name: str         # agents-hub 群聊名称（便于显示）
+    bound_at: str                # 绑定时间
+
+@dataclass
+class FeishuSyncState:
+    """同步状态（持久化）"""
+    feishu_chat_id: str          # 飞书群 ID
+    last_message_id: int         # 最后同步的消息 ID
+    last_sync_at: str            # 最后同步时间
+```
+
+### 7. 流式输出
 
 - [ ] **决策**：砍掉流式输出，先做基础功能
 - [ ] **原因**：前端修改量较大，需要重构消息展示逻辑
 - [ ] **后续**：作为优化项，后续再考虑
 
-### 7. 风险与缓解
+### 8. 风险与缓解
 
 - [ ] **lark-oapi SDK 线程安全**：参考 nanobot 的 run_ws() 实现
 - [ ] **消息去重**：使用 OrderedDict 缓存 message_id
@@ -144,19 +203,24 @@ WebSocket 2：飞书 Channel ↔ 飞书服务器
 - [ ] 广播监听有效
 - [ ] 过滤逻辑正确（忽略纯状态刷新）
 
-### 切片 5：Session 映射管理（AFK，阻塞：切片 2）
+### 切片 5：Session 映射与同步状态管理（AFK，阻塞：切片 2）
 
-**目标**：实现飞书群到 agents-hub 群聊的映射
+**目标**：实现飞书群到 agents-hub 群聊的映射，支持增量同步
 
 **实现内容**：
-- `agents_hub/channels/feishu/session.py`（映射关系持久化）
+- `agents_hub/channels/feishu/session.py`
+  - `FeishuSessionMapping`：绑定关系（持久化）
+  - `FeishuSyncState`：同步状态（持久化）
+  - 增量同步逻辑：重启后从上次位置开始同步
 - `/bind <group_chat_name>` 命令
-- 启动时加载映射关系
+- 启动时加载映射关系和同步状态
 
 **验收标准**：
 - [ ] 映射关系能够持久化
+- [ ] 同步状态能够持久化
 - [ ] `/bind` 命令正常工作
-- [ ] 启动时自动加载映射
+- [ ] 启动时自动加载映射和同步状态
+- [ ] 增量同步逻辑正确（重启后不重复发送）
 
 ### 切片 6：命令系统集成（AFK，阻塞：切片 3、4、5）
 

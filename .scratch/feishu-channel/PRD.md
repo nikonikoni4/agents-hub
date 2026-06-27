@@ -9,7 +9,7 @@ labels: [ready-for-agent]
 当前 agents-hub 支持微信 channel 和本地前端两种交互方式，但存在以下问题：
 
 1. **微信 channel 限制**：微信 ilinkai API 不支持群聊消息收发，只能通过命令模拟群聊体验，用户体验受限
-2. **缺少飞书集成**：飞书作为主流 IM 平台，原生支持群聊、流式输出（CardKit）、WebSocket 长连接，适合与 agents-hub 集成
+2. **缺少飞书集成**：飞书作为主流 IM 平台，原生支持群聊、WebSocket 长连接，适合与 agents-hub 集成
 3. **消息同步需求**：本地前端和 IM 平台之间的消息需要实时同步，当前架构缺少统一的广播机制
 
 ## Solution
@@ -30,9 +30,8 @@ labels: [ready-for-agent]
 - WebSocket 长连接（lark-oapi SDK）
 - 消息格式：`**[agent name]** : 消息内容`，末尾附带当前群聊 agent 列表
 - 接收消息解析 `@agent_name`，复用本地解析逻辑
-- 流式输出：CardKit 流式卡片
 - 命令系统：复用微信的命令
-- Session 映射：飞书 chat_id 到 agents-hub group_chat_id
+- Session 映射：飞书 chat_id 到 agents-hub group_chat_id，支持增量同步
 
 ## User Stories
 
@@ -55,17 +54,17 @@ labels: [ready-for-agent]
 
 10. 作为飞书用户，我希望 bot 回复时显示 `[agent name] : 消息内容` 格式，以便知道是哪个 agent 的回复
 11. 作为飞书用户，我希望 bot 回复末尾附带当前群聊 agent 列表，以便了解群聊中的 agent 成员
-12. 作为飞书用户，我希望 bot 支持流式输出（CardKit 流式卡片），以便实时看到 agent 的回复过程
-13. 作为飞书用户，我希望 bot 能够智能检测消息格式（短文本/富文本/卡片），以便获得最佳的显示效果
-14. 作为飞书用户，我希望 bot 支持引用回复，以便明确回复某条特定消息
-15. 作为飞书用户，我希望 bot 能够显示处理中/完成的表情状态，以便了解消息处理进度
+12. 作为飞书用户，我希望 bot 能够智能检测消息格式（短文本/富文本/卡片），以便获得最佳的显示效果
+13. 作为飞书用户，我希望 bot 支持引用回复，以便明确回复某条特定消息
+14. 作为飞书用户，我希望 bot 能够显示处理中/完成的表情状态，以便了解消息处理进度
 
 ### 群聊编排对接
 
-16. 作为飞书用户，我希望通过 `/bind <group_chat_name>` 命令绑定飞书群到 agents-hub 群聊，以便建立映射关系
-17. 作为飞书用户，我希望飞书群消息能够转发到 agents-hub 群聊，以便 agent 处理消息
-18. 作为飞书用户，我希望 agent 回复能够推送到飞书群，以便看到处理结果
-19. 作为飞书用户，我希望 Session 映射关系能够持久化，以便重启后继续之前的会话
+15. 作为飞书用户，我希望通过 `/bind <group_chat_name>` 命令绑定飞书群到 agents-hub 群聊，以便建立映射关系
+16. 作为飞书用户，我希望飞书群消息能够转发到 agents-hub 群聊，以便 agent 处理消息
+17. 作为飞书用户，我希望 agent 回复能够推送到飞书群，以便看到处理结果
+18. 作为飞书用户，我希望 Session 映射关系能够持久化，以便重启后继续之前的会话
+19. 作为飞书用户，我希望重启后能够增量同步错过的消息，以便了解之前发生的内容
 20. 作为本地用户，我希望飞书消息能够同步到本地前端，以便看到飞书用户的发言
 21. 作为飞书用户，我希望本地消息能够同步到飞书群，以便看到本地用户的发言
 
@@ -79,12 +78,18 @@ labels: [ready-for-agent]
 27. 作为飞书用户，我希望通过 `/create-group` 命令创建群聊，以便组织多 agent 协作
 28. 作为飞书用户，我希望通过 `/create-role` 命令创建角色，以便扩展 agent 能力
 
+### 单聊同步（暂不实现）
+
+29. 作为飞书用户，我希望重启后能够增量同步单聊错过的消息，以便了解之前发生的内容
+    - **暂不实现原因**：单聊数据不在 agents-hub 中存储，实现复杂度较高
+    - **后续**：待单聊数据存储方案确定后再实现
+
 ### 媒体处理（可选/分期）
 
-29. 作为飞书用户，我希望 bot 能够接收图片消息，以便处理图片内容
-30. 作为飞书用户，我希望 bot 能够接收文件消息，以便处理文件内容
-31. 作为飞书用户，我希望 bot 能够上传图片，以便返回图片结果
-32. 作为飞书用户，我希望 bot 能够上传文件，以便返回文件结果
+30. 作为飞书用户，我希望 bot 能够接收图片消息，以便处理图片内容
+31. 作为飞书用户，我希望 bot 能够接收文件消息，以便处理文件内容
+32. 作为飞书用户，我希望 bot 能够上传图片，以便返回图片结果
+33. 作为飞书用户，我希望 bot 能够上传文件，以便返回文件结果
 
 ## Implementation Decisions
 
@@ -120,13 +125,12 @@ async def broadcast_group_chat_refresh(self, message: AgentMessage = None):
 **新增模块**：`agents_hub/channels/feishu/`
 
 **文件结构**：
-- `channel.py`：主 channel 类，WebSocket 连接管理、消息接收/发送
+- `channel.py`：主 channel 类，WebSocket 连接管理、消息接收/发送、广播监听
 - `config.py`：配置模型（app_id, app_secret, encrypt_key 等）
 - `client.py`：lark-oapi 封装，API 调用
 - `message.py`：消息解析，@Mention 检测，@agent_name 解析
-- `streaming.py`：CardKit 流式输出，缓冲区管理
 - `commander.py`：命令处理，复用微信的命令系统
-- `session.py`：Session 映射，chat_id 到 group_chat_id 的持久化
+- `session.py`：Session 映射和同步状态管理，支持增量同步
 - `exceptions.py`：异常定义
 
 **核心设计决策**：
@@ -137,26 +141,30 @@ async def broadcast_group_chat_refresh(self, message: AgentMessage = None):
    - 发送消息格式：`**[agent_name]** : 消息内容`
    - 消息末尾附带当前群聊 agent 列表
 
-2. **消息携带 channel 引用**：
-   - 在 `AgentMessage` 中添加 `reply_channel` 字段
-   - 定义 `ReplyChannel` 接口，支持 `send_delta()` 和 `send()` 方法
-   - 飞书 channel 实现 `FeishuReplyChannel`
-   - Agent 处理消息时，检查 `reply_channel`，有就流式输出到 channel
+2. **群聊不区分 Channel**：
+   - 群聊保持通用，飞书 Channel 作为监听者接入
+   - 广播机制是"一对多"的，飞书 Channel 和本地前端都会收到
+   - 飞书 Channel 负责把消息推送到飞书群，本地前端负责刷新 UI
 
-3. **Session 映射**：
-   - 飞书 chat_id 到 agents-hub group_chat_id 的映射
-   - 持久化到 JSON 文件
+3. **广播过滤机制**：
+   - 飞书 Channel 监听广播时，只处理有消息的广播
+   - 忽略纯状态刷新（如 Agent 状态变化、权限请求等）
+   - 过滤逻辑：检查广播中是否包含 `message` 字段
+
+4. **Session 映射与增量同步**：
+   - 飞书 chat_id 到 agents-hub group_chat_id 的映射（持久化）
+   - 同步状态：记录每个飞书群最后同步到哪条消息（持久化）
+   - 增量同步：重启后从上次位置开始同步，避免重复发送
    - 通过 `/bind <group_chat_name>` 命令建立映射
 
-4. **异步通知**：
-   - 飞书 channel 连接到 agents-hub 的 WebSocket
-   - 监听 `group_chat_refresh` 事件
-   - 从广播中提取消息内容，推送到飞书群
+5. **进程内监听**：
+   - 飞书 Channel 在 agents-hub 进程内，直接调用 WebSocketManager
+   - 不需要通过 WebSocket 连接到 agents-hub
+   - 启动时加入对应 group_chat_id 的房间
 
 **技术依赖**：
 - `lark-oapi >= 1.0.0`：飞书官方 SDK
 - WebSocket 长连接：无需公网 IP，自动重连
-- CardKit API：流式输出支持
 
 **配置模型**：
 ```python
@@ -168,7 +176,24 @@ class FeishuConfig:
     verification_token: str = ""  # 验证 token（可选）
     group_policy: str = "mention"  # "open" 响应所有群消息 / "mention" 只响应 @bot
     domain: str = "feishu"  # "feishu" 国内版 / "lark" 国际版
-    streaming: bool = True  # 启用 CardKit 流式输出
+```
+
+**Session 与同步状态模型**：
+```python
+@dataclass
+class FeishuSessionMapping:
+    """飞书群绑定关系（持久化）"""
+    feishu_chat_id: str          # 飞书群 ID（oc_xxx，创建后不变）
+    group_chat_id: str           # agents-hub 群聊 ID
+    group_chat_name: str         # agents-hub 群聊名称（便于显示）
+    bound_at: str                # 绑定时间
+
+@dataclass
+class FeishuSyncState:
+    """同步状态（持久化）"""
+    feishu_chat_id: str          # 飞书群 ID
+    last_message_id: int         # 最后同步的消息 ID
+    last_sync_at: str            # 最后同步时间
 ```
 
 ## Testing Decisions
@@ -178,9 +203,10 @@ class FeishuConfig:
 1. **广播机制**：测试 `broadcast_group_chat_refresh()` 方法是否正确附加消息内容
 2. **消息接收**：测试飞书消息接收入口 `on_message()` 是否正确解析消息
 3. **消息发送**：测试 `send_to_feishu()` 是否正确格式化并推送消息
-4. **流式输出**：测试 `FeishuReplyChannel.send_delta()` 是否正确更新 CardKit 卡片
+4. **广播过滤**：测试飞书 Channel 是否正确过滤纯状态刷新广播
 5. **Session 映射**：测试 `FeishuSessionManager` 是否正确持久化映射关系
-6. **命令系统**：测试命令路由是否正确分发到对应的处理函数
+6. **增量同步**：测试重启后是否正确从上次位置开始同步
+7. **命令系统**：测试命令路由是否正确分发到对应的处理函数
 
 ### 测试方法
 
@@ -205,17 +231,18 @@ class FeishuConfig:
 ### 技术风险
 
 1. **lark-oapi SDK 线程安全**：WebSocket 在独立线程运行，需要正确桥接到 asyncio，参考 nanobot 的 `run_ws()` 实现
-2. **CardKit API 限流**：流式更新可能触发 API 限流，使用 0.5 秒节流间隔
-3. **消息去重**：飞书可能重复推送消息，使用 OrderedDict 缓存 message_id
-4. **异步回调**：当前 GroupChatService 不支持异步回调，需要新增事件订阅机制
+2. **消息去重**：飞书可能重复推送消息，使用 OrderedDict 缓存 message_id
+3. **广播过滤**：需要正确区分消息广播和状态刷新广播，避免重复推送
 
 ### 实现建议
 
-1. **Phase 1：基础连接**：WebSocket 连接、消息接收、基础发送
-2. **Phase 2：群聊对接**：Session 映射、消息路由、@Mention 解析
-3. **Phase 3：流式输出**：CardKit 流式卡片、缓冲区管理、节流
-4. **Phase 4：异步通知**：事件订阅机制、实时推送
-5. **Phase 5：测试与优化**：集成测试、性能优化、错误处理
+1. **Phase 1：广播机制扩展**：修改 `broadcast_group_chat_refresh()` 函数，添加消息参数
+2. **Phase 2：飞书 Channel 基础框架**：创建目录结构、config、exceptions、client
+3. **Phase 3：消息接收与解析**：实现消息接收、@解析、消息去重
+4. **Phase 4：消息发送与广播监听**：实现消息发送、广播监听、过滤逻辑
+5. **Phase 5：Session 与同步管理**：实现映射关系、增量同步
+6. **Phase 6：命令系统集成**：实现 commander，复用微信命令
+7. **Phase 7：端到端测试**：完整流程测试、性能优化、错误处理
 
 ### 参考实现
 

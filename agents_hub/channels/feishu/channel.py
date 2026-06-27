@@ -70,7 +70,64 @@ class FeishuChannel:
         # 注册广播回调
         register_channel_callback(self._on_broadcast)
 
+        # 补偿重启期间错过的消息
+        await self._sync_missed_messages()
+
         logger.info("飞书 channel 已启动")
+
+    async def _sync_missed_messages(self) -> None:
+        """补偿重启期间错过的消息。
+
+        遍历所有已绑定的群聊 session，查询群聊历史中 id > last_message_id 的消息并补发。
+        """
+        from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
+
+        if not self._session_manager:
+            return
+
+        synced_count = 0
+        for state in self._session_manager._states.values():
+            if state.session_type != "group_chat":
+                continue
+
+            try:
+                group_chat = await group_chat_manager.load_group_chat(state.session_id)
+                messages = group_chat.runtime.get_message_dicts(limit=0)  # 获取全部消息
+
+                # 过滤出错过的消息
+                missed = [m for m in messages if m.get("id", 0) > state.last_message_id]
+                if not missed:
+                    continue
+
+                logger.info(
+                    "补偿消息: feishu_chat_id=%s, group_chat_id=%s, missed=%d",
+                    state.feishu_chat_id,
+                    state.session_id,
+                    len(missed),
+                )
+
+                # 逐条补发
+                for msg in missed:
+                    await self.send_to_feishu(
+                        chat_id=state.feishu_chat_id,
+                        content=msg.get("content", ""),
+                        agent_name=msg.get("speaker", "unknown"),
+                    )
+                    state.last_message_id = msg.get("id", 0)
+                    synced_count += 1
+
+            except Exception as e:
+                logger.error(
+                    "补偿消息失败: feishu_chat_id=%s, group_chat_id=%s, error=%s",
+                    state.feishu_chat_id,
+                    state.session_id,
+                    e,
+                    exc_info=True,
+                )
+
+        if synced_count > 0:
+            self._session_manager.save()
+            logger.info("消息补偿完成: synced=%d", synced_count)
 
     async def _on_ws_message(self, event: dict[str, Any]) -> None:
         """处理 WebSocket 接收到的消息事件。
