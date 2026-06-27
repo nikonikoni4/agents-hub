@@ -297,6 +297,8 @@ class SingleChatManager:
         # 系统角色：附加 agent token 以便调用 MCP 工具时验证身份
         if agent_name in (config.default_assistant_name, config.default_memory_assistant_name):
             return f"{content}\n\n[系统提示] 你的 agent token 是: {config.assistant_token}"
+        if agent_name == config.default_feishu_assistant_name:
+            return f"{content}\n\n[系统提示] 你的 agent token 是: {config.feishu_assistant_token}"
         return content
 
     async def send_message_stream(self, single_chat_id: str, content: str) -> AsyncIterator[str]:

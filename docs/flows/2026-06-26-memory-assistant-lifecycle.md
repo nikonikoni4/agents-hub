@@ -82,17 +82,17 @@ class MemoryContext:
 | 写入 history.jsonl | `config.history_jsonl_path` | `MemoryTask.execute()` |
 | 写入用户决策 | `config.decision_path` | Agent 自主行为（由 prompt 指导） |
 
-<key_function last_update="2026-06-26T18:23:55+08:00">
+<key_function last_update="2026-06-27T23:39:49+08:00">
 - agents_hub/scheduler/task/memory_task.py
-  - memory_task.MemoryTask.execute:100
+  - memory_task.MemoryTask.execute:98
   - memory_task.append_to_history:22
-  - memory_task.trim_history_jsonl:56
-  - memory_task._build_memory_prompt:76
+  - memory_task.trim_history_jsonl:54
+  - memory_task._build_memory_prompt:74
 - agents_hub/mcp/server.py
-  - server.get_memory_context:1469
-  - server._verify_memory_token:125
+  - server.get_memory_context:1475
+  - server._verify_memory_token:131
 - agents_hub/roles/prompt_file.py
-  - prompt_file.build_system_file_content:489
+  - prompt_file.build_system_file_content:534
 </key_function>
 
 ## 流程概览

@@ -185,12 +185,13 @@ class ClaudeParser:
 
     def _parse_result_event(self, event: dict, session_id: str) -> StreamEvent | None:
         """
-        处理 result 事件：提取 usage 信息并生成 TURN_COMPLETE 事件
+        处理 result 事件：提取 usage 信息和完整输出文本，并生成 TURN_COMPLETE 事件
 
         CLI --output-format stream-json 输出的 result 事件格式：
         {
             "type": "result",
             "subtype": "success",
+            "result": "完整的最终输出文本",
             "usage": {
                 "input_tokens": int,
                 "output_tokens": int,
@@ -201,6 +202,7 @@ class ClaudeParser:
         }
         """
         usage = event.get("usage", {})
+        result_text = event.get("result", "")  # 提取完整输出文本
         # 从 modelUsage 提取 contextWindow（key 是动态模型名）
         model_usage = event.get("modelUsage", {})
         max_context_window = 0
@@ -210,15 +212,20 @@ class ClaudeParser:
                 max_context_window = cw
                 break
         logger.info(
-            "[ClaudeParser] result event usage: input_tokens=%s, cache_read=%s, output_tokens=%s, max_context_window=%s",
+            "[ClaudeParser] result event usage: input_tokens=%s, cache_read=%s, output_tokens=%s, max_context_window=%s, result_text_len=%s",
             usage.get("input_tokens", 0),
             usage.get("cache_read_input_tokens", 0),
             usage.get("output_tokens", 0),
             max_context_window,
+            len(result_text),
         )
         return StreamEvent(
             type=AgentEventType.TURN_COMPLETE,
-            content={"usage": usage, "max_context_window": max_context_window},
+            content={
+                "usage": usage,
+                "max_context_window": max_context_window,
+                "result": result_text,  # 包含完整输出文本
+            },
             session_id=session_id,
             timestamp=datetime.now().isoformat(),
             agent_name="",

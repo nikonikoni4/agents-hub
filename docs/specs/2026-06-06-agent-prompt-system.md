@@ -96,7 +96,7 @@ contract_refs:
 
 ### 对外接口
 
-<key_function last_update="2026-06-26T18:23:55+08:00">
+<key_function last_update="2026-06-27T23:39:49+08:00">
 - agents_hub/core/agent/base_agent.py
   - base_agent.Agent.SHARED_RULES:38
 - agents_hub/core/agent/manager.py
@@ -104,11 +104,11 @@ contract_refs:
 - agents_hub/core/agent/worker.py
   - worker.Worker.ROLE_INSTRUCTIONS:15
 - agents_hub/core/foundation/renderer.py
-  - renderer.render_for_llm:49
-  - renderer.render_for_chat:69
+  - renderer.render_for_llm:64
+  - renderer.render_for_chat:89
 - agents_hub/core/context/agent_context.py
   - agent_context.AgentContext.get_context:38
-  - agent_context.AgentContext.build_user_prompt:180
+  - agent_context.AgentContext.build_user_prompt:179
 </key_function>
 
 | 接口 | 说明 | 约束 |

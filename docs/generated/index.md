@@ -99,3 +99,9 @@
  - path: generated/028/
  - 触发规则：local-code-review 审查 a1fdd19..HEAD（5 个提交，14 个文件，420 行新增）
  - 内容摘要：8 维度并行审查，发现 8 个高置信度问题（>=80）：组件直接调用 API 违反分层架构（95）、缺少测试覆盖（90）、直接操作 store state（85）、重复的状态检查代码（85）、缺少更新 Spec 文档（85）、嵌套三元表达式（80）、重复的状态映射逻辑（80）、注释与代码不符（80）
+
+## 飞书重构代码审查 031
+ - updated_at : 2026-06-27
+ - path: generated/031/
+ - 触发规则：local-code-review 审查 HEAD~1..HEAD（飞书重构提交，14 文件，+2125/-229）
+ - 内容摘要：8 维度并行审查，发现 8 个高置信度问题（>=80）：prompt injection 可伪造 feishu_chat_id（90）、6 个 MCP 工具无鉴权绕过 ADR-0007（95）、list_group_chats N+1 查询（90）、bind_to_single_chat 缺少 exc_info（90）、缺少错误路径测试（90）、mock side_effect 逻辑缺陷（88）、spec 行号系统性偏移（95）、spec 异常类型不符（95）。核心风险：Issue 1+2 组合构成跨租户会话操控攻击面

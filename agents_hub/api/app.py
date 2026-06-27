@@ -94,6 +94,9 @@ async def lifespan(app: FastAPI):
     # 后台启动微信 channel（仅当 token 已存在时），不阻塞 lifespan
     wechat_task = asyncio.create_task(_start_wechat_channel())
 
+    # 后台启动飞书 channel（仅当配置存在时），不阻塞 lifespan
+    feishu_task = asyncio.create_task(_start_feishu_channel())
+
     # 启动定时调度器
     from agents_hub.scheduler import scheduler_service
 
@@ -108,6 +111,13 @@ async def lifespan(app: FastAPI):
         await wechat_channel.stop()
     elif not wechat_task.done():
         wechat_task.cancel()
+
+    feishu_channel = feishu_task.result() if feishu_task.done() else None
+    if feishu_channel:
+        await feishu_channel.stop()
+    elif not feishu_task.done():
+        feishu_task.cancel()
+
     mcp_task.cancel()
 
 
@@ -148,6 +158,36 @@ async def _start_wechat_channel():
             return None
     except Exception as e:
         logger.warning(f"微信 channel 启动异常: {e}")
+        return None
+
+
+async def _start_feishu_channel():
+    """启动飞书 channel，返回 channel 实例或 None"""
+    from agents_hub.api.services.group_chat_service import GroupChatService
+    from agents_hub.channels.feishu import FeishuChannel
+    from agents_hub.channels.feishu.config import FeishuConfig
+    from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
+
+    feishu_data = config.feishu_config
+    app_id = feishu_data.get("app_id", "")
+    app_secret = feishu_data.get("app_secret", "")
+
+    if not app_id or not app_secret:
+        logger.info("飞书 channel: 未配置 app_id 或 app_secret，跳过启动")
+        return None
+
+    feishu_config = FeishuConfig.from_system_config(config.system)
+    group_chat_service = GroupChatService(group_chat_manager)
+    channel = FeishuChannel(
+        feishu_config, data_path=config.data_path, group_chat_service=group_chat_service
+    )
+
+    try:
+        await channel.start()
+        logger.info("飞书 channel 已启动")
+        return channel
+    except Exception as e:
+        logger.warning(f"飞书 channel 启动异常: {e}")
         return None
 
 

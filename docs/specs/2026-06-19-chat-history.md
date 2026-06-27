@@ -85,7 +85,7 @@ contract_refs:
 
 ### 群聊聚合消息
 
-<key_function last_update="2026-06-26T18:23:55+08:00">
+<key_function last_update="2026-06-27T23:39:49+08:00">
 - agents_hub/core/context/group_chat_runtime.py
   - group_chat_runtime.GroupChatRuntime.get_message_dicts:130
 - agents_hub/core/context/group_chat_session.py
