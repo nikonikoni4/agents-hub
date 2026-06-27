@@ -42,14 +42,13 @@ class FeishuChannel:
         self._client: FeishuClient | None = None
         self._deduplicator = MessageDeduplicator()
         self._commander: Any = None  # 延迟初始化
-        self._session_manager: Any = None  # 延迟初始化
         self._members: list[str] = []  # 群聊成员列表
 
     async def start(self) -> None:
         """启动 channel：初始化客户端 -> 注册回调"""
         # 延迟导入避免循环依赖
         from agents_hub.channels.feishu.commander import FeishuCommander
-        from agents_hub.channels.feishu.session import FeishuSessionManager
+        from agents_hub.channels.feishu.session import feishu_session_manager
         from agents_hub.realtime.dependencies import register_channel_callback
 
         # 初始化客户端
@@ -60,12 +59,11 @@ class FeishuChannel:
 
         await self._client.connect()
 
-        # 初始化 session manager
-        self._session_manager = FeishuSessionManager(self._data_path)
-        self._session_manager.load()
+        # 加载全局 session manager
+        feishu_session_manager.load()
 
-        # 初始化 commander
-        self._commander = FeishuCommander(self._session_manager, self._group_chat_service)
+        # 初始化 commander（不再传递 session_manager）
+        self._commander = FeishuCommander(self._group_chat_service)
 
         # 注册广播回调
         register_channel_callback(self._on_broadcast)
@@ -80,14 +78,12 @@ class FeishuChannel:
 
         遍历所有已绑定的群聊 session，查询群聊历史中 id > last_message_id 的消息并补发。
         """
+        from agents_hub.channels.feishu.session import feishu_session_manager
         from agents_hub.core.foundation import GroupChatNotFoundError
         from agents_hub.core.orchestration.group_chat_manager import group_chat_manager
 
-        if not self._session_manager:
-            return
-
         synced_count = 0
-        for state in self._session_manager._states.values():
+        for state in feishu_session_manager.iter_states():
             if state.session_type != "group_chat":
                 continue
 
@@ -137,7 +133,9 @@ class FeishuChannel:
                 )
 
         if synced_count > 0:
-            self._session_manager.save()
+            from agents_hub.channels.feishu.session import feishu_session_manager
+
+            feishu_session_manager.save()
             logger.info("消息补偿完成: synced=%d", synced_count)
 
     async def _on_ws_message(self, event: dict[str, Any]) -> None:
@@ -228,7 +226,7 @@ class FeishuChannel:
             self._client = None
 
         self._commander = None
-        self._session_manager = None
+        # 注意：不再清理 _session_manager，因为使用全局单例
         logger.info("飞书 channel 已停止")
 
     async def on_message(self, event: dict[str, Any]) -> None:
@@ -357,15 +355,16 @@ class FeishuChannel:
             FeishuAPIError: 飞书 API 调用失败
             FeishuAuthError: 飞书认证失败
         """
+        from agents_hub.channels.feishu.session import feishu_session_manager
+
         # 过滤：只处理有消息的广播
         if not message:
             return
 
-        if not self._session_manager:
-            return
+        synced = False
 
         # 查找所有绑定到此 group_chat_id 的飞书群
-        for state in self._session_manager._states.values():
+        for state in feishu_session_manager.iter_states():
             # 只同步群聊模式且匹配 group_chat_id 的状态
             if state.session_type != "group_chat" or state.session_id != group_chat_id:
                 continue
@@ -381,9 +380,10 @@ class FeishuChannel:
                 agent_name=message.get("send_from", "unknown"),
             )
 
-            # 更新同步状态并持久化
-            self._session_manager.update_sync_state(state.feishu_chat_id, message.get("id", 0))
+            # 更新同步状态
+            feishu_session_manager.update_sync_state(state.feishu_chat_id, message.get("id", 0))
+            synced = True
 
-        # 批量保存：避免每条消息都写磁盘
-        if self._session_manager._states:
-            self._session_manager.save()
+        # 仅在有状态变更时持久化
+        if synced:
+            feishu_session_manager.save()

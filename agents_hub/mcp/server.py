@@ -1,5 +1,5 @@
 """
-MCP Server 和 15 个工具
+MCP Server 和 21 个工具
 
 提供 Manager 编排团队协作的能力：
 1. call_agent: 派活给团队成员
@@ -17,6 +17,12 @@ MCP Server 和 15 个工具
 13. list_loop_executions: 查询 Loop 执行历史（任意 Agent）
 14. health_check: 健康检查端点
 15. get_memory_context: 获取群聊上下文
+16. list_group_chats: 列出所有 Agent Hub 群聊（飞书助手专用）
+17. list_single_chat_history: 列出飞书群的单聊历史（飞书助手专用）
+18. bind_to_group_chat: 绑定飞书群到群聊模式（飞书助手专用）
+19. bind_to_single_chat: 绑定飞书群到单聊模式（飞书助手专用）
+20. create_single_chat: 创建新单聊会话（飞书助手专用）
+21. get_current_binding: 查看飞书群当前绑定状态（飞书助手专用）
 
 维护说明：
 - 当前 tool 数量少，且共享同一套 token 解析、GroupChat 获取和错误响应约定，
@@ -1549,6 +1555,185 @@ async def get_memory_context(
 
 
 # ============================================================================
+# 飞书管理工具（Feishu Admin Tools）
+# ============================================================================
+
+
+async def list_group_chats(feishu_chat_id: str) -> dict:
+    """列出所有可用的 Agent Hub 群聊。
+
+    返回系统中所有已创建的群聊信息，包括 ID、名称和成员列表。
+    飞书用户可以通过此工具查看可绑定的群聊。
+
+    Args:
+        feishu_chat_id: 飞书群 ID（oc_xxx 格式）
+
+    Returns:
+        成功: {"group_chats": [{"group_chat_id": "...", "name": "...", "members": [...]}]}
+    """
+    logger.info("MCP list_group_chats: feishu_chat_id=%s", feishu_chat_id)
+    all_chats = group_chat_manager.list_all_group_chats()
+    result = []
+    for chat_info in all_chats:
+        gc_id = chat_info.get("group_chat_id", "")
+        gc_name = chat_info.get("group_chat_name", "")
+        members = []
+        try:
+            gc = await group_chat_manager.load_group_chat(gc_id)
+            members = [m["name"] for m in gc.runtime.get_member_dicts()]
+        except GroupChatNotFoundError:
+            pass
+        result.append({"group_chat_id": gc_id, "name": gc_name, "members": members})
+    return {"group_chats": result}
+
+
+async def list_single_chat_history(feishu_chat_id: str, agent_name: str | None = None) -> dict:
+    """列出飞书群的单聊历史记录。
+
+    返回该飞书群之前创建过的单聊会话列表，包括会话 ID、Agent 名称、
+    第一句话摘要和创建时间。可通过 agent_name 参数过滤。
+
+    Args:
+        feishu_chat_id: 飞书群 ID
+        agent_name: 可选，按 agent 名称过滤
+
+    Returns:
+        成功: {"history": [{"session_id": "...", "agent_name": "...", "first_message": "...", "created_at": "..."}]}
+    """
+    from agents_hub.channels.feishu.session import feishu_session_manager
+
+    logger.info(
+        "MCP list_single_chat_history: feishu_chat_id=%s, agent_name=%s",
+        feishu_chat_id,
+        agent_name,
+    )
+    state = feishu_session_manager.get_state(feishu_chat_id)
+    if state is None:
+        return {"history": []}
+    history = state.single_chat_history
+    if agent_name:
+        history = [h for h in history if h.get("agent_name") == agent_name]
+    return {"history": history}
+
+
+async def bind_to_group_chat(feishu_chat_id: str, group_chat_id: str) -> dict:
+    """将飞书群绑定到 Agent Hub 群聊，切换到群聊模式。
+
+    绑定后，飞书群中的消息将直接转发到指定的 Agent Hub 群聊。
+    如果群聊不存在，返回错误。
+
+    Args:
+        feishu_chat_id: 飞书群 ID
+        group_chat_id: Agent Hub 群聊 ID
+
+    Returns:
+        成功: {"status": "bound", "group_chat_id": "...", "group_chat_name": "..."}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    from agents_hub.channels.feishu.service import feishu_session_service
+
+    logger.info(
+        "MCP bind_to_group_chat: feishu_chat_id=%s, group_chat_id=%s",
+        feishu_chat_id,
+        group_chat_id,
+    )
+    try:
+        return await feishu_session_service.bind_to_group_chat(feishu_chat_id, group_chat_id)
+    except GroupChatNotFoundError:
+        return make_error_response(
+            GROUP_CHAT_NOT_FOUND,
+            f"群聊 {group_chat_id} 不存在，请先使用 list_group_chats 查看可用群聊",
+        )
+    except Exception as e:
+        logger.error("bind_to_group_chat 失败: %s", e, exc_info=True)
+        return make_error_response(INTERNAL_ERROR, f"内部错误: {e}")
+
+
+async def bind_to_single_chat(feishu_chat_id: str, session_id: str) -> dict:
+    """将飞书群绑定到已有单聊会话，切换到单聊模式。
+
+    绑定后，飞书群中的消息将直接转发到指定的单聊 Agent。
+    使用 list_single_chat_history 查看可用的单聊会话。
+
+    Args:
+        feishu_chat_id: 飞书群 ID
+        session_id: 单聊会话 ID
+
+    Returns:
+        成功: {"status": "bound", "session_id": "...", "agent_name": "..."}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    from agents_hub.channels.feishu.service import feishu_session_service
+
+    logger.info(
+        "MCP bind_to_single_chat: feishu_chat_id=%s, session_id=%s",
+        feishu_chat_id,
+        session_id,
+    )
+    try:
+        return await feishu_session_service.bind_to_single_chat(feishu_chat_id, session_id)
+    except Exception as e:
+        logger.error("bind_to_single_chat 失败: session_id=%s, %s", session_id, e)
+        return make_error_response(
+            VALIDATION_ERROR,
+            f"单聊会话 {session_id} 不存在或操作失败: {e}",
+        )
+
+
+async def create_single_chat(feishu_chat_id: str, agent_name: str) -> dict:
+    """为飞书群创建新的单聊会话并绑定。
+
+    创建一个与指定 Agent 的新单聊会话，同时绑定到飞书群。
+    创建后飞书群自动切换到单聊模式。
+
+    Args:
+        feishu_chat_id: 飞书群 ID
+        agent_name: Agent 角色名称
+
+    Returns:
+        成功: {"single_chat_id": "...", "agent_name": "...", "status": "created"}
+        失败: {"error": {"code": "...", "message": "..."}}
+    """
+    from agents_hub.channels.feishu.service import feishu_session_service
+
+    logger.info(
+        "MCP create_single_chat: feishu_chat_id=%s, agent_name=%s",
+        feishu_chat_id,
+        agent_name,
+    )
+    try:
+        return await feishu_session_service.create_single_chat(feishu_chat_id, agent_name)
+    except Exception as e:
+        logger.error(
+            "create_single_chat 失败: feishu_chat_id=%s, agent=%s, %s",
+            feishu_chat_id,
+            agent_name,
+            e,
+        )
+        return make_error_response(VALIDATION_ERROR, f"创建单聊失败: {e}")
+
+
+async def get_current_binding(feishu_chat_id: str) -> dict:
+    """查看飞书群当前的绑定状态。
+
+    返回飞书群当前的会话类型、关联 ID、名称等完整状态信息。
+
+    Args:
+        feishu_chat_id: 飞书群 ID
+
+    Returns:
+        {"session_type": "...", "session_id": "...", "session_name": "...", ...}
+    """
+    from agents_hub.channels.feishu.session import feishu_session_manager
+
+    logger.info("MCP get_current_binding: feishu_chat_id=%s", feishu_chat_id)
+    state = feishu_session_manager.get_state(feishu_chat_id)
+    if state is None:
+        return {"session_type": "idle", "session_id": "", "session_name": ""}
+    return state.to_dict()
+
+
+# ============================================================================
 # 注册工具到 FastMCP
 # ============================================================================
 
@@ -1576,3 +1761,9 @@ _register_tool_with_docstring(list_loops)
 _register_tool_with_docstring(list_loop_executions)
 _register_tool_with_docstring(health_check)
 _register_tool_with_docstring(get_memory_context)
+_register_tool_with_docstring(list_group_chats)
+_register_tool_with_docstring(list_single_chat_history)
+_register_tool_with_docstring(bind_to_group_chat)
+_register_tool_with_docstring(bind_to_single_chat)
+_register_tool_with_docstring(create_single_chat)
+_register_tool_with_docstring(get_current_binding)

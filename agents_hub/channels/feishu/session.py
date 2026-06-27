@@ -145,6 +145,23 @@ class FeishuSessionManager:
                 )
             return self._states[feishu_chat_id]
 
+    def iter_states(self) -> list[FeishuSessionState]:
+        """返回所有状态的快照列表（只读遍历用）"""
+        with self._operation_lock:
+            return list(self._states.values())
+
+    def get_state(self, feishu_chat_id: str) -> FeishuSessionState | None:
+        """获取状态（只读，不存在时返回 None）
+
+        Args:
+            feishu_chat_id: 飞书群 ID
+
+        Returns:
+            FeishuSessionState 或 None
+        """
+        with self._operation_lock:
+            return self._states.get(feishu_chat_id)
+
     def switch_to_idle(self, feishu_chat_id: str) -> None:
         """切换到 idle 状态（命令面板）
 

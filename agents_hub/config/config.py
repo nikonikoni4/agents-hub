@@ -60,6 +60,7 @@ class SystemConfig:
         "default_user_name": "user",  # 默认用户身份名
         "default_assistant_name": "Agents-Hub-Assistant",  # 默认系统助手角色名
         "default_memory_assistant_name": "Agents-Hub-Memory-Assistant",  # 默认记忆助手角色名
+        "default_feishu_assistant_name": "Feishu-Assistant",  # 默认飞书助手角色名
         "decision_path": None,  # 用户决策文件存储路径（全局），None 表示使用 data_path / "decisions"
         "memory_task_cron_hour": 10,  # 记忆任务执行小时（0-23）
         "memory_task_cron_minute": 0,  # 记忆任务执行分钟（0-59）
@@ -247,6 +248,11 @@ class SystemConfig:
         return self._config_data["default_memory_assistant_name"]
 
     @property
+    def default_feishu_assistant_name(self) -> str:
+        """默认飞书助手角色名"""
+        return self._config_data["default_feishu_assistant_name"]
+
+    @property
     def decision_path(self) -> Path:
         """用户决策文件存储路径（全局）"""
         if self._config_data["decision_path"]:
@@ -378,6 +384,11 @@ class Config:
     def default_memory_assistant_name(self) -> str:
         """快捷访问：默认记忆助手角色名"""
         return self.system.default_memory_assistant_name
+
+    @property
+    def default_feishu_assistant_name(self) -> str:
+        """快捷访问：默认飞书助手角色名"""
+        return self.system.default_feishu_assistant_name
 
     @property
     def decision_path(self) -> Path:

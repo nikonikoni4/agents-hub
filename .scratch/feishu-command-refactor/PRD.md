@@ -91,20 +91,14 @@ labels: [ready-for-agent]
 25. 作为飞书用户，我希望单聊历史能够持久化保存，以便下次可以继续对话
 26. 作为飞书用户，我希望单聊会话在飞书状态中保存，以便切换到其他会话后还能回来
 
-### 消息路由（核心流程保持不变）
+### 核心流程保持不变
 
 27. 作为飞书用户，我希望消息接收、解析、去重机制保持不变，以便系统稳定运行
 28. 作为飞书用户，我希望 mention 占位符替换机制保持不变，以便正确解析 @ 消息
 29. 作为飞书用户，我希望命令优先级处理保持不变，以便命令始终优先于普通消息
 30. 作为飞书用户，我希望消息发送格式化（agent 名称前缀 + 内容）保持不变，以便清晰识别回复来源
-
-### WebSocket 连接（核心流程保持不变）
-
 31. 作为飞书用户，我希望 WebSocket 连接管理机制保持不变，以便系统能够自动重连
 32. 作为飞书用户，我希望后台线程处理和异步桥接机制保持不变，以便不阻塞主事件循环
-
-### 状态持久化（核心流程保持不变）
-
 33. 作为飞书用户，我希望状态持久化机制保持不变，以便重启后保留会话绑定关系
 34. 作为飞书用户，我希望 FeishuSessionState 数据结构保持不变，以便兼容现有数据
 
@@ -127,7 +121,7 @@ idle ──/start──> assistant ──MCP工具切换──> group_chat/singl
   └──────────────────/back─────────────────────┘
 ```
 
-### 新增模块：agents-hub-feishu-admin MCP
+### 模块 1：agents-hub-feishu-admin MCP（新增）
 
 **目的**：为飞书助手 Agent 提供专用的管理工具
 
@@ -176,10 +170,11 @@ class SingleChatHistoryItem:
 
 **数据存储**：
 - 单聊历史保存在 `FeishuSessionState` 中
-- 新增字段：`single_chat_history: List[SingleChatHistoryItem]`
+- 新增字段：`single_chat_history: List[Dict[str, str]]`
 - 每次创建或切换单聊时更新历史列表
+- 限制列表长度为 50 条，超过则自动清理最旧的
 
-### 修改模块：Commander 命令系统
+### 模块 2：Commander 命令系统（修改）
 
 **位置**：`agents_hub/channels/feishu/commander.py`
 
@@ -189,12 +184,7 @@ class SingleChatHistoryItem:
    - 保留：`/start`（新增）、`/back`、`/default`
    - 移除：`/help`、`/a`、`/assistant`、`/agents`、`/ag`、`/groups`、`/g`、`/status`
 
-2. **新增 `/start` 命令**：
-   - 切换到 assistant 状态
-   - 如果 single_chat_id 不存在，创建助手单聊
-   - 发送欢迎消息到助手
-
-3. **修改消息路由逻辑**：
+2. **消息路由逻辑**（伪代码）：
    ```python
    async def handle(user_id, content, chat_id):
        # 最高优先级：/back 命令
@@ -206,9 +196,8 @@ class SingleChatHistoryItem:
        
        if state.session_type == "idle":
            if content.strip() == "/start":
-               # 切换到助手模式
                return await _enter_assistant_mode(chat_id)
-           return WELCOME_TEXT  # "发送 /start 进入助手模式"
+           return WELCOME_TEXT
        
        elif state.session_type == "assistant":
            response = await _forward_to_assistant(chat_id, content)
@@ -216,31 +205,26 @@ class SingleChatHistoryItem:
            # 检查状态是否改变（助手调用了 MCP 工具）
            new_state = session_manager.get_state(chat_id)
            if new_state.session_type != "assistant":
-               # 追加系统消息
                return response + f"\n\n✅ 已进入{new_state.session_name}\n/back 返回"
-           
            return response
        
        elif state.session_type == "group_chat":
-           # /default 命令只在群聊模式生效
            if content.startswith("/default "):
                return await _cmd_default(chat_id, content)
-           
-           # 直接转发到群聊
            await _forward_to_group_chat(state, content)
        
        elif state.session_type == "single_chat":
-           # 直接转发到单聊
            return await _forward_to_single_chat(state, content)
    ```
 
-4. **保留的核心转发函数**（不修改）：
+3. **保留的核心函数**（完全不修改）：
    - `_forward_to_group_chat()` - 群聊转发逻辑
    - `_forward_to_single_chat()` - 单聊转发逻辑
    - `_forward_to_assistant()` - 助手转发逻辑
    - `_collect_stream_response()` - 流式响应收集
+   - `_cmd_default()` - 设置群聊默认 Agent
 
-### 修改模块：SessionManager 状态管理
+### 模块 3：SessionManager 状态管理（修改）
 
 **位置**：`agents_hub/channels/feishu/session.py`
 
@@ -250,31 +234,24 @@ class SingleChatHistoryItem:
    ```python
    @dataclass
    class FeishuSessionState:
-       feishu_chat_id: str          # 飞书群 ID（不变）
-       session_type: str            # idle/assistant/single_chat/group_chat（不变）
-       session_id: str              # 关联 ID（不变）
-       session_name: str            # 显示名称（不变）
-       single_chat_id: str          # 单聊会话 ID（不变）
-       last_message_id: int         # 增量同步位置（不变）
-       last_sync_at: str            # 最后同步时间（不变）
-       created_at: str              # 创建时间（不变）
-       default_agent: str           # 群聊默认对话 Agent（不变）
+       # 现有字段（不变）
+       feishu_chat_id: str
+       session_type: str
+       session_id: str
+       session_name: str
+       single_chat_id: str
+       last_message_id: int
+       last_sync_at: str
+       created_at: str
+       default_agent: str
        
        # 新增字段
        single_chat_history: List[Dict[str, str]] = field(default_factory=list)
-       # 格式：[{"session_id": "...", "agent_name": "...", 
-       #         "first_message": "...", "created_at": "..."}]
    ```
 
 2. **新增方法**：
-   ```python
-   def switch_to_idle(feishu_chat_id: str):
-       """切换到 idle 状态，保留绑定关系"""
-       
-   def add_single_chat_history(feishu_chat_id: str, session_id: str, 
-                               agent_name: str, first_message: str):
-       """添加单聊历史记录"""
-   ```
+   - `switch_to_idle(feishu_chat_id)` - 切换到 idle 状态
+   - `add_single_chat_history(feishu_chat_id, session_id, agent_name, first_message)` - 添加单聊历史
 
 3. **保持不变的方法**：
    - `get_or_create_state()`
@@ -284,36 +261,13 @@ class SingleChatHistoryItem:
    - `update_sync_state()`
    - `save()` / `load()`
 
-### 保持不变的模块
+4. **数据迁移**：
+   - `_migrate_old_format()` 自动处理旧格式数据
+   - 新增字段 `single_chat_history` 默认为空列表
 
-**以下模块和流程完全不修改**：
+### 模块 4：飞书助手 Agent 配置（新增）
 
-1. **message.py**：
-   - `parse_message()` - 消息解析
-   - `MessageDeduplicator` - 消息去重
-   - `parse_mentions()` - mention 占位符替换
-   - `parse_agent_name()` - agent 名称解析
-
-2. **client.py**：
-   - `FeishuClient` - 飞书 API 客户端
-   - `connect()` - WebSocket 连接
-   - `send_message()` - 消息发送
-   - 后台线程管理和异步桥接
-
-3. **channel.py** 的核心流程：
-   - `_on_ws_message()` - WebSocket 事件处理
-   - `on_message()` - 消息接收、解析、去重、优先级判断
-   - `send_to_feishu()` - 消息格式化发送
-   - `_sync_missed_messages()` - 重启补偿同步
-   - `_on_broadcast()` - 群聊消息增量同步
-   - `start()` / `stop()` - Channel 生命周期管理
-
-4. **config.py** / **exceptions.py**：
-   - 配置模型和异常定义保持不变
-
-### 飞书助手 Agent 配置
-
-**位置**：`roles/feishu_assistant/`（新建）
+**位置**：`roles/feishu_assistant/`
 
 **配置内容**：
 ```yaml
@@ -335,6 +289,33 @@ instructions: |
   转发到目标会话，不再经过你。用户可以说"返回"或发送 /back 回到命令面板。
 ```
 
+### 保持不变的模块
+
+**以下模块和流程完全不修改**：
+
+1. **message.py**：
+   - `parse_message()` - 消息解析
+   - `MessageDeduplicator` - 消息去重（LRU 缓存）
+   - `parse_mentions()` - mention 占位符替换
+   - `parse_agent_name()` - agent 名称解析
+
+2. **client.py**：
+   - `FeishuClient` - 飞书 API 客户端
+   - `connect()` - WebSocket 连接
+   - `send_message()` - 消息发送
+   - 后台线程管理和异步桥接
+
+3. **channel.py** 的核心流程：
+   - `_on_ws_message()` - WebSocket 事件处理
+   - `on_message()` - 消息接收、解析、去重、优先级判断
+   - `send_to_feishu()` - 消息格式化发送
+   - `_sync_missed_messages()` - 重启补偿同步
+   - `_on_broadcast()` - 群聊消息增量同步
+   - `start()` / `stop()` - Channel 生命周期管理
+
+4. **config.py** / **exceptions.py**：
+   - 配置模型和异常定义保持不变
+
 ## Testing Decisions
 
 ### 测试范围
@@ -352,30 +333,22 @@ instructions: |
 4. 消息发送格式化
 5. 状态持久化和加载
 
-### 测试方法
+### 测试边界
 
-1. **单元测试**：
-   - 测试 MCP 工具的输入输出
-   - 测试 Commander 的状态路由逻辑
-   - 测试 SessionManager 的数据模型扩展
+**良好的测试**：
+- 测试外部行为，而非实现细节
+- 测试状态转换的正确性
+- 测试 MCP 工具的输入输出契约
+- 测试数据持久化和迁移逻辑
 
-2. **集成测试**：
-   - 测试助手调用 MCP 工具后状态的改变
-   - 测试消息路由在不同状态下的行为
-   - 测试单聊历史的保存和读取
-
-3. **端到端测试**：
-   - 完整用户场景：idle → assistant → 查询 → 切换 → 工作模式 → 返回
-   - 回归测试：群聊增量同步、重启补偿
-
-### 测试用例示例
+**测试用例示例**：
 
 **场景 1：进入群聊**
 ```
-1. 用户发送任意消息 → 收到欢迎提示
-2. 用户发送 /start → 进入助手模式，收到助手欢迎
-3. 用户说"有哪些群聊" → 助手返回群聊列表
-4. 用户说"进入 Research Team" → 助手调用 bind_to_group_chat
+1. 用户发送任意消息 → 验证收到欢迎提示
+2. 用户发送 /start → 验证进入助手模式
+3. 用户说"有哪些群聊" → 验证助手返回群聊列表
+4. 用户说"进入 Research Team" → 验证助手调用 bind_to_group_chat
 5. 验证状态改变：assistant → group_chat
 6. 验证系统消息："✅ 已进入 Research Team\n/back 返回"
 7. 用户发送普通消息 → 验证消息转发到群聊
@@ -383,8 +356,8 @@ instructions: |
 
 **场景 2：查看和继续单聊历史**
 ```
-1. 用户在助手模式说"我之前和 researcher 聊过什么" → 助手返回历史列表
-2. 用户说"继续第一个对话" → 助手调用 bind_to_single_chat
+1. 用户在助手模式说"我之前和 researcher 聊过什么" → 验证返回历史列表
+2. 用户说"继续第一个对话" → 验证助手调用 bind_to_single_chat
 3. 验证状态改变：assistant → single_chat
 4. 验证 single_chat_id 正确
 5. 用户发送消息 → 验证消息转发到单聊
@@ -401,9 +374,9 @@ instructions: |
 ### Prior Art
 
 参考现有测试：
-- `tests/channels/feishu/` - 现有飞书 Channel 测试（如果存在）
 - `tests/mcp/test_server.py` - MCP 服务器测试
 - `tests/api/test_group_chat_service.py` - 群聊服务测试
+- `tests/channels/feishu/` - 飞书 Channel 测试（如果存在）
 
 ## Out of Scope
 
@@ -488,19 +461,19 @@ instructions: |
 
 ## Further Notes
 
-### 技术风险
+### 技术风险与缓解
 
 1. **助手调用 MCP 工具后的状态同步**：
-   - 风险：助手调用 `bind_to_group_chat` 后，状态已改变，但 Commander 需要检测到这个变化
-   - 缓解：在 `handle()` 方法中，助手响应后重新读取状态，判断是否改变
+   - **风险**：助手调用 `bind_to_group_chat` 后，状态已改变，但 Commander 需要检测到这个变化
+   - **缓解**：在 `handle()` 方法中，助手响应后重新读取状态，判断是否改变
 
 2. **单聊历史数据量**：
-   - 风险：随着时间推移，single_chat_history 列表可能变得很大
-   - 缓解：只保留最近 N 条历史（如 50 条），超过则自动清理
+   - **风险**：随着时间推移，single_chat_history 列表可能变得很大
+   - **缓解**：只保留最近 50 条历史，超过则自动清理最旧的
 
 3. **MCP 工具权限隔离**：
-   - 风险：普通群聊 Agent 可能误用飞书管理 MCP
-   - 缓解：飞书管理 MCP 只配置给 feishu_assistant，普通 Agent 使用 agents-hub-collaboration MCP
+   - **风险**：普通群聊 Agent 可能误用飞书管理 MCP
+   - **缓解**：飞书管理 MCP 只配置给 feishu_assistant，普通 Agent 使用 agents-hub-collaboration MCP
 
 ### 实现顺序建议
 

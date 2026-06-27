@@ -153,7 +153,7 @@ class FeishuCommander:
             request = CreateSingleChatRequest(
                 type=SingleChatType.NEW,
                 single_chat_name=f"feishu-assistant-{state.feishu_chat_id}",
-                agent_name=config.default_assistant_name,
+                agent_name=config.default_feishu_assistant_name,
             )
             response = await single_chat_manager.create_single_chat(request)
             state.single_chat_id = response.single_chat_id
@@ -164,8 +164,9 @@ class FeishuCommander:
                 response.single_chat_id,
             )
 
-        # 发送消息并收集流式响应
-        return await self._collect_stream_response(state.single_chat_id, content)
+        # 在消息前注入 feishu_chat_id，供助手 MCP 工具使用
+        prefixed_content = f"[feishu_chat_id:{state.feishu_chat_id}]{content}"
+        return await self._collect_stream_response(state.single_chat_id, prefixed_content)
 
     async def _forward_to_single_chat(self, state: FeishuSessionState, content: str) -> str:
         """转发到单聊 agent。"""

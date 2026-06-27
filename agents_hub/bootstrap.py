@@ -56,6 +56,25 @@ MEMORY_ASSISTANT_DISABLED_TOOLS = [
     "list_loop_executions",
 ]
 
+# Feishu Assistant 禁用的 MCP 工具黑名单
+# 飞书助手只需要飞书管理工具和 create_group_chat/create_agent，不需要其他编排工具
+FEISHU_ASSISTANT_DISABLED_TOOLS = [
+    "AskUserQuestion",
+    "call_agent",
+    "health_check",
+    "check_agent_call",
+    "assign_tasks_to_team",
+    "archive_task_list",
+    "create_loop",
+    "start_loop",
+    "stop_loop",
+    "delete_loop",
+    "get_loop_status",
+    "list_loops",
+    "list_loop_executions",
+    "get_memory_context",
+]
+
 
 def _get_template_dir() -> Path:
     """获取模板目录路径。
@@ -256,3 +275,27 @@ def initialize_default_roles() -> None:
         _copy_knowledge_to_role("memory-assistant", memory_assistant_name)
     except Exception as e:
         logger.warning(f"复制知识文件到 {memory_assistant_name} 失败: {e}")
+
+    # Feishu-Assistant 角色：飞书 Channel 的控制面板角色
+    feishu_assistant_name = config.default_feishu_assistant_name
+    if feishu_assistant_name not in role_manager.list_role_names():
+        try:
+            role_manager.create_role(
+                name=feishu_assistant_name,
+                platform=AgentPlatform.CLAUDE,
+                type=RoleType.SYSTEM,
+                description="飞书助手，帮助飞书用户管理会话、绑定群聊和单聊",
+            )
+            logger.info(f"已创建系统角色: {feishu_assistant_name}")
+        except Exception as e:
+            logger.warning(f"创建系统角色 {feishu_assistant_name} 失败: {e}")
+
+    # 为 Feishu-Assistant 设置禁用列表（无论角色是否已存在，确保禁用列表是最新的）
+    try:
+        feishu_role = role_manager.get_role(feishu_assistant_name)
+        feishu_role.update_disabled_tools(FEISHU_ASSISTANT_DISABLED_TOOLS)
+        logger.info(
+            f"已更新 {feishu_assistant_name} 禁用工具列表: {FEISHU_ASSISTANT_DISABLED_TOOLS}"
+        )
+    except Exception as e:
+        logger.warning(f"更新 {feishu_assistant_name} 禁用工具列表失败: {e}")
