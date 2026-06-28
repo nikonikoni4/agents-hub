@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -26,6 +26,7 @@ class FeishuConfig:
     verification_token: str = ""
     group_policy: str = "mention"
     domain: str = "feishu"
+    bot_names: list[str] = field(default_factory=list)
 
     @classmethod
     def from_system_config(cls, system_config: SystemConfig) -> FeishuConfig:
@@ -45,4 +46,5 @@ class FeishuConfig:
             verification_token=feishu_data.get("verification_token", ""),
             group_policy=feishu_data.get("group_policy", "mention"),
             domain=feishu_data.get("domain", "feishu"),
+            bot_names=feishu_data.get("bot_names", []),
         )

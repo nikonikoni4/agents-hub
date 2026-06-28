@@ -52,6 +52,9 @@ class RoleManager:
         agents_dir: agents 目录的路径。
     """
 
+    # 全局保留名称（如飞书机器人名），所有实例共享
+    reserved_role_names: set[str] = set()
+
     def __init__(self, agents_dir: Path | None = None) -> None:
         """初始化 RoleManager 实例。
 
@@ -119,6 +122,9 @@ class RoleManager:
         if name.upper() in reserved:
             logger.error("角色名验证失败: name=%s, Windows 保留名称", name)
             raise ValueError(f"Invalid role name: '{name}' is a Windows reserved name")
+        if name in RoleManager.reserved_role_names:
+            logger.error("角色名验证失败: name=%s, 与机器人名称冲突", name)
+            raise ValueError(f"Invalid role name: '{name}' conflicts with a bot name")
 
     def _check_name_prefix_conflict(self, name: str) -> None:
         """检查新名称是否与已有角色名称互为前缀。

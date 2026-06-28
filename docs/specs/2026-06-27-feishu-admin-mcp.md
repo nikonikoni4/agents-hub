@@ -51,14 +51,14 @@ abstract: 飞书管理 MCP 工具规格，定义飞书助手专用的会话管�
 
 工具定义在 `agents_hub/mcp/server.py`，通过 FastMCP 注册。
 
-<key_function last_update="2026-06-27T19:00:00+08:00">
+<key_function last_update="2026-06-28T09:38:27+08:00">
 - agents_hub/mcp/server.py
-  - server.list_group_chats:1562
-  - server.list_single_chat_history:1590
-  - server.bind_to_group_chat:1621
-  - server.bind_to_single_chat:1656
-  - server.create_single_chat:1695
-  - server.get_current_binding:1735
+  - server.list_group_chats:1567
+  - server.list_single_chat_history:1598
+  - server.bind_to_group_chat:1632
+  - server.bind_to_single_chat:1668
+  - server.create_single_chat:1702
+  - server.get_current_binding:1738
 </key_function>
 
 #### list_group_chats
@@ -205,6 +205,7 @@ abstract: 飞书管理 MCP 工具规格，定义飞书助手专用的会话管�
 |------|------|------|------|
 | `feishu_chat_id` | `str` | 是 | 飞书群 ID |
 | `agent_name` | `str` | 是 | Agent 角色名称 |
+| `cwd` | `str` | 否 | Agent 工作目录（不传则使用默认工作目录） |
 
 **返回值**：
 

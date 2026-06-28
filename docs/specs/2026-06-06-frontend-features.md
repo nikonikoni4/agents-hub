@@ -75,7 +75,7 @@ components -> hooks -> store -> core
 
 ### Store 层公共接口
 
-<key_function last_update="2026-06-27T23:39:49+08:00">
+<key_function last_update="2026-06-28T09:38:27+08:00">
 - frontend/src/features/session/store/sessionStore.ts
   - sessionStore.useSessionStore
 - frontend/src/features/roles/store/rolesStore.ts

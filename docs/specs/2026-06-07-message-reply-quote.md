@@ -54,7 +54,7 @@ module: frontend/chat
 
 ### 前端状态契约
 
-<key_function last_update="2026-06-27T23:39:49+08:00">
+<key_function last_update="2026-06-28T09:38:27+08:00">
 - frontend/src/layouts/ChatArea/ChatArea.tsx
   - ChatArea.handleQuote
   - ChatArea.handleClearQuote

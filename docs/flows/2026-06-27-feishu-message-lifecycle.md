@@ -122,22 +122,22 @@ session_state: dict
 
 **说明**：群聊模式下，飞书消息通过 GroupChatService 发送到群聊，群聊的新消息通过广播机制同步回飞书。同步使用 last_message_id 做增量检查，避免重复推送。助手模式下，助手 Agent 通过 MCP 工具（feishu_session_service）完成群聊绑定。
 
-<key_function last_update="2026-06-27T23:39:49+08:00">
+<key_function last_update="2026-06-28T09:38:27+08:00">
 - agents_hub/channels/feishu/channel.py
-  - channel.FeishuChannel.on_message:232
-  - channel.FeishuChannel.send_to_feishu:308
-  - channel.FeishuChannel._on_broadcast:347
+  - channel.FeishuChannel.on_message:239
+  - channel.FeishuChannel.send_to_feishu:321
+  - channel.FeishuChannel._on_broadcast:369
 - agents_hub/channels/feishu/commander.py
   - commander.FeishuCommander.handle:46
   - commander.FeishuCommander._enter_assistant_mode:100
-  - commander.FeishuCommander._forward_to_assistant:148
-  - commander.FeishuCommander._forward_to_single_chat:171
-  - commander.FeishuCommander._forward_to_group_chat:179
-  - commander.FeishuCommander._collect_stream_response:223
+  - commander.FeishuCommander._forward_to_assistant:139
+  - commander.FeishuCommander._forward_to_single_chat:174
+  - commander.FeishuCommander._forward_to_group_chat:182
+  - commander.FeishuCommander._collect_stream_response:226
 - agents_hub/channels/feishu/service.py
   - service.FeishuSessionService.bind_to_group_chat:31
-  - service.FeishuSessionService.bind_to_single_chat:65
-  - service.FeishuSessionService.create_single_chat:97
+  - service.FeishuSessionService.bind_to_single_chat:59
+  - service.FeishuSessionService.create_single_chat:87
 - agents_hub/channels/feishu/session.py
   - session.FeishuSessionManager.get_or_create_state:119
   - session.FeishuSessionManager.get_state:153
@@ -145,10 +145,10 @@ session_state: dict
   - session.FeishuSessionManager.switch_to_idle:165
   - session.FeishuSessionManager.switch_to_group_chat:179
   - session.FeishuSessionManager.switch_to_single_chat:202
-  - session.FeishuSessionManager.switch_to_assistant:215
-  - session.FeishuSessionManager.update_sync_state:250
-  - session.FeishuSessionManager.add_single_chat_history:263
-  - session.FeishuSessionManager.save:310
+  - session.FeishuSessionManager.switch_to_assistant:220
+  - session.FeishuSessionManager.update_sync_state:255
+  - session.FeishuSessionManager.add_single_chat_history:268
+  - session.FeishuSessionManager.save:315
 - agents_hub/channels/feishu/message.py
   - message.parse_message:14
   - message.parse_agent_name:64

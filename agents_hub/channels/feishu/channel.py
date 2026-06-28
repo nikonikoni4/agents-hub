@@ -62,6 +62,13 @@ class FeishuChannel:
         # 加载全局 session manager
         feishu_session_manager.load()
 
+        # 注册飞书机器人名称为保留角色名
+        if self.config.bot_names:
+            from agents_hub.roles.role_manager import RoleManager
+
+            RoleManager.reserved_role_names.update(self.config.bot_names)
+            logger.info("已注册机器人保留名称: %s", self.config.bot_names)
+
         # 初始化 commander（不再传递 session_manager）
         self._commander = FeishuCommander(self._group_chat_service)
 
@@ -256,6 +263,12 @@ class FeishuChannel:
         if mentions:
             content = parse_mentions(content, mentions)
 
+        # 4.5 过滤机器人名称：去除行首的 @bot_name
+        import re
+
+        for bot_name in self.config.bot_names:
+            content = re.sub(rf"^@?\s*{re.escape(bot_name)}\s+", "", content)
+
         # 5. 【优先级1】判断是否为命令消息（以 / 开头）
         #    命令消息直接交给 commander 处理，不解析 agent_name
         if content.strip().startswith("/"):
@@ -326,6 +339,11 @@ class FeishuChannel:
         """
         if not self._client:
             return
+
+        # 安全过滤：移除泄露的 feishu_chat_id
+        import re
+
+        content = re.sub(r"oc_[a-zA-Z0-9]+", "[已隐藏]", content)
 
         # 格式化消息
         formatted_content = f"**[{agent_name}]** : {content}"

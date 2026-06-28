@@ -59,13 +59,13 @@ abstract: 飞书 Channel 模块规格，定义飞书消息接收/发送、命令
 
 ### FeishuChannel（主类）
 
-<key_function last_update="2026-06-27T23:39:49+08:00">
+<key_function last_update="2026-06-28T09:38:27+08:00">
 - agents_hub/channels/feishu/channel.py
   - channel.FeishuChannel.start:47
-  - channel.FeishuChannel.stop:222
-  - channel.FeishuChannel.on_message:232
-  - channel.FeishuChannel.send_to_feishu:308
-  - channel.FeishuChannel._on_broadcast:347
+  - channel.FeishuChannel.stop:229
+  - channel.FeishuChannel.on_message:239
+  - channel.FeishuChannel.send_to_feishu:321
+  - channel.FeishuChannel._on_broadcast:369
 </key_function>
 
 **对外接口**：

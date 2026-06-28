@@ -67,7 +67,7 @@ contract_refs:
 
 ### 对外接口
 
-<key_function last_update="2026-06-27T23:39:49+08:00">
+<key_function last_update="2026-06-28T09:38:27+08:00">
 - agents_hub/agent_bridge/bridge.py
   - bridge.AgentBridge.execute_stream:130
   - bridge.AgentBridge.execute:262
@@ -79,8 +79,8 @@ contract_refs:
   - models.FirstResponseResult
   - models.AgentEventType:13
 - agents_hub/roles/role_manager.py
-  - role_manager.RoleManager.create_role:266
-  - role_manager.RoleManager.get_role:211
+  - role_manager.RoleManager.create_role:272
+  - role_manager.RoleManager.get_role:217
 </key_function>
 
 **接口说明**：

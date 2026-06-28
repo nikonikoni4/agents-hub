@@ -43,6 +43,7 @@ feishu:
   app_secret: ""
   group_policy: "mention"
   domain: "feishu"
+  bot_names: []
 """
 
 

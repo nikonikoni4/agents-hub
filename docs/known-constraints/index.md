@@ -1,3 +1,9 @@
+## feishu-bot-name-filter
+ - updated_at : 2026-06-28
+ - path: `docs/known-constraints/feishu-bot-name-filter.md`
+ - 触发规则：修改飞书 channel.py on_message() 中的 @bot_name 过滤逻辑、FeishuConfig.bot_names 配置时阅读
+ - 内容摘要：记录 @bot_name 过滤仅匹配行首（`^` 锚点）的已知局限，包括设计理由和影响范围
+
 ## context-usage-calculation
  - updated_at : 2026-06-20
  - path: `docs/known-constraints/context-usage-calculation.md`

@@ -84,12 +84,15 @@ class FeishuSessionService:
             "agent_name": agent_name,
         }
 
-    async def create_single_chat(self, feishu_chat_id: str, agent_name: str) -> dict:
+    async def create_single_chat(
+        self, feishu_chat_id: str, agent_name: str, cwd: str | None = None
+    ) -> dict:
         """为飞书群创建新单聊会话并绑定。
 
         Args:
             feishu_chat_id: 飞书群 ID
             agent_name: Agent 角色名称
+            cwd: Agent 工作目录（可选）
 
         Returns:
             {"single_chat_id": "...", "agent_name": "...", "status": "created"}
@@ -98,14 +101,16 @@ class FeishuSessionService:
             Exception: 创建失败
         """
         logger.info(
-            "create_single_chat: feishu_chat_id=%s, agent_name=%s",
+            "create_single_chat: feishu_chat_id=%s, agent_name=%s, cwd=%s",
             feishu_chat_id,
             agent_name,
+            cwd,
         )
         request = CreateSingleChatRequest(
             type=SingleChatType.NEW,
             single_chat_name=f"feishu-{feishu_chat_id}-{agent_name}",
             agent_name=agent_name,
+            cwd=cwd,
         )
         response = await single_chat_manager.create_single_chat(request)
         feishu_session_manager.add_single_chat_history(

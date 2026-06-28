@@ -1699,7 +1699,12 @@ async def bind_to_single_chat(agent_token: str, feishu_chat_id: str, session_id:
         )
 
 
-async def create_single_chat(agent_token: str, feishu_chat_id: str, agent_name: str) -> dict:
+async def create_single_chat(
+    agent_token: str,
+    feishu_chat_id: str,
+    agent_name: str,
+    cwd: str | None = None,
+) -> dict:
     """为飞书群创建新的单聊会话并绑定。
 
     创建一个与指定 Agent 的新单聊会话，同时绑定到飞书群。
@@ -1709,6 +1714,7 @@ async def create_single_chat(agent_token: str, feishu_chat_id: str, agent_name: 
         agent_token: 飞书助手 token
         feishu_chat_id: 飞书群 ID
         agent_name: Agent 角色名称
+        cwd: Agent 工作目录（可选，不传则使用默认工作目录）
 
     Returns:
         成功: {"single_chat_id": "...", "agent_name": "...", "status": "created"}
@@ -1719,12 +1725,13 @@ async def create_single_chat(agent_token: str, feishu_chat_id: str, agent_name: 
     from agents_hub.channels.feishu.service import feishu_session_service
 
     logger.info(
-        "MCP create_single_chat: feishu_chat_id=%s, agent_name=%s",
+        "MCP create_single_chat: feishu_chat_id=%s, agent_name=%s, cwd=%s",
         feishu_chat_id,
         agent_name,
+        cwd,
     )
     try:
-        return await feishu_session_service.create_single_chat(feishu_chat_id, agent_name)
+        return await feishu_session_service.create_single_chat(feishu_chat_id, agent_name, cwd=cwd)
     except Exception as e:
         logger.error(
             "create_single_chat 失败: feishu_chat_id=%s, agent=%s, %s",

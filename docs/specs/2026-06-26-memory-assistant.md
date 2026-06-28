@@ -115,9 +115,9 @@ contract_refs: agents_hub/mcp/server.py, agents_hub/roles/prompt_file.py, agents
 
 ### MCP 工具：get_memory_context
 
-<key_function last_update="2026-06-27T23:39:49+08:00">
+<key_function last_update="2026-06-28T09:38:27+08:00">
 - agents_hub/mcp/server.py
-  - server.get_memory_context:1475
+  - server.get_memory_context:1480
   - server._verify_memory_token:131
 </key_function>
 
