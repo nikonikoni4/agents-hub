@@ -306,12 +306,12 @@ class TestBuildCompactHistoryXml:
         ctx.agent_name = "agent_a"
 
         history = [{"content": {"summary": "发生了X事件"}}]
-        result = await ctx._build_compact_history_xml(history, last_loaded_compact_index=0)
+        result = await ctx._build_compact_history_md(history, last_loaded_compact_index=0)
 
-        assert f"<{Tag.GROUP_HISTORY}>" in result
-        assert f"<{Tag.SUMMARY_OVERALL}>" in result
+        assert "## 历史摘要" in result
+        assert "**全体进展**" in result
         assert "1. 发生了X事件" in result
-        assert Tag.SUMMARY_FOR_YOU not in result
+        assert "**与你相关**" not in result
 
     @pytest.mark.asyncio
     async def test_overall_and_for_you(self):
@@ -320,10 +320,10 @@ class TestBuildCompactHistoryXml:
         ctx.agent_name = "agent_a"
 
         history = [{"content": {"summary": "整体摘要", "agent_a": "你的专属摘要"}}]
-        result = await ctx._build_compact_history_xml(history, last_loaded_compact_index=0)
+        result = await ctx._build_compact_history_md(history, last_loaded_compact_index=0)
 
         assert "1. 整体摘要" in result
-        assert f"<{Tag.SUMMARY_FOR_YOU}>" in result
+        assert "**与你相关**" in result
         assert "1. 你的专属摘要" in result
 
     @pytest.mark.asyncio
@@ -336,7 +336,7 @@ class TestBuildCompactHistoryXml:
             {"content": {"summary": "旧摘要"}},
             {"content": {"summary": "新摘要"}},
         ]
-        result = await ctx._build_compact_history_xml(history, last_loaded_compact_index=1)
+        result = await ctx._build_compact_history_md(history, last_loaded_compact_index=1)
 
         assert "旧摘要" not in result
         assert "1. 新摘要" in result
@@ -541,7 +541,7 @@ class TestGetContext:
 
     @pytest.mark.asyncio
     async def test_leader_gets_recent_messages(self):
-        """契约：LEADER 角色 get_context 包含 <recent_messages>"""
+        """契约：LEADER 角色 get_context 包含最近消息"""
         messages = [
             {"agent_name": "agent_b", "content": "任务进展"},
         ]
@@ -549,12 +549,12 @@ class TestGetContext:
 
         result = await ctx.get_context()
 
-        assert Tag.RECENT_MESSAGES in result
+        assert "## 最近消息" in result
         assert "任务进展" in result
 
     @pytest.mark.asyncio
     async def test_worker_skips_recent_messages(self):
-        """契约：TEAM_MEMBER 角色 get_context 不包含 <recent_messages>"""
+        """契约：TEAM_MEMBER 角色 get_context 不包含最近消息"""
         messages = [
             {"agent_name": "agent_b", "content": "任务进展"},
         ]
@@ -562,7 +562,7 @@ class TestGetContext:
 
         result = await ctx.get_context()
 
-        assert Tag.RECENT_MESSAGES not in result
+        assert "## 最近消息" not in result
         assert "任务进展" not in result
 
     @pytest.mark.asyncio
@@ -578,18 +578,18 @@ class TestGetContext:
 
         result = await ctx.get_context()
 
-        assert Tag.GROUP_HISTORY in result
+        assert "## 历史摘要" in result
         assert "团队进展摘要" in result
         assert "你的专属摘要" in result
 
     @pytest.mark.asyncio
     async def test_leader_with_no_messages_returns_empty_recent(self):
-        """契约：LEADER 无新消息时不生成 <recent_messages>"""
+        """契约：LEADER 无新消息时不生成最近消息块"""
         ctx = self._make_context_for_get("agent_a", RoleType.LEADER, [])
 
         result = await ctx.get_context()
 
-        assert Tag.RECENT_MESSAGES not in result
+        assert "## 最近消息" not in result
 
     @pytest.mark.asyncio
     async def test_worker_updates_message_index(self):

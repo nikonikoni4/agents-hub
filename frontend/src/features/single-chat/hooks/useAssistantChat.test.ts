@@ -95,16 +95,16 @@ describe('useAssistantChat', () => {
       expect(state.activeSingleChatId).toBe('existing-chat');
     });
 
-    it('应该在已有 draft 会话时不执行任何操作', () => {
-      const existingDraft = {
+    it('应该在已有助手 draft 时不执行任何操作', () => {
+      const assistantDraft = {
         type: 'new' as const,
-        single_chat_name: 'Existing Draft',
-        agent_name: 'Test-Agent',
+        single_chat_name: 'Agents Hub 助手',
+        agent_name: 'Agents-Hub-Assistant',
       };
 
       useSingleChatStore.setState({
         activeSingleChatId: null,
-        draftChat: existingDraft,
+        draftChat: assistantDraft,
       });
 
       const { result } = renderHook(() => useAssistantChat());
@@ -114,7 +114,34 @@ describe('useAssistantChat', () => {
       });
 
       const state = useSingleChatStore.getState();
-      expect(state.draftChat).toEqual(existingDraft);
+      expect(state.draftChat).toEqual(assistantDraft);
+    });
+
+    it('应该在有非助手 draft（如私聊）时替换为助手会话', () => {
+      const privateChatDraft = {
+        type: 'continue_group_chat' as const,
+        single_chat_name: '与 agent-x 的私聊',
+        agent_name: 'agent-x',
+        group_chat_id: 'group-1',
+      };
+
+      useSingleChatStore.setState({
+        activeSingleChatId: null,
+        draftChat: privateChatDraft,
+      });
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      act(() => {
+        result.current.initAssistantChat();
+      });
+
+      const state = useSingleChatStore.getState();
+      expect(state.draftChat).toEqual({
+        type: 'new',
+        single_chat_name: 'Agents Hub 助手',
+        agent_name: 'Agents-Hub-Assistant',
+      });
     });
   });
 

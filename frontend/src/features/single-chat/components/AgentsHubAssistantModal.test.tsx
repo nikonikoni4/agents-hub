@@ -26,19 +26,52 @@ vi.mock('../hooks/useSingleChatMessages', () => ({
   })),
 }));
 
-vi.mock('../store/singleChatStore', () => ({
-  useSingleChatStore: vi.fn((selector) => {
-    const state = {
-      activeSingleChatId: null,
-      singleChats: [],
-      draftChat: null,
-      openSingleChat: vi.fn(),
-      openDraftChat: vi.fn(),
-      clearActive: vi.fn(),
-    };
-    return selector ? selector(state) : state;
-  }),
+vi.mock('../hooks/useSingleChatMembers', () => ({
+  useSingleChatMembers: vi.fn(() => ({
+    members: [],
+    loading: false,
+  })),
 }));
+
+vi.mock('../hooks/useNavigationHandler', () => ({
+  useNavigationHandler: vi.fn(() => ({
+    handleNavigation: vi.fn(),
+  })),
+}));
+
+vi.mock('../hooks/useAutoResizeTextarea', () => ({
+  useAutoResizeTextarea: vi.fn(() => ({
+    textareaRef: { current: null },
+    adjustHeight: vi.fn(),
+  })),
+}));
+
+vi.mock('../hooks/useAssistantChat', () => ({
+  useAssistantChat: vi.fn(() => ({
+    initAssistantChat: vi.fn(),
+    startNewChat: vi.fn(),
+  })),
+}));
+
+vi.mock('./AssistantSkillCards', () => ({
+  AssistantSkillCards: () => null,
+}));
+
+vi.mock('../store/singleChatStore', () => {
+  const state = {
+    activeSingleChatId: null,
+    singleChats: [],
+    draftChat: null,
+    openSingleChat: vi.fn(),
+    openDraftChat: vi.fn(),
+    clearActive: vi.fn(),
+  };
+  const store = Object.assign(
+    vi.fn((selector: any) => (selector ? selector(state) : state)),
+    { getState: vi.fn(() => state) }
+  );
+  return { useSingleChatStore: store };
+});
 
 describe('AgentsHubAssistantModal', () => {
   const defaultProps = {

@@ -130,7 +130,10 @@ class TestExecuteWithFirstResponse:
             ),
             StreamEvent(
                 type=AgentEventType.TURN_COMPLETE,
-                content={"usage": {"input_tokens": 100, "cache_read_input_tokens": 50}},
+                content={
+                    "usage": {"input_tokens": 100, "cache_read_input_tokens": 50},
+                    "result": "Hello World How are you?",  # 完整输出文本
+                },
                 session_id="test-session",
                 timestamp="2026-01-01T00:00:05",
                 agent_name="test-agent",

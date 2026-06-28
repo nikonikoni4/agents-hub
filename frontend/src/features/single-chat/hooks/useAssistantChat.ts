@@ -19,9 +19,13 @@ export function useAssistantChat() {
 
   // 打开弹窗时查找最近的助手会话
   const initAssistantChat = useCallback(() => {
-    // 如果已有活跃会话，不需要查找
-    if (activeSingleChatId || draftChat) return;
+    // 如果已有活跃的助手会话，不需要查找
+    if (activeSingleChatId) return;
 
+    // 如果已有助手相关的 draft，不需要重新创建
+    if (draftChat && draftChat.agent_name === 'Agents-Hub-Assistant') return;
+
+    // 有非助手的 draft（如私聊），需要替换为助手会话
     const latestChat = findLatestAssistantChat(singleChats);
     if (latestChat) {
       openSingleChat(latestChat.single_chat_id);

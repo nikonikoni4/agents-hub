@@ -91,6 +91,9 @@ export function AgentsHubAssistantModal({ isOpen, onClose }: AgentsHubAssistantM
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 保存/恢复私聊状态，避免助手弹窗污染右侧栏的 SingleChatPanel
+  const savedStateRef = useRef<{ activeId: string | null; draft: typeof draftChat } | null>(null);
+
   // 从已有列表中查找，或用 draft 构造临时对象
   const activeChat = activeSingleChatId
     ? singleChats.find((c) => c.single_chat_id === activeSingleChatId)
@@ -118,23 +121,46 @@ export function AgentsHubAssistantModal({ isOpen, onClose }: AgentsHubAssistantM
   const agentMember = members.find((m) => m.name === displayChat?.agent_name);
   const agentAvatar = agentMember?.role?.avatar ?? null;
 
+  // 关闭弹窗时恢复之前的状态（如私聊）
+  const handleClose = useCallback(() => {
+    if (savedStateRef.current) {
+      const { activeId, draft } = savedStateRef.current;
+      const store = useSingleChatStore.getState();
+      if (activeId) {
+        store.openSingleChat(activeId);
+      } else if (draft) {
+        store.openDraftChat(draft);
+      } else {
+        store.clearActive();
+      }
+      savedStateRef.current = null;
+    }
+    onClose();
+  }, [onClose]);
+
   // ESC 键关闭
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
-  // 打开弹窗时查找最近的助手会话
+  // 打开弹窗时保存当前状态（私聊等），然后初始化助手会话
   useEffect(() => {
     if (!isOpen) return;
+    // 保存当前 singleChatStore 状态
+    const store = useSingleChatStore.getState();
+    savedStateRef.current = {
+      activeId: store.activeSingleChatId,
+      draft: store.draftChat,
+    };
     initAssistantChat();
   }, [isOpen, initAssistantChat]);
 
@@ -185,7 +211,7 @@ export function AgentsHubAssistantModal({ isOpen, onClose }: AgentsHubAssistantM
   if (!isOpen) return null;
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
+    <div className={styles.overlay} onClick={handleClose}>
       <div
         className={styles.dialog}
         onClick={(e) => e.stopPropagation()}
@@ -204,7 +230,7 @@ export function AgentsHubAssistantModal({ isOpen, onClose }: AgentsHubAssistantM
           <button type="button" className={styles.newChatBtn} onClick={handleNewChat}>
             开始新对话
           </button>
-          <button type="button" className={styles.closeBtn} onClick={onClose} title="关闭">
+          <button type="button" className={styles.closeBtn} onClick={handleClose} title="关闭">
             ×
           </button>
         </div>
